@@ -36,10 +36,6 @@ def start_ollama():
         logger.error("Ollama is running")
 
 
-
-
-
-
 def get_vector_db() -> FAISS:
     if os.path.exists(f"{idx}/index.faiss"):
         logger.info("idx existed")
