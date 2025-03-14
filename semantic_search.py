@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from typing import Union
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
@@ -9,24 +10,45 @@ from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 import logging.config
 import os
+import subprocess
+import socket
+import faiss
 
-# 加载配置
+
 logging.config.fileConfig('logging.conf')
-
-# 创建 logger
 logger = logging.getLogger(__name__)
 doc = "1.pdf"
-emb_name = "../bge-large-zh-v1.5"
+emb_name = os.path.abspath("../bge-large-zh-v1.5")
 idx = "faiss_index"
+model_name = "deepseek-r1:7b"
+
+def is_ollama_running(port=11434):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
+
+def start_ollama():
+    if not is_ollama_running():
+        try:
+            subprocess.run(["ollama", "serve"], check=True)
+        except subprocess.CalledProcessError as e:
+            logger.error(f"ollama start failed: {e}")
+    else:
+        logger.error("Ollama is running")
+
+
+
+
 
 
 def get_vector_db() -> FAISS:
-
-    if os.path.exists("./"):
+    if os.path.exists(f"{idx}/index.faiss"):
         logger.info("idx existed")
-        vector_db = FAISS.load_local(idx,
-                                     HuggingFaceEmbeddings(model_name=emb_name),
+        try:
+            vector_db = FAISS.load_local(idx,
+                                         HuggingFaceEmbeddings(model_name=emb_name),
                                      allow_dangerous_deserialization=True)
+        except Exception as e:
+            logger.error(f"load index failed: {e}")
     else:
         logger.info("create idx")
         loader = PyPDFLoader(doc)
@@ -39,31 +61,38 @@ def get_vector_db() -> FAISS:
     return vector_db
 
 
-if __name__ == "__main__":
-
-    # 语义搜索
-    query = "居民如何开户?"
-    logger.info("similarity_search {} in doc {}".format(query, doc))
+def search(question: str) -> Union[str, list[Union[str, dict]]]:
+    logger.info("similarity_search {} in doc {}".format(question, doc))
     # 搜索部分
-    docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(query, k=2)
+    docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(question, k=2)
 
     # 输出结果和相关性分数
     # for doc, score in docs_with_scores:
     #     print(f"[相关度：{score:.2f}] {doc.page_content[:200]}...")
     # 构建增强提示
     template = """基于以下上下文：
-    {context}
-    
-    回答：{question}"""
+        {context}
+        
+        回答：{question}"""
     prompt = ChatPromptTemplate.from_template(template)
 
-    # 调用Ollama
-    model = ChatOllama(model="deepseek-r1:7b")
+    model = ChatOllama(model=model_name)
     chain = prompt | model
-    logger.info("submit user question in LLM: {}".format(query))
+    logger.info("submit user question in LLM: {}".format(question))
     response = chain.invoke({
         "context": "\n\n".join([doc.page_content for doc, score in docs_with_scores]),
-        "question": query
+        "question": question
     })
+    return response.content
 
-    logger.info("answer： {}".format(response.content))
+
+if __name__ == "__main__":
+    logger.info("gpu number {}".format(faiss.get_num_gpus()))
+    # vector_dimension = 1024
+    # index = faiss.index_factory(vector_dimension, 'IVF4096,Flat')
+    # res = faiss.StandardGpuResources()
+    # gpu_index = faiss.index_cpu_to_gpu(res, 0, index)
+    start_ollama()
+    my_question = "居民如何开户?"
+    answer = search(my_question)
+    logger.info("answer： {}".format(answer))
