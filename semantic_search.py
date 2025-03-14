@@ -42,7 +42,7 @@ def get_vector_db() -> FAISS:
 if __name__ == "__main__":
 
     # 语义搜索
-    query = "剧名如何开户?"
+    query = "居民如何开户?"
     logger.info("similarity_search {} in doc {}".format(query, doc))
     # 搜索部分
     docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(query, k=2)
