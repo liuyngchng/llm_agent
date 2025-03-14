@@ -28,8 +28,8 @@ if __name__ == "__main__":
     db = FAISS.from_documents(texts, embeddings)
 
     # 语义搜索
-    query = "居民客户天然气开户的手续是什么?"
-    logger.info("similarity search {} in doc {}".format(query, doc))
+    query = "your question?"
+    logger.info("similarity_search {} in doc {}".format(query, doc))
     # 搜索部分
     docs_with_scores = db.similarity_search_with_relevance_scores(query, k=2)
 
