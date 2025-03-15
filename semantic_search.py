@@ -86,7 +86,7 @@ def search(question: str) -> Union[str, list[Union[str, dict]]]:
     return response.content
 
 
-if __name__ == "__main__":
+def test():
     logger.info("gpu number {}".format(faiss.get_num_gpus()))
     # vector_dimension = 1024
     # index = faiss.index_factory(vector_dimension, 'IVF4096,Flat')
@@ -100,3 +100,7 @@ if __name__ == "__main__":
     logger.info("answer： {}".format(answer))
     torch.cuda.empty_cache()
     logger.info("cuda released")
+
+
+if __name__ == "__main__":
+    test()
