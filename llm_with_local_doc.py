@@ -7,8 +7,6 @@ import logging.config
 
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
-model_name = "deepseek-r1:7b"
-api_url = "http://127.0.0.1:11434"
 
 
 def test_req():
