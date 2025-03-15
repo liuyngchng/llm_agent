@@ -13,6 +13,7 @@ import os
 import subprocess
 import socket
 import faiss
+import torch
 
 
 logging.config.fileConfig('logging.conf')
@@ -88,7 +89,11 @@ if __name__ == "__main__":
     # index = faiss.index_factory(vector_dimension, 'IVF4096,Flat')
     # res = faiss.StandardGpuResources()
     # gpu_index = faiss.index_cpu_to_gpu(res, 0, index)
+    # gpu_index.reset()
+    # res.noTempMemory()
     start_ollama()
     my_question = "居民如何开户?"
     answer = search(my_question)
     logger.info("answer： {}".format(answer))
+    torch.cuda.empty_cache()
+    logger.info("cuda released")
