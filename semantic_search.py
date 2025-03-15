@@ -33,7 +33,7 @@ def is_ollama_running(port=11434):
 def start_ollama():
     if not is_ollama_running():
         try:
-            subprocess.run(["ollama", "serve"], check=True)
+            subprocess.Popen(["ollama", "serve"])
         except subprocess.CalledProcessError as e:
             logger.error("ollama start failed: {}".format(e))
     else:
@@ -62,7 +62,7 @@ def get_vector_db() -> FAISS:
 
 
 def search(question: str) -> Union[str, list[Union[str, dict]]]:
-    logger.info("similarity_search {} in doc {}".format(question, doc))
+    logger.info("similarity_search [{}] in doc {}".format(question, doc))
     # 搜索部分
     docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(question, k=2)
 
@@ -78,7 +78,7 @@ def search(question: str) -> Union[str, list[Union[str, dict]]]:
 
     model = ChatOllama(model=model_name, base_url=api_url)
     chain = prompt | model
-    logger.info("submit user question in LLM: {}".format(question))
+    logger.info("submit question to LLM: {}".format(question))
     response = chain.invoke({
         "context": "\n\n".join([doc.page_content for doc, score in docs_with_scores]),
         "question": question
