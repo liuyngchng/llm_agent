@@ -15,7 +15,6 @@ import socket
 import faiss
 import torch
 
-
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
 doc = "1.pdf"
@@ -25,29 +24,31 @@ model_name = "deepseek-r1:7b"
 api_url = "http://127.0.0.1:11434"
 api_key = "123456789"
 
+
 def is_ollama_running(port=11434):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(('localhost', port)) == 0
+
 
 def start_ollama():
     if not is_ollama_running():
         try:
             subprocess.run(["ollama", "serve"], check=True)
         except subprocess.CalledProcessError as e:
-            logger.error(f"ollama start failed: {e}")
+            logger.error("ollama start failed: {}".format(e))
     else:
         logger.error("Ollama is running")
 
 
 def get_vector_db() -> FAISS:
-    if os.path.exists(f"{idx}/index.faiss"):
+    if os.path.exists("{}/index.faiss".format(idx)):
         logger.info("idx existed")
         try:
             vector_db = FAISS.load_local(idx,
                                          HuggingFaceEmbeddings(model_name=emb_name),
-                                     allow_dangerous_deserialization=True)
+                                         allow_dangerous_deserialization=True)
         except Exception as e:
-            logger.error(f"load index failed: {e}")
+            logger.error("load index failed: {}".format(e))
     else:
         logger.info("create idx")
         loader = PyPDFLoader(doc)
