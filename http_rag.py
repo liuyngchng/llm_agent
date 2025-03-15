@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-api_url = "https://127.0.0.1:19114"
+api_url = "http://127.0.0.1:11434"
 api_key = "123456789"
 
 
@@ -57,7 +57,7 @@ def req_with_vector_db(question: str) -> str:
     # 创建远程 Ollama API代理
     logger.info("get remote llm agent")
     # 可调用无需 api_key 的model
-    llm = OllamaLLM(model=llm_name, base_url=api_url)
+    # llm = OllamaLLM(model=llm_name, base_url=api_url)
 
     # 调用需要 api_key 的 model
     llm = ChatOpenAI(api_key=api_key, base_url=api_url, http_client=httpx.Client(verify=False), model=remote_llm_name)
@@ -121,18 +121,18 @@ def test_req():
     let LLM retrieve the information from local vector database, 
     and the output the answer.
     """
-    my_question = "巴拉巴拉小魔仙是什么？"
+    my_question = "居民如何开户？"
     logger.info("invoke question: {}".format(my_question))
     answer = req_with_vector_db(my_question)
     logger.info("answer is {}".format(answer))
 
 
 if __name__ == '__main__':
-    # test_req()
+    test_req()
 
     """
     just for test, not for a production environment.
     """
-    init_cfg("env.cfg")
-    logger.info("api_url={}, api_key={}".format(api_url, api_key))
-    app.run(host='0.0.0.0', port=19000)
+    # init_cfg("env.cfg")
+    # logger.info("api_url={}, api_key={}".format(api_url, api_key))
+    # app.run(host='0.0.0.0', port=19000)

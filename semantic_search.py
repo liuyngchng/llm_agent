@@ -22,6 +22,8 @@ doc = "1.pdf"
 emb_name = os.path.abspath("../bge-large-zh-v1.5")
 idx = "faiss_index"
 model_name = "deepseek-r1:7b"
+api_url = "http://127.0.0.1:11434"
+api_key = "123456789"
 
 def is_ollama_running(port=11434):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -73,7 +75,7 @@ def search(question: str) -> Union[str, list[Union[str, dict]]]:
         回答：{question}"""
     prompt = ChatPromptTemplate.from_template(template)
 
-    model = ChatOllama(model=model_name)
+    model = ChatOllama(model=model_name, base_url=api_url)
     chain = prompt | model
     logger.info("submit user question in LLM: {}".format(question))
     response = chain.invoke({
