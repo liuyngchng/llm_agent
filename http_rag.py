@@ -11,6 +11,7 @@ from langchain_ollama import OllamaLLM
 import logging.config
 import httpx
 from flask import Flask, request, jsonify, render_template
+from semantic_search import search
 
 # 加载配置
 logging.config.fileConfig('logging.conf')
@@ -110,7 +111,7 @@ def submit():
     """
     msg = request.form.get('msg')
     logger.info("rcv_msg: {}".format(msg))
-    answer = req_with_vector_db(msg)
+    answer = search(msg)
     logger.info("answer is：{}".format(answer))
     return answer
 
@@ -123,7 +124,7 @@ def test_req():
     """
     my_question = "居民如何开户？"
     logger.info("invoke question: {}".format(my_question))
-    answer = req_with_vector_db(my_question)
+    answer = search(my_question)
     logger.info("answer is {}".format(answer))
 
 
