@@ -28,7 +28,7 @@ api_url = "http://127.0.0.1:11434"
 api_key = "123456789"
 
 
-def init_cfg(cfg_file: str):
+def init_cfg(cfg_file="env.cfg"):
     global api_url, api_key, model_name
     with open(cfg_file) as f:
         lines = f.readlines()
@@ -39,6 +39,8 @@ def init_cfg(cfg_file: str):
         api_url = lines[0].strip()
         api_key = lines[1].strip()
         model_name = lines[2].strip()
+        logger.info("init_cfg_info, api_url:{}, api_key:{}, model_name:{}"
+                    .format(api_url, api_key, model_name))
     except Exception as e:
         logger.error("init_cfg_error: {}".format(e))
 
@@ -99,7 +101,7 @@ def search(question: str, is_remote=False) -> Union[str, list[Union[str, dict]]]
     else:
         model = ChatOllama(model=model_name, base_url=api_url)
     chain = prompt | model
-    logger.info("submit question to LLM: {}".format(question))
+    logger.info("submit question[{}] to llm {}, {}".format(question, api_url, model_name))
     response = chain.invoke({
         "context": "\n\n".join([doc.page_content for doc, score in docs_with_scores]),
         "question": question
@@ -117,11 +119,12 @@ def test():
     # res.noTempMemory()
     start_ollama()
     my_question = "居民如何开户?"
-    answer = search(my_question)
+    answer = search(my_question, True)
     logger.info("answer： {}".format(answer))
     torch.cuda.empty_cache()
     logger.info("cuda released")
 
 
 if __name__ == "__main__":
+    init_cfg()
     test()
