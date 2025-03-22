@@ -48,7 +48,8 @@ def submit():
     """
     msg = request.form.get('msg')
     logger.info("rcv_msg: {}".format(msg))
-    answer = search(msg, True)
+    #answer = search(msg, True)
+    answer = search(msg)
     logger.info("answer is：{}".format(answer))
     return answer
 
