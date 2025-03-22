@@ -59,6 +59,13 @@ def start_ollama():
     else:
         logger.error("Ollama is running")
 
+def check_ollama():
+    if is_ollama_running():
+        logger.info("Ollama is running")   
+    else:
+        logger.error("please start Ollama first")
+        exit(-1)        
+
 
 def get_vector_db() -> FAISS:
     if os.path.exists("{}/index.faiss".format(idx)):

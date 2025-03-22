@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from semantic_search import search,start_ollama
+from semantic_search import search,check_ollama
 
 import logging.config
 
@@ -22,5 +22,5 @@ def test_req():
 
 
 if __name__ == '__main__':
-    start_ollama()
+    check_ollama()
     test_req()
