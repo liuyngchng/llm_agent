@@ -10,9 +10,9 @@ from langchain_text_splitters import CharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 # from langchain_community.vectorstores import SQLiteVSS
-# from langchain_unstructured import UnstructuredLoader
+from langchain_unstructured import UnstructuredLoader
 # from langchain_community.document_loaders import DirectoryLoader
-# from langchain_core.documents import Document
+from langchain_core.documents import Document
 
 import logging.config
 import os
@@ -20,7 +20,7 @@ import os
 
 def vectoring():
     # knowledge_dir = "../test/"
-    knowledge_file = "./1.txt"
+    knowledge_file = "./1.pdf"
     # bge-large-zh-v1.5 中文分词模型，国内网络环境可以通过 https://modelscope.cn/models/BAAI/bge-large-zh-v1.5 下载
     embedding_model = "../bge-large-zh-v1.5"
     vector_file = "./faiss_index"
@@ -34,16 +34,16 @@ def vectoring():
     # 加载知识库文件
     logger.info("load local doc {}".format(knowledge_file))
     # load word, PDF file
-    # loader = UnstructuredLoader(file)
+    loader = UnstructuredLoader(knowledge_file)
     # load txt file
-    loader = TextLoader(knowledge_file, encoding='utf8')
+    # loader = TextLoader(knowledge_file, encoding='utf8')
     # load a directory
     # loader = DirectoryLoader(path=knowledge_dir, recursive=True, load_hidden=False,
     #                          loader_cls=TextLoader, glob="**/*.java")
     documents = loader.load()
-    logger.info("loaded {} files, files name list as following".format(len(documents)))
+    logger.info("loaded {} documents, files name list as following".format(len(documents)))
     for doc in documents:
-        print("\t\t{}".format(doc.metadata.get("source")))
+        print(f"\t{doc.metadata}\t{doc.page_content}")
 
     # 将文档分割成块
     logger.info("split doc")
