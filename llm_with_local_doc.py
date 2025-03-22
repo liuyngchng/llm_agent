@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from semantic_search import search
+from semantic_search import search,start_ollama
 
 import logging.config
 
@@ -18,8 +18,9 @@ def test_req():
     my_question = "户内拆改迁移服务该怎么做?"
     logger.info("invoke question: {}".format(my_question))
     answer = search(my_question)
-    logger.info("answer is {}".format(answer))
+    logger.info(f"answer is {answer}")
 
 
 if __name__ == '__main__':
+    start_ollama()
     test_req()
