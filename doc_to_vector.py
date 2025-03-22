@@ -47,7 +47,7 @@ def vectoring():
 
     # 将文档分割成块
     logger.info("split doc")
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=10, separators=['\n\n'])
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=10, separators=['。','\n\n'])
     texts = text_splitter.split_documents(documents)
 
     # 加载Embedding模型，进行自然语言处理
