@@ -16,6 +16,7 @@ import socket
 import faiss
 import torch
 import httpx
+from numpy.f2py.auxfuncs import throw_error
 
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
@@ -74,8 +75,10 @@ def get_vector_db() -> FAISS:
             vector_db = FAISS.load_local(idx,
                                          HuggingFaceEmbeddings(model_name=emb_name),
                                          allow_dangerous_deserialization=True)
+            return vector_db
         except Exception as e:
             logger.error("load index failed: {}".format(e))
+            raise e
     else:
         logger.info("create idx")
         loader = PyPDFLoader(doc)
@@ -85,7 +88,7 @@ def get_vector_db() -> FAISS:
         embeddings = HuggingFaceEmbeddings(model_name=emb_name)
         vector_db = FAISS.from_documents(texts, embeddings)
         vector_db.save_local(idx)
-    return vector_db
+        return vector_db
 
 
 def search(question: str, is_remote=False) -> Union[str, list[Union[str, dict]]]:
