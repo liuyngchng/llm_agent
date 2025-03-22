@@ -91,11 +91,12 @@ def get_vector_db() -> FAISS:
 def search(question: str, is_remote=False) -> Union[str, list[Union[str, dict]]]:
     logger.info("sim_search [{}] in doc {}".format(question, doc))
     # 搜索部分
-    docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(question, k=2)
+    docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(question, k=5)
 
     # 输出结果和相关性分数
-    # for doc, score in docs_with_scores:
-    #     print(f"[相关度：{score:.2f}] {doc.page_content[:200]}...")
+    for related_doc, score in docs_with_scores:
+        # logger.info(f"[相关度：{score:.2f}]\t{related_doc.page_content[:200]}...")
+        logger.info(f"[相关度：{score:.2f}]\t{related_doc.page_content}")
     # 构建增强提示
     template = """基于以下上下文：
         {context}

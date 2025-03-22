@@ -6,7 +6,7 @@
 """
 
 from langchain_community.document_loaders import TextLoader
-from langchain_text_splitters import CharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 # from langchain_community.vectorstores import SQLiteVSS
@@ -43,11 +43,11 @@ def vectoring():
     documents = loader.load()
     logger.info("loaded {} documents, files name list as following".format(len(documents)))
     for doc in documents:
-        print(f"\t{doc.metadata}\t{doc.page_content}")
+        print(f"\t{doc.metadata["page_number"]}\t{doc.page_content}")
 
     # 将文档分割成块
     logger.info("split doc")
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=10, separators=['\n\n'])
     texts = text_splitter.split_documents(documents)
 
     # 加载Embedding模型，进行自然语言处理
