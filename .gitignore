@@ -25,5 +25,5 @@ sqlite_vss
 **/*.tar.gz
 **/*.config
 **/*.cfg
-**/*.db
+#**/*.db
 **/*.json

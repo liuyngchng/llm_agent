@@ -115,7 +115,7 @@ def first_tool_call(state: State) -> dict[str, list[AIMessage]]:
 def model_get_schema_call(state: State) -> dict[str, list[AIMessage]]:
     # print("input_in_model_get_schema_call:", state)
     # Add a node for a model to choose the relevant tables based on the question and available tables
-    model_get_schema = ChatOllama(model="llama3.2:3B", temperature=0).bind_tools(
+    model_get_schema = ChatOllama(model="llama3.1:8b", temperature=0).bind_tools(
         [get_schema_tool]
     )
     # print('model_get_schema_invoke({})'.format(state["messages"][2].content))
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     print("db tables is: {}".format(db.get_usable_table_names()))
     db.run("SELECT * FROM customer_info LIMIT 10;")
 
-    toolkit = SQLDatabaseToolkit(db=db, llm=ChatOllama(model="llama3.2:3B"))
+    toolkit = SQLDatabaseToolkit(db=db, llm=ChatOllama(model="llama3.1:8b"))
     toolkit_tools = toolkit.get_tools()
 
     list_tables_tool = next(tool for tool in toolkit_tools if tool.name == "sql_db_list_tables")
@@ -220,7 +220,7 @@ if __name__ == "__main__":
     query_check_prompt = ChatPromptTemplate.from_messages(
         [("system", query_check_system), ("placeholder", "{messages}")]
     )
-    query_check = query_check_prompt | ChatOllama(model="llama3.2:3B", temperature=0).bind_tools(
+    query_check = query_check_prompt | ChatOllama(model="llama3.1:8b", temperature=0).bind_tools(
         [db_query_tool], tool_choice="required"
     )
 
@@ -272,7 +272,7 @@ if __name__ == "__main__":
     query_gen_prompt = ChatPromptTemplate.from_messages(
         [("system", query_gen_system), ("placeholder", "{messages}")]
     )
-    query_gen = query_gen_prompt | ChatOllama(model="llama3.2:3B", temperature=0).bind_tools(
+    query_gen = query_gen_prompt | ChatOllama(model="llama3.1:8b", temperature=0).bind_tools(
         [SubmitFinalAnswer]
     )
 
@@ -302,15 +302,15 @@ if __name__ == "__main__":
     app = workflow.compile()
     img_name = "{}.png".format(__file__.split("/")[-1])
     #print("save the graph to local file {}".format(img_name))
-    #app.get_graph().draw_png(img_name)
-    user_question = "查询姓名为 Manoj 的客户地址"
+    #app.get_graph().draw_png(img_na信息me)
+    user_question = "查询张三2025年的订单详细信息"
     print("question is: {}".format(user_question))
     messages = app.invoke(
         {"messages": [("user", user_question)]}, {"recursion_limit":100 }
     )
     # json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
     json_str = messages["messages"][-1].content
-    # print("SQL is : {}".format(json_str))
+    print("SQL is : {}".format(json_str))
     print("answer is: {}".format(db_query_tool.invoke(json_str)))
 
 
