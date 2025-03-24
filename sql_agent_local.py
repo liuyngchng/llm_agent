@@ -118,11 +118,11 @@ def model_get_schema_call(state: State) -> dict[str, list[AIMessage]]:
     model_get_schema = ChatOllama(model="llama3.1:8b", temperature=0).bind_tools(
         [get_schema_tool]
     )
-    # print('model_get_schema_invoke({})'.format(state["messages"][2].content))
+    print('model_get_schema_invoke({})'.format(state["messages"][2].content))
     model_get_schema_call_result = {
         "messages": [model_get_schema.invoke(state["messages"][2].content)]
     }
-    # print("output_in_model_get_schema_call:", model_get_schema_call_result)
+    print("output_in_model_get_schema_call:", model_get_schema_call_result)
     return model_get_schema_call_result
 
 def model_check_query(state: State) -> dict[str, list[AIMessage]]:
