@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import httpx
+
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_community.utilities import SQLDatabase
 from typing import Any
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableLambda, RunnableWithFallbacks
-from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import ToolNode
 from langchain_core.tools import tool
 from langchain_core.prompts import ChatPromptTemplate
@@ -17,53 +16,7 @@ from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 from langgraph.graph import END, StateGraph, START
 from langgraph.graph.message import AnyMessage, add_messages
-import logging.config
 
-"""
-curl -s --noproxy '*' -X POST http://127.0.0.1:11434/api/chat -d '{
-    "model": "llama3.1:8b",
-    "messages": [
-        {"role": "user", "content": "你好，我想订一张机票。"}
-        ],
-    "stream":false
-}' | jq
-"""
-
-logging.config.fileConfig('logging.conf')
-logger = logging.getLogger(__name__)
-
-# 支持 tools 调用
-#model_name="llama3.1:8b"
-
-model_name = "deepseek-r1:7b"
-api_url = "http://127.0.0.1:11434"
-api_key = "123456789"
-
-
-def init_cfg(cfg_file="env.cfg"):
-    global api_url, api_key, model_name
-    with open(cfg_file) as f:
-        lines = f.readlines()
-    if len(lines) < 2:
-        logger.error("cfg_err_in_file_{}".format(cfg_file))
-        return
-    try:
-        api_url = lines[0].strip()
-        api_key = lines[1].strip()
-        model_name = lines[2].strip()
-        logger.info("init_cfg_info, api_url:{}, api_key:{}, model_name:{}"
-                    .format(api_url, api_key, model_name))
-    except Exception as e:
-        logger.error("init_cfg_error: {}".format(e))
-
-
-def get_llm(is_remote: False):
-    if is_remote:
-        model = ChatOpenAI(api_key=api_key, base_url=api_url,
-                           http_client=httpx.Client(verify=False), model=model_name)
-    else:
-        model = ChatOllama(model=model_name, base_url=api_url)
-    return model
 
 # Define the state for the agent
 class State(TypedDict):
@@ -162,17 +115,14 @@ def first_tool_call(state: State) -> dict[str, list[AIMessage]]:
 def model_get_schema_call(state: State) -> dict[str, list[AIMessage]]:
     # print("input_in_model_get_schema_call:", state)
     # Add a node for a model to choose the relevant tables based on the question and available tables
-    # just for localhost call
-    # model_get_schema = ChatOllama(model="llama3.1:8b", temperature=0).bind_tools(
-    #     [get_schema_tool]
-    # )
-    model_get_schema = get_llm(is_remote=True)
-
-    logger.info('model_get_schema_invoke({})'.format(state["messages"][-1].content))
+    model_get_schema = ChatOllama(model="llama3.1:8b", temperature=0).bind_tools(
+        [get_schema_tool]
+    )
+    # print('model_get_schema_invoke({})'.format(state["messages"][2].content))
     model_get_schema_call_result = {
-        "messages": [model_get_schema.invoke(state["messages"][-1].content)]
+        "messages": [model_get_schema.invoke(state["messages"][2].content)]
     }
-    logger.info("output_in_model_get_schema_call:", model_get_schema_call_result)
+    # print("output_in_model_get_schema_call:", model_get_schema_call_result)
     return model_get_schema_call_result
 
 def model_check_query(state: State) -> dict[str, list[AIMessage]]:
@@ -219,9 +169,8 @@ if __name__ == "__main__":
     give LLM a JDBC uri, let it get the database and table schema.
     LLM read the database schema, and get the information.
     a question input about the information in DB will be turned into a SQL query,
-    then data retrieved from DB returned back from LLM to user.
+    then data retrieved from DB returned back from LLM.
     """
-    init_cfg()
     # use SQLite DB
     db = SQLDatabase.from_uri("sqlite:///test2.db")
 
@@ -231,17 +180,11 @@ if __name__ == "__main__":
     # db_host = "127.0.0.1"
     # db_name = "test"
     # db = SQLDatabase.from_uri("mysql+pymysql://{}:{}@{}/{}".format(db_user, db_password, db_host, db_name))
-    logger.info("db dialect is: {}".format(db.dialect))
-    logger.info("db tables is: {}".format(db.get_usable_table_names()))
+    print("db dialect is: {}".format(db.dialect))
+    print("db tables is: {}".format(db.get_usable_table_names()))
+    db.run("SELECT * FROM customer_info LIMIT 10;")
 
-    # just for test purpose only to check whether DB Uri is OK.
-    # db.run("SELECT * FROM customer_info LIMIT 10;")
-
-    toolkit = SQLDatabaseToolkit(db=db,
-                                 # llm=ChatOllama(model="llama3.1:8b", base_uri=""),
-                                 llm = get_llm(is_remote=True),
-
-                                 )
+    toolkit = SQLDatabaseToolkit(db=db, llm=ChatOllama(model="llama3.1:8b"))
     toolkit_tools = toolkit.get_tools()
 
     list_tables_tool = next(tool for tool in toolkit_tools if tool.name == "sql_db_list_tables")
@@ -260,11 +203,6 @@ if __name__ == "__main__":
     # print(db_query_tool.invoke("SELECT * FROM customer_info LIMIT 3;"))
 
     query_check_system = """You are a SQLite expert with a strong attention to detail.
-    
-    You are a helpful assistant with tool calling capabilities.
-    
-    When you receive a tool call response, use the output to format an answer to the orginal user question.
-
     Double check the SQLite query for common mistakes, including:
     - Using NOT IN with NULL values
     - Using UNION when UNION ALL should have been used
@@ -282,11 +220,7 @@ if __name__ == "__main__":
     query_check_prompt = ChatPromptTemplate.from_messages(
         [("system", query_check_system), ("placeholder", "{messages}")]
     )
-    # query_check = query_check_prompt |ChatOllama(model="llama3.1:8b", temperature=0).bind_tools(
-    #     [db_query_tool], tool_choice="required"
-    # )
-
-    query_check = query_check_prompt | get_llm(is_remote=True).bind_tools(
+    query_check = query_check_prompt | ChatOllama(model="llama3.1:8b", temperature=0).bind_tools(
         [db_query_tool], tool_choice="required"
     )
 
@@ -315,10 +249,6 @@ if __name__ == "__main__":
     # Add a node for a model to generate a query based on the question and schema
     query_gen_system = """You are a SQLite database expert with a strong attention to detail.
     
-    When you receive a tool call response, use the output to format an answer to the orginal user question.
-
-    You are a helpful assistant with tool calling capabilities.
-
     Given an input question, output a syntactically correct SQLite query to run, then look at the results of the query and return the answer.
     
     DO NOT call any tool besides SubmitFinalAnswer to submit the final answer.
@@ -342,10 +272,7 @@ if __name__ == "__main__":
     query_gen_prompt = ChatPromptTemplate.from_messages(
         [("system", query_gen_system), ("placeholder", "{messages}")]
     )
-    # query_gen = query_gen_prompt | ChatOllama(model="llama3.1:8b", temperature=0).bind_tools(
-    #     [SubmitFinalAnswer]
-    # )
-    query_gen = query_gen_prompt | get_llm(is_remote=True).bind_tools(
+    query_gen = query_gen_prompt | ChatOllama(model="llama3.1:8b", temperature=0).bind_tools(
         [SubmitFinalAnswer]
     )
 
@@ -377,14 +304,14 @@ if __name__ == "__main__":
     #print("save the graph to local file {}".format(img_name))
     #app.get_graph().draw_png(img_na信息me)
     user_question = "查询张三2025年的订单详细信息"
-    logger.info("question is: {}".format(user_question))
+    print("question is: {}".format(user_question))
     messages = app.invoke(
         {"messages": [("user", user_question)]}, {"recursion_limit":100 }
     )
     # json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
     json_str = messages["messages"][-1].content
-    logger.info("SQL is : {}".format(json_str))
-    logger.info("answer is: {}".format(db_query_tool.invoke(json_str)))
+    print("SQL is : {}".format(json_str))
+    print("answer is: {}".format(db_query_tool.invoke(json_str)))
 
 
     # for event in app.stream(

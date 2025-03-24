@@ -16,7 +16,6 @@ import socket
 import faiss
 import torch
 import httpx
-from numpy.f2py.auxfuncs import throw_error
 
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
