@@ -1,11 +1,11 @@
-FROM ubuntu:22.04 
+FROM ubuntu:24.02 
 
 WORKDIR /opt
 ARG PROXY=""
 ARG PROXY=" -i http:///root/pypi/+simple --trusted-host devpi.11.11.77.81.nip.io"
 #ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple"
 RUN apt-get update
-RUN apt-get -y install python3.10 python3.10-dev python3-pip virtualenv vim curl gcc g++ tesseract-ocr
+RUN apt-get -y install python3.10 python3.10-dev python3-pip virtualenv vim curl gcc g++ tesseract-ocr fonts-noto-color-emoji
 RUN virtualenv llm_py_env
 #RUN pwd
 #RUN ls llm_py_env/bin/activate
