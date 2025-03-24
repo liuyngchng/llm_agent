@@ -43,7 +43,8 @@ def vectoring():
     documents = loader.load()
     logger.info("loaded {} documents, files name list as following".format(len(documents)))
     for doc in documents:
-        print(f"\t{doc.metadata["page_number"]}\t{doc.page_content}")
+        #print(f"\t{doc.metadata['page_number']}\t{doc.page_content}")
+        print(f"{doc.page_content}")
 
     # 将文档分割成块
     logger.info("split doc")
