@@ -59,8 +59,11 @@ def init_cfg(cfg_file="env.cfg"):
 
 def get_llm(is_remote: False):
     if is_remote:
-        model = ChatOpenAI(api_key=api_key, base_url=api_url,
-                           http_client=httpx.Client(verify=False), model=model_name)
+        if "https" in api_url:
+            model = ChatOpenAI(api_key=api_key, base_url=api_url,
+                               http_client=httpx.Client(verify=False), model=model_name)
+        else:
+            model = ChatOllama(model=model_name, base_url=api_url)
     else:
         model = ChatOllama(model=model_name, base_url=api_url)
     return model
