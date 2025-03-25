@@ -59,10 +59,13 @@ def init_cfg(cfg_file="env.cfg"):
 
 def get_llm(is_remote: False):
     if is_remote:
-        model = ChatOpenAI(api_key=api_key, base_url=api_url,
-                           http_client=httpx.Client(verify=False), model=model_name)
+        if "https" in api_url:
+            model = ChatOpenAI(api_key=api_key, base_url=api_url,
+                               http_client=httpx.Client(verify=False), model=model_name, temperature=0)
+        else:
+            model = ChatOllama(model=model_name, base_url=api_url, temperature=0)
     else:
-        model = ChatOllama(model=model_name, base_url=api_url)
+        model = ChatOllama(model=model_name, base_url=api_url, temperature=0)
     return model
 
 # Define the state for the agent
@@ -146,7 +149,7 @@ def first_tool_call(state: State) -> dict[str, list[AIMessage]]:
                     {
                         "name": "sql_db_list_tables",
                         "args": {},
-                        "id": "tool_abcd123",
+                        "id": "sql_db_list_tables",
                     }
                 ],
             )
@@ -163,16 +166,18 @@ def model_get_schema_call(state: State) -> dict[str, list[AIMessage]]:
     # print("input_in_model_get_schema_call:", state)
     # Add a node for a model to choose the relevant tables based on the question and available tables
     # just for localhost call
-    # model_get_schema = ChatOllama(model="llama3.1:8b", temperature=0).bind_tools(
+    # model_get_schema = ChatOllama(model="llama3.1:8b", base_url=api_url, temperature=0).bind_tools(
     #     [get_schema_tool]
     # )
-    model_get_schema = get_llm(is_remote=True)
+    model_get_schema = get_llm(is_remote=True).bind_tools(
+            [get_schema_tool]
+    )
 
-    logger.info('model_get_schema_invoke({})'.format(state["messages"][-1].content))
+    logger.debug('model_get_schema_invoke({})'.format(state["messages"][-1].content))
     model_get_schema_call_result = {
         "messages": [model_get_schema.invoke(state["messages"][-1].content)]
     }
-    logger.info("output_in_model_get_schema_call:", model_get_schema_call_result)
+    logger.debug("output_in_model_get_schema_call:", model_get_schema_call_result)
     return model_get_schema_call_result
 
 def model_check_query(state: State) -> dict[str, list[AIMessage]]:
@@ -231,8 +236,8 @@ if __name__ == "__main__":
     # db_host = "127.0.0.1"
     # db_name = "test"
     # db = SQLDatabase.from_uri("mysql+pymysql://{}:{}@{}/{}".format(db_user, db_password, db_host, db_name))
-    logger.info("db dialect is: {}".format(db.dialect))
-    logger.info("db tables is: {}".format(db.get_usable_table_names()))
+    logger.debug("db dialect is: {}".format(db.dialect))
+    logger.debug("db tables is: {}".format(db.get_usable_table_names()))
 
     # just for test purpose only to check whether DB Uri is OK.
     # db.run("SELECT * FROM customer_info LIMIT 10;")
@@ -383,7 +388,7 @@ if __name__ == "__main__":
     )
     # json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
     json_str = messages["messages"][-1].content
-    logger.info("SQL is : {}".format(json_str))
+    logger.debug("SQL is : {}".format(json_str))
     logger.info("answer is: {}".format(db_query_tool.invoke(json_str)))
 
 
