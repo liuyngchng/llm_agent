@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -5,6 +7,7 @@ from sentence_transformers import SentenceTransformer
 
 def embed(model, documents):
     """
+
     embedding document
     """
 
