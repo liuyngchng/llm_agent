@@ -23,7 +23,7 @@ doc = "1.pdf"
 emb_name = os.path.abspath("../bge-large-zh-v1.5")
 idx = "faiss_index"
 
-model_name = "deepseek-r1:7b"
+model_name = "deepseek-r1"
 api_url = "http://127.0.0.1:11434"
 api_key = "123456789"
 
