@@ -17,26 +17,27 @@ from langchain_core.documents import Document
 import logging.config
 import os
 
+# knowledge_dir = "../test/"
+knowledge_file = "./1.pdf"
+# bge-large-zh-v1.5 中文分词模型，国内网络环境可以通过 https://modelscope.cn/models/BAAI/bge-large-zh-v1.5 下载
+embedding_model = "../bge-large-zh-v1.5"
+vector_file = "./faiss_index"
 
-def vectoring():
-    # knowledge_dir = "../test/"
-    knowledge_file = "./1.pdf"
-    # bge-large-zh-v1.5 中文分词模型，国内网络环境可以通过 https://modelscope.cn/models/BAAI/bge-large-zh-v1.5 下载
-    embedding_model = "../bge-large-zh-v1.5"
-    vector_file = "./faiss_index"
+# 加载配置
+logging.config.fileConfig('logging.conf')
 
-    # 加载配置
-    logging.config.fileConfig('logging.conf')
+# 创建 logger
+logger = logging.getLogger(__name__)
 
-    # 创建 logger
-    logger = logging.getLogger(__name__)
+def vectoring(file: str):
+
 
     # 加载知识库文件
-    logger.info("load local doc {}".format(knowledge_file))
+    logger.info("load local doc {}".format(file))
     # load word, PDF file
-    loader = UnstructuredLoader(knowledge_file)
+    loader = UnstructuredLoader(file)
     # load txt file
-    # loader = TextLoader(knowledge_file, encoding='utf8')
+    # loader = TextLoader(file, encoding='utf8')
     # load a directory
     # loader = DirectoryLoader(path=knowledge_dir, recursive=True, load_hidden=False,
     #                          loader_cls=TextLoader, glob="**/*.java")
@@ -90,7 +91,5 @@ if __name__ == "__main__":
     # print(a)
 
     # os.environ["CUDA_VISIBLE_DEVICES"] = 0
-    a = "hello"
-    a += " world"
-    a
-    vectoring()
+
+    vectoring(knowledge_file)
