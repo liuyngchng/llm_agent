@@ -11,7 +11,7 @@ class Joke(BaseModel):
     punchline: str = Field(description="answer to resolve the joke")
 
 def get_chain():
-    chat_model = ChatOllama(model="llama3.2:3B", temperature=0)
+    chat_model = ChatOllama(model="llama3.1", temperature=0)
 
     joke_query = "Tell me a joke."
 

@@ -5,7 +5,7 @@ from langgraph.graph import StateGraph, START, END
 from langchain_ollama import OllamaLLM
 
 # 初始化模型
-llm = OllamaLLM(model="deepseek-r1:7B", base_url='http://127.0.0.1:11434')
+llm = OllamaLLM(model="deepseek-r1", base_url='http://127.0.0.1:11434')
 
     
 # 定义图节点

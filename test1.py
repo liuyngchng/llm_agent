@@ -14,7 +14,7 @@ from langchain.chains import RetrievalQA
 from langchain_chroma import Chroma
 class VectorStoreQA:
     def __init__(self,
-                 model_name: str = "deepseek-r1:7b",
+                 model_name: str = "deepseek-r1",
                  embedding_model: str = "nomic-embed-text:latest",
                  temperature: float = 0.5,
                  k: int = 4):
@@ -155,7 +155,7 @@ class VectorStoreQA:
 if __name__ == "__main__":
     # 初始化 QA 系统
     qa_system = VectorStoreQA(
-        model_name="deepseek-r1:latest",
+        model_name="deepseek-r1",
         k=4
     )
     

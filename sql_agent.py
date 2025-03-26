@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import sqlite3
 import httpx
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_community.utilities import SQLDatabase
@@ -19,6 +20,8 @@ from langgraph.graph import END, StateGraph, START
 from langgraph.graph.message import AnyMessage, add_messages
 import logging.config
 
+import sqlite_util
+
 """
 curl -s --noproxy '*' -X POST http://127.0.0.1:11434/api/chat -d '{
     "model": "llama3.1:8b",
@@ -35,9 +38,11 @@ logger = logging.getLogger(__name__)
 # 支持 tools 调用
 #model_name="llama3.1:8b"
 
-model_name = "deepseek-r1:7b"
+model_name = "deepseek-r1"
 api_url = "http://127.0.0.1:11434"
 api_key = "123456789"
+db_file = "test2.db"
+db_uri = f"sqlite:///{db_file}"
 
 
 def init_cfg(cfg_file="env.cfg"):
@@ -228,7 +233,7 @@ if __name__ == "__main__":
     """
     init_cfg()
     # use SQLite DB
-    db = SQLDatabase.from_uri("sqlite:///test2.db")
+    db = SQLDatabase.from_uri(db_uri)
 
     # use MySQL DB
     # db_user = "test"
@@ -388,8 +393,13 @@ if __name__ == "__main__":
     )
     # json_str = messages["messages"][-1].tool_calls[0]["args"]["final_answer"]
     json_str = messages["messages"][-1].content
-    logger.debug("SQL is : {}".format(json_str))
-    logger.info("answer is: {}".format(db_query_tool.invoke(json_str)))
+    logger.debug(f"SQL is : {json_str}")
+    # answer = db_query_tool.invoke(json_str)
+    # logger.info(f"answer is: {answer}")
+    # del db
+    conn = sqlite3.connect(db_file)
+    answer = sqlite_util.output_data(conn, json_str)
+
 
 
     # for event in app.stream(

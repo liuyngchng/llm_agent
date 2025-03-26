@@ -123,7 +123,7 @@ if __name__ == "__main__":
     use a LLM tool call to retrieve information in database sqlite.
     """
     db_uri = "sqlite:///test.db"
-    # llm_name_str = "deepseekR17B"
+    # llm_name_str = "deepseek-r1"
 
     #支持 tools工具调用功能
     llm_name_str = "llama3.2:3B"

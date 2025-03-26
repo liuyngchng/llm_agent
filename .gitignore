@@ -27,3 +27,5 @@ sqlite_vss
 **/*.cfg
 #**/*.db
 **/*.json
+*.html
+*.htm
