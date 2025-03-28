@@ -43,6 +43,10 @@ api_url = "http://127.0.0.1:11434"
 api_key = "123456789"
 db_file = "test2.db"
 db_uri = f"sqlite:///{db_file}"
+question ="查询张三2025年的订单详细信息"
+# question = "查询山东天然气销售分公司2025年的订单详细信息"
+
+
 
 
 def init_cfg(cfg_file="env.cfg"):
@@ -178,11 +182,11 @@ def model_get_schema_call(state: State) -> dict[str, list[AIMessage]]:
             [get_schema_tool]
     )
 
-    logger.debug('model_get_schema_invoke({})'.format(state["messages"][-1].content))
+    logger.debug(f"model_get_schema_invoke({state["messages"][-1].content})")
     model_get_schema_call_result = {
         "messages": [model_get_schema.invoke(state["messages"][-1].content)]
     }
-    logger.debug("output_in_model_get_schema_call:", model_get_schema_call_result)
+    logger.debug(f"output_in_model_get_schema_call:{model_get_schema_call_result}")
     return model_get_schema_call_result
 
 def model_check_query(state: State) -> dict[str, list[AIMessage]]:
@@ -262,8 +266,8 @@ if __name__ == "__main__":
     # print(list_tables_tool.invoke(""))
 
     #for test get_schema_tool
-    # print("test get_schema_tool")
-    # print(get_schema_tool.invoke("customer_info"))
+    #print("test get_schema_tool")
+    #print(get_schema_tool.invoke("order_info"))
 
     # for test db_query_tool
     # print("test db_query_tool")
@@ -386,7 +390,7 @@ if __name__ == "__main__":
     img_name = "{}.png".format(__file__.split("/")[-1])
     #print("save the graph to local file {}".format(img_name))
     #app.get_graph().draw_png(img_na信息me)
-    user_question = "查询张三2025年的订单详细信息"
+    user_question = question
     logger.info("question is: {}".format(user_question))
     messages = app.invoke(
         {"messages": [("user", user_question)]}, {"recursion_limit":100 }
