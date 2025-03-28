@@ -10,7 +10,7 @@ logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
 
 def get_data(line_txt):
-    model = ChatOllama(model="llama3.1", base_url="http://127.0.0.1:11434", temperature=0)
+    model = ChatOllama(model="deepseek-r1", base_url="http://127.0.0.1:11434", temperature=0)
     template = """请生成严格遵循如下结构的纯JSON数组（不要任何非JSON内容）：：
     [{{"q":"问题1","a":"答案1"}},{{"q":"问题2","a":"答案2"}}]
     注意：1. 必须是合法JSON 2. 禁止注释 3. 使用双引号
@@ -34,7 +34,7 @@ if __name__  == "__main__":
     txt = "昆仑燃气需要服务1500万终端客户"
     result = get_data(txt)
     if result:
-        logger.info(result)
+        logger.info(f"\n{result}\n")
         logger.info(result[0]["q"])
     else:
         logger.warning("未生成有效数据")
