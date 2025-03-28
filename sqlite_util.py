@@ -15,13 +15,13 @@ def db_query_tool(db, query: str) -> str:
     except Exception as e:
         return json.dumps({"error": str(e)})
 
-def output_data(db, sql:str):
+def output_data(db, sql:str) -> str:
     result = db_query_tool(db, sql)
     # print(result)
     data = json.loads(result)
     # 生成表格
     df = pd.DataFrame(data['data'], columns=data['columns'])
-    print(df.to_markdown(index=False))  # 控制台打印美观表格
+    return df.to_markdown(index=False)  # 控制台打印美观表格
     # 生成网页表格
     # df.to_html("table.html")  # 生成可交互网页表格
 
