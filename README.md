@@ -10,6 +10,16 @@ is a SQL agent demo, used so-called TextToSQL. you can ask question about databa
 
 # 2. deploy
 
+env
+
+```sh
+Ubuntu 24.02 LTS
+Python 3.12.3
+pip 24.0
+```
+
+
+
 you can build docker file as following
 
 ```sh
@@ -35,12 +45,12 @@ docker run -dit --name test --rm --entrypoint "/opt/app/start.sh" -p 19001:19000
 
 ## 4.1 LLM
 
-test your LLM function as following
+test whether your LLM service function normally as following
 
 ```sh
 #health check for your LLM
 curl -X POST http://127.0.0.1:11434/api/generate -d '{
-	"model": "llama3.1:8b",
+	"model": "llama3.1",
 	"prompt": "hi",
 	"stream":true
 }'

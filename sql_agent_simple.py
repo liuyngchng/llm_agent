@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import re
 import sqlite3
 from typing import Dict
 from langchain_core.prompts import ChatPromptTemplate
@@ -13,8 +14,8 @@ from sqlite_util import output_data
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
 
-# model_name = "deepseek-r1"
-model_name = "llama3.1"
+model_name = "deepseek-r1"
+# model_name = "llama3.1"
 api_url = "http://127.0.0.1:11434"
 api_key = "123456789"
 db_file = "test1.db"
@@ -37,6 +38,8 @@ def init_cfg(cfg_file="env.cfg"):
     except Exception as e:
         logger.error("init_cfg_error: {}".format(e))
 
+
+
 class SQLGenerator:
 
     def __init__(self, db_uri: str):
@@ -51,10 +54,10 @@ class SQLGenerator:
 
              请严格按以下要求生成SQL：
              1. 仅输出标准SQL代码块，不要任何解释
-             2. 使用与表结构完全一致的中文字段名
+             2. 使用与表结构完全一致的中文字段名，不要使用英文字段名
              3. WHERE条件需包含公司名称和时间范围过滤
              4. 禁止包含分析过程或思考步骤
-             5. select 中禁止使用 *， 列出详细的字段名称
+             5. 查询语句中禁止用 *表示全部字段， 需列出详细的字段名称清单
              """
              ),
             ("human", "用户问题：{question}")
@@ -106,21 +109,43 @@ class SQLGenerator:
         return model
 
 
+def extract_sql(raw_sql: str) -> str:
+    # 精准匹配 ```sql...``` 代码块
+    pattern = r"```sql(.*?)```"
+    match = re.search(pattern, raw_sql, re.DOTALL)  # DOTALL模式匹配换行
+
+    if match:
+        clean_sql = match.group(1)
+        # 清理首尾空白/换行（保留分号）
+        return clean_sql.strip(" \n\t")
+    return raw_sql  # 无代码块时返回原始内容
+
+def ask_question(q:str):
+    sql =""
+    try:
+        agent = SQLGenerator(db_uri)
+        # 生成SQL
+        logger.info(f"提交的问题：{q}")
+        sql = agent.generate_sql(q)
+        sql = extract_sql(sql)
+        logger.debug(f"生成的SQL：\n\n{sql}\n")
+
+        # 执行查询
+        # result = agent.execute_query(sql)
+        # if result["success"]:
+        #     logger.info(f"查询结果：\n{result["data"]}")
+        # else:
+        #     logger.error(f"查询失败：{result['error']}")
+        conn = sqlite3.connect(db_file)
+        result = output_data(conn, sql)
+        logger.info(f"输出数据:\n{result}")
+    except Exception as e:
+        logger.error(f"error, {e}， sql: {sql}")
+
 if __name__ == "__main__":
     init_cfg()
-    agent = SQLGenerator(db_uri)
-    # 生成SQL
-    logger.info(f"提交问题：{question}")
-    sql = agent.generate_sql(question)
-    sql= sql.replace("```", "").replace("[SQL:", "").replace("]","")
-    logger.debug(f"生成的SQL：\n\n{sql}\n")
-
-    # 执行查询
-    # result = agent.execute_query(sql)
-    # if result["success"]:
-    #     logger.info(f"查询结果：\n{result["data"]}")
-    # else:
-    #     logger.error(f"查询失败：{result['error']}")
-    conn = sqlite3.connect(db_file)
-    result = output_data(conn, sql)
-    logger.info(f"输出数据:\n{result}")
+    while True:
+        input_q = input("请输入您的问题(输入q退出)：")
+        if input_q == "q":
+            exit(0)
+        ask_question(input_q)
