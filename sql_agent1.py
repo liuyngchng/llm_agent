@@ -21,6 +21,22 @@ db_file = "test1.db"
 db_uri = f"sqlite:///{db_file}"
 question ="查询山东天然气销售分公司的订单详细信息"
 
+def init_cfg(cfg_file="env.cfg"):
+    global api_url, api_key, model_name
+    with open(cfg_file) as f:
+        lines = f.readlines()
+    if len(lines) < 2:
+        logger.error("cfg_err_in_file_{}".format(cfg_file))
+        return
+    try:
+        api_url = lines[0].strip()
+        api_key = lines[1].strip()
+        model_name = lines[2].strip()
+        logger.info("init_cfg_info, api_url:{}, api_key:{}, model_name:{}"
+                    .format(api_url, api_key, model_name))
+    except Exception as e:
+        logger.error("init_cfg_error: {}".format(e))
+
 class SQLGenerator:
 
     def __init__(self, db_uri: str):
@@ -91,8 +107,7 @@ class SQLGenerator:
 
 
 if __name__ == "__main__":
-    # 使用示例
-    db_uri = "sqlite:///test1.db"
+    init_cfg()
     agent = SQLGenerator(db_uri)
     # 生成SQL
     logger.info(f"提交问题：{question}")
