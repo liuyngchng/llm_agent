@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import os
 import re
 import sqlite3
 from typing import Dict
@@ -14,37 +15,39 @@ from sqlite_util import output_data
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
 
-model_name = "deepseek-r1"
-# model_name = "llama3.1"
-api_url = "http://127.0.0.1:11434"
-api_key = "123456789"
-db_file = "test1.db"
-db_uri = f"sqlite:///{db_file}"
-question ="查询山东天然气销售分公司的订单详细信息"
+# model_name = "deepseek-r1"
+# # model_name = "llama3.1"
+# api_uri = "http://127.0.0.1:11434"
+# api_key = "123456789"
 
-def init_cfg(cfg_file="env.cfg"):
-    global api_url, api_key, model_name
+# question ="查询山东天然气销售分公司的订单详细信息"
+
+def init_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
+    # global api_uri, api_key, model_name
+    _my_cfg = {"api_uri":"http://127.0.0.1:11434", "api_key":"", "model_name":"deepseek-r1"}
     with open(cfg_file) as f:
         lines = f.readlines()
     if len(lines) < 2:
         logger.error("cfg_err_in_file_{}".format(cfg_file))
-        return
+        return _my_cfg
     try:
-        api_url = lines[0].strip()
-        api_key = lines[1].strip()
-        model_name = lines[2].strip()
-        logger.info("init_cfg_info, api_url:{}, api_key:{}, model_name:{}"
-                    .format(api_url, api_key, model_name))
+        _my_cfg["api_uri"] = lines[0].strip()
+        _my_cfg["api_key"] = lines[1].strip()
+        _my_cfg["model_name"] = lines[2].strip()
+        logger.info(f"init_cfg_info, {_my_cfg}")
     except Exception as e:
         logger.error("init_cfg_error: {}".format(e))
-
-
+    return _my_cfg
 
 class SQLGenerator:
 
-    def __init__(self, db_uri: str):
+    def __init__(self, db_uri: str, api_uri: str, api_key:str, model_name:str, is_remote_model:bool):
         self.db = SQLDatabase.from_uri(db_uri)
-        self.llm = self.get_llm(False)
+        self.api_uri = api_uri
+        self.api_key = api_key
+        self.model_name = model_name
+        self.is_remote_model = is_remote_model
+        self.llm = self.get_llm()
 
         # 带数据库结构的提示模板
         self.prompt_template = ChatPromptTemplate.from_messages([
@@ -96,16 +99,20 @@ class SQLGenerator:
             ])
         return "\n".join(schema_entries)
 
-    @staticmethod
-    def get_llm(is_remote: False):
-        if is_remote:
-            if "https" in api_url:
-                model = ChatOpenAI(api_key=api_key, base_url=api_url,
-                                   http_client=httpx.Client(verify=False), model=model_name, temperature=0)
+    def get_llm(self):
+        if self.is_remote_model:
+            if "https" in self.api_uri:
+                model = ChatOpenAI(api_key=self.api_key,
+                                   base_url=self.api_uri,
+                                   http_client=httpx.Client(verify=False, proxy=None),
+                                   model=self.model_name,
+                                   temperature=0
+                                   )
             else:
-                model = ChatOllama(model=model_name, base_url=api_url, temperature=0)
+                model = ChatOllama(model=self.model_name, base_url=self.api_uri, temperature=0)
         else:
-            model = ChatOllama(model=model_name, base_url=api_url, temperature=0)
+            model = ChatOllama(model=self.model_name, base_url=self.api_uri, temperature=0)
+        logger.debug(f"model type {type(model)}, model: {model}")
         return model
 
 
@@ -120,15 +127,16 @@ def extract_sql(raw_sql: str) -> str:
         return clean_sql.strip(" \n\t")
     return raw_sql  # 无代码块时返回原始内容
 
-def ask_question(q:str):
+def ask_question(q: str, db_uri: str, api_uri:str, api_key: str, model_name: str, is_remote_model: bool):
     sql =""
     try:
-        agent = SQLGenerator(db_uri)
+        agent = SQLGenerator(db_uri, api_uri, api_key, model_name, is_remote_model)
         # 生成SQL
         logger.info(f"提交的问题：{q}")
         sql = agent.generate_sql(q)
+        logger.debug(f"generate_sql {sql}")
         sql = extract_sql(sql)
-        logger.debug(f"生成的SQL：\n\n{sql}\n")
+        logger.debug(f"extract_sql sql\n\n {sql}\n")
 
         # 执行查询
         # result = agent.execute_query(sql)
@@ -137,15 +145,20 @@ def ask_question(q:str):
         # else:
         #     logger.error(f"查询失败：{result['error']}")
         conn = sqlite3.connect(db_file)
+        logger.debug(f"connect to db {db_file}")
         result = output_data(conn, sql)
         logger.info(f"输出数据:\n{result}")
     except Exception as e:
         logger.error(f"error, {e}， sql: {sql}")
 
 if __name__ == "__main__":
-    init_cfg()
-    while True:
-        input_q = input("请输入您的问题(输入q退出)：")
-        if input_q == "q":
-            exit(0)
-        ask_question(input_q)
+    os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
+    my_cfg = init_cfg()
+    db_file = "test1.db"
+    db_uri = f"sqlite:///{db_file}"
+    # while True:
+    #     input_q = input("请输入您的问题(输入q退出)：")
+    #     if input_q == "q":
+    #         exit(0)
+    input_q = "查询2025年的数据"
+    ask_question(input_q, db_uri, my_cfg["api_uri"], my_cfg['api_key'], my_cfg['model_name'], True)
