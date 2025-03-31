@@ -97,7 +97,7 @@ def query_data():
     answer = ask_question(msg, db_uri, api_uri, api_key, model_name, True)
 
     if not answer:
-        answer="没有查询到数据，请您尝试换个问题提问"
+        answer="没有查询到相关数据，请您尝试换个问题提问"
     logger.info("answer is：{}".format(answer))
     return answer
 
