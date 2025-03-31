@@ -158,7 +158,7 @@ def ask_question(q: str, db_uri: str, api_uri:str, api_key: str, model_name: str
         else:
             logger.warning("other data type need to be done")
     except Exception as e:
-        logger.error(f"error, {e}， sql: {sql}")
+        logger.error(f"error, {e}，sql: {sql}", exc_info=True)
     return dt
 if __name__ == "__main__":
     os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
