@@ -93,6 +93,9 @@ def query_data():
     #answer = search(msg, True)
     db_file = "test1.db"
     db_uri = f"sqlite:///{db_file}"
+    req_db_uri = request.form.get('db_uri')
+    if req_db_uri:
+        db_uri = req_db_uri
     logger.info(f"ask_question({msg}, {db_uri}, {api_uri}, {api_key}, {model_name}, True)")
     answer = ask_question(msg, db_uri, api_uri, api_key, model_name, True)
 
