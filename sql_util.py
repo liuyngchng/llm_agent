@@ -8,27 +8,11 @@ import pandas as pd
 import logging.config
 
 from urllib.parse import urlparse, unquote
+from sys_init import init_cfg
 
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
 
-def init_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
-    # global api_uri, api_key, model_name
-    _my_cfg = {"api_uri":"http://127.0.0.1:11434", "api_key":"", "model_name":"deepseek-r1"}
-    with open(cfg_file) as f:
-        lines = f.readlines()
-    if len(lines) < 2:
-        logger.error("cfg_err_in_file_{}".format(cfg_file))
-        return _my_cfg
-    try:
-        _my_cfg["api_uri"] = lines[0].strip()
-        _my_cfg["api_key"] = lines[1].strip()
-        _my_cfg["model_name"] = lines[2].strip()
-        _my_cfg["db_uri"]= lines[3].strip()
-        logger.info(f"init_cfg_info, {_my_cfg}")
-    except Exception as e:
-        logger.error(f"init_cfg_error: {e}")
-    return _my_cfg
 
 def mysql_query_tool(db_con, query: str) -> str:
     try:

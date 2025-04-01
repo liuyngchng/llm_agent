@@ -10,6 +10,7 @@ import os
 from flask import Flask, request, jsonify, render_template
 from semantic_search import search
 from sql_agent import ask_question
+from sys_init import init_cfg
 
 # 加载配置
 logging.config.fileConfig('logging.conf')
@@ -22,24 +23,6 @@ app = Flask(__name__)
 api_uri = ""
 api_key = ""
 model_name = ""
-def init_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
-    # global api_uri, api_key, model_name
-    _my_cfg = {"api_uri":"http://127.0.0.1:11434", "api_key":"", "model_name":"deepseek-r1"}
-    with open(cfg_file) as f:
-        lines = f.readlines()
-    if len(lines) < 2:
-        logger.error("cfg_err_in_file_{}".format(cfg_file))
-        return _my_cfg
-    try:
-        _my_cfg["api_uri"] = lines[0].strip()
-        _my_cfg["api_key"] = lines[1].strip()
-        _my_cfg["model_name"] = lines[2].strip()
-        if lines[3]:
-            _my_cfg["db_uri"]= lines[3].strip()
-        logger.info(f"init_cfg_info, {_my_cfg}")
-    except Exception as e:
-        logger.error("init_cfg_error: {}".format(e))
-    return _my_cfg
 
 @app.route('/rag', methods=['GET'])
 def rag_index():

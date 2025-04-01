@@ -17,6 +17,8 @@ import faiss
 import torch
 import httpx
 
+from sys_init import init_cfg
+
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
 doc = "1.pdf"
@@ -27,22 +29,6 @@ model_name = "deepseek-r1"
 api_url = "http://127.0.0.1:11434"
 api_key = "123456789"
 
-
-def init_cfg(cfg_file="env.cfg"):
-    global api_url, api_key, model_name
-    with open(cfg_file) as f:
-        lines = f.readlines()
-    if len(lines) < 2:
-        logger.error("cfg_err_in_file_{}".format(cfg_file))
-        return
-    try:
-        api_url = lines[0].strip()
-        api_key = lines[1].strip()
-        model_name = lines[2].strip()
-        logger.info("init_cfg_info, api_url:{}, api_key:{}, model_name:{}"
-                    .format(api_url, api_key, model_name))
-    except Exception as e:
-        logger.error("init_cfg_error: {}".format(e))
 
 
 def is_ollama_running(port=11434):
