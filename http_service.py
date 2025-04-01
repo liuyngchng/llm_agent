@@ -34,6 +34,8 @@ def init_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
         _my_cfg["api_uri"] = lines[0].strip()
         _my_cfg["api_key"] = lines[1].strip()
         _my_cfg["model_name"] = lines[2].strip()
+        if lines[3]:
+            _my_cfg["db_uri"]= lines[3].strip()
         logger.info(f"init_cfg_info, {_my_cfg}")
     except Exception as e:
         logger.error("init_cfg_error: {}".format(e))
@@ -104,11 +106,20 @@ def query_data():
 
     return answer
 
-def test_query_data():
+def test_query_data(db_uri: str):
+    """
+    for test purpose only
+    """
     msg = "查询2025年的数据"
     logger.info(f"rcv_msg: {msg}")
-    db_file = "test1.db"
-    db_uri = f"sqlite:///{db_file}"
+
+    # for sqlite
+    # db_file = "test1.db"
+    # db_uri = f"sqlite:///{db_file}"
+
+    # for MySQL
+    # db_uri = "mysql+pymysql://db_user:db_password@db_host/db_name"
+
     logger.info(f"ask_question({msg}, {db_uri}, {api_uri}, {api_key}, {model_name}, True)")
     answer = ask_question(msg, db_uri, api_uri, api_key, model_name, True)
 
@@ -141,7 +152,8 @@ if __name__ == '__main__':
     api_uri = my_cfg["api_uri"]
     api_key = my_cfg["api_key"]
     model_name = my_cfg["model_name"]
-    logger.info(f"api_uri {api_uri}, api_key {api_key}, model_name {model_name}")
+    my_db_uri = my_cfg["db_uri"]
+    logger.info(f"api_uri {api_uri}, api_key {api_key}, model_name {model_name}, my_db_uri {my_db_uri}")
 
-    # test_query_data()
-    app.run(host='0.0.0.0', port=19000)
+    test_query_data(my_db_uri)
+    # app.run(host='0.0.0.0', port=19000)

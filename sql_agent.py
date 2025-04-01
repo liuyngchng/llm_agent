@@ -4,15 +4,17 @@ import os
 import re
 import sqlite3
 from typing import Dict
+from urllib.parse import urlparse
+
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.utilities import SQLDatabase
 from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
 import logging.config
 import httpx
-from sqlite_util import output_data
+from sql_util import output_data
 """
-pip install langchain_openai langchain_ollama langchain_core langchain_community sqlite3 tabulate
+pip install langchain_openai langchain_ollama langchain_core langchain_community sqlite3 tabulate pymysql
 """
 
 logging.config.fileConfig('logging.conf')
@@ -32,11 +34,14 @@ def init_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
         _my_cfg["model_name"] = lines[2].strip()
         logger.info(f"init_cfg_info, {_my_cfg}")
     except Exception as e:
-        logger.error("init_cfg_error: {}".format(e))
+        logger.error(f"init_cfg_error: {e}")
     return _my_cfg
 
 class SQLGenerator:
-
+    """
+    for mysql
+    # db_uri = "mysql+pymysql://db_user:db_password@db_host/db_name"
+    """
     def __init__(self, db_uri: str, api_uri: str, api_key:str,
                  model_name:str, is_remote_model:bool):
         self.db = SQLDatabase.from_uri(db_uri)
@@ -78,7 +83,7 @@ class SQLGenerator:
             result = self.db.run(sql)
             return {"success": True, "data": result}
         except Exception as e:
-            logger.error(f"SQL执行失败：{str(e)}")
+            logger.error(f"SQL执行失败：{e}")
             return {"success": False, "error": str(e)}
 
     def get_schema_info(self) -> str:
@@ -149,6 +154,15 @@ def ask_question(q: str, db_uri: str, api_uri:str, api_key: str,
             logger.debug(f"connect to db {db_file}")
             dt = output_data(conn, sql, True)
         elif "mysql" in db_uri:
+            parsed = urlparse(my_cfg["db_uri"])
+            logger.info(f"{parsed.hostname}, {parsed.username}, {parsed.password}, {parsed.path[1:]}")
+            my_conn = pymysql.connect(
+                host=parsed.hostname,
+                user=parsed.username,
+                password=unquote(parsed.password),
+                database=parsed.path[1:],
+                charset='utf8mb4'
+            )
             logger.warning("to get data from mysql")
         else:
             logger.warning("other data type need to be done")
