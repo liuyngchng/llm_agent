@@ -24,8 +24,7 @@ def init_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
         _my_cfg["api_uri"] = lines[0].strip()
         _my_cfg["api_key"] = lines[1].strip()
         _my_cfg["model_name"] = lines[2].strip()
-        if lines[3]:
-            _my_cfg["db_uri"]= lines[3].strip()
+        _my_cfg["db_uri"]= lines[3].strip()
         logger.info(f"init_cfg_info, {_my_cfg}")
     except Exception as e:
         logger.error(f"init_cfg_error: {e}")
@@ -88,6 +87,9 @@ def output_data(db_con, sql:str, is_html:bool) -> str:
 
 
 def mysql_output(db_uri: str, sql:str, is_html:bool):
+    """
+    db_uri = mysql+pymysql://user:pswd@host/db
+    """
     parsed = urlparse(db_uri)
     logger.info(f"host[{parsed.hostname}], user[{parsed.username}], password[{parsed.password}], database[{parsed.path[1:]}]")
     my_conn = pymysql.connect(
@@ -97,15 +99,30 @@ def mysql_output(db_uri: str, sql:str, is_html:bool):
         database=parsed.path[1:],
         charset='utf8mb4'
     )
-    logger.info(f"output_data({my_conn}, {my_sql}, {is_html})")
+    logger.info(f"output_data({my_conn}, {sql}, {is_html})")
+    my_dt = output_data(my_conn, sql, is_html)
+    return my_dt
+def sqlite_output(db_uri: str, sql:str, is_html:bool):
+    """
+    db_uri = f"sqlite:///test1.db"
+    """
+
+    db_file = db_uri.split('/')[-1]
+    my_conn = sqlite3.connect(db_file)
+    logger.debug(f"connect to db {db_file}")
     my_dt = output_data(my_conn, sql, is_html)
     return my_dt
 
 if __name__ == "__main__":
     # sql = "SELECT * FROM customer_info LIMIT 2"
     my_sql = "SELECT id, 支付金额 from order_info "
-    # my_conn = sqlite3.connect("test2.db")
     my_cfg = init_cfg()
     logger.info(f"my_cfg {my_cfg}")
-    dt = mysql_output(my_cfg['db_uri'], my_sql)
+    if "sqlite" in my_cfg['db_uri']:
+        dt = sqlite_output(my_cfg['db_uri'], my_sql, False)
+    elif "mysql" in my_cfg['db_uri']:
+        dt = mysql_output(my_cfg['db_uri'], my_sql,False)
+    else:
+        dt = None
+        logger.error("check your config file to input right dt_uri")
     logger.info(f"dt\n {dt}\n")

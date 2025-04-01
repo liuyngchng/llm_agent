@@ -12,7 +12,8 @@ from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
 import logging.config
 import httpx
-from sql_util import output_data
+from sql_util import sqlite_output, mysql_output
+
 """
 pip install langchain_openai langchain_ollama langchain_core langchain_community sqlite3 tabulate pymysql
 """
@@ -32,6 +33,7 @@ def init_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
         _my_cfg["api_uri"] = lines[0].strip()
         _my_cfg["api_key"] = lines[1].strip()
         _my_cfg["model_name"] = lines[2].strip()
+        _my_cfg["db_uri"] = lines[3].strip()
         logger.info(f"init_cfg_info, {_my_cfg}")
     except Exception as e:
         logger.error(f"init_cfg_error: {e}")
@@ -149,20 +151,11 @@ def ask_question(q: str, db_uri: str, api_uri:str, api_key: str,
         #     logger.error(f"查询失败：{result['error']}")
 
         if "sqlite" in db_uri:
-            db_file =db_uri.split('/')[-1]
-            conn = sqlite3.connect(db_file)
-            logger.debug(f"connect to db {db_file}")
-            dt = output_data(conn, sql, True)
+            logger.debug(f"connect to sqlite db {db_uri}")
+            dt = sqlite_output(db_uri, sql, True)
         elif "mysql" in db_uri:
-            parsed = urlparse(my_cfg["db_uri"])
-            logger.info(f"{parsed.hostname}, {parsed.username}, {parsed.password}, {parsed.path[1:]}")
-            my_conn = pymysql.connect(
-                host=parsed.hostname,
-                user=parsed.username,
-                password=unquote(parsed.password),
-                database=parsed.path[1:],
-                charset='utf8mb4'
-            )
+            logger.debug(f"connect to mysql db {db_uri}")
+            dt = mysql_output(db_uri, sql, True)
             logger.warning("to get data from mysql")
         else:
             logger.warning("other data type need to be done")
@@ -172,11 +165,10 @@ def ask_question(q: str, db_uri: str, api_uri:str, api_key: str,
 if __name__ == "__main__":
     os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
     my_cfg = init_cfg()
-    db_uri = f"sqlite:///test1.db"
     # while True:
     #     input_q = input("请输入您的问题(输入q退出)：")
     #     if input_q == "q":
     #         exit(0)
     input_q = "查询2025年的数据"
-    result = ask_question(input_q, db_uri, my_cfg["api_uri"], my_cfg['api_key'], my_cfg['model_name'], True)
+    result = ask_question(input_q, my_cfg['db_uri'], my_cfg["api_uri"], my_cfg['api_key'], my_cfg['model_name'], True)
     logger.info(f"输出数据:\n{result}")

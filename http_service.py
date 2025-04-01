@@ -155,5 +155,5 @@ if __name__ == '__main__':
     my_db_uri = my_cfg["db_uri"]
     logger.info(f"api_uri {api_uri}, api_key {api_key}, model_name {model_name}, my_db_uri {my_db_uri}")
 
-    test_query_data(my_db_uri)
-    # app.run(host='0.0.0.0', port=19000)
+    # test_query_data(my_db_uri)
+    app.run(host='0.0.0.0', port=19000)
