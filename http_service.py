@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+"""
+pip install flask
+"""
 
 import logging.config
 import os
@@ -46,7 +48,7 @@ def rag_index():
     """
     return render_template('rag_index.html')
 
-@app.route('/query', methods=['GET'])
+@app.route('/', methods=['GET'])
 def query_data_index():
     """
      A index for static
@@ -56,7 +58,6 @@ def query_data_index():
     return render_template('query_data_index.html')
 
 @app.route('/health', methods=['GET'])
-@app.route('/', methods=['GET'])
 def get_data():
     """
     JSON submit, get data from application JSON
@@ -79,7 +80,7 @@ def submit():
     logger.info("rcv_msg: {}".format(msg))
     #answer = search(msg, True)
     answer = search(msg)
-    logger.info("answer is：{}".format(answer))
+    logger.info(f"answer is：{answer}")
     return answer
 @app.route('/query/data', methods=['POST'])
 def query_data():
@@ -89,8 +90,7 @@ def query_data():
     :return:
     """
     msg = request.form.get('msg')
-    logger.info("rcv_msg: {}".format(msg))
-    #answer = search(msg, True)
+    logger.info(f"rcv_msg: {msg}")
     db_file = "test1.db"
     db_uri = f"sqlite:///{db_file}"
     req_db_uri = request.form.get('db_uri')
@@ -98,10 +98,23 @@ def query_data():
         db_uri = req_db_uri
     logger.info(f"ask_question({msg}, {db_uri}, {api_uri}, {api_key}, {model_name}, True)")
     answer = ask_question(msg, db_uri, api_uri, api_key, model_name, True)
+    logger.info(f"answer is：{answer}")
+    if not answer:
+        answer="没有查询到相关数据，请您尝试换个问题提问"
+
+    return answer
+
+def test_query_data():
+    msg = "查询2025年的数据"
+    logger.info(f"rcv_msg: {msg}")
+    db_file = "test1.db"
+    db_uri = f"sqlite:///{db_file}"
+    logger.info(f"ask_question({msg}, {db_uri}, {api_uri}, {api_key}, {model_name}, True)")
+    answer = ask_question(msg, db_uri, api_uri, api_key, model_name, True)
 
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
-    logger.info("answer is：{}".format(answer))
+    logger.info(f"answer is：\n{answer}")
     return answer
 
 def test_req():
@@ -111,9 +124,9 @@ def test_req():
     and the output the answer.
     """
     my_question = "居民如何开户？"
-    logger.info("invoke question: {}".format(my_question))
+    logger.info(f"invoke question: {my_question}")
     answer = search(my_question, True)
-    logger.info("answer is {}".format(answer))
+    logger.info(f"answer is {answer}")
 
 
 if __name__ == '__main__':
@@ -129,4 +142,6 @@ if __name__ == '__main__':
     api_key = my_cfg["api_key"]
     model_name = my_cfg["model_name"]
     logger.info(f"api_uri {api_uri}, api_key {api_key}, model_name {model_name}")
+
+    # test_query_data()
     app.run(host='0.0.0.0', port=19000)

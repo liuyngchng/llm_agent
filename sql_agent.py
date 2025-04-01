@@ -11,6 +11,9 @@ from langchain_ollama import ChatOllama
 import logging.config
 import httpx
 from sqlite_util import output_data
+"""
+pip install tabulate
+"""
 
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
@@ -127,8 +130,9 @@ def extract_sql(raw_sql: str) -> str:
         return clean_sql.strip(" \n\t")
     return raw_sql  # 无代码块时返回原始内容
 
-def ask_question(q: str, db_uri: str, api_uri:str, api_key: str, model_name: str, is_remote_model: bool):
+def ask_question(q: str, db_uri: str, api_uri:str, api_key: str, model_name: str, is_remote_model: bool) -> str:
     sql =""
+    dt = ""
     try:
         agent = SQLGenerator(db_uri, api_uri, api_key, model_name, is_remote_model)
         # 生成SQL
@@ -137,28 +141,33 @@ def ask_question(q: str, db_uri: str, api_uri:str, api_key: str, model_name: str
         logger.debug(f"generate_sql {sql}")
         sql = extract_sql(sql)
         logger.debug(f"extract_sql sql\n\n {sql}\n")
-
         # 执行查询
         # result = agent.execute_query(sql)
         # if result["success"]:
         #     logger.info(f"查询结果：\n{result["data"]}")
         # else:
         #     logger.error(f"查询失败：{result['error']}")
-        conn = sqlite3.connect(db_file)
-        logger.debug(f"connect to db {db_file}")
-        result = output_data(conn, sql)
-        logger.info(f"输出数据:\n{result}")
-    except Exception as e:
-        logger.error(f"error, {e}， sql: {sql}")
 
+        if "sqlite" in db_uri:
+            db_file =db_uri.split('/')[-1]
+            conn = sqlite3.connect(db_file)
+            logger.debug(f"connect to db {db_file}")
+            dt = output_data(conn, sql, True)
+        elif "mysql" in db_uri:
+            logger.warning("to get data from mysql")
+        else:
+            logger.warning("other data type need to be done")
+    except Exception as e:
+        logger.error(f"error, {e}，sql: {sql}", exc_info=True)
+    return dt
 if __name__ == "__main__":
     os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
     my_cfg = init_cfg()
-    db_file = "test1.db"
-    db_uri = f"sqlite:///{db_file}"
+    db_uri = f"sqlite:///test1.db"
     # while True:
     #     input_q = input("请输入您的问题(输入q退出)：")
     #     if input_q == "q":
     #         exit(0)
     input_q = "查询2025年的数据"
-    ask_question(input_q, db_uri, my_cfg["api_uri"], my_cfg['api_key'], my_cfg['model_name'], True)
+    result = ask_question(input_q, db_uri, my_cfg["api_uri"], my_cfg['api_key'], my_cfg['model_name'], True)
+    logger.info(f"输出数据:\n{result}")
