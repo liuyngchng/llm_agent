@@ -127,6 +127,7 @@ def ask_question(q: str, db_uri: str, api_uri:str, api_key: str,
         logger.debug(f"generate_sql {sql}")
         sql = extract_sql(sql)
         logger.debug(f"extract_sql sql\n\n {sql}\n")
+
         # 执行查询
         # result = agent.execute_query(sql)
         # if result["success"]:
