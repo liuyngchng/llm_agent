@@ -30,7 +30,7 @@
 </head>
 <body>
     <div style="text-align: center;margin-top: 15%;" >
-        <p style="font:22px Verdana; font-weight:bold;">自然语言查询数据示例</p>
+        <p style="font:22px Verdana; font-weight:bold;">自然语言数据查询示例</p>
         <form style="margin-top: 2%" action="/query/data" method="post">
             <div style="display: flex; align-items: center; gap: 8px; margin: 0 auto; width: fit-content">
                 <span>问&nbsp;&nbsp;&nbsp;&nbsp;题:&nbsp;</span>
@@ -42,7 +42,7 @@
             </div>
             <div>&nbsp;</div>
             <div align="center"style="margin-bottom: 0.5%"><span>数据库:</span>
-                <input type="text" name="db_uri" value="" placeholder="jdbc://mysql****" ><br>
+                <input type="text" name="db_uri" value="" placeholder="mysql+pymysql://db_user:db_password@db_host/db_name" ><br>
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%">

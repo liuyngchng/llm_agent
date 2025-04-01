@@ -46,9 +46,6 @@ db_uri = f"sqlite:///{db_file}"
 question ="查询张三2025年的订单详细信息"
 # question = "查询山东天然气销售分公司2025年的订单详细信息"
 
-
-
-
 def init_cfg(cfg_file="env.cfg"):
     global api_url, api_key, model_name
     with open(cfg_file) as f:
@@ -244,7 +241,7 @@ if __name__ == "__main__":
     # db_password = "test"
     # db_host = "127.0.0.1"
     # db_name = "test"
-    # db = SQLDatabase.from_uri("mysql+pymysql://{}:{}@{}/{}".format(db_user, db_password, db_host, db_name))
+    # db = SQLDatabase.from_uri(f"mysql+pymysql://{db_user}:{db_password}@{db_host}/{db_name}")
     logger.debug("db dialect is: {}".format(db.dialect))
     logger.debug("db tables is: {}".format(db.get_usable_table_names()))
 

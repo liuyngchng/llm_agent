@@ -12,18 +12,11 @@ import logging.config
 import httpx
 from sqlite_util import output_data
 """
-pip install tabulate
+pip install langchain_openai langchain_ollama langchain_core langchain_community sqlite3 tabulate
 """
 
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
-
-# model_name = "deepseek-r1"
-# # model_name = "llama3.1"
-# api_uri = "http://127.0.0.1:11434"
-# api_key = "123456789"
-
-# question ="查询山东天然气销售分公司的订单详细信息"
 
 def init_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
     # global api_uri, api_key, model_name
@@ -44,7 +37,8 @@ def init_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
 
 class SQLGenerator:
 
-    def __init__(self, db_uri: str, api_uri: str, api_key:str, model_name:str, is_remote_model:bool):
+    def __init__(self, db_uri: str, api_uri: str, api_key:str,
+                 model_name:str, is_remote_model:bool):
         self.db = SQLDatabase.from_uri(db_uri)
         self.api_uri = api_uri
         self.api_key = api_key
@@ -130,7 +124,8 @@ def extract_sql(raw_sql: str) -> str:
         return clean_sql.strip(" \n\t")
     return raw_sql  # 无代码块时返回原始内容
 
-def ask_question(q: str, db_uri: str, api_uri:str, api_key: str, model_name: str, is_remote_model: bool) -> str:
+def ask_question(q: str, db_uri: str, api_uri:str, api_key: str,
+                 model_name: str, is_remote_model: bool) -> str:
     sql =""
     dt = ""
     try:
