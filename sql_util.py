@@ -67,6 +67,7 @@ def output_data(db_con, sql:str, is_html:bool) -> str:
         )
     else:
         dt = df.to_markdown(index=False)  # 控制台打印美观表格
+    logger.info(f"returned dt {df.to_markdown(index=False)}")
     return dt
 
 
@@ -84,8 +85,8 @@ def mysql_output(db_uri: str, sql:str, is_html:bool):
         charset='utf8mb4'
     )
     logger.info(f"output_data({my_conn}, {sql}, {is_html})")
-    my_dt = output_data(my_conn, sql, is_html)
-    return my_dt
+    return output_data(my_conn, sql, is_html)
+
 def sqlite_output(db_uri: str, sql:str, is_html:bool):
     """
     db_uri = f"sqlite:///test1.db"
@@ -103,10 +104,10 @@ if __name__ == "__main__":
     my_cfg = init_cfg()
     logger.info(f"my_cfg {my_cfg}")
     if "sqlite" in my_cfg['db_uri']:
-        dt = sqlite_output(my_cfg['db_uri'], my_sql, False)
+        my_dt = sqlite_output(my_cfg['db_uri'], my_sql, False)
     elif "mysql" in my_cfg['db_uri']:
-        dt = mysql_output(my_cfg['db_uri'], my_sql,False)
+        my_dt = mysql_output(my_cfg['db_uri'], my_sql,False)
     else:
-        dt = None
+        my_dt = None
         logger.error("check your config file to input right dt_uri")
-    logger.info(f"dt\n {dt}\n")
+    logger.info(f"my_dt\n {my_dt}\n")

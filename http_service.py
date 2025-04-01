@@ -83,7 +83,7 @@ def query_data():
         db_uri = req_db_uri
     logger.info(f"ask_question({msg}, {db_uri}, {api_uri}, {api_key}, {model_name}, True)")
     answer = ask_question(msg, db_uri, api_uri, api_key, model_name, True)
-    logger.info(f"answer is：{answer}")
+    logger.debug(f"answer is：{answer}")
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
 
