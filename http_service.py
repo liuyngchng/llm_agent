@@ -90,7 +90,7 @@ def query_data():
     return answer
 
 @app.route('/gt/db/dt', methods=['POST'])
-def query_data():
+def get_db_dt():
     """
     form submit, get data from form
     curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"msg":"who are you?"}'
