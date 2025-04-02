@@ -20,9 +20,10 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-api_uri = ""
-api_key = ""
-model_name = ""
+my_api_uri = ""
+my_api_key = ""
+my_model_name = ""
+my_db_uri = ""
 
 @app.route('/rag', methods=['GET'])
 def rag_index():
@@ -74,16 +75,15 @@ def query_data():
     curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"msg":"who are you?"}'
     :return:
     """
-    msg = request.form.get('msg')
+    msg = request.form.get('msg').strip()
     logger.info(f"rcv_msg: {msg}")
-    db_file = "test1.db"
-    db_uri = f"sqlite:///{db_file}"
     req_db_uri = request.form.get('db_uri')
+    global my_db_uri
     if req_db_uri:
-        db_uri = req_db_uri
-    logger.info(f"ask_question({msg}, {db_uri}, {api_uri}, {api_key}, {model_name}, True)")
-    answer = ask_question(msg, db_uri, api_uri, api_key, model_name, True)
-    logger.debug(f"answer is：{answer}")
+        my_db_uri = req_db_uri
+    logger.info(f"ask_question({msg}, {my_db_uri}, {my_api_uri}, {my_api_key}, {my_model_name}, True)")
+    answer = ask_question(msg, my_db_uri, my_api_uri, my_api_key, my_model_name, True)
+    # logger.debug(f"answer is：{answer}")
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
 
@@ -103,8 +103,8 @@ def test_query_data(db_uri: str):
     # for MySQL
     # db_uri = "mysql+pymysql://db_user:db_password@db_host/db_name"
 
-    logger.info(f"ask_question({msg}, {db_uri}, {api_uri}, {api_key}, {model_name}, True)")
-    answer = ask_question(msg, db_uri, api_uri, api_key, model_name, True)
+    logger.info(f"ask_question({msg}, {db_uri}, {my_api_uri}, {my_api_key}, {my_model_name}, True)")
+    answer = ask_question(msg, db_uri, my_api_uri, my_api_key, my_model_name, True)
 
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
@@ -132,11 +132,11 @@ if __name__ == '__main__':
     """
     os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
     my_cfg = init_cfg()
-    api_uri = my_cfg["api_uri"]
-    api_key = my_cfg["api_key"]
-    model_name = my_cfg["model_name"]
+    my_api_uri = my_cfg["api_uri"]
+    my_api_key = my_cfg["api_key"]
+    my_model_name = my_cfg["model_name"]
     my_db_uri = my_cfg["db_uri"]
-    logger.info(f"api_uri {api_uri}, api_key {api_key}, model_name {model_name}, my_db_uri {my_db_uri}")
+    logger.info(f"api_uri {my_api_uri}, api_key {my_api_key}, model_name {my_model_name}, db_uri {my_db_uri}")
 
-    # test_query_data(my_db_uri)
+    # test_query_data(db_uri)
     app.run(host='0.0.0.0', port=19000)
