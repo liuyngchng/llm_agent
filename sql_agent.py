@@ -115,8 +115,11 @@ def extract_sql(raw_sql: str) -> str:
         return clean_sql.strip(" \n\t")
     return raw_sql  # 无代码块时返回原始内容
 
-def ask_question(q: str, db_uri: str, api_uri:str, api_key: str,
-                 model_name: str, is_remote_model: bool) -> str:
+def get_dt_with_nl(q: str, db_uri: str, api_uri:str, api_key: str,
+                   model_name: str, output_data_format: str, is_remote_model: bool) -> str:
+    """
+    通过自然语言查询数据库中的数据
+    """
     sql =""
     dt = ""
     try:
@@ -128,20 +131,12 @@ def ask_question(q: str, db_uri: str, api_uri:str, api_key: str,
         sql = extract_sql(sql)
         logger.debug(f"extract_sql sql\n\n {sql}\n")
 
-        # 执行查询
-        # result = agent.execute_query(sql)
-        # if result["success"]:
-        #     logger.info(f"查询结果：\n{result["data"]}")
-        # else:
-        #     logger.error(f"查询失败：{result['error']}")
-
         if "sqlite" in db_uri:
             logger.debug(f"connect to sqlite db {db_uri}")
-            dt = sqlite_output(db_uri, sql, True)
+            dt = sqlite_output(db_uri, sql, output_data_format)
         elif "mysql" in db_uri:
             logger.debug(f"connect to mysql db {db_uri}")
-            dt = mysql_output(db_uri, sql, True)
-            logger.warning("to get data from mysql")
+            dt = mysql_output(db_uri, sql, output_data_format)
         else:
             logger.warning("other data type need to be done")
     except Exception as e:
@@ -155,5 +150,5 @@ if __name__ == "__main__":
     #     if input_q == "q":
     #         exit(0)
     input_q = "查询2025年的数据"
-    result = ask_question(input_q, my_cfg['db_uri'], my_cfg["api_uri"], my_cfg['api_key'], my_cfg['model_name'], True)
+    result = get_dt_with_nl(input_q, my_cfg['db_uri'], my_cfg["api_uri"], my_cfg['api_key'], my_cfg['model_name'], 'json', True)
     logger.info(f"输出数据:\n{result}")

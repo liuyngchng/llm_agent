@@ -36,7 +36,7 @@ def sqlite_query_tool(db_con, query: str) -> str:
         logger.error(f"init_cfg_error: {e}")
         return json.dumps({"error": str(e)})
 
-def output_data(db_con, sql:str, is_html:bool) -> str:
+def output_data(db_con, sql:str, data_format:str) -> str:
     result =''
     if isinstance(db_con, sqlite3.Connection):
         result = sqlite_query_tool(db_con, sql)
@@ -47,10 +47,10 @@ def output_data(db_con, sql:str, is_html:bool) -> str:
         raise "database type error"
 
     data = json.loads(result)
-    logger.info(f"data {data}")
+    logger.info(f"data {data} for {db_con}")
     # 生成表格
     df = pd.DataFrame(data['data'], columns=data['columns'])
-    if is_html:
+    if 'html' in data_format:
         # dt = df.to_html()  #生成网页表格
         dt = df.to_html(
             index=False,
@@ -65,13 +65,20 @@ def output_data(db_con, sql:str, is_html:bool) -> str:
             '<td>',
             '<td style="padding:6px; border-bottom:1px solid #eee">'
         )
-    else:
+    elif 'markdown' in data_format:
         dt = df.to_markdown(index=False)  # 控制台打印美观表格
+    elif 'json' in data_format:
+        dt = df.to_json(force_ascii=False, orient='records')
+    else:
+        dt = ''
+        info = f"error data format {data_format}"
+        logger.error(info)
+        raise info
     logger.info(f"returned dt {df.to_markdown(index=False)}")
     return dt
 
 
-def mysql_output(db_uri: str, sql:str, is_html:bool):
+def mysql_output(db_uri: str, sql:str, data_format:str):
     """
     db_uri = mysql+pymysql://user:pswd@host/db
     """
@@ -84,10 +91,10 @@ def mysql_output(db_uri: str, sql:str, is_html:bool):
         database=parsed.path[1:],
         charset='utf8mb4'
     )
-    logger.info(f"output_data({my_conn}, {sql}, {is_html})")
-    return output_data(my_conn, sql, is_html)
+    logger.info(f"output_data({my_conn}, {sql}, {data_format})")
+    return output_data(my_conn, sql, data_format)
 
-def sqlite_output(db_uri: str, sql:str, is_html:bool):
+def sqlite_output(db_uri: str, sql:str, data_format:str):
     """
     db_uri = f"sqlite:///test1.db"
     """
@@ -95,7 +102,7 @@ def sqlite_output(db_uri: str, sql:str, is_html:bool):
     db_file = db_uri.split('/')[-1]
     my_conn = sqlite3.connect(db_file)
     logger.debug(f"connect to db {db_file}")
-    my_dt = output_data(my_conn, sql, is_html)
+    my_dt = output_data(my_conn, sql, data_format)
     return my_dt
 
 if __name__ == "__main__":
@@ -104,9 +111,9 @@ if __name__ == "__main__":
     my_cfg = init_cfg()
     logger.info(f"my_cfg {my_cfg}")
     if "sqlite" in my_cfg['db_uri']:
-        my_dt = sqlite_output(my_cfg['db_uri'], my_sql, False)
+        my_dt = sqlite_output(my_cfg['db_uri'], my_sql, 'json')
     elif "mysql" in my_cfg['db_uri']:
-        my_dt = mysql_output(my_cfg['db_uri'], my_sql,False)
+        my_dt = mysql_output(my_cfg['db_uri'], my_sql,'json')
     else:
         my_dt = None
         logger.error("check your config file to input right dt_uri")

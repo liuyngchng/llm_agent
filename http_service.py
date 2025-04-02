@@ -9,7 +9,7 @@ import os
 
 from flask import Flask, request, jsonify, render_template
 from semantic_search import search
-from sql_agent import ask_question
+from sql_agent import get_dt_with_nl
 from sys_init import init_cfg
 
 # 加载配置
@@ -81,11 +81,32 @@ def query_data():
     global my_db_uri
     if req_db_uri:
         my_db_uri = req_db_uri
-    logger.info(f"ask_question({msg}, {my_db_uri}, {my_api_uri}, {my_api_key}, {my_model_name}, True)")
-    answer = ask_question(msg, my_db_uri, my_api_uri, my_api_key, my_model_name, True)
+    logger.info(f"ask_question({msg}, {my_db_uri}, {my_api_uri}, {my_api_key}, {my_model_name}, html, True)")
+    answer = get_dt_with_nl(msg, my_db_uri, my_api_uri, my_api_key, my_model_name, 'html', True)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
+
+    return answer
+
+@app.route('/gt/db/dt', methods=['POST'])
+def query_data():
+    """
+    form submit, get data from form
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"msg":"who are you?"}'
+    :return:
+    """
+    msg = request.form.get('msg').strip()
+    logger.info(f"rcv_msg: {msg}")
+    req_db_uri = request.form.get('db_uri')
+    global my_db_uri
+    if req_db_uri:
+        my_db_uri = req_db_uri
+    logger.info(f"ask_question({msg}, {my_db_uri}, {my_api_uri}, {my_api_key}, {my_model_name}, 'json')")
+    answer = get_dt_with_nl(msg, my_db_uri, my_api_uri, my_api_key, my_model_name, 'json', True)
+    # logger.debug(f"answer is：{answer}")
+    if not answer:
+        answer='{"msg":"没有查询到相关数据，请您尝试换个问题进行提问", "code":404}'
 
     return answer
 
@@ -103,9 +124,8 @@ def test_query_data(db_uri: str):
     # for MySQL
     # db_uri = "mysql+pymysql://db_user:db_password@db_host/db_name"
 
-    logger.info(f"ask_question({msg}, {db_uri}, {my_api_uri}, {my_api_key}, {my_model_name}, True)")
-    answer = ask_question(msg, db_uri, my_api_uri, my_api_key, my_model_name, True)
-
+    logger.info(f"ask_question({msg}, {db_uri}, {my_api_uri}, {my_api_key}, {my_model_name}, markdown, True)")
+    answer = get_dt_with_nl(msg, db_uri, my_api_uri, my_api_key, my_model_name, 'markdown', True)
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
     logger.info(f"answer is：\n{answer}")
