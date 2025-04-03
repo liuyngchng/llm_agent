@@ -38,7 +38,7 @@ class SQLGenerator:
         self.llm = self.get_llm()
 
         # 带数据库结构的提示模板
-        self.prompt_template = ChatPromptTemplate.from_messages([
+        self.gen_sql_prompt_template = ChatPromptTemplate.from_messages([
             ("system",
              """您是一个专业的SQL生成助手。已知数据库结构：
              {schema}
@@ -49,17 +49,39 @@ class SQLGenerator:
              3. WHERE条件需包含公司名称和时间范围过滤
              4. 禁止包含分析过程或思考步骤
              5. 查询语句中禁止用 *表示全部字段， 需列出详细的字段名称清单
+             6. 禁止生成 update、delete 等任何对数据修改的语句
              """
              ),
             ("human", "用户问题：{question}")
         ])
 
+        self.gen_nl_prompt_template = ChatPromptTemplate.from_messages([
+            ("system",
+             """您是一个专业的数据解读助手。已知 Markdown格式的数据清单：
+             {markdown_dt}
+
+             (1) 请输出对数据的简洁解读，不要啰嗦
+             (2) 如果没有提供数据，给出比较客气的回答，说没有查询到相关数据
+             (3) 最终输出中，除了解读内容外，还需要返回原始的数据列表
+             (4) 原始数据需要输出为html的多行表格
+             (5) 最终输出为html格式的文本，方便直接插入静态页面的<div></div>内部
+             """
+             )
+        ])
+
     def generate_sql(self, question: str) -> str:
         """生成SQL查询"""
-        chain = self.prompt_template | self.llm
+        chain = self.gen_sql_prompt_template | self.llm
         response = chain.invoke({
             "question": question,
             "schema": self.get_schema_info()
+        })
+        return response.content
+
+    def get_nl_with_dt(self, markdown_dt: str):
+        chain = self.gen_nl_prompt_template | self.llm
+        response = chain.invoke({
+            "markdown_dt": markdown_dt
         })
         return response.content
 
@@ -122,8 +144,8 @@ def get_dt_with_nl(q: str, db_uri: str, api_uri:str, api_key: str,
     """
     sql =""
     dt = ""
+    agent = SQLGenerator(db_uri, api_uri, api_key, model_name, is_remote_model)
     try:
-        agent = SQLGenerator(db_uri, api_uri, api_key, model_name, is_remote_model)
         # 生成SQL
         logger.info(f"提交的问题：{q}")
         sql = agent.generate_sql(q)
@@ -133,15 +155,18 @@ def get_dt_with_nl(q: str, db_uri: str, api_uri:str, api_key: str,
 
         if "sqlite" in db_uri:
             logger.debug(f"connect to sqlite db {db_uri}")
-            dt = sqlite_output(db_uri, sql, output_data_format)
+            dt = sqlite_output(db_uri, sql, "markdown")
         elif "mysql" in db_uri:
             logger.debug(f"connect to mysql db {db_uri}")
-            dt = mysql_output(db_uri, sql, output_data_format)
+            dt = mysql_output(db_uri, sql, "markdown")
         else:
             logger.warning("other data type need to be done")
     except Exception as e:
         logger.error(f"error, {e}，sql: {sql}", exc_info=True)
-    return dt
+    nl_dt = agent.get_nl_with_dt(dt)
+    logger.info(f"nl_dt: {nl_dt}")
+    return nl_dt
+
 if __name__ == "__main__":
     os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
     my_cfg = init_cfg()
