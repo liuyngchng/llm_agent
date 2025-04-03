@@ -93,10 +93,10 @@ def query_data():
 def get_db_dt():
     """
     form submit, get data from form
-    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"msg":"who are you?"}'
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000//gt/db/dt' -H "Content-Type: application/json"  -d '{"msg":"把数据明细给我调出来"}'
     :return:
     """
-    msg = request.form.get('msg').strip()
+    msg = request.get_json().get('msg').strip()
     logger.info(f"rcv_msg: {msg}")
     req_db_uri = request.form.get('db_uri')
     global my_db_uri
