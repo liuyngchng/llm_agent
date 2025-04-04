@@ -27,3 +27,4 @@ sqlite_vss
 **/*.cfg
 #**/*.db
 **/*.json
+**/*.lock
