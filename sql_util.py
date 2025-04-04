@@ -116,5 +116,6 @@ if __name__ == "__main__":
         my_dt = mysql_output(my_cfg['db_uri'], my_sql,'json')
     else:
         my_dt = None
-        logger.error("check your config file to input right dt_uri")
+        raise "check your config file to config correct [dt_uri]"
+
     logger.info(f"my_dt\n {my_dt}\n")
