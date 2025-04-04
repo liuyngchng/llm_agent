@@ -34,7 +34,9 @@ def query_data_index():
     curl -s --noproxy '*' http://127.0.0.1:19000 | jq
     :return:
     """
-    return render_template('query_data_index.html')
+    dt_idx = "query_data_index.html"
+    logger.info(f"return page {dt_idx}")
+    return render_template(dt_idx)
 
 @app.route('/health', methods=['GET'])
 def get_data():
