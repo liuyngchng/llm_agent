@@ -16,7 +16,7 @@ from sql_util import sqlite_output, mysql_output
 from sys_init import init_cfg
 
 """
-pip install langchain_openai langchain_ollama langchain_core langchain_community sqlite3 tabulate pymysql
+pip install langchain_openai langchain_ollama langchain_core langchain_community pandas tabulate pymysql
 """
 
 logging.config.fileConfig('logging.conf')
@@ -65,6 +65,7 @@ class SQLGenerator:
              (3) 最终输出中，除了解读内容外，还需要返回原始的数据列表
              (4) 原始数据需要输出为html的多行表格
              (5) 最终输出为html格式的文本，方便直接插入静态页面的<div></div>内部
+             (6) 不要输出任何markdown格式的文本
              """
              )
         ])
