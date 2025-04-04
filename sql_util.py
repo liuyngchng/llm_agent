@@ -82,13 +82,13 @@ def mysql_output(db_uri: str, sql:str, data_format:str):
     """
     db_uri = mysql+pymysql://user:pswd@host/db
     """
-    parsed = urlparse(db_uri)
-    logger.info(f"host[{parsed.hostname}], user[{parsed.username}], password[{parsed.password}], database[{parsed.path[1:]}]")
+    parsed_uri = urlparse(db_uri)
+    logger.info(f"host[{parsed_uri.hostname}], user[{parsed_uri.username}], password[{parsed_uri.password}], database[{parsed_uri.path[1:]}]")
     my_conn = pymysql.connect(
-        host=unquote(parsed.hostname),
-        user=unquote(parsed.username),
-        password=unquote(parsed.password),
-        database=parsed.path[1:],
+        host=unquote(parsed_uri.hostname),
+        user=unquote(parsed_uri.username),
+        password=unquote(parsed_uri.password),
+        database=parsed_uri.path[1:],
         charset='utf8mb4'
     )
     logger.info(f"output_data({my_conn}, {sql}, {data_format})")
