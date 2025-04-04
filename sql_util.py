@@ -130,4 +130,4 @@ def test_url():
     logger.info(f"url_decode test:\n {decode_params}\n")
 
 if __name__ == "__main__":
-    test_url()
+    test_db()
