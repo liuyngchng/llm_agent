@@ -7,7 +7,7 @@ import json
 import pandas as pd
 import logging.config
 
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, urlencode
 from sys_init import init_cfg
 
 logging.config.fileConfig('logging.conf')
@@ -85,8 +85,8 @@ def mysql_output(db_uri: str, sql:str, data_format:str):
     parsed = urlparse(db_uri)
     logger.info(f"host[{parsed.hostname}], user[{parsed.username}], password[{parsed.password}], database[{parsed.path[1:]}]")
     my_conn = pymysql.connect(
-        host=parsed.hostname,
-        user=parsed.username,
+        host=unquote(parsed.hostname),
+        user=unquote(parsed.username),
         password=unquote(parsed.password),
         database=parsed.path[1:],
         charset='utf8mb4'
@@ -105,7 +105,7 @@ def sqlite_output(db_uri: str, sql:str, data_format:str):
     my_dt = output_data(my_conn, sql, data_format)
     return my_dt
 
-if __name__ == "__main__":
+def test_db():
     # sql = "SELECT * FROM customer_info LIMIT 2"
     my_sql = "SELECT id, 支付金额 from order_info "
     my_cfg = init_cfg()
@@ -113,9 +113,21 @@ if __name__ == "__main__":
     if "sqlite" in my_cfg['db_uri']:
         my_dt = sqlite_output(my_cfg['db_uri'], my_sql, 'json')
     elif "mysql" in my_cfg['db_uri']:
-        my_dt = mysql_output(my_cfg['db_uri'], my_sql,'json')
+        my_dt = mysql_output(my_cfg['db_uri'], my_sql, 'json')
     else:
         my_dt = None
         raise "check your config file to config correct [dt_uri]"
 
     logger.info(f"my_dt\n {my_dt}\n")
+
+def test_url():
+    url_params = urlencode({"test":'张三'}, encoding="UTF-8")
+    logger.info(f"url_encode test:\n {url_params}\n")
+    params = [("name", "张三"), ("age", 20), ("gender", "男")]
+    url_params = urlencode(params, encoding="UTF-8")
+    logger.info(f"url_encode test:\n {url_params}\n")
+    decode_params = unquote(url_params)
+    logger.info(f"url_decode test:\n {decode_params}\n")
+
+if __name__ == "__main__":
+    test_url()
