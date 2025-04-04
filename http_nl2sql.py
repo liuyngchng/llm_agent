@@ -34,7 +34,7 @@ def query_data_index():
     curl -s --noproxy '*' http://127.0.0.1:19000 | jq
     :return:
     """
-    dt_idx = "query_data_index.html"
+    dt_idx = "nl2sql_index.html"
     logger.info(f"return page {dt_idx}")
     return render_template(dt_idx)
 

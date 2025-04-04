@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import re
-import sqlite3
 from typing import Dict
-from urllib.parse import urlparse
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.utilities import SQLDatabase
