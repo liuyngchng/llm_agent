@@ -10,8 +10,8 @@ from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
 import logging.config
 import httpx
-from sql_util import sqlite_output, mysql_output
-from sys_init import init_cfg
+from db_util import sqlite_output, mysql_output, get_db_uri
+from sys_init import init_yml_cfg
 
 """
 pip install langchain_openai langchain_ollama langchain_core langchain_community pandas tabulate pymysql
@@ -38,7 +38,7 @@ class SQLGenerator:
         # 带数据库结构的提示模板
         self.gen_sql_prompt_template = ChatPromptTemplate.from_messages([
             ("system",
-             """您是一个专业的SQL生成助手。已知数据库结构：
+             """你是一个专业的SQL生成助手。已知数据库结构：
              {schema}
 
              请严格按以下要求生成SQL：
@@ -55,11 +55,10 @@ class SQLGenerator:
 
         self.gen_nl_prompt_template = ChatPromptTemplate.from_messages([
             ("system",
-             """您是一个专业的数据解读助手。已知 Markdown格式的数据清单：
+             """你是一个专业的数据解读助手。已知 Markdown格式的数据清单：
              {markdown_dt}
 
-             (1)请输出对数据的简洁解读，以及原始数据
-             (2) 原始数据与其他文本分开，单独列一个markdown table
+             (1)请输出对数据的简洁解读，以及可以渲染为表格的原始数据
              """
              )
         ])
@@ -132,43 +131,42 @@ def extract_sql(raw_sql: str) -> str:
         return clean_sql.strip(" \n\t")
     return raw_sql  # 无代码块时返回原始内容
 
-def get_dt_with_nl(q: str, db_uri: str, api_uri:str, api_key: str,
-                   model_name: str, output_data_format: str, is_remote_model: bool) -> str:
+def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: bool) -> str:
     """
     通过自然语言查询数据库中的数据
     """
     sql =""
     dt = ""
-    agent = SQLGenerator(db_uri, api_uri, api_key, model_name, is_remote_model)
+    db_uri = get_db_uri(cfg)
+    agent = SQLGenerator(db_uri, cfg['ai']['api_uri'], cfg['ai']['api_key'], cfg['ai']['model_name'], is_remote_model)
     try:
         # 生成SQL
         logger.info(f"提交的问题：{q}")
         sql = agent.generate_sql(q)
-        logger.debug(f"generate_sql {sql}")
+        logger.debug(f"generate_sql\n{sql}")
         sql = extract_sql(sql)
-        logger.debug(f"extract_sql sql\n\n {sql}\n")
+        logger.debug(f"extract_sql\n\n{sql}\n")
 
         if "sqlite" in db_uri:
             logger.debug(f"connect to sqlite db {db_uri}")
             dt = sqlite_output(db_uri, sql, "markdown")
         elif "mysql" in db_uri:
             logger.debug(f"connect to mysql db {db_uri}")
-            dt = mysql_output(db_uri, sql, "markdown")
+            dt = mysql_output(cfg, sql, "markdown")
         else:
             logger.warning("other data type need to be done")
     except Exception as e:
         logger.error(f"error, {e}，sql: {sql}", exc_info=True)
     nl_dt = agent.get_nl_with_dt(dt)
-    logger.info(f"nl_dt: {nl_dt}")
+    logger.info(f"nl_dt:\n{nl_dt}")
     return nl_dt
 
 if __name__ == "__main__":
     os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
-    my_cfg = init_cfg()
+    my_cfg = init_yml_cfg()
     # while True:
     #     input_q = input("请输入您的问题(输入q退出)：")
     #     if input_q == "q":
     #         exit(0)
     input_q = "查询2025年的数据"
-    result = get_dt_with_nl(input_q, my_cfg['db_uri'], my_cfg["api_uri"], my_cfg['api_key'], my_cfg['model_name'], 'json', True)
-    logger.info(f"输出数据:\n{result}")
+    get_dt_with_nl(input_q, my_cfg, 'json', True)

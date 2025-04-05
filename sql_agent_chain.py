@@ -20,8 +20,8 @@ from langgraph.graph import END, StateGraph, START
 from langgraph.graph.message import AnyMessage, add_messages
 import logging.config
 
-import sql_util
-from sys_init import init_cfg
+import db_util
+from sys_init import init_txt_cfg
 
 """
 curl -s --noproxy '*' -X POST http://127.0.0.1:11434/api/chat -d '{
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     a question input about the information in DB will be turned into a SQL query,
     then data retrieved from DB returned back from LLM to user.
     """
-    init_cfg()
+    init_txt_cfg()
     # use SQLite DB
     db = SQLDatabase.from_uri(db_uri)
 

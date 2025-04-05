@@ -17,18 +17,13 @@ import faiss
 import torch
 import httpx
 
-from sys_init import init_cfg
+from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
 doc = "1.pdf"
 emb_name = os.path.abspath("../bge-large-zh-v1.5")
 idx = "faiss_index"
-
-model_name = "deepseek-r1"
-api_url = "http://127.0.0.1:11434"
-api_key = "123456789"
-
 
 
 def is_ollama_running(port=11434):
@@ -76,7 +71,7 @@ def get_vector_db() -> FAISS:
         return vector_db
 
 
-def search(question: str, is_remote=False) -> Union[str, list[Union[str, dict]]]:
+def search(question: str, cfg: dict, is_remote=False) -> Union[str, list[Union[str, dict]]]:
     logger.info("sim_search [{}] in doc {}".format(question, doc))
     # 搜索部分
     docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(question, k=5)
@@ -92,12 +87,12 @@ def search(question: str, is_remote=False) -> Union[str, list[Union[str, dict]]]
         回答：{question}"""
     prompt = ChatPromptTemplate.from_template(template)
     if is_remote:
-        model = ChatOpenAI(api_key=api_key, base_url=api_url,
-                           http_client=httpx.Client(verify=False), model=model_name)
+        model = ChatOpenAI(api_key=cfg['ai']['api_key'], base_url=cfg['ai']['api_url'],
+                           http_client=httpx.Client(verify=False), model=cfg['ai']['model_name'])
     else:
-        model = ChatOllama(model=model_name, base_url=api_url)
+        model = ChatOllama(model=cfg['ai']['model_name'], base_url=cfg['ai']['api_url'])
     chain = prompt | model
-    logger.info("submit question[{}] to llm {}, {}".format(question, api_url, model_name))
+    logger.info("submit question[{}] to llm {}, {}".format(question, cfg['ai']['api_url'], cfg['ai']['model_name']))
     response = chain.invoke({
         "context": "\n\n".join([doc.page_content for doc, score in docs_with_scores]),
         "question": question
@@ -122,5 +117,5 @@ def test():
 
 
 if __name__ == "__main__":
-    init_cfg()
+    init_yml_cfg()
     test()

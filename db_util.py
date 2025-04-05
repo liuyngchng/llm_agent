@@ -8,7 +8,7 @@ import pandas as pd
 import logging.config
 
 from urllib.parse import urlparse, unquote, urlencode
-from sys_init import init_cfg
+from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
@@ -70,33 +70,45 @@ def output_data(db_con, sql:str, data_format:str) -> str:
     elif 'json' in data_format:
         dt = df.to_json(force_ascii=False, orient='records')
     else:
-        dt = ''
         info = f"error data format {data_format}"
         logger.error(info)
         raise info
-    logger.info(f"returned dt {df.to_markdown(index=False)}")
+    logger.info(f"returned dt \n{df.to_markdown(index=False)}")
     return dt
 
 
-def mysql_output(db_uri: str, sql:str, data_format:str):
+def mysql_output(cfg: dict, sql:str, data_format:str):
     """
     db_uri = mysql+pymysql://user:pswd@host/db
     """
-    parsed_uri = urlparse(db_uri)
-    logger.info(f"host[{parsed_uri.hostname}], user[{parsed_uri.username}], password[{parsed_uri.password}], database[{parsed_uri.path[1:]}]")
-    my_conn = pymysql.connect(
-        host=unquote(parsed_uri.hostname),
-        user=unquote(parsed_uri.username),
-        password=unquote(parsed_uri.password),
-        database=parsed_uri.path[1:],
-        charset='utf8mb4'
-    )
-    logger.info(f"output_data({my_conn}, {sql}, {data_format})")
+    db_config = cfg.get('db', {})
+
+    if all(key in db_config for key in ['name', 'host', 'user', 'password']):
+        logger.info("connect db with name, host, user, password")
+        my_conn = pymysql.connect(
+            host=db_config['host'],
+            user=db_config['user'],
+            password=db_config['password'],
+            database=db_config['name'],
+            charset='utf8mb4'
+        )
+    else:
+        logger.info("connect db with db_uri")
+        parsed_uri = urlparse(db_config['uri'])
+        logger.info(f"host[{parsed_uri.hostname}], user[{parsed_uri.username}], password[{parsed_uri.password}], database[{parsed_uri.path[1:]}]")
+        my_conn = pymysql.connect(
+            host=unquote(parsed_uri.hostname),
+            user=unquote(parsed_uri.username),
+            password=unquote(parsed_uri.password),
+            database=parsed_uri.path[1:],
+            charset='utf8mb4'
+        )
+    logger.info(f"output_data({my_conn}, \n{sql}\n, {data_format})")
     return output_data(my_conn, sql, data_format)
 
 def sqlite_output(db_uri: str, sql:str, data_format:str):
     """
-    db_uri = f"sqlite:///test1.db"
+    cfg["db_uri"] = "sqlite:///test1.db"
     """
 
     db_file = db_uri.split('/')[-1]
@@ -105,15 +117,30 @@ def sqlite_output(db_uri: str, sql:str, data_format:str):
     my_dt = output_data(my_conn, sql, data_format)
     return my_dt
 
+def get_db_uri(cfg: dict) -> str:
+    db_config = cfg.get('db', {})
+    if all(key in db_config for key in ['type', 'name', 'host', 'user', 'password']):
+        if 'mysql' in db_config['type']:
+            my_db_uri = f"mysql+pymysql://{db_config['user']}:{db_config['password']}@{db_config['host']}/{db_config['name']}"
+        elif 'sqlite' in db_config['type']:
+            my_db_uri = f"sqlite:///{db_config['name']}"
+        else:
+            raise "unknown db type in config file"
+    else:
+        raise "one of the following key ['type', 'name', 'host', 'user', 'password'] missed in config file"
+    logger.info(f"db_uri {my_db_uri}")
+    return my_db_uri
+
 def test_db():
     # sql = "SELECT * FROM customer_info LIMIT 2"
     my_sql = "SELECT id, 支付金额 from order_info "
-    my_cfg = init_cfg()
+    my_cfg = init_yml_cfg()
     logger.info(f"my_cfg {my_cfg}")
-    if "sqlite" in my_cfg['db_uri']:
-        my_dt = sqlite_output(my_cfg['db_uri'], my_sql, 'json')
-    elif "mysql" in my_cfg['db_uri']:
-        my_dt = mysql_output(my_cfg['db_uri'], my_sql, 'json')
+    db_uri = get_db_uri(my_cfg)
+    if "sqlite" in db_uri:
+        my_dt = sqlite_output(db_uri, my_sql, 'json')
+    elif "mysql" in db_uri:
+        my_dt = mysql_output(my_cfg, my_sql, 'json')
     else:
         my_dt = None
         raise "check your config file to config correct [dt_uri]"

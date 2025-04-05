@@ -28,3 +28,6 @@ sqlite_vss
 #**/*.db
 **/*.json
 **/*.lock
+**/*.yml
+**/*.yaml
+config.yml
