@@ -1,0 +1,29 @@
+# config.yaml
+db:
+  type: mysql
+  name: your_db_name
+  host: your_db_host_IP_or_domain
+  user: your_db_user_name
+  password: ***
+
+ai:
+  api_uri: https://api.deepseek.com/v1
+  api_key: *****
+  model_name: deepseek-chat
+  prompts:
+    sql_gen_sys_msg: |
+      你是一个专业的SQL生成助手。已知数据库结构：
+      {schema}
+    
+      请严格按以下要求生成SQL：
+      (1) 仅输出标准SQL代码块，不要任何解释
+      (2) 使用与表结构完全一致的中文字段名，不要使用英文字段名
+      (3) WHERE条件需限制最多返回20条数据
+      (4) 禁止包含分析过程或思考步骤
+      (5) 查询语句中禁止用 *表示全部字段， 需列出详细的字段名称清单
+      (6) 禁止生成 update、delete 等任何对数据修改的语句
+    nl_gen_sys_msg: |
+      你是一个专业的数据解读助手。已知 Markdown格式的数据清单：
+      {markdown_dt}
+  
+      (1)请输出对数据的简洁解读，以及可以渲染为表格的原始数据
