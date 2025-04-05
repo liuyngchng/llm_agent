@@ -26,46 +26,30 @@ class SQLGenerator:
     for mysql
     # db_uri = "mysql+pymysql://db_user:db_password@db_host/db_name"
     """
-    def __init__(self, db_uri: str, api_uri: str, api_key:str,
-                 model_name:str, is_remote_model:bool):
-        self.db = SQLDatabase.from_uri(db_uri)
-        self.api_uri = api_uri
-        self.api_key = api_key
-        self.model_name = model_name
+    def __init__(self, cfg:dict , is_remote_model:bool):
+        self.db = SQLDatabase.from_uri(get_db_uri(cfg))
+        self.api_uri = cfg['ai']['api_uri']
+        self.api_key = cfg['ai']['api_key']
+        self.model_name = cfg['ai']['model_name']
         self.is_remote_model = is_remote_model
         self.llm = self.get_llm()
 
         # 带数据库结构的提示模板
-        self.gen_sql_prompt_template = ChatPromptTemplate.from_messages([
-            ("system",
-             """你是一个专业的SQL生成助手。已知数据库结构：
-             {schema}
-
-             请严格按以下要求生成SQL：
-             1. 仅输出标准SQL代码块，不要任何解释
-             2. 使用与表结构完全一致的中文字段名，不要使用英文字段名
-             3. WHERE条件需包含公司名称和时间范围过滤
-             4. 禁止包含分析过程或思考步骤
-             5. 查询语句中禁止用 *表示全部字段， 需列出详细的字段名称清单
-             6. 禁止生成 update、delete 等任何对数据修改的语句
-             """
-             ),
+        sql_gen_sys_msg = f"""{cfg['ai']['prompts']['sql_gen_sys_msg']}"""
+        logger.info(f"sql_gen_sys_msg {sql_gen_sys_msg}")
+        self.sql_gen_prompt_template = ChatPromptTemplate.from_messages([
+            ("system", sql_gen_sys_msg),
             ("human", "用户问题：{question}")
         ])
-
-        self.gen_nl_prompt_template = ChatPromptTemplate.from_messages([
-            ("system",
-             """你是一个专业的数据解读助手。已知 Markdown格式的数据清单：
-             {markdown_dt}
-
-             (1)请输出对数据的简洁解读，以及可以渲染为表格的原始数据
-             """
-             )
+        nl_gen_sys_msg = f"""{cfg['ai']['prompts']['nl_gen_sys_msg']}"""
+        logger.info(f"nl_gen_sys_msg {nl_gen_sys_msg}")
+        self.nl_gen_prompt_template = ChatPromptTemplate.from_messages([
+            ("system", nl_gen_sys_msg),
         ])
 
     def generate_sql(self, question: str) -> str:
         """生成SQL查询"""
-        chain = self.gen_sql_prompt_template | self.llm
+        chain = self.sql_gen_prompt_template | self.llm
         response = chain.invoke({
             "question": question,
             "schema": self.get_schema_info()
@@ -73,7 +57,7 @@ class SQLGenerator:
         return response.content
 
     def get_nl_with_dt(self, markdown_dt: str):
-        chain = self.gen_nl_prompt_template | self.llm
+        chain = self.nl_gen_prompt_template | self.llm
         response = chain.invoke({
             "markdown_dt": markdown_dt
         })
@@ -137,8 +121,8 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     """
     sql =""
     dt = ""
-    db_uri = get_db_uri(cfg)
-    agent = SQLGenerator(db_uri, cfg['ai']['api_uri'], cfg['ai']['api_key'], cfg['ai']['model_name'], is_remote_model)
+
+    agent = SQLGenerator(cfg, is_remote_model)
     try:
         # 生成SQL
         logger.info(f"提交的问题：{q}")
@@ -146,7 +130,7 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
         logger.debug(f"generate_sql\n{sql}")
         sql = extract_sql(sql)
         logger.debug(f"extract_sql\n\n{sql}\n")
-
+        db_uri = get_db_uri(cfg)
         if "sqlite" in db_uri:
             logger.debug(f"connect to sqlite db {db_uri}")
             dt = sqlite_output(db_uri, sql, "markdown")
