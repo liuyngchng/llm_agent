@@ -1,16 +1,27 @@
-# config.yaml
+# config.yaml，文件格式必须严格遵循 yaml配置文件格式
 db:
+#  数据库类型, mysql sqlite
   type: mysql
+#  数据库名称，如果是sqlite，直接写文件名称，本地需存在相应的文件名
   name: your_db_name
+#  数据库连接的IP地址或者域名
   host: your_db_host_IP_or_domain
+#  连接数据库的用户名
   user: your_db_user_name
-  password: ***
+#  读取数据库的用户密码
+  password: 12345
 
 ai:
+#  大语言模型 API 基地址
   api_uri: https://api.deepseek.com/v1
-  api_key: *****
+  #  大语言模型 API key
+  api_key: 45678
+  #  大语言模型 模型名称
   model_name: deepseek-chat
   prompts:
+#    是否需要在读取数据库数据的基础上，添加进行文字描述，true 需要，false，不需要
+    add_desc_to_dt: true
+#    通过自然语言生成SQL语句的大模型提示词，内嵌变量 {schema} 不可更改，其他可自定义，多行
     sql_gen_sys_msg: |
       你是一个专业的SQL生成助手。已知数据库结构：
       {schema}
@@ -22,8 +33,10 @@ ai:
       (4) 禁止包含分析过程或思考步骤
       (5) 查询语句中禁止用 *表示全部字段， 需列出详细的字段名称清单
       (6) 禁止生成 update、delete 等任何对数据修改的语句
+#  通过SQL语句查询到数据后，让大语言模型对数据进行文字描述总结的提示词，
+#  内嵌变量 {markdown_dt} 不可更改必须包含,其他可自定义，多行，add_desc_to_dt = true时生效
     nl_gen_sys_msg: |
       你是一个专业的数据解读助手。已知 Markdown格式的数据清单：
       {markdown_dt}
-  
-      (1)请输出对数据的简洁解读，以及可以渲染为表格的原始数据
+
+      (1) 请对数据进行简洁解读

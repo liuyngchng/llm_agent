@@ -59,7 +59,7 @@ def query_data():
     msg = request.form.get('msg').strip()
     logger.info(f"rcv_msg: {msg}")
     logger.info(f"ask_question({msg}, {my_cfg}, html, True)")
-    answer = get_dt_with_nl(msg, my_cfg, 'html', True)
+    answer = get_dt_with_nl(msg, my_cfg, 'markdown', True)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
