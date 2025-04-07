@@ -6,8 +6,11 @@ pip install gunicorn flask concurrent-log-handler langchain_openai langchain_oll
 
 import logging.config
 import os
+import sqlite3
 
 from flask import Flask, request, jsonify, render_template
+
+import db_util
 from sql_agent import get_dt_with_nl
 from sys_init import init_yml_cfg
 
@@ -32,7 +35,7 @@ def query_data_index():
     """
     dt_idx = "nl2sql_index.html"
     logger.info(f"return page {dt_idx}")
-    return render_template(dt_idx, uid = "123")
+    return render_template(dt_idx, uid = "my_uid_is_123")
 
 @app.route('/health', methods=['GET'])
 def get_data():
@@ -44,6 +47,25 @@ def get_data():
     data = request.get_json()
     print(data)
     return jsonify({"message": "Data received successfully!", "data": data}), 200
+
+@app.route('/login', methods=['POST'])
+def login():
+    """
+    form submit, get data from form
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"user":"test"}'
+    :return:
+    """
+    user = request.form.get('user').strip()
+    psw = request.form.get('psw').strip()
+    logger.info(f"user login: {user}, {psw}")
+    my_conn = sqlite3.connect('test_config.db')
+    db_util.sqlite_query_tool(my_conn, f"select * from user where user={user} and psw = {psw} limit 1")
+    answer = get_dt_with_nl(user, my_cfg, 'markdown', True)
+    # logger.debug(f"answer is：{answer}")
+    if not answer:
+        answer="没有查询到相关数据，请您尝试换个问题提问"
+
+    return answer
 
 @app.route('/query/data', methods=['POST'])
 def query_data():
