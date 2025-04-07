@@ -54,7 +54,39 @@ def config_index():
         raise "err_in_config_index"
     dt_idx = "config_index.html"
     logger.info(f"return page {dt_idx}")
-    return render_template(dt_idx, sys_name=my_cfg['sys']['name'])
+    return render_template(dt_idx, sys_name=my_cfg['sys']['name'], waring_info="")
+
+@app.route('/cfg/idx', methods=['POST'])
+def save_config():
+    logger.info(f"save config info {request.form}")
+    dt_idx = "config_index.html"
+    my_conn = sqlite3.connect('test_config.db')
+    try:
+        usr = request.form.get('usr').strip()
+        db_type = request.form.get('db_type').strip()
+        db_host = request.form.get('db_host').strip()
+        db_name = request.form.get('db_name').strip()
+        db_usr = request.form.get('db_usr').strip()
+        db_psw = request.form.get('db_psw').strip()
+
+
+        check_sql = f"select id from user where name='{usr}' limit 1"
+
+        check_info = db_util.sqlite_query_tool(my_conn, check_sql)
+        logger.debug(f"check_info {check_info}")
+        check_info=json.loads(check_info)['data']
+        uid = check_info[0][0]
+        insert_sql = (f"insert into db_config (uid, db_type, db_host, db_name, db_usr, db_psw) "
+               f"values ('{uid}', '{db_type}', '{db_host}', '{db_name}', '{db_usr}', '{db_psw}')")
+        db_util.sqlite_insert_tool(my_conn, insert_sql)
+        logger.info(f"return page {dt_idx}")
+        my_conn.close()
+        return render_template(dt_idx, sys_name=my_cfg['sys']['name'], waring_info="保存成功")
+    except Exception as e:
+        my_conn.close()
+        logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
+        return render_template(dt_idx, sys_name=my_cfg['sys']['name'], waring_info="保存失败")
+
 
 @app.route('/health', methods=['GET'])
 def get_data():
@@ -96,6 +128,7 @@ def login():
     sql = f"select id from user where name='{user}' and t = '{t}' limit 1"
     check_info = db_util.sqlite_query_tool(my_conn, sql)
     user_id = json.loads(check_info)['data']
+    my_conn.close()
     if not user_id:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
         return render_template("login.html", user = user, waring_info="用户名或密码输入错误")
@@ -113,17 +146,20 @@ def query_data(catch=None):
     msg = request.form.get('msg').strip()
     uid = ''
     if my_cfg['sys']['auth']:
+        my_conn = sqlite3.connect('test_config.db')
         try:
             uid = request.form.get('uid').strip()
-            my_conn = sqlite3.connect('test_config.db')
+
             sql = f"select id from user where id='{uid}' limit 1"
             check_info = db_util.sqlite_query_tool(my_conn, sql)
             check_user_id = json.loads(check_info)['data']
             check_user_id = check_user_id[0][0]
             logger.info(f"rcv_uid {check_user_id}")
+            my_conn.close()
             if not check_user_id:
                 raise f"illegal_request {request}"
         except Exception as e:
+            my_conn.close()
             logger.error(f"auth_err, {e}", exc_info=True)
             raise f"auth_err_for_request {request}"
     logger.info(f"rcv_msg: {msg}, from user {uid}")

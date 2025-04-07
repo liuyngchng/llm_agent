@@ -36,6 +36,18 @@ def sqlite_query_tool(db_con, query: str) -> str:
         logger.error(f"init_cfg_error: {e}")
         return json.dumps({"error": str(e)})
 
+def sqlite_insert_tool(db_con, query: str) -> str:
+    # ///TODO 防止sql注入
+    try:
+        cursor = db_con.cursor()
+        cursor.execute(query)
+        db_con.commit()
+        return json.dumps({"affected_rows": cursor.rowcount})
+    except Exception as e:
+        db_con.rollback()
+        logger.error(f"save_data_err: {e}")
+        return json.dumps({"error": "save data failed"})
+
 def output_data(db_con, sql:str, data_format:str) -> str:
     result =''
     if isinstance(db_con, sqlite3.Connection):

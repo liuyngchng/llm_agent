@@ -47,7 +47,7 @@
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%"><span>数据库主机:</span>
-                <input type="text" name="db_uri" value="" placeholder="192.168.1.1" >
+                <input type="text" id="db_host" name="db_host" value="" placeholder="192.168.1.1" >
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%"><span>用&nbsp;&nbsp;&nbsp;户&nbsp;&nbsp;&nbsp;名:&nbsp;&nbsp;</span>
@@ -61,6 +61,7 @@
             <div align="center" style="margin-bottom: 0.5%">
                 <button type="submit" content="" id="button">&nbsp;保&nbsp;&nbsp;存&nbsp;</button>
             </div>
+            <div align="center"><span style="color: red">{{waring_info}}</span></div>
         </form>
     </div>
     <script>
