@@ -131,7 +131,11 @@ def login():
     my_conn.close()
     if not user_id:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
-        return render_template("login.html", user = user, waring_info="用户名或密码输入错误")
+        return render_template("login.html",
+                               user = user,
+                               sys_name=my_cfg['sys']['name'],
+                               waring_info="用户名或密码输入错误"
+                               )
     else:
         logger.info(f"return_page {dt_idx}")
         return render_template(dt_idx, uid=user_id[0][0], sys_name=my_cfg['sys']['name'])
