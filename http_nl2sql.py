@@ -22,10 +22,6 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
-# my_api_uri = my_cfg["ai"]["api_uri"]
-# my_api_key = my_cfg["ai"]["api_key"]
-# my_model_name = my_cfg["ai"]["model_name"]
-# my_db_uri = my_cfg["db"]["uri"]
 
 @app.route('/', methods=['GET'])
 def query_data_index():
@@ -36,7 +32,7 @@ def query_data_index():
     """
     dt_idx = "nl2sql_index.html"
     logger.info(f"return page {dt_idx}")
-    return render_template(dt_idx)
+    return render_template(dt_idx, uid = "123")
 
 @app.route('/health', methods=['GET'])
 def get_data():
