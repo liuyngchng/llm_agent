@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>用户登录</title>
+    <title>{{sys_name}}</title>
 	<meta charset="utf-8">
     <meta id="adm">
     <style>
@@ -30,11 +30,11 @@
 </head>
 <body>
 <div style="text-align: center;margin-top: 15%;" >
-    <p style="font:22px Verdana; font-weight:bold;">数据查询</p>
+    <p style="font:22px Verdana; font-weight:bold;">{{sys_name}}</p>
     <form id = "my_form" style="margin-top: 2%" method="post" action="/login">
         <div align="center" style="margin-bottom: 0.5%">
             <span>用户名:</span>
-            <input id = "user" name = "user"  type="text" value="{{user}}">
+            <input id = "usr" name = "usr"  type="text" value="{{user}}">
         </div>
         <input id = "t" name = "t"  type="hidden">
     </form>
@@ -44,7 +44,7 @@
     <div align="center" style="margin-bottom: 0.5%">
         <button type="submit" content="" id="button">&nbsp;登&nbsp;&nbsp;录&nbsp;</button>
     </div>
-    <div align="center"><span style="color: red">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+    <div align="center"><span style="color: red">{{waring_info}}</span></div>
 </div>
 <script>
     var psw_input = document.getElementById("psw");

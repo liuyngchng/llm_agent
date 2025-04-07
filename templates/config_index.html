@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Text to SQL demo</title>
+    <title>{{sys_name}}</title>
 	<meta charset="utf-8">
     <meta id="adm">
     <style>
@@ -30,15 +30,20 @@
 </head>
 <body>
     <div style="text-align: center;margin-top: 10%;" >
-        <p style="font:28px Verdana; font-weight:bold;">数据源配置</p>
-        <form style="margin-top: 2%" action="/query/data" method="post">
+        <p style="font:28px Verdana; font-weight:bold;">{{sys_name}}_数据源配置</p>
+        <form style="margin-top: 2%" action="/cfg/idx" method="post">
+            <div style="display: flex; align-items: center; gap: 8px; margin: 0 auto; width: fit-content">
+                <span>用戶名称:&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                <input type="text" id="usr" name="usr" value="" placeholder="your_user_name" required>
+            </div>
+            <div>&nbsp;</div>
             <div style="display: flex; align-items: center; gap: 8px; margin: 0 auto; width: fit-content">
                 <span>数据库类型:</span>
-                <input type="text" name="msg" value="MySQL" required>
+                <input type="text" id="db_type" name="db_type" value="MySQL" required>
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%"><span>数据库名称:</span>
-                <input type="text" name="db_uri" value="" placeholder="test" >
+                <input type="text" id="db_name" name="db_name" value="" placeholder="test"  required>
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%"><span>数据库主机:</span>
@@ -46,15 +51,47 @@
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%"><span>用&nbsp;&nbsp;&nbsp;户&nbsp;&nbsp;&nbsp;名:&nbsp;&nbsp;</span>
-                <input type="text" name="db_uri" value="" placeholder="my_username" >
+                <input type="text" id="db_usr"  name="db_usr" value="" placeholder="my_username" required>
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%"><span>密&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;码:</span>
-                <input type="password" name="db_uri" value="" placeholder="my_password" >
+                <input type="password" id="db_psw"  name="db_psw" value="" placeholder="my_password" required>
             </div>
             <div>&nbsp;</div>
+            <div align="center" style="margin-bottom: 0.5%">
+                <button type="submit" content="" id="button">&nbsp;保&nbsp;&nbsp;存&nbsp;</button>
+            </div>
         </form>
     </div>
+    <script>
+        document.getElementById("button").onclick = function () {
+            if (document.getElementById("usr").value.trim() == '') {
+                alert("请输入用户名");
+                return;
+            }
+            if (document.getElementById("db_type").value.trim() == '') {
+                alert("请输入数据库类型");
+                return;
+            }
+            if (document.getElementById("db_name").value.trim() == '') {
+                alert("请输入数据库名称");
+                return;
+            }
+            if (document.getElementById("db_uri").value.trim() == '') {
+                alert("请输入数据库主机地址");
+                return;
+            }
+            if (document.getElementById("db_usr").value.trim() == '') {
+                alert("请输入数据库连接用户名称");
+                return;
+            }
+            if (document.getElementById("db_psw").value.trim() == '') {
+                alert("请输入数据库连接用户密码");
+                return;
+            }
+            document.getElementById("my_form").submit();
+        }
+    </script>
 </body>
 </html>
 

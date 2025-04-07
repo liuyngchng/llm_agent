@@ -3,7 +3,7 @@
 """
 pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama langchain_core langchain_community pandas tabulate pymysql
 """
-
+import json
 import logging.config
 import os
 import sqlite3
@@ -26,7 +26,7 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 
-@app.route('/', methods=['GET'])
+@app.route('/gt/dt/idx', methods=['GET'])
 def query_data_index():
     """
      A index for static
@@ -36,6 +36,25 @@ def query_data_index():
     dt_idx = "nl2sql_index.html"
     logger.info(f"return page {dt_idx}")
     return render_template(dt_idx, uid = "my_uid_is_123")
+
+@app.route('/cfg/idx', methods=['GET'])
+def config_index():
+    """
+     A index for static
+    curl -s --noproxy '*' http://127.0.0.1:19000 | jq
+    :return:
+    """
+    logger.info(f"request_args_in_config_index {request.args}")
+    try:
+        tkn = request.args.get('tkn')
+        if tkn != my_cfg['sys']['cfg_tkn']:
+            raise "illegal_access_for_config"
+    except Exception as e:
+        logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
+        raise "err_in_config_index"
+    dt_idx = "config_index.html"
+    logger.info(f"return page {dt_idx}")
+    return render_template(dt_idx, sys_name=my_cfg['sys']['name'])
 
 @app.route('/health', methods=['GET'])
 def get_data():
@@ -48,35 +67,67 @@ def get_data():
     print(data)
     return jsonify({"message": "Data received successfully!", "data": data}), 200
 
+@app.route('/', methods=['GET'])
+def login_index():
+    auth_flag = my_cfg['sys']['auth']
+    if auth_flag:
+        login_idx = "login.html"
+        logger.info(f"return page {login_idx}")
+        return render_template(login_idx, waring_info="", sys_name=my_cfg['sys']['name'])
+    else:
+        dt_idx = "nl2sql_index.html"
+        logger.info(f"return_page_with_no_auth {dt_idx}")
+        return render_template(dt_idx, uid='foo', sys_name=my_cfg['sys']['name'])
+
 @app.route('/login', methods=['POST'])
 def login():
     """
     form submit, get data from form
     curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"user":"test"}'
     :return:
+    echo -n 'my_str' |  md5sum
     """
-    user = request.form.get('user').strip()
-    psw = request.form.get('psw').strip()
-    logger.info(f"user login: {user}, {psw}")
+    dt_idx = "nl2sql_index.html"
+    logger.debug(f"request.form: {request.form}")
+    user = request.form.get('usr').strip()
+    t = request.form.get('t').strip()
+    logger.info(f"user login: {user}, {t}")
     my_conn = sqlite3.connect('test_config.db')
-    db_util.sqlite_query_tool(my_conn, f"select * from user where user={user} and psw = {psw} limit 1")
-    answer = get_dt_with_nl(user, my_cfg, 'markdown', True)
-    # logger.debug(f"answer is：{answer}")
-    if not answer:
-        answer="没有查询到相关数据，请您尝试换个问题提问"
-
-    return answer
+    sql = f"select id from user where name='{user}' and t = '{t}' limit 1"
+    check_info = db_util.sqlite_query_tool(my_conn, sql)
+    user_id = json.loads(check_info)['data']
+    if not user_id:
+        logger.error(f"用户名或密码输入错误 {user}, {t}")
+        return render_template("login.html", user = user, waring_info="用户名或密码输入错误")
+    else:
+        logger.info(f"return_page {dt_idx}")
+        return render_template(dt_idx, uid=user_id[0][0], sys_name=my_cfg['sys']['name'])
 
 @app.route('/query/data', methods=['POST'])
-def query_data():
+def query_data(catch=None):
     """
     form submit, get data from form
     curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"msg":"who are you?"}'
     :return:
     """
     msg = request.form.get('msg').strip()
-    logger.info(f"rcv_msg: {msg}")
-    logger.info(f"ask_question({msg}, {my_cfg}, html, True)")
+    uid = ''
+    if my_cfg['sys']['auth']:
+        try:
+            uid = request.form.get('uid').strip()
+            my_conn = sqlite3.connect('test_config.db')
+            sql = f"select id from user where id='{uid}' limit 1"
+            check_info = db_util.sqlite_query_tool(my_conn, sql)
+            check_user_id = json.loads(check_info)['data']
+            check_user_id = check_user_id[0][0]
+            logger.info(f"rcv_uid {check_user_id}")
+            if not check_user_id:
+                raise f"illegal_request {request}"
+        except Exception as e:
+            logger.error(f"auth_err, {e}", exc_info=True)
+            raise f"auth_err_for_request {request}"
+    logger.info(f"rcv_msg: {msg}, from user {uid}")
+    logger.info(f"ask_question({msg}, my_cfg, html, True)")
     answer = get_dt_with_nl(msg, my_cfg, 'markdown', True)
     # logger.debug(f"answer is：{answer}")
     if not answer:
