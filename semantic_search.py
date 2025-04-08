@@ -84,7 +84,7 @@ def search(question: str, cfg: dict, is_remote=False) -> Union[str, list[Union[s
     template = """基于以下上下文：
         {context}
         回答：{question}
-        上下文中没有系统的信息，请不要自行编造"""
+        上下文中没有的信息，请不要自行编造"""
 
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
