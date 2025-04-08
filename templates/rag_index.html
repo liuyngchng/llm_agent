@@ -185,9 +185,9 @@
             queryInput.value = '';            
             // 发送API请求
             fetchQueryData(query)
-                .then(data => {
+                .then(({data, contentType})  => {
                     // 添加机器人消息到聊天
-                    addMessage(data, 'bot');
+                    addMessage(data, 'bot', contentType);
                 })
                 .catch(error => {
                     addMessage(`查询失败：${error.message}`, 'bot');
@@ -210,9 +210,11 @@
 
                 chatContainer.removeChild(loadingMsg);
                 sendButton.disabled = false;
-
-                if (!response.ok) throw new Error('网络响应失败');
-                return await response.text();
+                const contentType = response.headers.get('Content-Type');
+                const data = await response.text();
+                if (!response.ok)
+                    throw new Error('网络响应失败');
+                return {data, contentType}
             } catch (error) {
                 chatContainer.removeChild(loadingMsg);
                 sendButton.disabled = false;
@@ -221,14 +223,18 @@
         }
         
         // 添加消息到聊天
-        function addMessage(text, type) {
+        function addMessage(text, type, contentType) {
             const messageContainer = document.createElement('div');
             messageContainer.classList.add('message-container');
             // 安全处理并解析markdown/html
             const sanitizedContent = DOMPurify.sanitize(
-                type === 'bot' ? marked.parse(text) : text
+                contentType?.includes('markdown') ? marked.parse(text) : text,
+                {
+                    ALLOWED_TAGS: ['div','h1','form','label','select','option','input','textarea','button','p','br','span','a','strong','em'],
+                    ALLOWED_ATTR: ['id','class','for','name','required','type','value','href','placeholder']
+                }
             );
-             if (type === 'user') {
+            if (type === 'user') {
                 messageContainer.classList.add('user-message-container');
                 messageContainer.innerHTML = `
                     <div class="message-bubble user-message-bubble">${sanitizedContent}</div>

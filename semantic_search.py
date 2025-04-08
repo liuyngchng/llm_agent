@@ -70,8 +70,48 @@ def get_vector_db() -> FAISS:
         vector_db.save_local(idx)
         return vector_db
 
+def classify_question(question: str, cfg: dict, is_remote=True) -> str:
+    """
+    from transformers import pipeline
 
-def search(question: str, cfg: dict, is_remote=False) -> Union[str, list[Union[str, dict]]]:
+    classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
+    def classify_query(text):
+        labels = ["投诉", "缴费", "维修"]
+        result = classifier(text, labels, multi_label=False)
+        return result['labels'][0]
+
+    # 示例使用
+    user_input = "我家水管爆了需要处理"
+    print(f"问题类型: {classify_query(user_input)}")
+
+    """
+    logger.info(f"classify_question [{question}]")
+    template = """
+          根据以下问题的内容，将用户问题分为以下几类
+           (1)缴费;
+           (2)上门服务;
+           (3)其他;
+           问题： {question}\n分类结果:
+           
+          """
+    prompt = ChatPromptTemplate.from_template(template)
+    logger.info(f"prompt {prompt}")
+    model = get_model(cfg, is_remote)
+    chain = prompt | model
+    logger.info("submit question[{}] to llm {}, {}".format(question, cfg['ai']['api_uri'], cfg['ai']['model_name']))
+    response = chain.invoke({
+        "question": question
+    })
+    del model
+    torch.cuda.empty_cache()
+    return response.content
+
+def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[str, dict]]]:
+    """
+    search user questions in knowledge base,
+    submit the search result and user question to LLM, return the answer
+    """
     logger.info("sim_search [{}] in doc {}".format(question, doc))
     # 搜索部分
     docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(question, k=5)
@@ -85,19 +125,12 @@ def search(question: str, cfg: dict, is_remote=False) -> Union[str, list[Union[s
         基于以下上下文：
         {context}
         回答：{question}
-        上下文中没有的信息，请不要自行编造
+        (1) 上下文中没有的信息，请不要自行编造
+        (2) 当需要提供上门服务的时候， 提供一个用户可填写的表格
         """
-
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
-    if is_remote:
-        model = ChatOpenAI(api_key=cfg['ai']['api_key'],
-                           base_url=cfg['ai']['api_uri'],
-                           http_client=httpx.Client(verify=False, proxy=None),
-                           model=cfg['ai']['model_name']
-                           )
-    else:
-        model = ChatOllama(model=cfg['ai']['model_name'], base_url=cfg['ai']['api_uri'])
+    model = get_model(cfg, is_remote)
     chain = prompt | model
     logger.info("submit question[{}] to llm {}, {}".format(question, cfg['ai']['api_uri'], cfg['ai']['model_name']))
     response = chain.invoke({
@@ -107,6 +140,18 @@ def search(question: str, cfg: dict, is_remote=False) -> Union[str, list[Union[s
     del model
     torch.cuda.empty_cache()
     return response.content
+
+
+def get_model(cfg, is_remote):
+    if is_remote:
+        model = ChatOpenAI(api_key=cfg['ai']['api_key'],
+                           base_url=cfg['ai']['api_uri'],
+                           http_client=httpx.Client(verify=False, proxy=None),
+                           model=cfg['ai']['model_name']
+                           )
+    else:
+        model = ChatOllama(model=cfg['ai']['model_name'], base_url=cfg['ai']['api_uri'])
+    return model
 
 
 def test():
@@ -126,5 +171,9 @@ def test():
 
 
 if __name__ == "__main__":
-    init_yml_cfg()
-    test()
+    my_cfg = init_yml_cfg()
+    result = classify_question("我要缴费", my_cfg, True)
+    logger.info(f"result: {result}")
+    result = classify_question("你们能派个人来吗？", my_cfg, True)
+    logger.info(f"result: {result}")
+    # test()

@@ -7,8 +7,8 @@ pip install flask
 import logging.config
 import os
 
-from flask import Flask, request, jsonify, render_template
-from semantic_search import search
+from flask import Flask, request, jsonify, render_template, Response
+from semantic_search import search, classify_question
 from sys_init import init_yml_cfg
 
 # 加载配置
@@ -32,7 +32,11 @@ def rag_index():
     curl -s --noproxy '*' http://127.0.0.1:19000 | jq
     :return:
     """
-    return render_template('rag_index.html')
+    ctx = {
+        "sys_name" : my_cfg['sys']['name'],
+
+    }
+    return render_template('rag_index.html', **ctx)
 
 
 
@@ -57,10 +61,21 @@ def submit():
     """
     msg = request.form.get('msg')
     logger.info("rcv_msg: {}".format(msg))
-    answer = search(msg, my_cfg, True)
+    labels = ["缴费", "上门服务", "其他"]
+    classify_result = classify_question(msg, my_cfg, True)
+    logger.info(f"classify_result: {classify_result}")
+    content_type='text/markdown; charset=utf-8'
+    if labels[0] in classify_result:
+        answer = search(msg, my_cfg, True)
+    elif labels[1] in classify_result:
+        with open('static/service1.html', 'r', encoding='utf-8') as file:
+            content = file.read()
+        content_type = 'text/html; charset=utf-8'
+        answer = f"<div>请填写以下表格，我们将安排工作人员上门为您提供服务</div> {content}"
+    else:
+        answer = "目前还没有有效的信息提供给您"
     logger.info(f"answer is：{answer}")
-    return answer
-
+    return Response(answer, content_type)
 def test_req():
     """
     ask the LLM for some private question not public to outside,

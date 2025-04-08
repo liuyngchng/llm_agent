@@ -1,0 +1,74 @@
+
+<div>
+    <h1>燃气上门服务申请表</h1>
+    <form id="serviceRequestForm">
+        <div class="form-group">
+            <label for="serviceType" class="required">服务类型</label>
+            <select id="serviceType" name="serviceType" required>
+                <option value="">-- 请选择 --</option>
+                <option value="报装服务">报装服务</option>
+                <option value="安全检查">安全检查</option>
+                <option value="紧急抢修">紧急抢修</option>
+                <option value="设施维修">设施维修</option>
+                <option value="拆改迁移">拆改迁移</option>
+                <option value="器具安装">器具安装</option>
+                <option value="其他">其他</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="customerName" class="required">客户姓名</label>
+            <input type="text" id="customerName" name="customerName" required>
+        </div>
+
+        <div class="form-group">
+            <label for="contactNumber" class="required">联系电话</label>
+            <input type="tel" id="contactNumber" name="contactNumber" required>
+        </div>
+
+        <div class="form-group">
+            <label for="address" class="required">服务地址</label>
+            <input type="text" id="address" name="address" required>
+        </div>
+
+        <div class="form-group">
+            <label for="preferredDate" class="required">期望上门日期</label>
+            <input type="date" id="preferredDate" name="preferredDate" required>
+        </div>
+
+        <div class="form-group">
+            <label for="preferredTime">期望上门时间段</label>
+            <select id="preferredTime" name="preferredTime">
+                <option value="">任意时间</option>
+                <option value="08:00-12:00">上午 (08:00-12:00)</option>
+                <option value="12:00-14:00">中午 (12:00-14:00)</option>
+                <option value="14:00-18:00">下午 (14:00-18:00)</option>
+                <option value="18:00-21:00">晚上 (18:00-21:00)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="problemDescription" class="required">问题描述/服务需求</label>
+            <textarea id="problemDescription" name="problemDescription" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="customerType">客户类型</label>
+            <select id="customerType" name="customerType">
+                <option value="居民客户">居民客户</option>
+                <option value="非居民客户">非居民客户</option>
+                <option value="农村管道客户">农村管道客户</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="additionalNotes">备注信息</label>
+            <textarea id="additionalNotes" name="additionalNotes"></textarea>
+            <p class="note">如有特殊需求或其他说明请在此填写</p>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="submit-btn">提交申请</button>
+        </div>
+    </form>
+</div>
