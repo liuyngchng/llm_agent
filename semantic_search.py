@@ -21,7 +21,7 @@ from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
-doc = "1.pdf"
+doc = "1.txt"
 emb_name = os.path.abspath("../bge-large-zh-v1.5")
 idx = "faiss_index"
 
@@ -53,7 +53,7 @@ def get_vector_db() -> FAISS:
         logger.info("idx existed")
         try:
             vector_db = FAISS.load_local(idx,
-                                         HuggingFaceEmbeddings(model_name=emb_name),
+                                         HuggingFaceEmbeddings(model_name=emb_name,  model_kwargs={'device': 'cpu'}),
                                          allow_dangerous_deserialization=True)
             return vector_db
         except Exception as e:
@@ -65,7 +65,7 @@ def get_vector_db() -> FAISS:
         pages = loader.load_and_split()
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
         texts = text_splitter.split_documents(pages)
-        embeddings = HuggingFaceEmbeddings(model_name=emb_name)
+        embeddings = HuggingFaceEmbeddings(model_name=emb_name,  model_kwargs={'device': 'cpu'})
         vector_db = FAISS.from_documents(texts, embeddings)
         vector_db.save_local(idx)
         return vector_db
@@ -81,10 +81,12 @@ def search(question: str, cfg: dict, is_remote=False) -> Union[str, list[Union[s
         # logger.info(f"[相关度：{score:.2f}]\t{related_doc.page_content[:200]}...")
         logger.info(f"[相关度：{score:.2f}]\t{related_doc.page_content}")
     # 构建增强提示
-    template = """基于以下上下文：
+    template = """
+        基于以下上下文：
         {context}
         回答：{question}
-        上下文中没有的信息，请不要自行编造"""
+        上下文中没有的信息，请不要自行编造
+        """
 
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
@@ -102,6 +104,8 @@ def search(question: str, cfg: dict, is_remote=False) -> Union[str, list[Union[s
         "context": "\n\n".join([doc.page_content for doc, score in docs_with_scores]),
         "question": question
     })
+    del model
+    torch.cuda.empty_cache()
     return response.content
 
 

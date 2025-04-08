@@ -18,7 +18,7 @@ import logging.config
 import os
 
 # knowledge_dir = "../test/"
-knowledge_file = "./2.txt"
+knowledge_file = "./1.txt"
 # bge-large-zh-v1.5 中文分词模型，国内网络环境可以通过 https://modelscope.cn/models/BAAI/bge-large-zh-v1.5 下载
 embedding_model = "../bge-large-zh-v1.5"
 vector_file = "./faiss_index"
@@ -35,9 +35,9 @@ def vectoring(file: str):
     # 加载知识库文件
     logger.info("load local doc {}".format(file))
     # load word, PDF file
-    loader = UnstructuredLoader(file)
+    # loader = UnstructuredLoader(file)
     # load txt file
-    # loader = TextLoader(file, encoding='utf8')
+    loader = TextLoader(file, encoding='utf8')
     # load a directory
     # loader = DirectoryLoader(path=knowledge_dir, recursive=True, load_hidden=False,
     #                          loader_cls=TextLoader, glob="**/*.java")
@@ -56,7 +56,8 @@ def vectoring(file: str):
     logger.info("load embedding model: {}".format(embedding_model))
     embeddings = HuggingFaceEmbeddings(
         model_name=embedding_model,
-        cache_folder='./bge-cache'
+        cache_folder='./bge-cache',
+        model_kwargs={'device': 'cpu'}
     )
 
     # 创建向量数据库

@@ -19,12 +19,13 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-my_api_uri = ""
-my_api_key = ""
-my_model_name = ""
-my_db_uri = ""
+my_cfg = init_yml_cfg()
+os.system(
+    "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
+)
 
-@app.route('/rag', methods=['GET'])
+
+@app.route('/', methods=['GET'])
 def rag_index():
     """
      A index for static
@@ -56,8 +57,7 @@ def submit():
     """
     msg = request.form.get('msg')
     logger.info("rcv_msg: {}".format(msg))
-    #answer = search(msg, True)
-    answer = search(msg)
+    answer = search(msg, my_cfg, True)
     logger.info(f"answer is：{answer}")
     return answer
 
@@ -67,16 +67,14 @@ def test_req():
     let LLM retrieve the information from local vector database, 
     and the output the answer.
     """
-    cfg = init_yml_cfg()
-    logger.info(f"config {cfg}")
+    logger.info(f"config {my_cfg}")
     my_question = "我想充值缴费？"
     logger.info(f"invoke question: {my_question}")
 
-    answer = search(my_question, cfg, True)
+    answer = search(my_question, my_cfg, True)
     logger.info(f"answer is \r\n{answer}")
 
 
 if __name__ == '__main__':
-    # init_cfg()
-    test_req()
-    # app.run(host='0.0.0.0', port=19000)
+    # test_req()
+    app.run(host='0.0.0.0', port=19000)
