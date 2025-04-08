@@ -10,7 +10,13 @@ db:
   user: your_db_user_name
 #  读取数据库的用户密码
   password: 12345
-
+sys:
+#   系统名称(title) 配置
+  name: 智燃慧问test
+#   是否启用认证， true， 登录后才能使用系统;false 无需登录
+  auth: true
+#  自定义数据库配置时的权限认证 token
+  cfg_tkn: f5cac69586d60b98d43a2ae34d64e876
 ai:
 #  大语言模型 API 基地址
   api_uri: https://api.deepseek.com/v1
@@ -19,9 +25,9 @@ ai:
   #  大语言模型 模型名称
   model_name: deepseek-chat
   prompts:
-#    是否需要在读取数据库数据的基础上，添加进行文字描述，true 需要，false，不需要
+#   是否需要在读取数据库数据的基础上，添加进行文字描述，true 需要，false，不需要
     add_desc_to_dt: true
-#    通过自然语言生成SQL语句的大模型提示词，内嵌变量 {schema} 不可更改，其他可自定义，多行
+#   通过自然语言生成SQL语句的大模型提示词，内嵌变量 {schema} 不可更改，其他可自定义，多行
     sql_gen_sys_msg: |
       你是一个专业的SQL生成助手。已知数据库结构：
       {schema}

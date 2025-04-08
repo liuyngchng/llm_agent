@@ -49,7 +49,6 @@ def sqlite_insert_tool(db_con, query: str) -> str:
         return json.dumps({"error": "save data failed"})
 
 def output_data(db_con, sql:str, data_format:str) -> str:
-    result =''
     if isinstance(db_con, sqlite3.Connection):
         result = sqlite_query_tool(db_con, sql)
     elif isinstance(db_con, pymysql.Connection):
@@ -116,7 +115,9 @@ def mysql_output(cfg: dict, sql:str, data_format:str):
             charset='utf8mb4'
         )
     logger.info(f"output_data({my_conn}, \n{sql}\n, {data_format})")
-    return output_data(my_conn, sql, data_format)
+    dt = output_data(my_conn, sql, data_format)
+    my_conn.close()
+    return dt
 
 def sqlite_output(db_uri: str, sql:str, data_format:str):
     """
@@ -127,6 +128,7 @@ def sqlite_output(db_uri: str, sql:str, data_format:str):
     my_conn = sqlite3.connect(db_file)
     logger.debug(f"connect to db {db_file}")
     my_dt = output_data(my_conn, sql, data_format)
+    my_conn.close()
     return my_dt
 
 def get_db_uri(cfg: dict) -> str:

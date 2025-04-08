@@ -45,22 +45,66 @@ def config_index():
     :return:
     """
     logger.info(f"request_args_in_config_index {request.args}")
+    usr=''
     try:
         tkn = request.args.get('tkn')
         if tkn != my_cfg['sys']['cfg_tkn']:
             raise "illegal_access_for_config"
+        usr = request.args.get('usr')
+        if not usr:
+            return "user is null in config, please submit your username in config request"
     except Exception as e:
         logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
         raise "err_in_config_index"
+
+    ctx = {
+        "sys_name" : my_cfg['sys']['name'],
+        "waring_info" : "",
+        "usr": usr,
+        "db_type":my_cfg['db']['type'],
+        "db_name":my_cfg['db']['name'],
+        "db_host":my_cfg['db']['host'],
+        "db_usr": my_cfg['db']['user'],
+        "db_psw": my_cfg['db']['password'],
+    }
+    my_conn = sqlite3.connect('test_config.db')
+    check_sql = f"select id from user where name='{usr}' limit 1"
+    check_info = db_util.sqlite_query_tool(my_conn, check_sql)
+    logger.debug(f"check_info {check_info}")
+    check_data = json.loads(check_info)['data']
+    try:
+        uid = check_data[0][0]
+    except (IndexError, TypeError) as e:
+        return "illegal user info in config request"
+
+    check_sql = f"select uid, db_type, db_name, db_host, db_usr, db_psw from db_config where uid='{uid}' limit 1"
+    db_config_info = db_util.sqlite_query_tool(my_conn, check_sql)
+    logger.debug(f"check_info {db_config_info}")
+    check_info = json.loads(db_config_info)['data']
+    try:
+        uid = check_info[0][0]
+        ctx = {
+            "sys_name": my_cfg['sys']['name'],
+            "waring_info": "",
+            "usr": usr,
+            "db_type": check_info[0][1],
+            "db_name": check_info[0][2],
+            "db_host": check_info[0][3],
+            "db_usr": check_info[0][4],
+            "db_psw": check_info[0][5],
+        }
+    except (IndexError, TypeError) as e:
+        logger.info(f"no db config for user {usr}")
     dt_idx = "config_index.html"
     logger.info(f"return page {dt_idx}")
-    return render_template(dt_idx, sys_name=my_cfg['sys']['name'], waring_info="")
+    return render_template(dt_idx, **ctx)
 
 @app.route('/cfg/idx', methods=['POST'])
 def save_config():
     logger.info(f"save config info {request.form}")
     dt_idx = "config_index.html"
     my_conn = sqlite3.connect('test_config.db')
+    ctx = {}
     try:
         usr = request.form.get('usr').strip()
         db_type = request.form.get('db_type').strip()
@@ -69,9 +113,17 @@ def save_config():
         db_usr = request.form.get('db_usr').strip()
         db_psw = request.form.get('db_psw').strip()
 
-
+        ctx = {
+            "sys_name": my_cfg['sys']['name'],
+            "waring_info": "",
+            "usr": usr,
+            "db_type": db_type,
+            "db_name": db_name,
+            "db_host": db_host,
+            "db_usr": db_usr,
+            "db_psw": db_psw,
+        }
         check_sql = f"select id from user where name='{usr}' limit 1"
-
         check_info = db_util.sqlite_query_tool(my_conn, check_sql)
         logger.debug(f"check_info {check_info}")
         check_info=json.loads(check_info)['data']
@@ -81,11 +133,13 @@ def save_config():
         db_util.sqlite_insert_tool(my_conn, insert_sql)
         logger.info(f"return page {dt_idx}")
         my_conn.close()
-        return render_template(dt_idx, sys_name=my_cfg['sys']['name'], waring_info="保存成功")
+        ctx['waring_info'] = '保存成功'
+        return render_template(dt_idx, **ctx)
     except Exception as e:
         my_conn.close()
         logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
-        return render_template(dt_idx, sys_name=my_cfg['sys']['name'], waring_info="保存失败")
+        ctx['waring_info'] = '保存失败'
+        return render_template(dt_idx, **ctx)
 
 
 @app.route('/health', methods=['GET'])
@@ -131,11 +185,13 @@ def login():
     my_conn.close()
     if not user_id:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
-        return render_template("login.html",
-                               user = user,
-                               sys_name=my_cfg['sys']['name'],
-                               waring_info="用户名或密码输入错误"
-                               )
+        ctx = {
+            "user" : user,
+            "sys_name" : my_cfg['sys']['name'],
+            "waring_info" : "用户名或密码输入错误",
+
+        }
+        return render_template("login.html", **ctx)
     else:
         logger.info(f"return_page {dt_idx}")
         return render_template(dt_idx, uid=user_id[0][0], sys_name=my_cfg['sys']['name'])

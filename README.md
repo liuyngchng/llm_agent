@@ -68,3 +68,9 @@ curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/health' -H "Content-Type:
 curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"msg":"who are you?"}'
 ```
 
+# 5. config
+
+自定义数据库配置，usr 为登录用户名， tkn的为config.yml 中配置的 sys.cfg_tkn
+```html
+http://127.0.0.1:19000/cfg/idx?usr=test&tkn=12345
+```
