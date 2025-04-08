@@ -9,6 +9,7 @@ import os
 
 from flask import Flask, request, jsonify, render_template
 from semantic_search import search
+from sys_init import init_yml_cfg
 
 # 加载配置
 logging.config.fileConfig('logging.conf')
@@ -66,13 +67,16 @@ def test_req():
     let LLM retrieve the information from local vector database, 
     and the output the answer.
     """
-    my_question = "居民如何开户？"
+    cfg = init_yml_cfg()
+    logger.info(f"config {cfg}")
+    my_question = "我想充值缴费？"
     logger.info(f"invoke question: {my_question}")
-    answer = search(my_question, True)
-    logger.info(f"answer is {answer}")
+
+    answer = search(my_question, cfg, True)
+    logger.info(f"answer is \r\n{answer}")
 
 
 if __name__ == '__main__':
     # init_cfg()
-    # test_req()
-    app.run(host='0.0.0.0', port=19000)
+    test_req()
+    # app.run(host='0.0.0.0', port=19000)

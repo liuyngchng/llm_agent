@@ -18,7 +18,7 @@ import logging.config
 import os
 
 # knowledge_dir = "../test/"
-knowledge_file = "./1.pdf"
+knowledge_file = "./2.txt"
 # bge-large-zh-v1.5 中文分词模型，国内网络环境可以通过 https://modelscope.cn/models/BAAI/bge-large-zh-v1.5 下载
 embedding_model = "../bge-large-zh-v1.5"
 vector_file = "./faiss_index"

@@ -83,16 +83,21 @@ def search(question: str, cfg: dict, is_remote=False) -> Union[str, list[Union[s
     # 构建增强提示
     template = """基于以下上下文：
         {context}
-        
-        回答：{question}"""
+        回答：{question}
+        上下文中没有系统的信息，请不要自行编造"""
+
     prompt = ChatPromptTemplate.from_template(template)
+    logger.info(f"prompt {prompt}")
     if is_remote:
-        model = ChatOpenAI(api_key=cfg['ai']['api_key'], base_url=cfg['ai']['api_url'],
-                           http_client=httpx.Client(verify=False), model=cfg['ai']['model_name'])
+        model = ChatOpenAI(api_key=cfg['ai']['api_key'],
+                           base_url=cfg['ai']['api_uri'],
+                           http_client=httpx.Client(verify=False, proxy=None),
+                           model=cfg['ai']['model_name']
+                           )
     else:
-        model = ChatOllama(model=cfg['ai']['model_name'], base_url=cfg['ai']['api_url'])
+        model = ChatOllama(model=cfg['ai']['model_name'], base_url=cfg['ai']['api_uri'])
     chain = prompt | model
-    logger.info("submit question[{}] to llm {}, {}".format(question, cfg['ai']['api_url'], cfg['ai']['model_name']))
+    logger.info("submit question[{}] to llm {}, {}".format(question, cfg['ai']['api_uri'], cfg['ai']['model_name']))
     response = chain.invoke({
         "context": "\n\n".join([doc.page_content for doc, score in docs_with_scores]),
         "question": question
@@ -110,7 +115,7 @@ def test():
     # res.noTempMemory()
     start_ollama()
     my_question = "居民如何开户?"
-    answer = search(my_question, True)
+    answer = search(my_question, init_yml_cfg())
     logger.info("answer： {}".format(answer))
     torch.cuda.empty_cache()
     logger.info("cuda released")
