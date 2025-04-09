@@ -243,8 +243,18 @@
                 messageContainer.classList.add('user-message-container');
                 messageContainer.innerHTML = `
                     <div class="bot-avatar">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM8 17.5C7.17 17.5 6.5 16.83 6.5 16C6.5 15.17 7.17 14.5 8 14.5C8.83 14.5 9.5 15.17 9.5 16C9.5 16.83 8.83 17.5 8 17.5ZM9.5 12C9.5 12.83 8.83 13.5 8 13.5C7.17 13.5 6.5 12.83 6.5 12C6.5 11.17 7.17 10.5 8 10.5C8.83 10.5 9.5 11.17 9.5 12ZM15.5 17.5C14.67 17.5 14 16.83 14 16C14 15.17 14.67 14.5 15.5 14.5C16.33 14.5 17 15.17 17 16C17 16.83 16.33 17.5 15.5 17.5ZM17 12C17 12.83 16.33 13.5 15.5 13.5C14.67 13.5 14 12.83 14 12C14 11.17 14.67 10.5 15.5 10.5C16.33 10.5 17 11.17 17 12Z" fill="white"/>
+                        <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                          <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#6366F1"/>
+                            <stop offset="100%" stop-color="#8B5CF6"/>
+                          </linearGradient>
+
+                          <circle cx="40" cy="40" r="38" fill="url(#grad)" stroke="#fff" stroke-width="2"/>
+
+                          <path d="M40 28a8 8 0 0 1 8 8 8 8 0 0 1-16 0 8 8 0 0 1 8-8m-12 24h24v-4H28z"
+                                fill="#fff"
+                                stroke="#fff"
+                                stroke-width="1"/>
                         </svg>
                     </div>
                     <div class="message-bubble user-message-bubble">${sanitizedContent}</div>
