@@ -6,8 +6,9 @@ pip install flask
 
 import logging.config
 import os
+import re
 
-from flask import Flask, request, jsonify, render_template, Response
+from flask import Flask, request, jsonify, render_template, Response, send_from_directory, abort
 from semantic_search import search, classify_question
 from sys_init import init_yml_cfg
 
@@ -53,6 +54,20 @@ def get_data():
     print(data)
     return jsonify({"message": "Data received successfully!", "data": data}), 200
 
+@app.route('/static/<file_name>', methods=['GET'])
+def get_img(file_name):
+    """
+    返回静态文件
+    """
+    if not re.match(r'^[\w\-\\.]+\.(png|jpg|jpeg|css|js)$', file_name):  # 限制文件名格式
+        abort(400)
+    if not file_name or '/' in file_name:  # 防止路径遍历
+        abort(400)
+    static_dir = os.path.join(app.root_path, 'static')
+    if not os.path.exists(os.path.join(static_dir, file_name)):
+        abort(404)
+    logger.info(f"return static file {file_name}")
+    return send_from_directory(static_dir, file_name)
 
 @app.route('/rag/submit', methods=['POST'])
 def submit():
