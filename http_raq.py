@@ -73,7 +73,7 @@ def submit():
         with open('static/service1.html', 'r', encoding='utf-8') as file:
             content = file.read()
         content_type = 'text/html; charset=utf-8'
-        answer = f"<div>请填写以下表格，我们将安排工作人员上门为您提供服务</div> {content}"
+        answer = f"<div>请填写以下信息，我们将安排工作人员上门为您提供服务</div> {content}"
     else:
         answer = "目前还没有有效的信息提供给您"
     logger.info(f"answer is：{answer}")

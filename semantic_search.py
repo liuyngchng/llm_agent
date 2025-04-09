@@ -114,7 +114,7 @@ def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[st
     """
     logger.info("sim_search [{}] in doc {}".format(question, doc))
     # 搜索部分
-    docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(question, k=1)
+    docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(question, k=5)
 
     # 输出结果和相关性分数
     for related_doc, score in docs_with_scores:
