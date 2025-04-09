@@ -36,7 +36,9 @@ def rag_index():
         "sys_name" : my_cfg['sys']['name'],
 
     }
-    return render_template('rag_index.html', **ctx)
+    idx = 'rag_index.html'
+    logger.info(f"return page {idx}")
+    return render_template(idx, **ctx)
 
 
 
@@ -75,7 +77,7 @@ def submit():
     else:
         answer = "目前还没有有效的信息提供给您"
     logger.info(f"answer is：{answer}")
-    return Response(answer, content_type)
+    return Response(answer, content_type=content_type, status=200)
 def test_req():
     """
     ask the LLM for some private question not public to outside,

@@ -114,12 +114,11 @@ def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[st
     """
     logger.info("sim_search [{}] in doc {}".format(question, doc))
     # 搜索部分
-    docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(question, k=5)
+    docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(question, k=1)
 
     # 输出结果和相关性分数
     for related_doc, score in docs_with_scores:
-        # logger.info(f"[相关度：{score:.2f}]\t{related_doc.page_content[:200]}...")
-        logger.info(f"[相关度：{score:.2f}]\t{related_doc.page_content}")
+        logger.info(f"[相关度：{score:.2f}]\t{related_doc.page_content[:100]}...")
     # 构建增强提示
     template = """
         基于以下上下文：
