@@ -59,12 +59,15 @@ def get_img(file_name):
     """
     返回静态文件
     """
-    if not re.match(r'^[\w\-\\.]+\.(png|jpg|jpeg|css|js)$', file_name):  # 限制文件名格式
+    if not re.match(r'^[\w\-\\.]+\.(png|jpg|jpeg|css|js|woff2?|ttf|ico|svg)$', file_name):  # 限制文件名格式
+        logger.error(f"return_400_for_file_request {file_name}")
         abort(400)
     if not file_name or '/' in file_name:  # 防止路径遍历
+        logger.error(f"return_400_for_file_request {file_name}")
         abort(400)
     static_dir = os.path.join(app.root_path, 'static')
     if not os.path.exists(os.path.join(static_dir, file_name)):
+        logger.error(f"return_404_for_file_request {file_name}")
         abort(404)
     logger.info(f"return static file {file_name}")
     return send_from_directory(static_dir, file_name)
@@ -73,7 +76,7 @@ def get_img(file_name):
 def submit():
     """
     form submit, get data from form
-    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"msg":"who are you?"}'
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/rag/submit' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"msg":"who are you?"}'
     :return:
     """
     msg = request.form.get('msg')
