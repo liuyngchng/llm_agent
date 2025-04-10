@@ -26,7 +26,7 @@ def execute_workflow(workflow):
 
 
 if __name__ == "__main__":
-    with open('workflow.json', 'r') as file:
+    with open('workflow.json', 'r', encoding='utf-8') as file:
         workflow_data = json.load(file)
 
     print(workflow_data)

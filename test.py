@@ -10,7 +10,7 @@ from langchain.chains import RetrievalQA
 import logging.config
 
 # 加载配置
-logging.config.fileConfig('logging.conf')
+logging.config.fileConfig('logging.conf', encoding="utf-8")
 
 # 创建 logger
 logger = logging.getLogger()

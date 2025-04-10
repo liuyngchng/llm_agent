@@ -14,7 +14,7 @@ import wave
 
 from sys_init import init_yml_cfg
 
-logging.config.fileConfig('logging.conf')
+logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 my_cfg = init_yml_cfg()

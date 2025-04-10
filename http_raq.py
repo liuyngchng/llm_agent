@@ -13,7 +13,7 @@ from semantic_search import search, classify_question
 from sys_init import init_yml_cfg
 
 # 加载配置
-logging.config.fileConfig('logging.conf')
+logging.config.fileConfig('logging.conf', encoding="utf-8")
 
 # 创建 logger
 logger = logging.getLogger(__name__)

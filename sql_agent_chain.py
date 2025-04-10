@@ -33,7 +33,7 @@ curl -s --noproxy '*' -X POST http://127.0.0.1:11434/api/chat -d '{
 }' | jq
 """
 
-logging.config.fileConfig('logging.conf')
+logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 # 支持 tools 调用

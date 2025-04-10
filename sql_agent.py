@@ -17,7 +17,7 @@ from sys_init import init_yml_cfg
 pip install langchain_openai langchain_ollama langchain_core langchain_community pandas tabulate pymysql
 """
 
-logging.config.fileConfig('logging.conf')
+logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 
@@ -157,11 +157,11 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
         logger.info(f"only_dt:\n{dt}")
         return dt
 
-def transcribe_audio(audio_path: str, api_key: str, ):
+def transcribe_audio(audio_path: str, api_key: str, model_name: str):
     client = OpenAI(api_key=api_key)
     with open(audio_path, "rb") as audio_file:
         transcript = client.audio.transcriptions.create(
-            model=MODEL_NAME,
+            model=model_name,
             file=audio_file
         )
     return transcript.text

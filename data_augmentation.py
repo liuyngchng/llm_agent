@@ -6,7 +6,7 @@ from langchain_ollama import ChatOllama
 
 import logging.config
 
-logging.config.fileConfig('logging.conf')
+logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 def get_data(line_txt):

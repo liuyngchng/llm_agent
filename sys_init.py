@@ -5,7 +5,7 @@ import yaml
 import os
 import logging.config
 
-logging.config.fileConfig('logging.conf')
+logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 def init_txt_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
@@ -20,7 +20,7 @@ def init_txt_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
     _my_cfg = {"api_uri":"http://127.0.0.1:11434", "api_key":"", "model_name":"deepseek-r1"}
     if not os.path.exists(cfg_file):
         raise FileNotFoundError(f"配置文件不存在: {cfg_file}")
-    with open(cfg_file) as f:
+    with open(cfg_file, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     if len(lines) < 2:
         logger.error("cfg_err_in_file_{}".format(cfg_file))
@@ -66,7 +66,7 @@ def init_yml_cfg(cfg_file="config.yml")-> dict[str, str]:
         raise FileNotFoundError(f"配置文件不存在: {cfg_file}")
     # 读取配置
     _my_cfg = {}
-    with open(cfg_file) as f:
+    with open(cfg_file, 'r', encoding='utf-8') as f:
         _my_cfg = yaml.safe_load(f)
     return _my_cfg
 

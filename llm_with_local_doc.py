@@ -7,7 +7,7 @@ import logging.config
 
 from sys_init import init_yml_cfg
 
-logging.config.fileConfig('logging.conf')
+logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 
