@@ -28,6 +28,7 @@ class SQLGenerator:
     """
     def __init__(self, cfg:dict , is_remote_model:bool):
         self.db = SQLDatabase.from_uri(get_db_uri(cfg))
+        self.db_type = cfg['db']['type']
         self.api_uri = cfg['ai']['api_uri']
         self.api_key = cfg['ai']['api_key']
         self.model_name = cfg['ai']['model_name']
@@ -36,6 +37,10 @@ class SQLGenerator:
 
         # 带数据库结构的提示模板
         sql_gen_sys_msg = f"""{cfg['ai']['prompts']['sql_gen_sys_msg']}"""
+        # try:
+        #     sql_gen_sys_msg = sql_gen_sys_msg.replace("{sql_dialect}", cfg['db']['type'])
+        # except Exception as e:
+        #     logger.error("set_sql_dialect_err", e)
         logger.info(f"sql_gen_sys_msg {sql_gen_sys_msg}")
         self.sql_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", sql_gen_sys_msg),
@@ -53,7 +58,8 @@ class SQLGenerator:
         chain = self.sql_gen_prompt_template | self.llm
         response = chain.invoke({
             "question": question,
-            "schema": self.get_schema_info()
+            "schema": self.get_schema_info(),
+            "sql_dialect": self.db_type,
         })
         return response.content
 
