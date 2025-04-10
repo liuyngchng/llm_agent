@@ -40,8 +40,8 @@
         const queryInput = document.getElementById('query-input');
         const dbUriInput = document.getElementById('db-uri-input');
         window.onload = function() {
-            const greeting = `Hi，我是客服小助手～<br>
-很高兴遇见你！你可以随时问我关于燃气使用过程中遇到的问题，我来帮你看看
+            const greeting = `Hi，我是问数小助手～<br>
+很高兴遇见你！你可以随时问我天燃气销售数据的问题，我来帮你查查
             `;
             addMessage(greeting, 'bot');
         };
@@ -71,7 +71,8 @@
                     }
                 })
                 .catch(error => {
-                    addMessage(`查询失败：${error.message}`, 'bot');
+                    console.log("error_occurred", error.message)
+                    addMessage(`查询失败，网路请求超时，请您稍后再试`, 'bot');
                 });
         });
         
@@ -111,7 +112,15 @@
             const messageContainer = document.createElement('div');
             messageContainer.classList.add('message-container');
             if (isChart) {
-                messageContainer.innerHTML = `<div class="chart-container"><canvas></canvas></div>`;
+                messageContainer.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img width="24" height="24" src="/static/bot.png">
+                    <div class="chart-container">
+                        您需要的数据的图形化展示如下所示：<br>
+                        <canvas></canvas>
+                    </div>
+                </div>
+                `;
                 chatContainer.appendChild(messageContainer);  // 追加这行
                 chatContainer.scrollTop = chatContainer.scrollHeight;  // 追加这行
                 return messageContainer;
