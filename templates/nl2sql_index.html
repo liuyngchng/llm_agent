@@ -40,13 +40,9 @@
         const queryInput = document.getElementById('query-input');
         const dbUriInput = document.getElementById('db-uri-input');
         window.onload = function() {
-            const greeting = `<div style="display: flex; align-items: center; gap: 10px;">
-                  <img width="24" height="24" src="/static/bot.png">
-                  <div>
-                    <div>Hi，我是客服小助手～</div>
-                    <div>很高兴遇见你！你可以随时问我关于燃气使用过程中遇到的问题，我来帮你看看</div>
-                  </div>
-                </div>`;
+            const greeting = `Hi，我是客服小助手～<br>
+很高兴遇见你！你可以随时问我关于燃气使用过程中遇到的问题，我来帮你看看
+            `;
             addMessage(greeting, 'bot');
         };
         // 表单提交
@@ -68,10 +64,8 @@
             // 发送API请求
             fetchQueryData(query).then(data => {
                     if (data.chart) {
-                        console.log(data)
-                        const chartData = JSON.parse(data.split('chart:')[1]);
-                        const msgElement = addMessage(data, 'bot');
-                        renderChart(msgElement.querySelector('canvas'), chartData);
+                        const msgElement = addMessage('图表展示', 'bot', true); // 新增第三个参数表示图表类型
+                        renderChart(msgElement.querySelector('canvas'), data.chart);
                     } else {
                         addMessage(data, 'bot');
                     }
@@ -95,42 +89,50 @@
                     body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(document.getElementById('uid').value)}`
                 });
 
-                chatContainer.removeChild(loadingMsg);
+                if (loadingMsg && chatContainer.contains(loadingMsg)) {
+                    chatContainer.removeChild(loadingMsg);
+                }
                 sendButton.disabled = false;
 
                 if (!response.ok) throw new Error('网络响应失败');
-                return await response.text();
+                const data = await response.json();
+                return data;
             } catch (error) {
-                chatContainer.removeChild(loadingMsg);
+                if (loadingMsg && chatContainer.contains(loadingMsg)) {
+                    chatContainer.removeChild(loadingMsg);
+                }
                 sendButton.disabled = false;
                 throw error;
             }
         }
         
         // 添加消息到聊天
-        function addMessage(text, type) {
+        function addMessage(text, type, isChart = false) {
             const messageContainer = document.createElement('div');
             messageContainer.classList.add('message-container');
+            if (isChart) {
+                messageContainer.innerHTML = `<div class="chart-container"><canvas></canvas></div>`;
+                chatContainer.appendChild(messageContainer);  // 追加这行
+                chatContainer.scrollTop = chatContainer.scrollHeight;  // 追加这行
+                return messageContainer;
+            }
             // 安全处理并解析markdown/html
             const sanitizedContent = DOMPurify.sanitize(
                 type === 'bot' ? marked.parse(text) : text
             );
-            if (type === 'bot' && text.startsWith('chart:')) {
-                messageContainer.innerHTML = `
-                    <div class="chart-container">
-                        <canvas id="myChart"></canvas>
-                    </div>`;
-                return messageContainer;
-            }
+
             if (type === 'user') {
                 messageContainer.classList.add('user-message-container');
                 messageContainer.innerHTML = `
-                    <div class="message-bubble user-message-bubble">${sanitizedContent}</div>
+                    <div class="message-bubble bot-message-bubble">${sanitizedContent}</div>
                 `;
             } else {
                 messageContainer.classList.add('bot-message-container');
                 messageContainer.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                        <img width="24" height="24" src="/static/bot.png">
                     <div class="message-bubble bot-message-bubble">${sanitizedContent}</div>
+                </div>
                 `;
             }
             
@@ -139,13 +141,14 @@
             return messageContainer;
         }
         function renderChart(canvasElement, rawData) {
+            const colors = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEEAD','#D4A5A5','#99B898','#FECEA8'];
             new Chart(canvasElement, {
                 type: 'pie',
                 data: {
                     labels: rawData.labels,
                     datasets: [{
                         data: rawData.values,
-                        backgroundColor: ['#FF6B6B', '#4ECDC4', '#45B7D1']
+                        backgroundColor: colors.slice(0, rawData.labels.length) // 动态取色
                     }]
                 }
             });
