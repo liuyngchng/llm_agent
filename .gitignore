@@ -30,4 +30,5 @@ sqlite_vss
 **/*.lock
 **/*.yml
 **/*.yaml
+**/*.wav
 config.yml
