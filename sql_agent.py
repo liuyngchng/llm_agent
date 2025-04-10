@@ -6,7 +6,7 @@ from typing import Dict
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.utilities import SQLDatabase
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAI
 from langchain_ollama import ChatOllama
 import logging.config
 import httpx
@@ -156,6 +156,15 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     else:
         logger.info(f"only_dt:\n{dt}")
         return dt
+
+def transcribe_audio(audio_path: str, api_key: str, ):
+    client = OpenAI(api_key=api_key)
+    with open(audio_path, "rb") as audio_file:
+        transcript = client.audio.transcriptions.create(
+            model=MODEL_NAME,
+            file=audio_file
+        )
+    return transcript.text
 
 if __name__ == "__main__":
     os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
