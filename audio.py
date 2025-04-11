@@ -40,7 +40,8 @@ def _transcribe_core(audio_file: Union[str, io.BytesIO], cfg: dict):
     file_obj = open(audio_file, "rb") if isinstance(audio_file, str) else audio_file
     transcript = client.audio.transcriptions.create(
         model=cfg["ai"]["asr_model_name"],
-        file=file_obj
+        language="zh",
+        file=file_obj,
     )
     return transcript.text
 
@@ -55,6 +56,7 @@ def transcribe_wav_audio_bytes(audio_bytes: bytes, cfg:dict):
         return _transcribe_core(io.BytesIO(audio_bytes), cfg)
     except APIConnectionError as ex:
         logger.exception("transcribe_audio_bytes_err")
+        return "transcribe_audio_bytes_err"
 
 def transcribe_webm_audio_bytes(webm_bytes: bytes, cfg:dict):
     if len(webm_bytes) == 0:

@@ -3,6 +3,7 @@
 
 """
 pip install sounddevice numpy keyboard
+pip install "vllm[audio]"
 ubuntu 24.04
 apt install portaudio19-dev
 """
@@ -23,8 +24,8 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 my_cfg = init_yml_cfg()
-API_KEY = SecretStr(my_cfg['ai']['api_key'])
-ASR_ENDPOINT = f"{my_cfg['ai']['api_uri']}/audio/transcriptions"
+API_KEY = SecretStr(my_cfg['ai']['asr_api_key'])
+ASR_ENDPOINT = f"{my_cfg['ai']['asr_api_uri']}/audio/transcriptions"
 MODEL_NAME = my_cfg['ai']['asr_model_name']
 
 def record_realtime(duration=10, fs=16000) -> bytes:
@@ -67,10 +68,13 @@ def transcribe_audio(audio_path):
     }
 
     data = {
-        "model": MODEL_NAME  # 改为通过data参数传递
+        "model": MODEL_NAME,
+        "language":"zh",
+        "task":"transcribe"
     }
     #如果有证书的话,自签证书还需要在操作系统安装证书
     # response = requests.post(ASR_ENDPOINT, headers=headers, files=files, data=data, verify="./cert/my.crt", proxies=None)
+    logger.info(f"requests.post({ASR_ENDPOINT}, headers={headers}, files={files}, data={data}, verify=False, proxies=None)")
     response = requests.post(ASR_ENDPOINT, headers=headers, files=files, data=data, verify=False, proxies=None)
     return response.json()
 
@@ -119,9 +123,9 @@ if __name__ == "__main__":
         -F "model={asr_model_name}" | jq
     """
     logger.info("start test")
-    # test_transcribe_my_audio_file()
+    test_transcribe_my_audio_file()
     # test_transcribe_my_realtime_audio()
-    test_customized_transcribe_my_realtime_audio()
+    # test_customized_transcribe_my_realtime_audio()
 
 
 

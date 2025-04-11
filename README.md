@@ -78,20 +78,20 @@ http://127.0.0.1:19000/cfg/idx?usr=test&tkn=12345
 ### 6. ASR
 
 ```sh
-CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 \
-vllm serve speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch \
+pip install "vllm[audio]"
+
+CUDA_LAUNCH_BLOCKING=1 CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 \
+vllm serve whisper-large-v3-turbo \
 --tensor-parallel-size 1 \
---max-model-len 8096 \
---gpu-memory-utilization 0.8 \
---enforce-eager
+--max-model-len 448 \
+--gpu-memory-utilization 0.7 \
+--enforce-eager \
+--swap-space 0 \
+--device cuda
 ```
 
 ```sh
-CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 vllm serve \
---model ./ \
---config-format=hf \
---enforce-eager \
---gpu-memory-utilization 0.8
+
 ```
 
 语音生成
@@ -106,7 +106,7 @@ edge-tts --text "测试语句" --write-media output.webm
 
 
 
-```
+```sh
 curl -X POST http://127.0.0.1:19000/trans/audio \
   -F "file=@static/asr_test.webm;type=audio/webm" \
   -H "Content-Type: multipart/form-data"
