@@ -17,7 +17,6 @@ faiss_index/*
 **/*.txt
 **/*.pdf
 !requirements.txt
-**/*.png
 **/*.csv
 sqlite_vss
 **/*.zip
