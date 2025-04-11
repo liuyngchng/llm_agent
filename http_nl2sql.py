@@ -7,12 +7,14 @@ import json
 import logging.config
 import os
 import sqlite3
+from logging import exception
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, Response
 
 import db_util
 from sql_agent import get_dt_with_nl
 from sys_init import init_yml_cfg
+from audio import transcribe_audio_bytes
 
 # 加载配置
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -247,6 +249,34 @@ def get_db_dt():
         answer='{"msg":"没有查询到相关数据，请您尝试换个问题进行提问", "code":404}'
 
     return answer
+
+@app.route('/trans/audio', methods=['POST'])
+def transcribe_audio() -> tuple[Response, int] | Response:
+    """
+    javascript
+    const audioBlob = new Blob([audioData], {type: 'audio/wav'});
+    fetch('/trans/audio', {
+      method: 'POST',
+      body: audioBlob
+    })
+    """
+    try:
+        if request.content_length > 10 * 1024 * 1024:  # 限制10MB
+            return jsonify({"error": "audio stream is too large, max size is 10MB"}), 413
+        audio_bytes = request.get_data(cache=False)
+        result = transcribe_audio_bytes(audio_bytes, my_cfg)
+        response = jsonify({"text": result})
+    except Exception as e:
+        logger.exception("语音识别接口异常")
+        response = jsonify({"error": str(e)}), 500
+    try:
+        origin = my_cfg["sys"]["allowed_origin"]
+        response.headers.add('Access-Control-Allow-Origin', origin)
+    except Exception as ex:
+        logger.error(f"set_origin_err, {ex}")
+    response.headers.add('Access-Control-Allow-Methods', 'POST')
+    return response
+
 
 def test_query_data():
     """
