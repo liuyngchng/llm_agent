@@ -120,6 +120,11 @@
     75% { content: "::"; }
     100% { content: "  "; }
 }
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
 .greeting-box {
       display: flex;
       align-items: center;
@@ -137,3 +142,20 @@
   font-weight: 500;
   margin-bottom: 4px;
 }
+.voice-button {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.voice-button.recording {
+    animation: pulse 1.5s infinite;
+}
+
+.voice-button.error {
+    color: #ff4444;
+    animation: none;
+}
+

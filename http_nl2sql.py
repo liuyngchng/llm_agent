@@ -14,7 +14,7 @@ from flask import Flask, request, jsonify, render_template, Response
 import db_util
 from sql_agent import get_dt_with_nl
 from sys_init import init_yml_cfg
-from audio import transcribe_audio_bytes
+from audio import transcribe_webm_audio_bytes, webm_to_wav
 
 # 加载配置
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -264,7 +264,7 @@ def transcribe_audio() -> tuple[Response, int] | Response:
         if request.content_length > 10 * 1024 * 1024:  # 限制10MB
             return jsonify({"error": "audio stream is too large, max size is 10MB"}), 413
         audio_bytes = request.get_data(cache=False)
-        result = transcribe_audio_bytes(audio_bytes, my_cfg)
+        result = transcribe_webm_audio_bytes(audio_bytes, my_cfg)
         response = jsonify({"text": result})
     except Exception as e:
         logger.exception("语音识别接口异常")
