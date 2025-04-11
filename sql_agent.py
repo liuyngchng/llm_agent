@@ -10,6 +10,8 @@ from langchain_openai import ChatOpenAI, OpenAI
 from langchain_ollama import ChatOllama
 import logging.config
 import httpx
+from pydantic import SecretStr
+
 from db_util import sqlite_output, mysql_output, get_db_uri
 from sys_init import init_yml_cfg
 
@@ -30,7 +32,7 @@ class SQLGenerator:
         self.db = SQLDatabase.from_uri(get_db_uri(cfg))
         self.db_type = cfg['db']['type']
         self.api_uri = cfg['ai']['api_uri']
-        self.api_key = cfg['ai']['api_key']
+        self.api_key = SecretStr(cfg['ai']['api_key'])
         self.model_name = cfg['ai']['model_name']
         self.is_remote_model = is_remote_model
         self.llm = self.get_llm()
@@ -157,7 +159,7 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
         logger.info(f"only_dt:\n{dt}")
         return dt
 
-def transcribe_audio(audio_path: str, api_key: str, model_name: str):
+def transcribe_audio(audio_path: str, api_key: SecretStr, model_name: str):
     client = OpenAI(api_key=api_key)
     with open(audio_path, "rb") as audio_file:
         transcript = client.audio.transcriptions.create(

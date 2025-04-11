@@ -14,7 +14,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from typing import Annotated, Literal
 from langchain_core.messages import AIMessage
 from langchain_ollama import ChatOllama
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from typing_extensions import TypedDict
 from langgraph.graph import END, StateGraph, START
 from langgraph.graph.message import AnyMessage, add_messages
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 model_name = "deepseek-r1"
 api_url = "http://127.0.0.1:11434"
-api_key = "123456789"
+api_key = SecretStr("123456789")
 db_file = "test2.db"
 db_uri = f"sqlite:///{db_file}"
 question ="查询张三2025年的订单详细信息"
@@ -68,14 +68,6 @@ class SubmitFinalAnswer(BaseModel):
     """Submit the final answer to the user based on the query results."""
 
     final_answer: str = Field(..., description="The final answer to the user")
-
-def create_tool_node_with_fallback(tools: list) -> RunnableWithFallbacks[Any, dict]:
-    """
-    Create a ToolNode with a fallback to handle errors and surface them to the agent.
-    """
-    return ToolNode(tools).with_fallbacks(
-        [RunnableLambda(handle_tool_error)], exception_key="error"
-    )
 
 
 def handle_tool_error(state) -> dict:
@@ -113,21 +105,6 @@ def create_tool_node_with_fallback(tools: list) -> RunnableWithFallbacks[Any, di
     )
     # print("output_in_create_tool_node_with_fallback", create_tool_node_with_fallback_result)
     return create_tool_node_with_fallback_result
-
-
-
-def handle_tool_error(state) -> dict:
-    error = state.get("error")
-    tool_calls = state["messages"][-1].tool_calls
-    return {
-        "messages": [
-            ToolMessage(
-                content=f"Error: {repr(error)}\n please fix your mistakes.",
-                tool_call_id=tc["id"],
-            )
-            for tc in tool_calls
-        ]
-    }
 
 # Add a node for the first tool call
 def first_tool_call(state: State) -> dict[str, list[AIMessage]]:
@@ -384,7 +361,7 @@ if __name__ == "__main__":
     # logger.info(f"answer is: {answer}")
     # del db
     conn = sqlite3.connect(db_file)
-    answer = sqlite_util.output_data(conn, json_str)
+    answer = db_util.sqlite_output(conn, json_str)
 
 
 

@@ -4,7 +4,8 @@
 from typing import Dict
 import logging
 from pathlib import Path
- 
+
+from langchain_core.messages import BaseMessage
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import OllamaEmbeddings
@@ -98,7 +99,7 @@ class VectorStoreQA:
             self.logger.error(f"文档处理错误: {str(e)}")
             raise
  
-    def get_answer(self, question: str) -> Dict:
+    def get_answer(self, question: str) -> BaseMessage:
         """
         获取问题的答案
         Args:

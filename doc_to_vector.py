@@ -33,7 +33,7 @@ def vectoring(file: str):
 
 
     # 加载知识库文件
-    logger.info("load local doc {}".format(file))
+    logger.info(f"load local doc {file}")
     # load word, PDF file
     # loader = UnstructuredLoader(file)
     # load txt file
@@ -53,7 +53,7 @@ def vectoring(file: str):
     texts = text_splitter.split_documents(documents)
 
     # 加载Embedding模型，进行自然语言处理
-    logger.info("load embedding model: {}".format(embedding_model))
+    logger.info(f"load embedding model: {embedding_model}")
     embeddings = HuggingFaceEmbeddings(
         model_name=embedding_model,
         cache_folder='./bge-cache',

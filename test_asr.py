@@ -12,13 +12,15 @@ import logging.config
 import sounddevice as sd
 import wave
 
+from pydantic import SecretStr
+
 from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 my_cfg = init_yml_cfg()
-API_KEY = my_cfg['ai']['api_key']
+API_KEY = SecretStr(my_cfg['ai']['api_key'])
 ASR_ENDPOINT = f"{my_cfg['ai']['api_uri']}/audio/transcriptions"
 MODEL_NAME = my_cfg['ai']['asr_model_name']
 

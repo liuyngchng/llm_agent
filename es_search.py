@@ -12,4 +12,5 @@ elastic_vector_search = ElasticVectorSearch(
     index_name="test_index",
     embedding=embedding
 )
+batch_docs = []
 ElasticVectorSearch.from_documents(batch_docs, embedding, elasticsearch_url=elasticsearch_url, index_name="test_index")

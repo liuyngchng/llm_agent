@@ -36,7 +36,7 @@ def init_txt_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
         raise e
     return _my_cfg
 
-def init_yml_cfg(cfg_file="config.yml")-> dict[str, str]:
+def init_yml_cfg(cfg_file="config.yml")-> dict[str, any]:
     """
     yaml config.yml file content as following
     database:
