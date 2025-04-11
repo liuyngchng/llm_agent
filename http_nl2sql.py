@@ -250,9 +250,7 @@ def get_db_dt():
 
     return answer
 
-@app.route('/trans/audio', methods=['POST'])
-def transcribe_audio() -> tuple[Response, int] | Response:
-    """
+"""
     javascript
     const audioBlob = new Blob([audioData], {type: 'audio/wav'});
     fetch('/trans/audio', {
@@ -260,6 +258,8 @@ def transcribe_audio() -> tuple[Response, int] | Response:
       body: audioBlob
     })
     """
+@app.route('/trans/audio', methods=['POST'])
+def transcribe_audio() -> tuple[Response, int] | Response:
     try:
         if request.content_length > 10 * 1024 * 1024:  # 限制10MB
             return jsonify({"error": "audio stream is too large, max size is 10MB"}), 413
@@ -268,7 +268,8 @@ def transcribe_audio() -> tuple[Response, int] | Response:
         response = jsonify({"text": result})
     except Exception as e:
         logger.exception("语音识别接口异常")
-        response = jsonify({"error": str(e)}), 500
+        response = jsonify({"error": str(e)}); response.status_code= 500
+
     try:
         origin = my_cfg["sys"]["allowed_origin"]
         response.headers.add('Access-Control-Allow-Origin', origin)

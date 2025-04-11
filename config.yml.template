@@ -1,6 +1,6 @@
 # config.yaml，文件格式必须严格遵循 yaml配置文件格式
 db:
-#  数据库类型, mysql sqlite
+#  数据库类型, mysql sqlite oracle
   type: mysql
 #  数据库名称，如果是sqlite，直接写文件名称，本地需存在相应的文件名
   name: your_db_name
@@ -12,11 +12,11 @@ db:
   password: 12345
 sys:
 #   系统名称(title) 配置
-  name: 智燃慧问test
+  name: 巴拉巴拉小魔仙
 #   是否启用认证， true， 登录后才能使用系统;false 无需登录
   auth: true
 #  自定义数据库配置时的权限认证 token
-  cfg_tkn: f5cac69586d60b98d43a2ae34d64e876
+  cfg_tkn: foobar
 ai:
 #  大语言模型 API 基地址
   api_uri: https://api.deepseek.com/v1
@@ -24,8 +24,15 @@ ai:
   api_key: 45678
   #  大语言模型 模型名称
   model_name: deepseek-chat
+
+  # 语音识别 API 基地址
+  asr_api_uri: https://api.your_audio_service_provider.com/v1/
+   # 语音识别 API key
+  asr_api_key: sk-xxxx
+   # 语音识别 API 模型名称
+  asr_model_name: asr
   prompts:
-#   是否需要在读取数据库数据的基础上，添加进行文字描述，true 需要，false，不需要
+#   是否需要在读取数据库数据的基础上，添加文字描述等转换，true 需要，false，不需要
     add_desc_to_dt: true
 #   通过自然语言生成SQL语句的大模型提示词，内嵌变量 {schema} 不可更改，其他可自定义，多行
     sql_gen_sys_msg: |

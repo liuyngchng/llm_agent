@@ -180,7 +180,7 @@
           try {
             mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm;codecs=opus' });
-             # 后端返回数据需符合 {"text": "识别结果"} json 格式
+             // 后端返回数据需符合 {"text": "识别结果"} json 格式
             mediaRecorder.ondataavailable = async (e) => {
                   if (e.data.size > 0) {
                     const response = await fetch('/trans/audio', {
