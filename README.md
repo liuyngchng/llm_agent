@@ -75,7 +75,20 @@ curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' -H "Content-Type:
 http://127.0.0.1:19000/cfg/idx?usr=test&tkn=12345
 ```
 
-### 6. ASR
+# 6. ASR
+
+安装  ffmpeg
+
+```sh
+# windows 
+https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
+# ubuntu
+sudo apt install ffmpeg
+```
+
+
+
+
 
 ```sh
 pip install "vllm[audio]"
