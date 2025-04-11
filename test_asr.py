@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-pip install sounddevice numpy
+pip install sounddevice numpy keyboard
 ubuntu 24.04
 apt install portaudio19-dev
 """
@@ -11,6 +11,9 @@ import requests
 import logging.config
 import sounddevice as sd
 import wave
+import keyboard
+import numpy as np
+from threading import Thread, Event
 
 from pydantic import SecretStr
 
@@ -24,14 +27,27 @@ API_KEY = SecretStr(my_cfg['ai']['api_key'])
 ASR_ENDPOINT = f"{my_cfg['ai']['api_uri']}/audio/transcriptions"
 MODEL_NAME = my_cfg['ai']['asr_model_name']
 
-def record_realtime(duration=10, fs=16000):
+def record_realtime(duration=10, fs=16000) -> bytes:
     """
-    duration: 录音时间长度默认10秒
+    函数调用发起录音
+    duration: 录音时间长度默认10秒， 时长到自动停止录音
     """
-    logger.info("开始录音...")
+    logger.info(f"开始录音，时长 {duration} 秒")
     audio = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
     sd.wait()  # 阻塞等待录音完成
     return audio.flatten().tobytes()
+
+def customized_record_realtime(stop_event, fs=16000) -> bytes:
+    audio = []
+    def callback(indata, *_):
+        if not stop_event.is_set():
+            audio.append(indata.copy())
+
+    with sd.InputStream(callback=callback, channels=1, samplerate=fs):
+        print("按 Q 结束录音")
+        stop_event.wait()  # 阻塞等待结束信号
+
+    return np.concatenate(audio).tobytes()
 
 # 调用ASR函数时保存为临时文件
 def start_audio(file_name: str):
@@ -58,6 +74,39 @@ def transcribe_audio(audio_path):
     response = requests.post(ASR_ENDPOINT, headers=headers, files=files, data=data, verify=False, proxies=None)
     return response.json()
 
+def test_transcribe_my_audio_file() -> str:
+    logger.info(f"ASR_ENDPOINT {ASR_ENDPOINT}, MODEL_NAME {MODEL_NAME}, API_KEY {API_KEY.get_secret_value()}")
+    # 使用示例
+    audio_file = "static/asr_example_zh.wav"
+    result = transcribe_audio(audio_file)
+    logger.info(f"demo识别结果:{result}")
+    return result
+
+def test_transcribe_my_realtime_audio() -> str:
+    audio_file = "my_audio.wav"
+    start_audio(audio_file)
+    logger.info("录音完毕")
+    result = transcribe_audio(audio_file)
+    logger.info(f"实时语音识别结果:{result}")
+    return result
+
+def test_customized_transcribe_my_realtime_audio():
+    stop_flag = Event()
+    keyboard.wait('S')  # 按 S 开始录音
+    rec_thread = Thread(target=customized_record_realtime, args=(stop_flag,))
+    rec_thread.start()
+
+    keyboard.wait('Q')  # 按 Q 结束录音
+    stop_flag.set()
+    rec_thread.join()
+
+    # 新增保存逻辑
+    audio_data = customized_record_realtime(stop_flag)  # 获取录音字节流
+    with wave.open("output.wav", "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)  # 16位深度=2字节
+        wf.setframerate(16000)
+        wf.writeframes(audio_data)
 
 if __name__ == "__main__":
     """
@@ -70,16 +119,9 @@ if __name__ == "__main__":
         -F "model={asr_model_name}" | jq
     """
     logger.info("start test")
+    # test_transcribe_my_audio_file()
+    # test_transcribe_my_realtime_audio()
+    test_customized_transcribe_my_realtime_audio()
 
 
-    logger.info(f"ASR_ENDPOINT {ASR_ENDPOINT}, MODEL_NAME {MODEL_NAME}, API_KEY {API_KEY.get_secret_value()}")
-    # 使用示例
-    audio_file = "static/asr_example_zh.wav"
-    result = transcribe_audio(audio_file)
-    logger.info(f"demo识别结果:{result}")
 
-    # audio_file = "my_audio.wav"
-    # start_audio(audio_file)
-    # logger.info("录音完毕")
-    # result = transcribe_audio(audio_file)
-    # logger.info(f"实时语音识别结果:{result}")
