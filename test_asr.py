@@ -25,6 +25,9 @@ ASR_ENDPOINT = f"{my_cfg['ai']['api_uri']}/audio/transcriptions"
 MODEL_NAME = my_cfg['ai']['asr_model_name']
 
 def record_realtime(duration=10, fs=16000):
+    """
+    duration: 录音时间长度默认10秒
+    """
     logger.info("开始录音...")
     audio = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
     sd.wait()  # 阻塞等待录音完成
@@ -40,7 +43,7 @@ def start_audio(file_name: str):
 
 def transcribe_audio(audio_path):
     headers = {
-        "Authorization": f"Bearer {API_KEY}"
+        "Authorization": f"Bearer {API_KEY.get_secret_value()}"
     }
 
     files = {
@@ -50,6 +53,8 @@ def transcribe_audio(audio_path):
     data = {
         "model": MODEL_NAME  # 改为通过data参数传递
     }
+    #如果有证书的话,自签证书还需要在操作系统安装证书
+    # response = requests.post(ASR_ENDPOINT, headers=headers, files=files, data=data, verify="./cert/my.crt", proxies=None)
     response = requests.post(ASR_ENDPOINT, headers=headers, files=files, data=data, verify=False, proxies=None)
     return response.json()
 
@@ -67,13 +72,14 @@ if __name__ == "__main__":
     logger.info("start test")
 
 
-    logger.info(f"ASR_ENDPOINT {ASR_ENDPOINT}, MODEL_NAME {MODEL_NAME}, API_KEY {API_KEY}")
+    logger.info(f"ASR_ENDPOINT {ASR_ENDPOINT}, MODEL_NAME {MODEL_NAME}, API_KEY {API_KEY.get_secret_value()}")
     # 使用示例
-    # audio_file = "static/asr_example_zh.wav"
-    # result = transcribe_audio(audio_file)
-    # logger.info(f"demo识别结果:{result}")
-    audio_file = "my_audio.wav"
-    start_audio(audio_file)
-    logger.info("录音完毕")
+    audio_file = "static/asr_example_zh.wav"
     result = transcribe_audio(audio_file)
-    logger.info(f"实时语音识别结果:{result}")
+    logger.info(f"demo识别结果:{result}")
+
+    # audio_file = "my_audio.wav"
+    # start_audio(audio_file)
+    # logger.info("录音完毕")
+    # result = transcribe_audio(audio_file)
+    # logger.info(f"实时语音识别结果:{result}")

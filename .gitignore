@@ -32,3 +32,5 @@ sqlite_vss
 **/*.yaml
 **/*.wav
 config.yml
+cert/*
+**/*.cer
