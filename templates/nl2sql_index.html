@@ -7,12 +7,12 @@
     <script src="/static/marked.min.js"></script>
     <script src="/static/chart.min.3.8.0.js"></script>
     <link rel="stylesheet" href="/static/my.css">
-    <title>{{sys_name}}</title>
+    <title>{{ sys_name | default('智能问答系统') }}</title>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>{{sys_name}}</h1>
+            <h1>{{ sys_name | default('智能问答系统') }}</h1>
         </div>
         
         <div class="chat-container" id="chat-container">
