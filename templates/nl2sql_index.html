@@ -172,49 +172,83 @@
 
     </script>
     <script>
-         // 语音识别功能
+        // 语音识别功能
         const voiceBtn = document.getElementById('voice-btn');
-        let mediaRecorder, mediaStream;
+<!--        const queryInput = document.getElementById('query-input');-->
+        let mediaRecorder, mediaStream, audioChunks = [];
+        let isRecording = false;
 
-        voiceBtn.addEventListener('mousedown', async () => {
-          try {
-            mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm;codecs=opus' });
-             // 后端返回数据需符合 {"text": "识别结果"} json 格式
-            mediaRecorder.ondataavailable = async (e) => {
-                  if (e.data.size > 0) {
-                    const response = await fetch('/trans/audio', {
-                      method: 'POST',
-                      body: e.data,
-                      headers: { 'Content-Type': 'audio/webm' }
-                    });
+        // 事件绑定（支持移动端+桌面）
+        voiceBtn.addEventListener('touchstart', handleStart);
+        voiceBtn.addEventListener('touchend', handleEnd);
+        voiceBtn.addEventListener('mousedown', handleStart);
+        voiceBtn.addEventListener('mouseup', handleEnd);
 
-                    // 新增结果处理
-                    const result = await response.json();
-                    console.log("result.text", result.text)
-                    if (result.text) {
+        async function handleStart(e) {
+            e.preventDefault();
+            if (isRecording) return;
 
-                      queryInput.value = result.text; // 将识别结果填入输入框
-                      queryForm.dispatchEvent(new Event('submit')); // 自动提交表单
-                    }
-                  }
-                };
+            try {
+                isRecording = true;
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(mediaStream);
 
-            mediaRecorder.start(500); // 每500ms发送音频片段
-            voiceBtn.classList.add('recording');
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = processAudio;
 
-          } catch (error) {
-            console.error('麦克风访问失败:', error);
-          }
-        });
+                mediaRecorder.start();
+                updateUIState('recording');
+            } catch (error) {
+                console.error('录音失败:', error);
+                showStatus('❌ 麦克风访问被拒绝', 2000);
+                resetState();
+            }
+        }
 
-        voiceBtn.addEventListener('mouseup', () => {
-          if (mediaRecorder) {
+        function handleEnd() {
+            if (!isRecording) return;
             mediaRecorder.stop();
-            mediaStream.getTracks().forEach(track => track.stop());
-            voiceBtn.classList.remove('recording');
-          }
-        });
+            mediaStream.getTracks().forEach(t => t.stop());
+            resetState();
+        }
+
+        async function processAudio() {
+            showStatus('🔍 识别中...');
+            try {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'recording.webm');
+
+                const response = await fetch('/trans/audio', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const { text } = await response.json();
+                if (text) {
+                    queryInput.value = text;
+                    showStatus('✅ 已输入识别结果', 1500);
+                }
+            } catch (error) {
+                console.error('识别失败:', error);
+                showStatus('❌ 语音识别失败', 2000);
+            } finally {
+                audioChunks = [];
+            }
+        }
+
+        function updateUIState(state) {
+            voiceBtn.classList.toggle('recording', state === 'recording');
+        }
+
+        function resetState() {
+            isRecording = false;
+            updateUIState('idle');
+        }
+
+        function showStatus(text, duration) {
+            // 状态提示实现（同上）
+        }
     </script>
 </body>
 </html>
