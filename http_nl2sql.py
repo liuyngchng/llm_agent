@@ -266,7 +266,11 @@ def transcribe_audio() -> tuple[Response, int] | Response:
     try:
         if request.content_length > 10 * 1024 * 1024:  # 限制10MB
             return jsonify({"error": "audio stream is too large, max size is 10MB"}), 413
-        audio_bytes = request.get_data(cache=False)
+
+        audio_file = request.files.get('audio')
+        if not audio_file or not audio_file.filename.endswith('.webm'):
+            return jsonify({"error": "invalid webm file"}), 400
+        audio_bytes = audio_file.read()
         result = transcribe_webm_audio_bytes(audio_bytes, my_cfg)
         data = {"text": result}
     except Exception as e:
