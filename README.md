@@ -74,3 +74,41 @@ curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' -H "Content-Type:
 ```html
 http://127.0.0.1:19000/cfg/idx?usr=test&tkn=12345
 ```
+
+### 6. ASR
+
+```sh
+CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 \
+vllm serve speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch \
+--tensor-parallel-size 1 \
+--max-model-len 8096 \
+--gpu-memory-utilization 0.8 \
+--enforce-eager
+```
+
+```sh
+CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 vllm serve \
+--model ./ \
+--config-format=hf \
+--enforce-eager \
+--gpu-memory-utilization 0.8
+```
+
+语音生成
+
+```
+pip install edge-tts 
+
+edge-tts --text "测试语句" --write-media output.webm
+```
+
+接口测试
+
+
+
+```
+curl -X POST http://127.0.0.1:19000/trans/audio \
+  -F "file=@static/asr_test.webm;type=audio/webm" \
+  -H "Content-Type: multipart/form-data"
+```
+

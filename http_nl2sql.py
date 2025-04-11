@@ -7,7 +7,6 @@ import json
 import logging.config
 import os
 import sqlite3
-from logging import exception
 
 from flask import Flask, request, jsonify, render_template, Response
 
@@ -23,6 +22,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False  # 中文直接输出，而不是转义成为\u的转义字符
 my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
@@ -69,34 +69,34 @@ def config_index():
         "db_usr": my_cfg['db']['user'],
         "db_psw": my_cfg['db']['password'],
     }
-    my_conn = sqlite3.connect('test_config.db')
     check_sql = f"select id from user where name='{usr}' limit 1"
-    check_info = db_util.sqlite_query_tool(my_conn, check_sql)
-    logger.debug(f"check_info {check_info}")
-    check_data = json.loads(check_info)['data']
-    try:
-        uid = check_data[0][0]
-    except (IndexError, TypeError) as e:
-        return "illegal user info in config request"
+    with sqlite3.connect('test_config.db') as my_conn:
+        check_info = db_util.sqlite_query_tool(my_conn, check_sql)
+        logger.debug(f"check_info {check_info}")
+        check_data = json.loads(check_info)['data']
+        try:
+            uid = check_data[0][0]
+        except (IndexError, TypeError) as e:
+            return "illegal user info in config request"
 
-    check_sql = f"select uid, db_type, db_name, db_host, db_usr, db_psw from db_config where uid='{uid}' limit 1"
-    db_config_info = db_util.sqlite_query_tool(my_conn, check_sql)
-    logger.debug(f"check_info {db_config_info}")
-    check_info = json.loads(db_config_info)['data']
-    try:
-        uid = check_info[0][0]
-        ctx = {
-            "sys_name": my_cfg['sys']['name'],
-            "waring_info": "",
-            "usr": usr,
-            "db_type": check_info[0][1],
-            "db_name": check_info[0][2],
-            "db_host": check_info[0][3],
-            "db_usr": check_info[0][4],
-            "db_psw": check_info[0][5],
-        }
-    except (IndexError, TypeError) as e:
-        logger.info(f"no db config for user {usr}")
+        check_sql = f"select uid, db_type, db_name, db_host, db_usr, db_psw from db_config where uid='{uid}' limit 1"
+        db_config_info = db_util.sqlite_query_tool(my_conn, check_sql)
+        logger.debug(f"check_info {db_config_info}")
+        check_info = json.loads(db_config_info)['data']
+        try:
+            uid = check_info[0][0]
+            ctx = {
+                "sys_name": my_cfg['sys']['name'],
+                "waring_info": "",
+                "usr": usr,
+                "db_type": check_info[0][1],
+                "db_name": check_info[0][2],
+                "db_host": check_info[0][3],
+                "db_usr": check_info[0][4],
+                "db_psw": check_info[0][5],
+            }
+        except (IndexError, TypeError) as e:
+            logger.info(f"no db config for user {usr}")
     dt_idx = "config_index.html"
     logger.info(f"return page {dt_idx}")
     return render_template(dt_idx, **ctx)
@@ -105,55 +105,59 @@ def config_index():
 def save_config():
     logger.info(f"save config info {request.form}")
     dt_idx = "config_index.html"
-    my_conn = sqlite3.connect('test_config.db')
     ctx = {}
-    try:
-        usr = request.form.get('usr').strip()
-        db_type = request.form.get('db_type').strip()
-        db_host = request.form.get('db_host').strip()
-        db_name = request.form.get('db_name').strip()
-        db_usr = request.form.get('db_usr').strip()
-        db_psw = request.form.get('db_psw').strip()
+    with sqlite3.connect('test_config.db') as my_conn:
+        try:
+            usr = request.form.get('usr').strip()
+            db_type = request.form.get('db_type').strip()
+            db_host = request.form.get('db_host').strip()
+            db_name = request.form.get('db_name').strip()
+            db_usr = request.form.get('db_usr').strip()
+            db_psw = request.form.get('db_psw').strip()
 
-        ctx = {
-            "sys_name": my_cfg['sys']['name'],
-            "waring_info": "",
-            "usr": usr,
-            "db_type": db_type,
-            "db_name": db_name,
-            "db_host": db_host,
-            "db_usr": db_usr,
-            "db_psw": db_psw,
-        }
-        check_sql = f"select id from user where name='{usr}' limit 1"
-        check_info = db_util.sqlite_query_tool(my_conn, check_sql)
-        logger.debug(f"check_info {check_info}")
-        check_info=json.loads(check_info)['data']
-        uid = check_info[0][0]
-        insert_sql = (f"insert into db_config (uid, db_type, db_host, db_name, db_usr, db_psw) "
-               f"values ('{uid}', '{db_type}', '{db_host}', '{db_name}', '{db_usr}', '{db_psw}')")
-        db_util.sqlite_insert_tool(my_conn, insert_sql)
-        logger.info(f"return page {dt_idx}")
-        my_conn.close()
-        ctx['waring_info'] = '保存成功'
-        return render_template(dt_idx, **ctx)
-    except Exception as e:
-        my_conn.close()
-        logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
-        ctx['waring_info'] = '保存失败'
-        return render_template(dt_idx, **ctx)
+            ctx = {
+                "sys_name": my_cfg['sys']['name'],
+                "waring_info": "",
+                "usr": usr,
+                "db_type": db_type,
+                "db_name": db_name,
+                "db_host": db_host,
+                "db_usr": db_usr,
+                "db_psw": db_psw,
+            }
+            check_sql = f"select id from user where name='{usr}' limit 1"
+            check_info = db_util.sqlite_query_tool(my_conn, check_sql)
+            logger.debug(f"check_info {check_info}")
+            check_info=json.loads(check_info)['data']
+            uid = check_info[0][0]
+            insert_sql = (f"insert into db_config (uid, db_type, db_host, db_name, db_usr, db_psw) "
+                   f"values ('{uid}', '{db_type}', '{db_host}', '{db_name}', '{db_usr}', '{db_psw}')")
+            db_util.sqlite_insert_tool(my_conn, insert_sql)
+            logger.info(f"return page {dt_idx}")
+            my_conn.close()
+            ctx['waring_info'] = '保存成功'
+            return render_template(dt_idx, **ctx)
+        except Exception as e:
+            my_conn.close()
+            logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
+            ctx['waring_info'] = '保存失败'
+            return render_template(dt_idx, **ctx)
 
 
-@app.route('/health', methods=['GET'])
-def get_data():
+@app.route('/status', methods=['GET'])
+def get_status():
     """
     JSON submit, get data from application JSON
-    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/ask' -H "Content-Type: application/json"  -d '{"msg":"who are you?"}'
+    curl -s --noproxy '*' -X GET  'http://127.0.0.1:19000/status' -H "Content-Type: application/json"
     :return:
     """
-    data = request.get_json()
-    print(data)
-    return jsonify({"message": "Data received successfully!", "data": data}), 200
+    data = {"message": "数据正常, service OK"}
+    response = Response(
+        json.dumps(data, ensure_ascii=False),
+        content_type="application/json; charset=utf-8",
+        status=200
+    )
+    return response
 
 @app.route('/', methods=['GET'])
 def login_index():
@@ -180,11 +184,10 @@ def login():
     user = request.form.get('usr').strip()
     t = request.form.get('t').strip()
     logger.info(f"user login: {user}, {t}")
-    my_conn = sqlite3.connect('test_config.db')
-    sql = f"select id from user where name='{user}' and t = '{t}' limit 1"
-    check_info = db_util.sqlite_query_tool(my_conn, sql)
-    user_id = json.loads(check_info)['data']
-    my_conn.close()
+    with sqlite3.connect('test_config.db') as my_conn:
+        sql = f"select id from user where name='{user}' and t = '{t}' limit 1"
+        check_info = db_util.sqlite_query_tool(my_conn, sql)
+        user_id = json.loads(check_info)['data']
     if not user_id:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
         ctx = {
@@ -208,22 +211,22 @@ def query_data(catch=None):
     msg = request.form.get('msg').strip()
     uid = ''
     if my_cfg['sys']['auth']:
-        my_conn = sqlite3.connect('test_config.db')
-        try:
-            uid = request.form.get('uid').strip()
+        with sqlite3.connect('test_config.db') as my_conn:
+            try:
+                uid = request.form.get('uid').strip()
 
-            sql = f"select id from user where id='{uid}' limit 1"
-            check_info = db_util.sqlite_query_tool(my_conn, sql)
-            check_user_id = json.loads(check_info)['data']
-            check_user_id = check_user_id[0][0]
-            logger.info(f"rcv_uid {check_user_id}")
-            my_conn.close()
-            if not check_user_id:
-                raise f"illegal_request {request}"
-        except Exception as e:
-            my_conn.close()
-            logger.error(f"auth_err, {e}", exc_info=True)
-            raise f"auth_err_for_request {request}"
+                sql = f"select id from user where id='{uid}' limit 1"
+                check_info = db_util.sqlite_query_tool(my_conn, sql)
+                check_user_id = json.loads(check_info)['data']
+                check_user_id = check_user_id[0][0]
+                logger.info(f"rcv_uid {check_user_id}")
+                my_conn.close()
+                if not check_user_id:
+                    raise f"illegal_request {request}"
+            except Exception as e:
+                my_conn.close()
+                logger.error(f"auth_err, {e}", exc_info=True)
+                raise f"auth_err_for_request {request}"
     logger.info(f"rcv_msg: {msg}, from user {uid}")
     logger.info(f"ask_question({msg}, my_cfg, html, True)")
     answer = get_dt_with_nl(msg, my_cfg, 'markdown', True)
@@ -265,11 +268,16 @@ def transcribe_audio() -> tuple[Response, int] | Response:
             return jsonify({"error": "audio stream is too large, max size is 10MB"}), 413
         audio_bytes = request.get_data(cache=False)
         result = transcribe_webm_audio_bytes(audio_bytes, my_cfg)
-        response = jsonify({"text": result})
+        data = {"text": result}
     except Exception as e:
         logger.exception("语音识别接口异常")
-        response = jsonify({"error": str(e)}); response.status_code= 500
+        data = {"text": f"语音识异常:{str(e)}"}
 
+    response = Response(
+        json.dumps(data, ensure_ascii=False),
+        content_type="application/json; charset=utf-8",
+        status=200
+    )
     try:
         origin = my_cfg["sys"]["allowed_origin"]
         response.headers.add('Access-Control-Allow-Origin', origin)

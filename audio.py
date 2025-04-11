@@ -29,11 +29,11 @@ def webm_to_wav(webm_data):
 def _transcribe_core(audio_file: Union[str, io.BytesIO], cfg: dict):
     if isinstance(audio_file, io.BytesIO):
         audio_file.seek(0)
-    scheme = urlparse(cfg.get("ai", {}).get("api_uri", "")).scheme
+    scheme = urlparse(cfg.get("ai", {}).get("asr_api_uri", "")).scheme
     http_client = httpx.Client(verify=False) if scheme == "https" else None
     client = OpenAI(
-        base_url=cfg["ai"].get("api_uri"),
-        api_key=cfg["ai"].get("api_key"),
+        base_url=cfg["ai"].get("asr_api_uri"),
+        api_key=cfg["ai"].get("asr_api_key"),
         http_client=http_client
     )
 
