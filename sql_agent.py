@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import io
 import os
 import re
-from typing import Dict
+from typing import Dict, Union
+from urllib.parse import urlparse
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.utilities import SQLDatabase
-from langchain_openai import ChatOpenAI, OpenAI
+from langchain_openai import ChatOpenAI
+from openai import OpenAI, APIConnectionError
 from langchain_ollama import ChatOllama
 import logging.config
 import httpx
@@ -159,14 +162,38 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
         logger.info(f"only_dt:\n{dt}")
         return dt
 
-def transcribe_audio(audio_path: str, api_key: SecretStr, model_name: str):
-    client = OpenAI(api_key=api_key)
-    with open(audio_path, "rb") as audio_file:
-        transcript = client.audio.transcriptions.create(
-            model=model_name,
-            file=audio_file
-        )
+def _transcribe_core(audio_file: Union[str, io.BytesIO], cfg: dict):
+    # 公共处理逻辑
+    scheme = urlparse(cfg.get("ai", {}).get("api_uri", "")).scheme
+    http_client = httpx.Client(verify=False) if scheme == "https" else None
+    client = OpenAI(
+        base_url=cfg["ai"].get("api_uri"),
+        api_key=cfg["ai"].get("api_key"),
+        http_client=http_client
+    )
+
+    file_obj = open(audio_file, "rb") if isinstance(audio_file, str) else audio_file
+    transcript = client.audio.transcriptions.create(
+        model=cfg["ai"]["asr_model_name"],
+        file=file_obj
+    )
     return transcript.text
+
+def transcribe_audio_file(audio_path: str, cfg:dict):
+    try:
+        return _transcribe_core(audio_path, cfg)
+    except Exception as ex:
+        logger.exception("transcribe_audio_file_err")
+
+def transcribe_audio_bytes(audio_bytes: bytes, cfg:dict):
+    try:
+        return _transcribe_core(io.BytesIO(audio_bytes), cfg)
+    except Exception as ex:
+        logger.exception("transcribe_audio_bytes_err")
+
+def test_transcribe_audio():
+    txt = transcribe_audio_file("./static/asr_example_zh.wav", my_cfg)
+    logger.info(f"audio_txt: {txt}")
 
 if __name__ == "__main__":
     os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
@@ -176,4 +203,5 @@ if __name__ == "__main__":
     #     if input_q == "q":
     #         exit(0)
     input_q = "查询2025年的数据"
-    get_dt_with_nl(input_q, my_cfg, 'json', True)
+    # get_dt_with_nl(input_q, my_cfg, 'json', True)
+    test_transcribe_audio()
