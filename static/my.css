@@ -63,8 +63,8 @@ body {
     outline: none;
 }
 .send-button {
+    background: linear-gradient(135deg, #4ECDC4, #45B7D1);
     padding: 12px 20px;
-    background-color: #1890ff;
     color: white;
     border: none;
     border-radius: 0 5px 5px 0;
@@ -112,6 +112,7 @@ body {
     content: "···";
     animation: dotFlashing 1.5s infinite step-start;
 }
+
 @keyframes dotFlashing {
     0% { content: ". "; }
     25% { content: ".."; }
@@ -119,10 +120,16 @@ body {
     75% { content: "::"; }
     100% { content: "  "; }
 }
+
 @keyframes pulse {
     0% { transform: scale(1); }
     50% { transform: scale(1.1); }
     100% { transform: scale(1); }
+}
+
+@keyframes pulseWave {
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
 }
 .greeting-box {
       display: flex;
@@ -141,22 +148,46 @@ body {
     font-weight: 500;
     margin-bottom: 4px;
 }
+.status-indicator {
+    position: fixed;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    display: none;
+}
+
 .voice-button {
-    background: none;
-    border: none;
-    padding: 8px;
-    cursor: pointer;
-    transition: transform 0.2s;
+    background: #f0f0f0;
+    transition: 0.3s;
 }
 
 .voice-button.recording {
-    animation: pulse 1.5s infinite;
+    background: linear-gradient(135deg, #ff6b6b, #ff4444);
 }
 
 .voice-button.error {
     color: #ff4444;
     animation: none;
 }
+.voice-effect {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(78,205,196,0.3) 0%, transparent 70%);
+    animation: pulseWave 1.5s infinite;
+    pointer-events: none;
+    z-index: 999;
+}
+
 @media (max-width: 768px) {
     .header {
         margin-bottom: 15px;
@@ -196,6 +227,7 @@ body {
         padding-right: 45px;
     }
     .send-button {
+        background: linear-gradient(135deg, #4ECDC4, #45B7D1);
         align-self: flex-end;
         border-radius: 5px;
         width: 25%;
