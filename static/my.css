@@ -237,19 +237,25 @@ button:disabled {
 }
 .voice-effect {
     position: fixed;
-    top: 50%;
+    bottom: 100px;
     left: 50%;
-    transform: translate(-50%, -50%);
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(78,205,196,0.3) 0%, transparent 70%);
-    animation: pulseWave 1.5s infinite;
-    pointer-events: none;
-    z-index: 999;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 60px;
 }
 .voice-effect[style="display: none;"] {
   animation: none;
+}
+.wave-bar {
+    transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    transform-origin: bottom center;
+}
+
+@keyframes wave {
+    0% { transform: scaleY(0.3); }
+    100% { transform: scaleY(1.5); }
 }
 
 @media (max-width: 768px) {
