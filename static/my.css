@@ -5,6 +5,11 @@ body {
     background-color: #f5f7fa;
     color: #333;
 }
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 .container {
     width: min(80%, 1200px);
     height: 80vh;

@@ -215,6 +215,7 @@
             clearState();
             showStatus('🛑 已手动停止', 1500);
           } else {
+            queryInput.disabled = true;
             clearInterval(timer);
             document.getElementById('voice-effect').style.display = 'block';
             try {
@@ -252,6 +253,7 @@
           if (isRecording) {
             mediaRecorder.stop();
             showStatus('⏱️ 已达到10秒最长录音时间');
+            voiceBtn.disabled = false;
           }
           clearState();
         }
@@ -268,6 +270,8 @@
 
         async function processAudio() {
           try {
+            voiceBtn.disabled = true;
+            document.querySelector('.send-button').disabled = true;
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             const formData = new FormData();
             formData.append('audio', audioBlob, 'recording.webm');
@@ -282,11 +286,14 @@
           } catch (error) {
             showStatus('❌ 识别失败', 2000);
           } finally {
+            voiceBtn.disabled = false;
+            document.querySelector('.send-button').disabled = false;
             clearState();
           }
         }
 
         function clearState() {
+             queryInput.disabled = false;
             if (mediaStream) {
                 mediaStream.getTracks().forEach(track => track.stop());
             }
