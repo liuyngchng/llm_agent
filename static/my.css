@@ -149,6 +149,21 @@ body {
     font-weight: 500;
     margin-bottom: 4px;
 }
+
+.tab-bar { margin-bottom: 10px; }
+.tab-btn {
+    padding: 5px 15px;
+    border: none;
+    background: #f0f0f0;
+    cursor: pointer;
+}
+.tab-btn.active { background: #4ECDC4; color: white; }
+.raw-data {
+    background: #f5f5f5;
+    padding: 10px;
+    max-height: 300px;
+    overflow: auto;
+}
 .status-indicator {
     position: fixed;
     bottom: 70px;

@@ -123,16 +123,24 @@
             messageContainer.classList.add('message-container');
             if (isChart) {
                 messageContainer.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <img width="24" height="24" src="/static/bot.png">
-                    <div class="chart-container">
-                        您需要的数据的图形化展示如下所示：<br>
-                        <canvas></canvas>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img width="24" height="24" src="/static/bot.png">
+                        <div class="chart-container">
+                            <div class="tab-bar">
+                                <button class="tab-btn active" onclick="toggleTab(this, 'chart')">图表</button>
+                                <button class="tab-btn" onclick="toggleTab(this, 'data')">数据</button>
+                            </div>
+                            <div class="tab-content chart-tab" style="display: block;">
+                                <canvas></canvas>
+                            </div>
+                            <div class="tab-content data-tab" style="display: none;">
+                                <pre class="raw-data"></pre>
+                            </div>
+                        </div>
                     </div>
-                </div>
                 `;
-                chatContainer.appendChild(messageContainer);  // 追加这行
-                chatContainer.scrollTop = chatContainer.scrollHeight;  // 追加这行
+                chatContainer.appendChild(messageContainer);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
                 return messageContainer;
             }
             // 安全处理并解析markdown/html
@@ -175,8 +183,17 @@
                     }]
                 }
             });
+            canvasElement.closest('.chart-container').querySelector('.raw-data').textContent =
+                JSON.stringify(rawData, null, 2);
         }
+        function toggleTab(btn, tabName) {
+            const container = btn.closest('.chart-container');
+            container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            container.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
 
+            btn.classList.add('active');
+            container.querySelector(`.${tabName}-tab`).style.display = 'block';
+        }
 
     </script>
     <script>
