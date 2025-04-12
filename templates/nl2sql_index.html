@@ -71,7 +71,7 @@
             fetchQueryData(query).then(data => {
                     if (data.chart) {
                         const msgElement = addMessage(' ', 'bot', true);
-                        renderChart(msgElement.querySelector('canvas'), data.chart);
+                        renderChart(msgElement.querySelector('canvas'), data.chart, data.raw_dt);
                     } else {
                         addMessage(data, 'bot');
                     }
@@ -171,20 +171,20 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return messageContainer;
         }
-        function renderChart(canvasElement, rawData) {
+        function renderChart(canvasElement, chartData, rawData) {
             const colors = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEEAD','#D4A5A5','#99B898','#FECEA8'];
             new Chart(canvasElement, {
                 type: 'pie',
                 data: {
-                    labels: rawData.labels,
+                    labels: chartData.labels,
                     datasets: [{
-                        data: rawData.values,
-                        backgroundColor: colors.slice(0, rawData.labels.length) // 动态取色
+                        data: chartData.values,
+                        backgroundColor: colors.slice(0, chartData.labels.length) // 动态取色
                     }]
                 }
             });
-            canvasElement.closest('.chart-container').querySelector('.raw-data').textContent =
-                JSON.stringify(rawData, null, 2);
+            const tableHtml = DOMPurify.sanitize(marked.parse(rawData.replace(/\\n/g, '\n')));
+            canvasElement.closest('.chart-container').querySelector('.raw-data').innerHTML = tableHtml;
         }
         function toggleTab(btn, tabName) {
             const container = btn.closest('.chart-container');
