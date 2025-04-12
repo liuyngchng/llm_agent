@@ -70,7 +70,7 @@
             // 发送API请求
             fetchQueryData(query).then(data => {
                     if (data.chart) {
-                        const msgElement = addMessage('图表展示', 'bot', true); // 新增第三个参数表示图表类型
+                        const msgElement = addMessage(' ', 'bot', true);
                         renderChart(msgElement.querySelector('canvas'), data.chart);
                     } else {
                         addMessage(data, 'bot');
@@ -89,7 +89,11 @@
             try {
                 sendButton.disabled = true;
                 const loadingMsg = addMessage('<div class="loading-dots">处理中</div>', 'bot');
-
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), 30000);
+                await fetch('/query/data', {
+                    signal: controller.signal
+                });
                 const response = await fetch('/query/data', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -133,7 +137,11 @@
             }
             // 安全处理并解析markdown/html
             const sanitizedContent = DOMPurify.sanitize(
-                type === 'bot' ? marked.parse(text) : text
+                type === 'bot' ? marked.parse(text) : text,
+                {
+                    ADD_TAGS: ['canvas'],
+                    ADD_ATTR: ['id']
+                }
             );
 
             if (type === 'user') {
@@ -175,7 +183,7 @@
         // 语音识别功能
         const voiceBtn = document.getElementById('voice-btn');
         let isRecording = false;
-        let mediaRecorder, mediaStream, timeoutId;
+        let mediaRecorder, mediaStream, timeoutId, timer;
         let audioChunks = [];
         let countdown = 10;
         // 点击切换录音状态
@@ -183,12 +191,14 @@
 
         async function toggleRecording() {
           if (isRecording) {
-            clearTimeout(timeoutId);    // 清除自动停止计时
-            mediaRecorder.stop();       // 停止录音
-            mediaStream.getTracks().forEach(track => track.stop());  // 关闭麦克风
-            clearState();               // 立即重置状态
-            showStatus('🛑 已手动停止'); // 明确状态提示
+            clearTimeout(timeoutId);
+            clearInterval(timer);
+            mediaRecorder.stop();
+            mediaStream.getTracks().forEach(track => track.stop());
+            clearState();
+            showStatus('🛑 已手动停止', 1500);
           } else {
+            clearInterval(timer);
             document.getElementById('voice-effect').style.display = 'block';
             try {
                 countdown = 10;
@@ -201,7 +211,7 @@
               isRecording = true;
               voiceBtn.classList.add('recording');
               showStatus(`🎤 录音中 (剩余${countdown}秒)...`);
-              const timer = setInterval(() => {
+              timer = setInterval(() => {
                   countdown--;
                   showStatus(`🎤 录音中 (剩余${countdown}秒)...`);
                   if(countdown <= 0) clearInterval(timer);

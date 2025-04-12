@@ -187,6 +187,9 @@ body {
     pointer-events: none;
     z-index: 999;
 }
+.voice-effect[style="display: none;"] {
+  animation: none;
+}
 
 @media (max-width: 768px) {
     .header {
@@ -211,8 +214,8 @@ body {
     }
 
     #query-form {
-        position: fixed;
-        bottom: 0;
+        position: sticky;
+        bottom: env(keyboard-inset-height, 0);
         left: 0;
         right: 0;
         padding: 10px;
