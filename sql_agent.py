@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+import json
 import os
 import re
 from typing import Dict
@@ -156,8 +156,12 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     if cfg['ai']['prompts']['add_desc_to_dt']:
         logger.info("add_description_to_data")
         nl_dt = agent.get_nl_with_dt(dt)
-        logger.info(f"nl_with_dt:\n{nl_dt}")
-        return nl_dt
+        nl_dt_dict = json.loads(nl_dt)
+        nl_dt_dict["raw_dt"] = dt
+        nl_dt_dict_str = json.dumps(nl_dt_dict, ensure_ascii=False)
+        logger.info(f"nl_with_dt:\n{nl_dt_dict_str}")
+
+        return nl_dt_dict_str
     else:
         logger.info(f"only_dt:\n{dt}")
         return dt

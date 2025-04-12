@@ -34,7 +34,7 @@
         </form>
     </div>
     <div class="status-indicator" id="status-indicator"></div>
-    <div id="voice-effect" class="voice-effect" style="display:none"></div>
+    <div id="voice-effect" class="voice-effect" style="display:none"><!-- 动态添加波形条 --></div>
     <script>
         DOMPurify.addHook('uponSanitizeElement', (node, data) => {
             if (data.tagName === 'canvas') {
@@ -44,8 +44,11 @@
         // 聊天容器
         const chatContainer = document.getElementById('chat-container');
         const queryForm = document.getElementById('query-form');
-        const queryInput = document.getElementById('query-input');
+        const queryInput = document.getElementById('query-input');   //查询输入框
         const dbUriInput = document.getElementById('db-uri-input');
+        const sendButton = document.querySelector('.send-button');  // 发送按钮
+        let isFetching = false;                                     //是否正在请求数据
+
         window.onload = function() {
             const greeting = `Hi，我是问数小助手～ 很高兴遇见你！你可以随时问我天燃气销售数据的问题，我来帮你查查
             `;
@@ -71,7 +74,7 @@
             fetchQueryData(query).then(data => {
                     if (data.chart) {
                         const msgElement = addMessage(' ', 'bot', true);
-                        renderChart(msgElement.querySelector('canvas'), data.chart);
+                        renderChart(msgElement.querySelector('canvas'), data.chart, data.raw_dt);
                     } else {
                         addMessage(data, 'bot');
                     }
@@ -81,13 +84,14 @@
                     addMessage(`查询失败，网路请求超时，请您稍后再试`, 'bot');
                 });
         });
+
+
         
         // 发送API请求
-        // 修改后的fetch逻辑
         async function fetchQueryData(query) {
-            const sendButton = document.querySelector('.send-button');
             try {
                 sendButton.disabled = true;
+                isFetching = true;      // 表示正在请求数据
                 const loadingMsg = addMessage('<div class="loading-dots">处理中</div>', 'bot');
                 const controller = new AbortController();
                 setTimeout(() => controller.abort(), 30000);
@@ -104,7 +108,7 @@
                     chatContainer.removeChild(loadingMsg);
                 }
                 sendButton.disabled = false;
-
+                isFetching = true;              // 数据请求完成
                 if (!response.ok) throw new Error('网络响应失败');
                 const data = await response.json();
                 return data;
@@ -123,16 +127,24 @@
             messageContainer.classList.add('message-container');
             if (isChart) {
                 messageContainer.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <img width="24" height="24" src="/static/bot.png">
-                    <div class="chart-container">
-                        您需要的数据的图形化展示如下所示：<br>
-                        <canvas></canvas>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img width="24" height="24" src="/static/bot.png">
+                        <div class="chart-container">
+                            <div class="tab-bar">
+                                <button class="tab-btn active" onclick="toggleTab(this, 'chart')">图表</button>
+                                <button class="tab-btn" onclick="toggleTab(this, 'data')">数据</button>
+                            </div>
+                            <div class="tab-content chart-tab" style="display: block;">
+                                <canvas></canvas>
+                            </div>
+                            <div class="tab-content data-tab" style="display: none;">
+                                <pre class="raw-data"></pre>
+                            </div>
+                        </div>
                     </div>
-                </div>
                 `;
-                chatContainer.appendChild(messageContainer);  // 追加这行
-                chatContainer.scrollTop = chatContainer.scrollHeight;  // 追加这行
+                chatContainer.appendChild(messageContainer);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
                 return messageContainer;
             }
             // 安全处理并解析markdown/html
@@ -163,23 +175,40 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return messageContainer;
         }
-        function renderChart(canvasElement, rawData) {
+        function renderChart(canvasElement, chartData, rawData) {
             const colors = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEEAD','#D4A5A5','#99B898','#FECEA8'];
             new Chart(canvasElement, {
                 type: 'pie',
                 data: {
-                    labels: rawData.labels,
+                    labels: chartData.labels,
                     datasets: [{
-                        data: rawData.values,
-                        backgroundColor: colors.slice(0, rawData.labels.length) // 动态取色
+                        data: chartData.values,
+                        backgroundColor: colors.slice(0, chartData.labels.length) // 动态取色
                     }]
+                },
+                options: {
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            align: 'center',        // 垂直居中
+                            labels: { padding: 20 }
+                        }
+                    },
+                    aspectRatio: 2
                 }
             });
+            const tableHtml = DOMPurify.sanitize(marked.parse(rawData.replace(/\\n/g, '\n')));
+            canvasElement.closest('.chart-container').querySelector('.raw-data').innerHTML = tableHtml;
+        }
+        function toggleTab(btn, tabName) {
+            const container = btn.closest('.chart-container');
+            container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            container.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+
+            btn.classList.add('active');
+            container.querySelector(`.${tabName}-tab`).style.display = 'block';
         }
 
-
-    </script>
-    <script>
         // 语音识别功能
         const voiceBtn = document.getElementById('voice-btn');
         let isRecording = false;
@@ -190,86 +219,103 @@
         voiceBtn.addEventListener('click', toggleRecording);
 
         async function toggleRecording() {
-          if (isRecording) {
-            clearTimeout(timeoutId);
-            clearInterval(timer);
-            mediaRecorder.stop();
-            mediaStream.getTracks().forEach(track => track.stop());
-            clearState();
-            showStatus('🛑 已手动停止', 1500);
-          } else {
-            clearInterval(timer);
-            document.getElementById('voice-effect').style.display = 'block';
-            try {
-                countdown = 10;
-                queryInput.value = '';
-              mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-              mediaRecorder = new MediaRecorder(mediaStream);
-              setupRecorder();
+            if (isRecording) {
+                clearTimeout(timeoutId);
+                clearInterval(timer);
+                mediaRecorder.stop();
+                mediaStream.getTracks().forEach(track => track.stop());
+                clearState();
+                showStatus('🛑 已手动停止', 1500);
+            } else {
+                document.getElementById('voice-effect').style.display = 'flex';
+                queryInput.disabled = true;
+                clearInterval(timer);
+                document.getElementById('voice-effect').innerHTML =
+                    Array(20).fill('<div class="wave-bar"></div>').join('');
+                document.querySelectorAll('.wave-bar').forEach((bar, i) => {
+                    bar.style.animationDelay = `${i * 50}ms`; // 交错动画
+                });
+                try {
+                    countdown = 10;
+                    queryInput.value = '';
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(mediaStream);
+                    const audioContext = new AudioContext();
+                    const analyser = audioContext.createAnalyser();
+                    const source = audioContext.createMediaStreamSource(mediaStream);
+                    source.connect(analyser);
+                    setupRecorder();
 
-              mediaRecorder.start();
-              isRecording = true;
-              voiceBtn.classList.add('recording');
-              showStatus(`🎤 录音中 (剩余${countdown}秒)...`);
-              timer = setInterval(() => {
-                  countdown--;
-                  showStatus(`🎤 录音中 (剩余${countdown}秒)...`);
-                  if(countdown <= 0) clearInterval(timer);
-              }, 1000);
+                    mediaRecorder.start();
+                    updateWaveBars(analyser);
+                    isRecording = true;
+                    voiceBtn.classList.add('recording');
+                    showStatus(`🎤 录音中 (剩余${countdown}秒)...`);
+                    timer = setInterval(() => {
+                        countdown--;
+                        showStatus(`🎤 录音中 (剩余${countdown}秒)...`);
+                        if(countdown <= 0) clearInterval(timer);
+                    }, 1000);
 
-              // 10秒自动停止
-              timeoutId = setTimeout(autoStopRecording, 10000);
-            } catch (error) {
-              showStatus('❌ 麦克风不可用');
+                    // 10秒自动停止
+                    timeoutId = setTimeout(autoStopRecording, 10000);
+                } catch (error) {
+                    showStatus('❌ 麦克风不可用');
+                }
             }
-          }
         }
 
         function setupRecorder() {
-          audioChunks = [];
-          mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-          mediaRecorder.onstop = processAudio;
+            audioChunks = [];
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = processAudio;
         }
 
         function autoStopRecording() {
-          if (isRecording) {
-            mediaRecorder.stop();
-            showStatus('⏱️ 已达到10秒最长录音时间');
-          }
-          clearState();
+            if (isRecording) {
+                mediaRecorder.stop();
+                showStatus('⏱️ 已达到10秒最长录音时间');
+                voiceBtn.disabled = false;
+            }
+            clearState();
         }
 
         function stopRecording() {
-          mediaRecorder.stop();
-          mediaStream.getTracks().forEach(track => {
-            track.stop();  // 停止轨道
-            mediaStream.removeTrack(track); // 从流中移除轨道
-          });
-          mediaStream = null;
-          clearTimeout(timeoutId);
+            mediaRecorder.stop();
+            mediaStream.getTracks().forEach(track => {
+                track.stop();  // 停止轨道
+                mediaStream.removeTrack(track); // 从流中移除轨道
+            });
+            mediaStream = null;
+            clearTimeout(timeoutId);
         }
 
         async function processAudio() {
-          try {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            const formData = new FormData();
-            formData.append('audio', audioBlob, 'recording.webm');
+            try {
+                voiceBtn.disabled = true;
+                sendButton.disabled = true;
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'recording.webm');
 
-            const response = await fetch('/trans/audio', { method: 'POST', body: formData });
-            const { text } = await response.json();
+                const response = await fetch('/trans/audio', { method: 'POST', body: formData });
+                const { text } = await response.json();
 
-            if (text) {
-              queryInput.value = text;
-              showStatus('✅ 识别成功', 1500);
+                if (text) {
+                    queryInput.value = text;
+                    showStatus('✅ 识别成功', 1500);
+                }
+            } catch (error) {
+                showStatus('❌ 识别失败', 2000);
+            } finally {
+                voiceBtn.disabled = false;
+                sendButton.disabled = false;
+                clearState();
             }
-          } catch (error) {
-            showStatus('❌ 识别失败', 2000);
-          } finally {
-            clearState();
-          }
         }
 
         function clearState() {
+            queryInput.disabled = false;
             if (mediaStream) {
                 mediaStream.getTracks().forEach(track => track.stop());
             }
@@ -280,10 +326,22 @@
         }
 
         function showStatus(text, duration) {
-          const indicator = document.getElementById('status-indicator');
-          indicator.textContent = text;
-          indicator.style.display = 'block';
-          if (duration) setTimeout(() => indicator.style.display = 'none', duration);
+            const indicator = document.getElementById('status-indicator');
+            indicator.textContent = text;
+            indicator.style.display = 'block';
+            if (duration) setTimeout(() => indicator.style.display = 'none', duration);
+        }
+        function updateWaveBars(analyser) {
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+            const avg = dataArray.reduce((a,b) => a + b) / dataArray.length;
+
+            document.querySelectorAll('.wave-bar').forEach(bar => {
+                bar.style.transform = avg > 10 ?
+                    `scaleY(${0.3 + (avg/50)}) rotate(${Math.sin(Date.now()/100)*2}deg)`
+                    : 'scaleY(0.3)';
+            });
+            requestAnimationFrame(() => updateWaveBars(analyser));
         }
         </script>
 </body>
