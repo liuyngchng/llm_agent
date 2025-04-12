@@ -5,7 +5,19 @@ body {
     background-color: #f5f7fa;
     color: #333;
 }
-
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image:
+        linear-gradient(rgba(245,247,250,0.2) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245,247,250,0.2) 1px, transparent 1px);
+    background-size: 20px 20px;
+    z-index: -1;
+}
 button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -16,16 +28,23 @@ button:disabled {
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-
+    perspective: 1000px;
 }
 .header {
     text-align: center;
     margin-bottom: 30px;
 }
 .chat-container {
+    background: linear-gradient(145deg, #ffffff, #f8f9fa);
     background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 16px;
+
+    box-shadow:
+        0 8px 32px rgba(0,0,0,0.1),
+        0 4px 12px rgba(0,0,0,0.08),
+        inset 2px 2px 4px rgba(255,255,255,0.5),
+        inset -2px -2px 4px rgba(222,222,222,0.3);
     padding: 20px;
     margin-bottom: 20px;
     height: calc(100vh - 150px);
@@ -33,6 +52,7 @@ button:disabled {
     display: flex;
     flex-direction: column;
     flex: 1;
+    transform: translateZ(20px);
 
 }
 .message {
@@ -79,6 +99,16 @@ button:disabled {
 }
 .send-button:hover {
     background-color: #40a9ff;
+    transform: translateY(-1px);
+    box-shadow:
+        4px 4px 10px rgba(78,205,196,0.3),
+        -3px -3px 6px rgba(255,255,255,0.6);
+}
+.send-button:active {
+    transform: translateY(1px);
+    box-shadow:
+        1px 1px 4px rgba(78,205,196,0.1),
+        -1px -1px 2px rgba(255,255,255,0.4);
 }
 .send-button:disabled {
     background-color: #ccc;
@@ -101,14 +131,22 @@ button:disabled {
     justify-content: flex-start;
 }
 .message-bubble {
+    position: relative;
+    transform-style: preserve-3d;
     max-width: 100%;
     width: auto;
 }
 .user-message-bubble {
     background-color: #e6f7ff;
+    box-shadow:
+        4px 4px 8px rgba(0,0,0,0.08),
+        inset 1px 1px 2px rgba(255,255,255,0.5);
 }
 .bot-message-bubble {
     background-color: #f5f5f5;
+    box-shadow:
+        -4px 4px 8px rgba(0,0,0,0.08),
+        inset -1px 1px 2px rgba(255,255,255,0.5);
 }
 .loading-dots {
     display: inline-block;
@@ -252,6 +290,10 @@ button:disabled {
     .input-field {
         border-radius: 5px;
         padding-right: 45px;
+        box-shadow:
+            3px 3px 8px rgba(78,205,196,0.2),
+            -2px -2px 4px rgba(255,255,255,0.5);
+        transition: all 0.2s;
     }
     .send-button {
         background: linear-gradient(135deg, #4ECDC4, #45B7D1);
