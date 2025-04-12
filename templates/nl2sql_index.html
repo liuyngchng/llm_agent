@@ -270,10 +270,13 @@
         }
 
         function clearState() {
-          isRecording = false;
-          clearInterval(timer);
-          voiceBtn.classList.remove('recording');
-          document.getElementById('voice-effect').style.display = 'none';
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+            isRecording = false;
+            clearInterval(timer);
+            voiceBtn.classList.remove('recording');
+            document.getElementById('voice-effect').style.display = 'none';
         }
 
         function showStatus(text, duration) {
