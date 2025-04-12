@@ -185,6 +185,16 @@
                         data: chartData.values,
                         backgroundColor: colors.slice(0, chartData.labels.length) // 动态取色
                     }]
+                },
+                options: {
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            align: 'center',        // 垂直居中
+                            labels: { padding: 20 }
+                        }
+                    },
+                    aspectRatio: 1.6  // 增加画布宽度
                 }
             });
             const tableHtml = DOMPurify.sanitize(marked.parse(rawData.replace(/\\n/g, '\n')));
@@ -299,9 +309,7 @@
                 showStatus('❌ 识别失败', 2000);
             } finally {
                 voiceBtn.disabled = false;
-                if (!isFetching) {
-                    sendButton.disabled = false;
-                }
+                sendButton.disabled = false;
                 clearState();
             }
         }

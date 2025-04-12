@@ -22,6 +22,10 @@ button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
+.chart-container canvas {
+    width: 60% ;
+    height: auto ;
+}
 .container {
     width: min(80%, 1200px);
     height: 80vh;
