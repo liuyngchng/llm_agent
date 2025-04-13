@@ -124,7 +124,7 @@ ffmpeg -i temp.webm -c:a libopus asr_test.webm
 
 ```sh
 curl -X POST http://127.0.0.1:19000/trans/audio \
-  -F "file=@static/asr_test.webm;type=audio/webm" \
+  -F "audio=@static/asr_test.webm;type=audio/webm" \
   -H "Content-Type: multipart/form-data"
 ```
 
