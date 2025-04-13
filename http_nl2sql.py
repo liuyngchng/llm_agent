@@ -27,6 +27,7 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
+config_db = "test_config.db"
 
 @app.route('/gt/dt/idx', methods=['GET'])
 def query_data_index():
@@ -70,7 +71,7 @@ def config_index():
         "db_psw": my_cfg['db']['password'],
     }
     check_sql = f"select id from user where name='{usr}' limit 1"
-    with sqlite3.connect('test_config.db') as my_conn:
+    with sqlite3.connect(config_db) as my_conn:
         check_info = db_util.sqlite_query_tool(my_conn, check_sql)
         logger.debug(f"check_info {check_info}")
         check_data = json.loads(check_info)['data']
@@ -106,7 +107,7 @@ def save_config():
     logger.info(f"save config info {request.form}")
     dt_idx = "config_index.html"
     ctx = {}
-    with sqlite3.connect('test_config.db') as my_conn:
+    with sqlite3.connect(config_db) as my_conn:
         try:
             usr = request.form.get('usr').strip()
             db_type = request.form.get('db_type').strip()
@@ -134,11 +135,9 @@ def save_config():
                    f"values ('{uid}', '{db_type}', '{db_host}', '{db_name}', '{db_usr}', '{db_psw}')")
             db_util.sqlite_insert_tool(my_conn, insert_sql)
             logger.info(f"return page {dt_idx}")
-            my_conn.close()
             ctx['waring_info'] = '保存成功'
             return render_template(dt_idx, **ctx)
         except Exception as e:
-            my_conn.close()
             logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
             ctx['waring_info'] = '保存失败'
             return render_template(dt_idx, **ctx)
@@ -184,7 +183,7 @@ def login():
     user = request.form.get('usr').strip()
     t = request.form.get('t').strip()
     logger.info(f"user login: {user}, {t}")
-    with sqlite3.connect('test_config.db') as my_conn:
+    with sqlite3.connect(config_db) as my_conn:
         sql = f"select id from user where name='{user}' and t = '{t}' limit 1"
         check_info = db_util.sqlite_query_tool(my_conn, sql)
         user_id = json.loads(check_info)['data']
@@ -209,25 +208,16 @@ def query_data(catch=None):
     :return:
     """
     msg = request.form.get('msg').strip()
-    uid = ''
-    if my_cfg['sys']['auth']:
-        with sqlite3.connect('test_config.db') as my_conn:
-            try:
-                uid = request.form.get('uid').strip()
-
-                sql = f"select id from user where id='{uid}' limit 1"
-                check_info = db_util.sqlite_query_tool(my_conn, sql)
-                check_user_id = json.loads(check_info)['data']
-                check_user_id = check_user_id[0][0]
-                logger.info(f"rcv_uid {check_user_id}")
-                my_conn.close()
-                if not check_user_id:
-                    raise f"illegal_request {request}"
-            except Exception as e:
-                my_conn.close()
-                logger.error(f"auth_err, {e}", exc_info=True)
-                raise f"auth_err_for_request {request}"
-    logger.info(f"rcv_msg: {msg}, from user {uid}")
+    auth_result = authenticate(request)
+    if not auth_result:
+        data = {"chart":{}, "raw_dt":{}, "msg":"illegal access"}
+        logger.error(f"illegal_access, {request}")
+        return Response(
+            json.dumps(data, ensure_ascii=False),
+            content_type="application/json; charset=utf-8",
+            status=200
+        )
+    logger.info(f"rcv_msg: {msg}")
     logger.info(f"ask_question({msg}, my_cfg, html, True)")
     answer = get_dt_with_nl(msg, my_cfg, 'markdown', True)
     # logger.debug(f"answer is：{answer}")
@@ -235,6 +225,27 @@ def query_data(catch=None):
         answer="没有查询到相关数据，请您尝试换个问题提问"
 
     return answer
+
+
+def authenticate(req)->bool:
+    if not my_cfg['sys']['auth']:
+        return True
+    result = False
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            uid = req.form.get('uid').strip()
+            sql = f"select id from user where id='{uid}' limit 1"
+            check_info = db_util.sqlite_query_tool(my_conn, sql)
+            check_user_id = json.loads(check_info)['data']
+            check_user_id = check_user_id[0][0]
+            logger.info(f"rcv_uid {check_user_id}")
+            if not check_user_id:
+                logger.error(f"illegal_request {req}")
+            result = True
+        except Exception as e:
+            logger.error(f"authenticate_err, {req}, {e}", exc_info=True)
+    return result
+
 
 @app.route('/gt/db/dt', methods=['POST'])
 def get_db_dt():

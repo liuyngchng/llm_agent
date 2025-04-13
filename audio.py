@@ -57,7 +57,9 @@ def transcribe_wav_audio_bytes(audio_bytes: bytes, cfg:dict):
         return _transcribe_core(io.BytesIO(audio_bytes), cfg)
     except APIConnectionError as ex:
         logger.exception("transcribe_audio_bytes_err")
-        return "transcribe_audio_bytes_err"
+        info = "语音识别出现异常"
+        logger.error(info)
+        return info
 
 def transcribe_webm_audio_bytes(webm_bytes: bytes, cfg:dict):
     if len(webm_bytes) == 0:

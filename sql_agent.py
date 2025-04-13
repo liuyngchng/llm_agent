@@ -46,13 +46,13 @@ class SQLGenerator:
         #     sql_gen_sys_msg = sql_gen_sys_msg.replace("{sql_dialect}", cfg['db']['type'])
         # except Exception as e:
         #     logger.error("set_sql_dialect_err", e)
-        logger.info(f"sql_gen_sys_msg {sql_gen_sys_msg}")
+        logger.debug(f"sql_gen_sys_msg {sql_gen_sys_msg}")
         self.sql_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", sql_gen_sys_msg),
             ("human", "用户问题：{question}")
         ])
         nl_gen_sys_msg = f"""{cfg['ai']['prompts']['nl_gen_sys_msg']}"""
-        logger.info(f"nl_gen_sys_msg {nl_gen_sys_msg}")
+        logger.debug(f"nl_gen_sys_msg {nl_gen_sys_msg}")
         self.nl_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", nl_gen_sys_msg),
             ("human", "用户问题：{question}")
