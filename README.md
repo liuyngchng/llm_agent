@@ -107,12 +107,15 @@ vllm serve whisper-large-v3-turbo \
 
 ```
 
-语音生成
+webm测试语音生成
 
-```
+```sh
 pip install edge-tts 
 
-edge-tts --text "测试语句" --write-media output.webm
+# 生成默认音频：
+edge-tts -t "测试语句" --write-media temp.webm
+# 转码为真实webm：
+ffmpeg -i temp.webm -c:a libopus asr_test.webm
 ```
 
 接口测试

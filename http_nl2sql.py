@@ -253,20 +253,19 @@ def get_db_dt():
 
     return answer
 
-"""
-    javascript
-    const audioBlob = new Blob([audioData], {type: 'audio/wav'});
-    fetch('/trans/audio', {
-      method: 'POST',
-      body: audioBlob
-    })
-    """
+
 @app.route('/trans/audio', methods=['POST'])
 def transcribe_audio() -> tuple[Response, int] | Response:
+    """
+    curl -s --noproxy '*' -w '\n' -X POST -F 'audio=@static/asr_test.webm' 'http://localhost:19000/trans/audio'
+    """
+    if request.content_length > 10 * 1024 * 1024:
+        return Response(
+            json.dumps("数据长度太大，已超过10MB", ensure_ascii=False),
+            content_type="application/json; charset=utf-8",
+            status=413
+        )
     try:
-        if request.content_length > 10 * 1024 * 1024:  # 限制10MB
-            return jsonify({"error": "audio stream is too large, max size is 10MB"}), 413
-
         audio_file = request.files.get('audio')
         if not audio_file or not audio_file.filename.endswith('.webm'):
             return jsonify({"error": "invalid webm file"}), 400
@@ -275,7 +274,7 @@ def transcribe_audio() -> tuple[Response, int] | Response:
         data = {"text": result}
     except Exception as e:
         logger.exception("语音识别接口异常")
-        data = {"text": f"语音识异常:{str(e)}"}
+        data = {"text": "语音识别异常，请检查语音识别服务是否正常"}
 
     response = Response(
         json.dumps(data, ensure_ascii=False),

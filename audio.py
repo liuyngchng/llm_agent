@@ -14,6 +14,7 @@ import httpx
 from openai import OpenAI, APIConnectionError
 import logging.config
 
+from http_raq import my_cfg
 from sys_init import init_yml_cfg
 from pydub import AudioSegment
 
@@ -64,12 +65,25 @@ def transcribe_webm_audio_bytes(webm_bytes: bytes, cfg:dict):
     wav_audio = webm_to_wav(webm_bytes)
     return transcribe_wav_audio_bytes(wav_audio, cfg)
 
-def test_transcribe_audio():
+def test_transcribe_wav_audio_file():
     txt = transcribe_audio_file("./static/asr_example_zh.wav", my_cfg)
     logger.info(f"audio_txt: {txt}")
 
+def transcribe_webm_directly(webm_bytes: bytes, cfg:dict):
+    """
+    需要确认语音识别模型支持的音频流格式是否支持webm,否则需要先进性格式转换，再进行语音识别
+    """
+    return _transcribe_core(io.BytesIO(webm_bytes), cfg)
+
+def test_transcribe_webm_audio_file():
+    with open('static/asr_test.webm', 'rb') as f:
+        audio_bytes = f.read()
+    txt = transcribe_webm_audio_bytes(audio_bytes, my_cfg)
+    # txt= transcribe_webm_directly(audio_bytes, my_cfg)
+    logger.info(f"audio_txt: {txt}")
 
 if __name__ == "__main__":
     os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
     my_cfg = init_yml_cfg()
-    test_transcribe_audio()
+    # test_transcribe_wav_audio_file()
+    test_transcribe_webm_audio_file()
