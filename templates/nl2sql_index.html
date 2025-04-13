@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="/static/purify.min.js"></script>
     <script src="/static/marked.min.js"></script>
-    <script src="/static/chart.min.3.8.0.js"></script>
+    <script src="/static/echarts.min.5.4.3.js"></script>
     <link rel="stylesheet" href="/static/my.css">
     <title>{{ sys_name | default('智能问答系统') }}</title>
 </head>
@@ -72,21 +72,21 @@
             queryInput.value = '';            
             // 发送API请求
             fetchQueryData(query).then(data => {
-                    if (data.chart) {
-                        const msgElement = addMessage(' ', 'bot', true);
-                        renderChart(msgElement.querySelector('canvas'), data.chart, data.raw_dt);
-                    } else {
-                        addMessage(data, 'bot');
-                    }
-                })
-                .catch(error => {
-                    console.log("error_occurred", error.message)
-                    addMessage(`查询失败，网路请求超时，请您稍后再试`, 'bot');
-                });
+                if (data.chart) {
+                    const { messageContainer, chartId, legendId } = addMessage('图表展示', 'bot', true);
+                    renderChart(data.chart, data.chartType, chartId,legendId);
+                } else {
+                    addMessage(data, 'bot');
+                }
+            })
+            .catch(error => {
+                console.log("error_occurred", error.message);
+                addMessage(`查询失败，网路请求超时，请您稍后再试`, 'bot');
+            });
         });
 
 
-        
+
         // 发送API请求
         async function fetchQueryData(query) {
             try {
@@ -111,7 +111,14 @@
                 isFetching = true;              // 数据请求完成
                 if (!response.ok) throw new Error('网络响应失败');
                 const data = await response.json();
-                return data;
+                // 判断图表类型
+                let chartType = 'pie'; // 默认饼图
+                if (query.includes('趋势') || query.includes('变化')) {
+                    chartType = 'line'; // 趋势图
+                } else if (query.includes('对比') || query.includes('比较')) {
+                    chartType = 'bar'; // 柱状图
+                }
+                return { ...data, chartType };
             } catch (error) {
                 if (loadingMsg && chatContainer.contains(loadingMsg)) {
                     chatContainer.removeChild(loadingMsg);
@@ -120,33 +127,40 @@
                 throw error;
             }
         }
-        
+        function adjustChatHeight() {
+            const chatContainer = document.querySelector('.chat-container');
+            const windowHeight = window.innerHeight;
+            chatContainer.style.height = `${windowHeight - 100}px`;
+        }
+
+        window.addEventListener('resize', adjustChatHeight);
+        window.addEventListener('load', adjustChatHeight);
         // 添加消息到聊天
         function addMessage(text, type, isChart = false) {
             const messageContainer = document.createElement('div');
             messageContainer.classList.add('message-container');
             if (isChart) {
+                const chartId = `chart-${Date.now()}-${Math.floor(Math.random() * 1000)}`; // 生成唯一 ID
+                const legendId = `legend-${Date.now()}-${Math.floor(Math.random() * 1000)}`; // 生成唯一图例 ID
                 messageContainer.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <img width="24" height="24" src="/static/bot.png">
-                        <div class="chart-container">
-                            <div class="tab-bar">
-                                <button class="tab-btn active" onclick="toggleTab(this, 'chart')">图表</button>
-                                <button class="tab-btn" onclick="toggleTab(this, 'data')">数据</button>
-                            </div>
-                            <div class="tab-content chart-tab" style="display: block;">
-                                <canvas></canvas>
-                            </div>
-                            <div class="tab-content data-tab" style="display: none;">
-                                <pre class="raw-data"></pre>
-                            </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img width="24" height="24" src="/static/bot.png">
+                    <div class="chart-container" style="display: flex; flex-direction: column; align-items: flex-start;">
+                        <div class="chart-title" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>图表</span>
+                        </div>
+                        <div style="display: flex; width: 100%; height: 400px; flex-shrink: 0;">
+                        <div id="${chartId}" class="chart" style="width: 100%; height: 100%;"></div>
+                        <div id="${legendId}" class="legend" style="width: 30%;"></div>
                         </div>
                     </div>
+                </div>
                 `;
                 chatContainer.appendChild(messageContainer);
                 chatContainer.scrollTop = chatContainer.scrollHeight;
-                return messageContainer;
+                return { messageContainer, chartId, legendId };
             }
+            
             // 安全处理并解析markdown/html
             const sanitizedContent = DOMPurify.sanitize(
                 type === 'bot' ? marked.parse(text) : text,
@@ -175,38 +189,181 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return messageContainer;
         }
-        function renderChart(canvasElement, chartData, rawData) {
-            const colors = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEEAD','#D4A5A5','#99B898','#FECEA8'];
-            new Chart(canvasElement, {
-                type: 'pie',
-                data: {
-                    labels: chartData.labels,
-                    datasets: [{
-                        data: chartData.values,
-                        backgroundColor: colors.slice(0, chartData.labels.length) // 动态取色
-                    }]
-                },
-                options: {
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            align: 'center',        // 垂直居中
-                            labels: { padding: 20 }
-                        }
-                    },
-                    aspectRatio: 2
-                }
-            });
-            const tableHtml = DOMPurify.sanitize(marked.parse(rawData.replace(/\\n/g, '\n')));
-            canvasElement.closest('.chart-container').querySelector('.raw-data').innerHTML = tableHtml;
-        }
-        function toggleTab(btn, tabName) {
-            const container = btn.closest('.chart-container');
-            container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            container.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        function renderChart(rawData, chartType, chartId, legendId) {
+            const chartDom = document.getElementById(chartId);
+            if (!chartDom) {
+                console.error("图表容器未找到");
+                return;
+            }
+            const myChart = echarts.init(chartDom);
 
-            btn.classList.add('active');
-            container.querySelector(`.${tabName}-tab`).style.display = 'block';
+            // 自定义颜色数组
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5', '#99B898', '#FECEA8'];
+
+            // 创建图例容器
+            const legendContainer = document.getElementById(legendId);
+            if (legendContainer) {
+                legendContainer.innerHTML = ''; // 清空图例容器
+                rawData.labels.forEach((label, index) => {
+                    const legendItem = document.createElement('div');
+                    legendItem.className = 'legend-item';
+                    legendItem.innerHTML = `
+                        <div class="legend-color" style="background-color: ${colors[index % colors.length]}"></div>
+                        <div class="legend-text">${label}</div>
+                    `;
+                    legendContainer.appendChild(legendItem);
+                });
+            }
+
+            let option;
+            switch (chartType) {
+                case 'line': // 趋势图
+                    option = {
+                        tooltip: {
+                            trigger: 'axis'
+                        },
+                        toolbox: {
+                            show: true,
+                            feature: {
+                                dataView: { show: true, readOnly: false },
+                                magicType: { show: true, type: ['line', 'bar'] },
+                                restore: { show: true },
+                                saveAsImage: { show: true }
+                            },
+                            right: 20,
+                            top: 20,
+                            top: 'auto',    // 自动计算顶部位置
+                            left: 'auto',   // 自动计算左侧位置
+                            orient: 'horizontal'
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: rawData.labels
+                        },
+                        yAxis: {
+                            type: 'value'
+                        },
+                        series: [{
+                            data: rawData.values,
+                            type: 'line',
+                            smooth: true,
+                            itemStyle: {
+                                color: colors[0]
+                            }
+                        }]
+                    };
+                    break;
+                case 'bar': // 柱状图
+                    option = {
+                        tooltip: {
+                            trigger: 'axis'
+                        },
+                        toolbox: {
+                            show: true,
+                            feature: {
+                                dataView: { show: true, readOnly: false },
+                                magicType: { show: true, type: ['line', 'bar'] },
+                                restore: { show: true },
+                                saveAsImage: { show: true }
+                            },
+                            right: 20,
+                            top: 20,
+                            top: 'auto',    // 自动计算顶部位置
+                            left: 'auto',   // 自动计算左侧位置
+                            orient: 'horizontal'
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: rawData.labels
+                        },
+                        yAxis: {
+                            type: 'value'
+                        },
+                        series: [{
+                            data: rawData.values,
+                            type: 'bar',
+                            itemStyle: {
+                                color: function(params) {
+                                    return colors[params.dataIndex % colors.length];
+                                }
+                            }
+                        }]
+                    };
+                    break;
+                default: // 饼图
+                    option = {
+                        tooltip: {
+                            trigger: 'item',
+                            formatter: '{b}: {c} ({d}%)',
+                            textStyle: {
+                                fontSize: 14,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        toolbox: {
+                            show: true,
+                            feature: {
+                                dataView: { show: true, readOnly: false },
+                                magicType: { show: true, type: ['line', 'bar'] },
+                                restore: { show: true },
+                                saveAsImage: { show: true }
+                            },
+                            right: 20,
+                            top: 20,
+                            top: 'auto',    // 自动计算顶部位置
+                            left: 'auto',   // 自动计算左侧位置
+                            orient: 'horizontal'
+                        },
+                        series: [
+                            {
+                                name: '数据分布',
+                                type: 'pie',
+                                radius: ['30%', '60%'],
+                                center: ['55%', '50%'],
+                                avoidLabelOverlap: false,
+                                itemStyle: {
+                                    borderRadius: 5,
+                                    borderColor: '#fff',
+                                    borderWidth: 2
+                                },
+                                label: {
+                                    show: true,
+                                    position: 'outside',
+                                    formatter: '{b}: {c}',
+                                    fontSize: 12,
+                                    color: '#333'
+                                },
+                                emphasis: {
+                                    label: {
+                                        show: true,
+                                        fontSize: '14',
+                                        fontWeight: 'bold'
+                                    }
+                                },
+                                labelLine: {
+                                    show: true,
+                                    length: 10,
+                                    length2: 20,
+                                    lineStyle: {
+                                        color: '#999'
+                                    }
+                                },
+                                data: rawData.labels.map((label, index) => ({
+                                    name: label,
+                                    value: rawData.values[index],
+                                    itemStyle: {
+                                        color: colors[index % colors.length]
+                                    }
+                                }))
+                            }
+                        ],
+                        animationDuration: 1000,
+                        animationEasing: 'elasticOut'
+                    };
+            }
+
+            myChart.setOption(option);
+            myChart.resize(); // 确保图表正确显示
         }
 
         // 语音识别功能

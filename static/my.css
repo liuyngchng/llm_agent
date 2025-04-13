@@ -199,12 +199,41 @@ button:disabled {
 
 .tab-bar { margin-bottom: 10px; }
 .tab-btn {
-    padding: 5px 15px;
+    padding: 8px 20px;
     border: none;
     background: #f0f0f0;
     cursor: pointer;
+    border-radius: 4px;
+    margin-right: 5px;
 }
-.tab-btn.active { background: #4ECDC4; color: white; }
+.tab-btn.active {
+    background: #4ECDC4;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.data-content {
+    display: none;
+    max-height: 400px;
+    overflow: auto;
+}
+.data-content.active {
+    display: block;
+}
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+.data-table th, .data-table td {
+    padding: 12px;
+    border: 1px solid #eee;
+    text-align: left;
+}
+.data-table th {
+    background-color: #f8f9fa;
+    position: sticky;
+    top: 0;
+}
 .raw-data {
     background: #f5f5f5;
     padding: 10px;
@@ -256,7 +285,6 @@ button:disabled {
     transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
     transform-origin: bottom center;
 }
-
 @keyframes wave {
     0% { transform: scaleY(0.3); }
     100% { transform: scaleY(1.5); }
@@ -317,4 +345,89 @@ button:disabled {
         top: 50%;
         transform: translateY(-50%);
     }
+}
+
+.chart-container {
+    display: flex; /* 使用 Flexbox 布局 */
+    justify-content: space-between; /* 图表和图例之间有空隙 */
+    align-items: flex-start; /* 顶部对齐 */
+    width: 100%; /* 或指定一个固定宽度，例如 800px */
+    max-width: 1200px; /* 可选：设置最大宽度 */
+    margin: 0 auto; /* 居中显示 */
+    padding: 20px; /* 内边距 */
+    max-height: calc(100vh - 100px);
+    min-height: 400px; /* 与代码中设置的 height:400px 一致 */
+    overflow-y: auto;
+    flex: 3;
+    min-width: 600px; /* 增大最小宽度 */
+    overflow-x: auto;
+}
+
+.chart-title {
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.chart-wrapper {
+    display: flex;
+    justify-content: space-between;
+    height: 400px;
+    overflow: hidden;
+    width: 100%; /* 增加宽度 */
+}
+
+.chart {
+    flex: 3; /* 图表占 2 份宽度 */
+    min-width: 700px; /* 最小宽度，防止过小 */
+    z-index: 10; /* 提高层级 */
+    width: 100%;
+    overflow: visible !important; /* 覆盖可能的 overflow:hidden */
+    /* 其他样式 */
+}
+
+.legend {
+    flex: 1; /* 图例占 1 份宽度 */
+    min-width: 200px; /* 最小宽度，防止过小 */
+    /* 如果需要，可以添加滚动条或调整字体大小 */
+    overflow-y: hidden; /* 如果图例内容过多，可以添加垂直滚动条 */
+    /* 其他样式 */
+}
+/* 可选：为图表和图例添加一些间距 */
+.chart + .legend {
+    margin-left: 20px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.legend-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.legend-color {
+    width: 15px;
+    height: 15px;
+    margin-right: 8px;
+    border-radius: 3px;
+}
+
+.legend-text {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 25px);
+}
+
+/* 确保工具箱显示在最上层 */
+.echarts-toolbox {
+    z-index: 999 !important;
+    pointer-events: auto !important;
 }
