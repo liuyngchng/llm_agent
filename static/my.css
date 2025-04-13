@@ -22,6 +22,14 @@ button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
+.chart-content, .data-content {
+    display: none;
+    height: 400px;
+}
+
+.chart-content.active, .data-content.active {
+    display: block;
+}
 .chart-container canvas {
     width: 100% ;
     height: 300px ;
@@ -295,6 +303,10 @@ button:disabled {
         margin-bottom: 15px;
         padding: 0 10px;
     }
+    .chart-container {
+        min-width: 100% !important;
+        flex-direction: column;
+    }
     .container {
         width: 100%;
         height: 100vh;
@@ -387,11 +399,10 @@ button:disabled {
 }
 
 .legend {
-    flex: 1; /* 图例占 1 份宽度 */
-    min-width: 200px; /* 最小宽度，防止过小 */
-    /* 如果需要，可以添加滚动条或调整字体大小 */
-    overflow-y: hidden; /* 如果图例内容过多，可以添加垂直滚动条 */
-    /* 其他样式 */
+  position: static !important; /* 取消固定定位 */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 /* 可选：为图表和图例添加一些间距 */
 .chart + .legend {
