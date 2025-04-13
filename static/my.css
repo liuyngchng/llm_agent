@@ -5,58 +5,24 @@ body {
     background-color: #f5f7fa;
     color: #333;
 }
-body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image:
-        linear-gradient(rgba(245,247,250,0.2) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(245,247,250,0.2) 1px, transparent 1px);
-    background-size: 20px 20px;
-    z-index: -1;
-}
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-.chart-content, .data-content {
-    display: none;
-    height: 400px;
-}
 
-.chart-content.active, .data-content.active {
-    display: block;
-}
-.chart-container canvas {
-    width: 100% ;
-    height: 300px ;
-}
 .container {
-    width: min(80%, 1200px);
-    height: 80vh;
+    width: 60%; /* 增加宽度 */
+    height: 100vh;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    perspective: 1000px;
 }
+
 .header {
     text-align: center;
     margin-bottom: 30px;
 }
-.chat-container {
-    background: linear-gradient(145deg, #ffffff, #f8f9fa);
-    background-color: #fff;
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 16px;
 
-    box-shadow:
-        0 8px 32px rgba(0,0,0,0.1),
-        0 4px 12px rgba(0,0,0,0.08),
-        inset 2px 2px 4px rgba(255,255,255,0.5),
-        inset -2px -2px 4px rgba(222,222,222,0.3);
+.chat-container {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     padding: 20px;
     margin-bottom: 20px;
     height: calc(100vh - 150px);
@@ -64,106 +30,105 @@ button:disabled {
     display: flex;
     flex-direction: column;
     flex: 1;
-    transform: translateZ(20px);
-
 }
+
 .message {
     margin-bottom: 15px;
     padding: 10px 15px;
     border-radius: 8px;
-    max-width: 80%;
+    max-width: 90%; /* 增加宽度 */
 }
+
 .user-message {
     background-color: #e6f7ff;
     align-self: flex-end;
     margin-left: auto;
 }
+
 .bot-message {
     background-color: #f5f5f5;
     align-self: flex-start;
 }
+
 .bot-icon {
     vertical-align: middle;
     margin-right: 8px;
     border-radius: 4px;
 }
+
 .input-container {
     display: flex;
     margin-bottom: 20px;
-
 }
+
 .input-field {
-    flex: 0.9;
+    flex: 1;
     padding: 12px 15px;
     border: 1px solid #ddd;
     border-radius: 5px 0 0 5px;
     font-size: 16px;
     outline: none;
 }
+
 .send-button {
-    background: linear-gradient(135deg, #4ECDC4, #45B7D1);
     padding: 12px 20px;
+    background-color: #1890ff;
     color: white;
     border: none;
     border-radius: 0 5px 5px 0;
     cursor: pointer;
     font-size: 16px;
 }
+
 .send-button:hover {
     background-color: #40a9ff;
-    transform: translateY(-1px);
-    box-shadow:
-        4px 4px 10px rgba(78,205,196,0.3),
-        -3px -3px 6px rgba(255,255,255,0.6);
 }
-.send-button:active {
-    transform: translateY(1px);
-    box-shadow:
-        1px 1px 4px rgba(78,205,196,0.1),
-        -1px -1px 2px rgba(255,255,255,0.4);
-}
+
 .send-button:disabled {
-    background-color: #ccc;
+    background-color: #ccc !important;
     cursor: not-allowed;
 }
+
 .avatar {
     width: 40px;
     height: 40px;
     border-radius: 50%;
     margin-right: 10px;
 }
+
 .message-container {
     display: flex;
     margin-bottom: 15px;
+    max-width: 100%;
 }
+
 .user-message-container {
     justify-content: flex-end;
 }
+
 .bot-message-container {
     justify-content: flex-start;
 }
+
 .message-bubble {
-    position: relative;
-    transform-style: preserve-3d;
-    max-width: 100%;
-    width: auto;
+    padding: 10px 15px;
+    border-radius: 8px;
+    max-width: 90%; /* 增加宽度 */
 }
+
 .user-message-bubble {
     background-color: #e6f7ff;
-    box-shadow:
-        4px 4px 8px rgba(0,0,0,0.08),
-        inset 1px 1px 2px rgba(255,255,255,0.5);
 }
+
 .bot-message-bubble {
     background-color: #f5f5f5;
-    box-shadow:
-        -4px 4px 8px rgba(0,0,0,0.08),
-        inset -1px 1px 2px rgba(255,255,255,0.5);
 }
+
 .loading-dots {
     display: inline-block;
     padding-left: 25px;
 }
+
 .loading-dots::after {
     content: "···";
     animation: dotFlashing 1.5s infinite step-start;
@@ -183,15 +148,11 @@ button:disabled {
     100% { transform: scale(1); }
 }
 
-@keyframes pulseWave {
-    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
-}
 .greeting-box {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
 }
 
 .bot-avatar {
@@ -205,160 +166,22 @@ button:disabled {
     margin-bottom: 4px;
 }
 
-.tab-bar { margin-bottom: 10px; }
-.tab-btn {
-    padding: 8px 20px;
-    border: none;
-    background: #f0f0f0;
-    cursor: pointer;
-    border-radius: 4px;
-    margin-right: 5px;
-}
-.tab-btn.active {
-    background: #4ECDC4;
-    color: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-.data-content {
-    display: none;
-    max-height: 400px;
-    overflow: auto;
-}
-.data-content.active {
-    display: block;
-}
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-}
-.data-table th, .data-table td {
-    padding: 12px;
-    border: 1px solid #eee;
-    text-align: left;
-}
-.data-table th {
-    background-color: #f8f9fa;
-    position: sticky;
-    top: 0;
-}
-.raw-data {
-    background: #f5f5f5;
-    padding: 10px;
-    max-height: 300px;
-    overflow: auto;
-}
-.status-indicator {
-    position: fixed;
-    bottom: 70px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    display: none;
-}
-
 .voice-button {
-    background: #f0f0f0;
-    transition: 0.3s;
+    background: none;
+    border: none;
     padding: 8px;
-    margin: 0 5px;
+    cursor: pointer;
+    transition: transform 0.2s;
 }
 
 .voice-button.recording {
-    background: linear-gradient(135deg, #ff6b6b, #ff4444);
+    animation: pulse 1.5s infinite;
 }
 
 .voice-button.error {
     color: #ff4444;
     animation: none;
 }
-.voice-effect {
-    position: fixed;
-    bottom: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    height: 60px;
-}
-.voice-effect[style="display: none;"] {
-  animation: none;
-}
-.wave-bar {
-    transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-    transform-origin: bottom center;
-}
-@keyframes wave {
-    0% { transform: scaleY(0.3); }
-    100% { transform: scaleY(1.5); }
-}
-
-@media (max-width: 768px) {
-    .header {
-        margin-bottom: 15px;
-        padding: 0 10px;
-    }
-    .chart-container {
-        min-width: 100% !important;
-        flex-direction: column;
-    }
-    .container {
-        width: 100%;
-        height: 100vh;
-        margin: 0;
-        padding: 10px;
-    }
-    .message-bubble {
-        max-width: 95%;
-        padding: 12px 16px;
-    }
-
-    .chat-container {
-        height: calc(100vh - 160px);
-        margin: 0 -10px;
-        border-radius: 0;
-    }
-
-    #query-form {
-        position: sticky;
-        bottom: env(keyboard-inset-height, 0);
-        left: 0;
-        right: 0;
-        padding: 10px;
-        background: #fff;
-    }
-    .input-container {
-        flex-direction: column;
-        gap: 10px;
-        padding: 8px 12px;
-    }
-    .input-field {
-        border-radius: 5px;
-        padding-right: 45px;
-        box-shadow:
-            3px 3px 8px rgba(78,205,196,0.2),
-            -2px -2px 4px rgba(255,255,255,0.5);
-        transition: all 0.2s;
-    }
-    .send-button {
-        background: linear-gradient(135deg, #4ECDC4, #45B7D1);
-        align-self: flex-end;
-        border-radius: 5px;
-        width: 25%;
-    }
-    .voice-button {
-        position: absolute;
-        right: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-    }
-}
-
 .chart-container {
     display: flex; /* 使用 Flexbox 布局 */
     justify-content: space-between; /* 图表和图例之间有空隙 */
@@ -399,10 +222,11 @@ button:disabled {
 }
 
 .legend {
-  position: static !important; /* 取消固定定位 */
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+    flex: 1; /* 图例占 1 份宽度 */
+    min-width: 200px; /* 最小宽度，防止过小 */
+    /* 如果需要，可以添加滚动条或调整字体大小 */
+    overflow-y: hidden; /* 如果图例内容过多，可以添加垂直滚动条 */
+    /* 其他样式 */
 }
 /* 可选：为图表和图例添加一些间距 */
 .chart + .legend {
@@ -437,6 +261,26 @@ button:disabled {
     max-width: calc(100% - 25px);
 }
 
+@media (max-width: 768px) {
+    .container {
+        width: 90%; /* 在小屏幕上进一步增加宽度 */
+    }
+    
+    .chart-wrapper {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .chart {
+        width: 100%;
+        height: 300px;
+    }
+    
+    .legend {
+        width: 100%;
+        height: 200px;
+    }
+}
 /* 确保工具箱显示在最上层 */
 .echarts-toolbox {
     z-index: 999 !important;

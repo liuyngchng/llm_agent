@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="/static/purify.min.js"></script>
     <script src="/static/marked.min.js"></script>
-    <script src="/static/echarts.min.5.4.3.js"></script>
-    <link rel="stylesheet" type="text/css" href="/static/my.css">
-    <title>{{ sys_name | default('智能问答系统') }}</title>
+    <script src="/static/echarts.min.js"></script>
+    <link rel="stylesheet" href="/static/my.css">
+    <title>{{sys_name}}</title>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>{{ sys_name | default('智能问答系统') }}</h1>
+            <h1>{{sys_name}}</h1>
         </div>
         
         <div class="chat-container" id="chat-container">
@@ -33,8 +33,9 @@
             <input type="hidden" id ="uid" name="uid" value="{{uid}}">
         </form>
     </div>
-    <div class="status-indicator" id="status-indicator"></div>
-    <div id="voice-effect" class="voice-effect" style="display:none"><!-- 动态添加波形条 --></div>
+	 <div class="status-indicator" id="status-indicator"></div>
+    <div id="voice-effect" class="voice-effect" style="display:none"></div>
+
     <script>
         DOMPurify.addHook('uponSanitizeElement', (node, data) => {
             if (data.tagName === 'canvas') {
@@ -44,16 +45,11 @@
         // 聊天容器
         const chatContainer = document.getElementById('chat-container');
         const queryForm = document.getElementById('query-form');
-        const queryInput = document.getElementById('query-input');   //查询输入框
+        const queryInput = document.getElementById('query-input');
         const dbUriInput = document.getElementById('db-uri-input');
-        const sendButton = document.querySelector('.send-button');  // 发送按钮
-        const state = {
-            isFetching: false,
-            activeController: null
-        };
-
         window.onload = function() {
-            const greeting = `Hi，我是问数小助手～ 很高兴遇见你！你可以随时问我天燃气销售数据的问题，我来帮你查查
+            const greeting = `Hi，我是问数小助手～<br>
+很高兴遇见你！你可以随时问我天燃气销售数据的问题，我来帮你查查
             `;
             addMessage(greeting, 'bot');
         };
@@ -75,10 +71,11 @@
             queryInput.value = '';            
             // 发送API请求
             fetchQueryData(query).then(data => {
-                // data 格式  {"chart": {}, "raw_dt": {}}, 其中"chart" 部分用于绘图， "raw_dt"部分是markdown格式原始数据
+                console.log("fetchQueryData后返回的数据:", data); // 调试信息
                 if (data.chart) {
+                    console.log("图表数据:", data.chart); // 调试信息
                     const { messageContainer, chartId, legendId } = addMessage('图表展示', 'bot', true);
-                    renderChart(data.chart, data.raw_dt, data.chartType, chartId,legendId);
+                    renderChart(data.chart, data.chartType, chartId,legendId);
                 } else {
                     addMessage(data, 'bot');
                 }
@@ -88,50 +85,42 @@
                 addMessage(`查询失败，网路请求超时，请您稍后再试`, 'bot');
             });
         });
-
+        
         // 发送API请求
+        // 修改后的fetch逻辑
         async function fetchQueryData(query) {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const sendButton = document.querySelector('.send-button');
             try {
                 sendButton.disabled = true;
-                state.isFetching = true;      // 表示正在请求数据
-                state.activeController = controller;
                 const loadingMsg = addMessage('<div class="loading-dots">处理中</div>', 'bot');
+
                 const response = await fetch('/query/data', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(document.getElementById('uid').value)}`,
-                    signal: controller.signal
+                    body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(document.getElementById('uid').value)}`
                 });
 
                 if (loadingMsg && chatContainer.contains(loadingMsg)) {
                     chatContainer.removeChild(loadingMsg);
                 }
                 sendButton.disabled = false;
-                state.isFetching = true;              // 数据请求完成
+
                 if (!response.ok) throw new Error('网络响应失败');
                 const data = await response.json();
-
-                const chartRules = [
-                    {pattern: /(趋势|变化|增长|下降)/, type: 'line'},
-                    {pattern: /(对比|比较|差异|不同)/, type: 'bar'},
-                    {pattern: /(占比|比例|分布)/, type: 'pie'}
-                ];
-
-                function detectChartType(query) {
-                    return chartRules.find(rule => rule.pattern.test(query))?.type || 'pie';
-                }
+                console.log("后端返回的数据:", data); // 调试信息
                 // 判断图表类型
-                let chartType = detectChartType(query)
-                return { ...data, chartType };
+                let chartType = 'pie'; // 默认饼图
+                if (query.includes('趋势') || query.includes('变化')) {
+                    chartType = 'line'; // 趋势图
+                } else if (query.includes('对比') || query.includes('比较')) {
+                    chartType = 'bar'; // 柱状图
+                }
+                return { ...data, chartType }; // 返回 chart 数据
             } catch (error) {
                 if (loadingMsg && chatContainer.contains(loadingMsg)) {
                     chatContainer.removeChild(loadingMsg);
                 }
                 sendButton.disabled = false;
-                state.isFetching = false;
-                state.activeController = null;
                 throw error;
             }
         }
@@ -151,19 +140,18 @@
                 const chartId = `chart-${Date.now()}-${Math.floor(Math.random() * 1000)}`; // 生成唯一 ID
                 const legendId = `legend-${Date.now()}-${Math.floor(Math.random() * 1000)}`; // 生成唯一图例 ID
                 messageContainer.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <img width="24" height="24" src="/static/bot.png">
-                        <div class="chart-container">
-                            <div class="tab-bar">
-                                <button class="tab-btn active" onclick="switchTab(this, 'chart')">图表</button>
-                                <button class="tab-btn" onclick="switchTab(this, 'data')">数据</button>
-                            </div>
-                            <div id="${chartId}" class="chart-content active">
-                                <div id="${legendId}" class="legend"></div>
-                            </div>
-                            <div id="data-${chartId}" class="data-content"></div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img width="24" height="24" src="/static/bot.png">
+                    <div class="chart-container" style="display: flex; flex-direction: column; align-items: flex-start;">
+                        <div class="chart-title" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>智能生成的【数据可视化看板】已就绪：</span>
+                        </div>
+                        <div style="display: flex; width: 100%; height: 400px; flex-shrink: 0;">
+                        <div id="${chartId}" class="chart" style="width: 100%; height: 100%;"></div>
+                        <div id="${legendId}" class="legend" style="width: 30%;"></div>
                         </div>
                     </div>
+                </div>
                 `;
                 chatContainer.appendChild(messageContainer);
                 chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -172,11 +160,7 @@
             
             // 安全处理并解析markdown/html
             const sanitizedContent = DOMPurify.sanitize(
-                type === 'bot' ? marked.parse(text) : text,
-                {
-                    ADD_TAGS: ['canvas'],
-                    ADD_ATTR: ['id']
-                }
+                type === 'bot' ? marked.parse(text) : text
             );
 
             if (type === 'user') {
@@ -198,12 +182,14 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return messageContainer;
         }
-        function renderChart(chartData, rawData, chartType, chartId, legendId) {
+        function renderChart(rawData, chartType, chartId, legendId) {
+            const chartDom = document.getElementById(chartId);
+            if (!chartDom) {
+                console.error("图表容器未找到");
+                return;
+            }
+            const myChart = echarts.init(chartDom);
 
-            const dataDiv = document.getElementById(`data-${chartId}`);
-            dataDiv.dataset.rawData = rawData;
-            const myChart = echarts.init(dataDiv);
-            window.addEventListener('resize', () => myChart.resize()); // 添加响应式
             // 自定义颜色数组
             const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5', '#99B898', '#FECEA8'];
 
@@ -211,7 +197,7 @@
             const legendContainer = document.getElementById(legendId);
             if (legendContainer) {
                 legendContainer.innerHTML = ''; // 清空图例容器
-                chartData.labels.forEach((label, index) => {
+                rawData.labels.forEach((label, index) => {
                     const legendItem = document.createElement('div');
                     legendItem.className = 'legend-item';
                     legendItem.innerHTML = `
@@ -245,13 +231,13 @@
                         },
                         xAxis: {
                             type: 'category',
-                            data: chartData.labels
+                            data: rawData.labels
                         },
                         yAxis: {
                             type: 'value'
                         },
                         series: [{
-                            data: chartData.values,
+                            data: rawData.values,
                             type: 'line',
                             smooth: true,
                             itemStyle: {
@@ -281,13 +267,13 @@
                         },
                         xAxis: {
                             type: 'category',
-                            data: chartData.labels
+                            data: rawData.labels
                         },
                         yAxis: {
                             type: 'value'
                         },
                         series: [{
-                            data: chartData.values,
+                            data: rawData.values,
                             type: 'bar',
                             itemStyle: {
                                 color: function(params) {
@@ -355,9 +341,9 @@
                                         color: '#999'
                                     }
                                 },
-                                data: chartData.labels.map((label, index) => ({
+                                data: rawData.labels.map((label, index) => ({
                                     name: label,
-                                    value: chartData.values[index],
+                                    value: rawData.values[index],
                                     itemStyle: {
                                         color: colors[index % colors.length]
                                     }
@@ -371,42 +357,10 @@
 
             myChart.setOption(option);
             myChart.resize(); // 确保图表正确显示
-            setTimeout(() => myChart.resize(), 50);
-        }
-        // Tab切换函数
-        function switchTab(btn, type) {
-            const container = btn.closest('.chart-container');
-            container.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
-            btn.classList.add('active');
-
-            const chartId = container.querySelector('.chart-content').id;
-            const dataDiv = container.querySelector(`#data-${chartId}`);
-
-            container.querySelectorAll('.chart-content, .data-content').forEach(el => {
-                el.classList.remove('active');
-            });
-
-            if(type === 'chart') {
-                container.querySelector('.chart-content').classList.add('active');
-            } else {
-                // 销毁图表实例
-                const chartDom = container.querySelector('.chart-content');
-                if(chartDom) {
-                    const chartInstance = echarts.getInstanceByDom(chartDom);
-                    if(type === 'chart' && chartInstance){
-                        chartInstance.resize(); // 仅重新调整尺寸
-                    }
-                }
-                // 直接从预存的rawData属性获取数据
-                const rawMarkdown = dataDiv.dataset.rawData;
-                if(!dataDiv.innerHTML) {
-                    dataDiv.innerHTML = DOMPurify.sanitize(marked.parse(rawMarkdown));
-                }
-                dataDiv.classList.add('active');
-            }
         }
 
-
+    </script>
+     <script>
         // 语音识别功能
         const voiceBtn = document.getElementById('voice-btn');
         let isRecording = false;
@@ -417,103 +371,86 @@
         voiceBtn.addEventListener('click', toggleRecording);
 
         async function toggleRecording() {
-            if (isRecording) {
-                clearTimeout(timeoutId);
-                clearInterval(timer);
-                mediaRecorder.stop();
-                mediaStream.getTracks().forEach(track => track.stop());
-                clearState();
-                showStatus('🛑 已手动停止', 1500);
-            } else {
-                document.getElementById('voice-effect').style.display = 'flex';
-                queryInput.disabled = true;
-                clearInterval(timer);
-                document.getElementById('voice-effect').innerHTML =
-                    Array(20).fill('<div class="wave-bar"></div>').join('');
-                document.querySelectorAll('.wave-bar').forEach((bar, i) => {
-                    bar.style.animationDelay = `${i * 50}ms`; // 交错动画
-                });
-                try {
-                    countdown = 10;
-                    queryInput.value = '';
-                    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(mediaStream);
-                    const audioContext = new AudioContext();
-                    const analyser = audioContext.createAnalyser();
-                    const source = audioContext.createMediaStreamSource(mediaStream);
-                    source.connect(analyser);
-                    setupRecorder();
+          if (isRecording) {
+            clearTimeout(timeoutId);
+            clearInterval(timer);
+            mediaRecorder.stop();
+            mediaStream.getTracks().forEach(track => track.stop());
+            clearState();
+            showStatus('🛑 已手动停止', 1500);
+          } else {
+            clearInterval(timer);
+            document.getElementById('voice-effect').style.display = 'block';
+            try {
+                countdown = 10;
+                queryInput.value = '';
+              mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              mediaRecorder = new MediaRecorder(mediaStream);
+              setupRecorder();
 
-                    mediaRecorder.start();
-                    updateWaveBars(analyser);
-                    isRecording = true;
-                    voiceBtn.classList.add('recording');
-                    showStatus(`🎤 录音中 (剩余${countdown}秒)...`);
-                    timer = setInterval(() => {
-                        countdown--;
-                        showStatus(`🎤 录音中 (剩余${countdown}秒)...`);
-                        if(countdown <= 0) clearInterval(timer);
-                    }, 1000);
+              mediaRecorder.start();
+              isRecording = true;
+              voiceBtn.classList.add('recording');
+              showStatus(`🎤 录音中 (剩余${countdown}秒)...`);
+              timer = setInterval(() => {
+                  countdown--;
+                  showStatus(`🎤 录音中 (剩余${countdown}秒)...`);
+                  if(countdown <= 0) clearInterval(timer);
+              }, 1000);
 
-                    // 10秒自动停止
-                    timeoutId = setTimeout(autoStopRecording, 10000);
-                } catch (error) {
-                    showStatus('❌ 麦克风不可用');
-                }
+              // 10秒自动停止
+              timeoutId = setTimeout(autoStopRecording, 10000);
+            } catch (error) {
+              showStatus('❌ 麦克风不可用');
             }
+          }
         }
 
         function setupRecorder() {
-            audioChunks = [];
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.onstop = processAudio;
+          audioChunks = [];
+          mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+          mediaRecorder.onstop = processAudio;
         }
 
         function autoStopRecording() {
-            if (isRecording) {
-                mediaRecorder.stop();
-                showStatus('⏱️ 已达到10秒最长录音时间');
-                voiceBtn.disabled = false;
-            }
-            clearState();
+          if (isRecording) {
+            mediaRecorder.stop();
+            showStatus('⏱️ 已达到10秒最长录音时间');
+          }
+          clearState();
         }
 
         function stopRecording() {
-            mediaRecorder.stop();
-            mediaStream.getTracks().forEach(track => {
-                track.stop();  // 停止轨道
-                mediaStream.removeTrack(track); // 从流中移除轨道
-            });
-            mediaStream = null;
-            clearTimeout(timeoutId);
+          mediaRecorder.stop();
+          mediaStream.getTracks().forEach(track => {
+            track.stop();  // 停止轨道
+            mediaStream.removeTrack(track); // 从流中移除轨道
+          });
+          mediaStream = null;
+          clearTimeout(timeoutId);
         }
 
         async function processAudio() {
-            try {
-                voiceBtn.disabled = true;
-                sendButton.disabled = true;
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const formData = new FormData();
-                formData.append('audio', audioBlob, 'recording.webm');
+          try {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
 
-                const response = await fetch('/trans/audio', { method: 'POST', body: formData });
-                const { text } = await response.json();
+            const response = await fetch('/trans/audio', { method: 'POST', body: formData });
+            const { text } = await response.json();
 
-                if (text) {
-                    queryInput.value = text;
-                    showStatus('✅ 识别成功', 1500);
-                }
-            } catch (error) {
-                showStatus('❌ 识别失败', 2000);
-            } finally {
-                voiceBtn.disabled = false;
-                sendButton.disabled = false;
-                clearState();
+            if (text) {
+              queryInput.value = text;
+              showStatus('✅ 识别成功', 1500);
             }
+          } catch (error) {
+            showStatus('❌ 识别失败', 2000);
+          } finally {
+            clearState();
+          }
         }
 
         function clearState() {
-            queryInput.disabled = false;
             if (mediaStream) {
                 mediaStream.getTracks().forEach(track => track.stop());
             }
@@ -524,22 +461,10 @@
         }
 
         function showStatus(text, duration) {
-            const indicator = document.getElementById('status-indicator');
-            indicator.textContent = text;
-            indicator.style.display = 'block';
-            if (duration) setTimeout(() => indicator.style.display = 'none', duration);
-        }
-        function updateWaveBars(analyser) {
-            const dataArray = new Uint8Array(analyser.frequencyBinCount);
-            analyser.getByteFrequencyData(dataArray);
-            const avg = dataArray.reduce((a,b) => a + b) / dataArray.length;
-
-            document.querySelectorAll('.wave-bar').forEach(bar => {
-                bar.style.transform = avg > 10 ?
-                    `scaleY(${0.3 + (avg/50)}) rotate(${Math.sin(Date.now()/100)*2}deg)`
-                    : 'scaleY(0.3)';
-            });
-            requestAnimationFrame(() => updateWaveBars(analyser));
+          const indicator = document.getElementById('status-indicator');
+          indicator.textContent = text;
+          indicator.style.display = 'block';
+          if (duration) setTimeout(() => indicator.style.display = 'none', duration);
         }
         </script>
 </body>
