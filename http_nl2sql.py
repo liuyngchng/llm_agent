@@ -10,6 +10,7 @@ import sqlite3
 
 from flask import Flask, request, jsonify, render_template, Response
 
+import config_util
 import db_util
 from sql_agent import get_dt_with_nl
 from sys_init import init_yml_cfg
@@ -36,9 +37,12 @@ def query_data_index():
     curl -s --noproxy '*' http://127.0.0.1:19000 | jq
     :return:
     """
-    dt_idx = "nl2sql_index.html"
-    logger.info(f"return page {dt_idx}")
-    return render_template(dt_idx, uid = "my_uid_is_123")
+    page = "nl2sql_index.html"
+    auth_result = authenticate(request)
+    if not auth_result:
+        page = "login.html"
+    logger.info(f"return page {page}")
+    return render_template(page, uid ="my_uid_is_123")
 
 @app.route('/cfg/idx', methods=['GET'])
 def config_index():
@@ -48,56 +52,18 @@ def config_index():
     :return:
     """
     logger.info(f"request_args_in_config_index {request.args}")
-    usr=''
     try:
-        tkn = request.args.get('tkn')
-        if tkn != my_cfg['sys']['cfg_tkn']:
-            raise "illegal_access_for_config"
         usr = request.args.get('usr')
         if not usr:
             return "user is null in config, please submit your username in config request"
     except Exception as e:
         logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
-        raise "err_in_config_index"
+        raise jsonify("err_in_config_index")
 
-    ctx = {
-        "sys_name" : my_cfg['sys']['name'],
-        "waring_info" : "",
-        "usr": usr,
-        "db_type":my_cfg['db']['type'],
-        "db_name":my_cfg['db']['name'],
-        "db_host":my_cfg['db']['host'],
-        "db_usr": my_cfg['db']['user'],
-        "db_psw": my_cfg['db']['password'],
-    }
-    check_sql = f"select id from user where name='{usr}' limit 1"
-    with sqlite3.connect(config_db) as my_conn:
-        check_info = db_util.sqlite_query_tool(my_conn, check_sql)
-        logger.debug(f"check_info {check_info}")
-        check_data = json.loads(check_info)['data']
-        try:
-            uid = check_data[0][0]
-        except (IndexError, TypeError) as e:
-            return "illegal user info in config request"
-
-        check_sql = f"select uid, db_type, db_name, db_host, db_usr, db_psw from db_config where uid='{uid}' limit 1"
-        db_config_info = db_util.sqlite_query_tool(my_conn, check_sql)
-        logger.debug(f"check_info {db_config_info}")
-        check_info = json.loads(db_config_info)['data']
-        try:
-            uid = check_info[0][0]
-            ctx = {
-                "sys_name": my_cfg['sys']['name'],
-                "waring_info": "",
-                "usr": usr,
-                "db_type": check_info[0][1],
-                "db_name": check_info[0][2],
-                "db_host": check_info[0][3],
-                "db_usr": check_info[0][4],
-                "db_psw": check_info[0][5],
-            }
-        except (IndexError, TypeError) as e:
-            logger.info(f"no db config for user {usr}")
+    uid = config_util.get_uid_by_user(usr, config_db)
+    ctx = config_util.get_db_config_by_uid(uid, config_db)
+    ctx['usr'] = usr
+    ctx["waring_info"]=""
     dt_idx = "config_index.html"
     logger.info(f"return page {dt_idx}")
     return render_template(dt_idx, **ctx)
@@ -106,41 +72,32 @@ def config_index():
 def save_config():
     logger.info(f"save config info {request.form}")
     dt_idx = "config_index.html"
-    ctx = {}
-    with sqlite3.connect(config_db) as my_conn:
-        try:
-            usr = request.form.get('usr').strip()
-            db_type = request.form.get('db_type').strip()
-            db_host = request.form.get('db_host').strip()
-            db_name = request.form.get('db_name').strip()
-            db_usr = request.form.get('db_usr').strip()
-            db_psw = request.form.get('db_psw').strip()
-
-            ctx = {
-                "sys_name": my_cfg['sys']['name'],
-                "waring_info": "",
-                "usr": usr,
-                "db_type": db_type,
-                "db_name": db_name,
-                "db_host": db_host,
-                "db_usr": db_usr,
-                "db_psw": db_psw,
-            }
-            check_sql = f"select id from user where name='{usr}' limit 1"
-            check_info = db_util.sqlite_query_tool(my_conn, check_sql)
-            logger.debug(f"check_info {check_info}")
-            check_info=json.loads(check_info)['data']
-            uid = check_info[0][0]
-            insert_sql = (f"insert into db_config (uid, db_type, db_host, db_name, db_usr, db_psw) "
-                   f"values ('{uid}', '{db_type}', '{db_host}', '{db_name}', '{db_usr}', '{db_psw}')")
-            db_util.sqlite_insert_tool(my_conn, insert_sql)
-            logger.info(f"return page {dt_idx}")
-            ctx['waring_info'] = '保存成功'
-            return render_template(dt_idx, **ctx)
-        except Exception as e:
-            logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
-            ctx['waring_info'] = '保存失败'
-            return render_template(dt_idx, **ctx)
+    usr = request.form.get('usr').strip()
+    db_type = request.form.get('db_type').strip()
+    db_host = request.form.get('db_host').strip()
+    db_name = request.form.get('db_name').strip()
+    db_usr = request.form.get('db_usr').strip()
+    db_psw = request.form.get('db_psw').strip()
+    config_info = {
+        "sys_name": my_cfg['sys']['name'],
+        "waring_info": "",
+        "usr": usr,
+        "db_type": db_type,
+        "db_name": db_name,
+        "db_host": db_host,
+        "db_usr": db_usr,
+        "db_psw": db_psw,
+    }
+    uid = config_util.get_uid_by_user(usr, config_db)
+    if not uid:
+        config_info['waring_info'] = '用户非法'
+        return render_template(dt_idx, **config_info)
+    save_cfg_result = config_util.save_data_source_config(config_db, config_info)
+    if save_cfg_result:
+        config_info['waring_info'] = '保存成功'
+    else:
+        config_info['waring_info'] = '保存失败'
+    return render_template(dt_idx, **config_info)
 
 
 @app.route('/status', methods=['GET'])
