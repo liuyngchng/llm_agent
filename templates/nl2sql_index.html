@@ -74,7 +74,8 @@
             fetchQueryData(query).then(data => {
                     if (data.chart) {
                         const msgElement = addMessage(' ', 'bot', true);
-                        renderChart(msgElement.querySelector('canvas'), data.chart, data.raw_dt);
+                        const chartType = detectChartType(query); // 新增类型判断
+                        renderChart(msgElement.querySelector('canvas'), data.chart, data.raw_dt, chartType); // 传入类型
                     } else {
                         addMessage(data, 'bot');
                     }
@@ -95,13 +96,11 @@
                 const loadingMsg = addMessage('<div class="loading-dots">处理中</div>', 'bot');
                 const controller = new AbortController();
                 setTimeout(() => controller.abort(), 30000);
-                await fetch('/query/data', {
-                    signal: controller.signal
-                });
                 const response = await fetch('/query/data', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(document.getElementById('uid').value)}`
+                    body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(document.getElementById('uid').value)}`,
+                    signal: controller.signal
                 });
 
                 if (loadingMsg && chatContainer.contains(loadingMsg)) {
@@ -175,28 +174,50 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return messageContainer;
         }
-        function renderChart(canvasElement, chartData, rawData) {
+
+        const chartRules = [
+            {pattern: /(趋势|变化|增长|下降)/, type: 'line'},
+            {pattern: /(对比|比较|差异|不同)/, type: 'bar'},
+            {pattern: /(占比|比例|分布)/, type: 'pie'}
+        ];
+
+        function detectChartType(query) {
+            return chartRules.find(rule => rule.pattern.test(query))?.type || 'pie';
+        }
+        function renderChart(canvasElement, chartData, rawData, chartType) {
             const colors = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEEAD','#D4A5A5','#99B898','#FECEA8'];
-            new Chart(canvasElement, {
-                type: 'pie',
+            const config = {
+                type: chartType,
                 data: {
                     labels: chartData.labels,
                     datasets: [{
+                        label: '数据',
                         data: chartData.values,
-                        backgroundColor: colors.slice(0, chartData.labels.length) // 动态取色
+                        backgroundColor: colors.slice(0, chartData.labels.length),
+                        borderColor: chartType === 'line' ? '#45B7D1' : undefined,
+                        borderWidth: chartType === 'line' ? 2 : 1,
+                        fill: chartType === 'line' ? false : true
                     }]
                 },
                 options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    aspectRatio: 2.5,
                     plugins: {
                         legend: {
-                            position: 'right',
-                            align: 'center',        // 垂直居中
+                            position: chartType === 'pie' ? 'right' : 'top',
+                            align: 'center',
                             labels: { padding: 20 }
                         }
                     },
-                    aspectRatio: 2
+                    scales: chartType !== 'pie' ? {
+                        x: { title: { display: true, text: '类别' } },
+                        y: { title: { display: true, text: '数值' }, beginAtZero: true }
+                    } : {},
+
                 }
-            });
+            };
+            new Chart(canvasElement, config);
             const tableHtml = DOMPurify.sanitize(marked.parse(rawData.replace(/\\n/g, '\n')));
             canvasElement.closest('.chart-container').querySelector('.raw-data').innerHTML = tableHtml;
         }
@@ -318,6 +339,7 @@
             queryInput.disabled = false;
             if (mediaStream) {
                 mediaStream.getTracks().forEach(track => track.stop());
+                mediaRecorder.stream = null;
             }
             isRecording = false;
             clearInterval(timer);
