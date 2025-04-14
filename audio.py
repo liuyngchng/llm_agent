@@ -65,7 +65,9 @@ def transcribe_webm_audio_bytes(webm_bytes: bytes, cfg:dict):
     if len(webm_bytes) == 0:
         raise ValueError("Empty audio data")
     wav_audio = webm_to_wav(webm_bytes)
-    return transcribe_wav_audio_bytes(wav_audio, cfg)
+    txt = transcribe_wav_audio_bytes(wav_audio, cfg)
+    logger.info(f"txt: {txt}")
+    return txt
 
 def test_transcribe_wav_audio_file():
     txt = transcribe_audio_file("./static/asr_example_zh.wav", my_cfg)
