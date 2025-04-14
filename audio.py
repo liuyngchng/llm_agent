@@ -14,7 +14,6 @@ import httpx
 from openai import OpenAI, APIConnectionError
 import logging.config
 
-from http_raq import my_cfg
 from sys_init import init_yml_cfg
 from pydub import AudioSegment
 
