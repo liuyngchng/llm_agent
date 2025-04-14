@@ -6,6 +6,8 @@ db:
   name: your_db_name
 #  数据库连接的IP地址或者域名
   host: your_db_host_IP_or_domain
+#  数据库连接的端口
+  port: your_db_instance_port
 #  连接数据库的用户名
   user: your_db_user_name
 #  读取数据库的用户密码
@@ -53,3 +55,15 @@ ai:
       {markdown_dt}
 
       (1) 请对数据进行简洁解读
+
+    gui_type_dt_msg: |
+      你是一个专业的 {sql_dialect} 数据库的 SQL生成助手。已知数据库结构：
+      {schema}
+
+      请严格按以下要求生成SQL：
+      (1) 仅输出标准SQL代码块，不要任何解释
+      (2) 使用与表结构完全一致的中文字段名，不要使用英文字段名
+      (3) WHERE条件需限制最多返回20条数据
+      (4) 禁止包含分析过程或思考步骤
+      (5) 查询语句中禁止用 *表示全部字段， 需列出详细的字段名称清单
+      (6) 禁止生成 update、delete 等任何对数据修改的语句
