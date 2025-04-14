@@ -69,9 +69,7 @@ def transcribe_webm_audio_bytes(webm_bytes: bytes, cfg:dict):
     logger.info(f"txt: {txt}")
     return txt
 
-def test_transcribe_wav_audio_file():
-    txt = transcribe_audio_file("./static/asr_example_zh.wav", my_cfg)
-    logger.info(f"audio_txt: {txt}")
+
 
 def transcribe_webm_directly(webm_bytes: bytes, cfg:dict):
     """
@@ -79,7 +77,18 @@ def transcribe_webm_directly(webm_bytes: bytes, cfg:dict):
     """
     return _transcribe_core(io.BytesIO(webm_bytes), cfg)
 
+
+def test_transcribe_wav_audio_file():
+    """
+    for test purpose only
+    """
+    txt = transcribe_audio_file("./static/asr_example_zh.wav", my_cfg)
+    logger.info(f"audio_txt: {txt}")
+
 def test_transcribe_webm_audio_file():
+    """
+    for test purpose only
+    """
     with open('static/asr_test.webm', 'rb') as f:
         audio_bytes = f.read()
     txt = transcribe_webm_audio_bytes(audio_bytes, my_cfg)
