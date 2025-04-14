@@ -13,26 +13,31 @@ db:
 #  读取数据库的用户密码
   password: 12345
 sys:
-#   系统名称(title) 配置
+#  系统名称(title) 配置
   name: 巴拉巴拉小魔仙
-#   是否启用认证， true， 登录后才能使用系统;false 无需登录
+#  是否启用认证， true， 登录后才能使用系统;false 无需登录
   auth: true
 #  自定义数据库配置时的权限认证 token
   cfg_tkn: foobar
+# 配置可访问的域， 防止跨域攻击
+  allowed_origin: http://192,168.1.122
+# 对配置信息进行加密的密钥，长度必须为16/32
+  cypher_key: abaababa
 ai:
-#  大语言模型 API 基地址
+# 大语言模型 API 基地址
   api_uri: https://api.deepseek.com/v1
   #  大语言模型 API key
   api_key: 45678
   #  大语言模型 模型名称
   model_name: deepseek-chat
 
-  # 语音识别 API 基地址
+  # 语音识别 API 基地址，需要部署为兼容 OpenAI-API-Compatible
   asr_api_uri: https://api.your_audio_service_provider.com/v1/
    # 语音识别 API key
   asr_api_key: sk-xxxx
    # 语音识别 API 模型名称
   asr_model_name: asr
+#  与大模型相关的提示词配置
   prompts:
 #   是否需要在读取数据库数据的基础上，添加文字描述等转换，true 需要，false，不需要
     add_desc_to_dt: true
