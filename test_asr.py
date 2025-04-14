@@ -78,7 +78,7 @@ def transcribe_audio(audio_path):
     response = requests.post(ASR_ENDPOINT, headers=headers, files=files, data=data, verify=False, proxies=None)
     return response.json()
 
-def test_transcribe_my_audio_file() -> str:
+def test_transcribe_my_wav_audio_file() -> str:
     logger.info(f"ASR_ENDPOINT {ASR_ENDPOINT}, MODEL_NAME {MODEL_NAME}, API_KEY {API_KEY.get_secret_value()}")
     # 使用示例
     audio_file = "static/asr_example_zh.wav"
@@ -123,7 +123,7 @@ if __name__ == "__main__":
         -F "model={asr_model_name}" | jq
     """
     logger.info("start test")
-    test_transcribe_my_audio_file()
+    test_transcribe_my_wav_audio_file()
     # test_transcribe_my_realtime_audio()
     # test_customized_transcribe_my_realtime_audio()
 

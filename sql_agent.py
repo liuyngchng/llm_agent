@@ -137,9 +137,9 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     agent = SQLGenerator(cfg, is_remote_model)
     try:
         # 生成SQL
-        logger.info(f"提交的问题：{q}")
+        logger.info(f"summit_question_to_llm：{q}")
         sql = agent.generate_sql(q)
-        logger.debug(f"generate_sql\n{sql}")
+        logger.debug(f"llm_output_sql\n{sql}")
         sql = extract_sql(sql)
         logger.debug(f"extract_sql\n\n{sql}\n")
         db_uri = get_db_uri(cfg)
