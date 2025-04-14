@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import json
+import copy
 import sqlite3
 import logging.config
 from Crypto.Cipher import AES
@@ -118,6 +119,18 @@ def save_data_source_config(data_source_cfg: dict, cfg: dict) -> bool:
         except Exception as e:
             logger.exception(f"err_in_exec_sql, {exec_sql}")
     return save_result
+
+def build_data_source_cfg_with_uid(uid: str, sys_cfg:dict)->dict:
+    my_new_dict = copy.deepcopy(sys_cfg)
+    source_cfg = get_data_source_config_by_uid(uid, sys_cfg)
+    my_new_dict['db']['type'] = source_cfg["db_type"]
+    my_new_dict['db']['name'] = source_cfg["db_name"]
+    my_new_dict['db']['host'] = source_cfg["db_host"]
+    my_new_dict['db']['port'] = source_cfg["db_port"]
+    my_new_dict['db']['user'] = source_cfg["db_usr"]
+    my_new_dict['db']['password'] = source_cfg["db_psw"]
+    return my_new_dict
+
 
 def encrypt(dt: str, key:str) -> str:
     """
