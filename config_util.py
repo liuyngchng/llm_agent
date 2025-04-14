@@ -121,8 +121,11 @@ def save_data_source_config(data_source_cfg: dict, cfg: dict) -> bool:
     return save_result
 
 def build_data_source_cfg_with_uid(uid: str, sys_cfg:dict)->dict:
-    my_new_dict = copy.deepcopy(sys_cfg)
+
     source_cfg = get_data_source_config_by_uid(uid, sys_cfg)
+    if not source_cfg:
+        return  sys_cfg
+    my_new_dict = copy.deepcopy(sys_cfg)
     my_new_dict['db']['type'] = source_cfg["db_type"]
     my_new_dict['db']['name'] = source_cfg["db_name"]
     my_new_dict['db']['host'] = source_cfg["db_host"]

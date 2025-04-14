@@ -174,7 +174,7 @@ def query_data(catch=None):
         )
     logger.info(f"rcv_msg: {msg}")
     logger.info(f"ask_question({msg}, my_cfg, html, True)")
-    if uid:
+    if uid and uid != 'foo':
         logger.info(f"build_data_source_cfg_with_uid_{uid}")
         db_source_cfg = config_util.build_data_source_cfg_with_uid(uid, my_cfg)
     else:
