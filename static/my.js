@@ -1,4 +1,4 @@
-<script>
+document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.system-settings-link').addEventListener('click', function(e) {
         e.preventDefault();
         const uid = document.getElementById('uid').value;
@@ -13,6 +13,5 @@
             newWindow.document.write(html);
         })
         .catch(error => console.error('请求失败:', error));
-    });
-
-</script>
+    })
+})

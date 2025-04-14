@@ -5,10 +5,10 @@
 	<meta charset="utf-8">
     <meta id="adm">
     <style>
-        div, span, input, button, textarea {font:28px Verdana}
+        div, span, input, button, textarea {font:16px Verdana}
         div, button {font-weight:bold;text-align: center;}
         span {text-align: center;}
-        input {width: 550px;}
+        input {width: 300px;}
         select {width: 308px;}
     </style>
     <script>
@@ -30,37 +30,37 @@
 </head>
 <body>
     <div style="text-align: center;margin-top: 10%;" >
-        <p style="font:28px Verdana; font-weight:bold;">{{sys_name}}_数据源配置</p>
+        <p style="font:20px Verdana; font-weight:bold;">{{sys_name}}_数据源配置</p>
         <form style="margin-top: 2%" action="/cfg/idx" method="post">
             <div style="display: flex; align-items: center; gap: 8px; margin: 0 auto; width: fit-content">
-                <span>用戶名称:&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                <input type="text" id="usr" name="usr" value="{{usr}}" placeholder="your_user_name" required>
-            </div>
-            <div>&nbsp;</div>
-            <div style="display: flex; align-items: center; gap: 8px; margin: 0 auto; width: fit-content">
                 <span>数据库类型:</span>
-                <input type="text" id="db_type" name="db_type" value="{{db_type}}" required>
+                <input type="text" id="db_type" name="db_type" value="{{db_type}}" placeholder="sqlite/mysql/oracle" required>
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%"><span>数据库名称:</span>
-                <input type="text" id="db_name" name="db_name" value="{{db_name}}" placeholder="test"  required>
+                <input type="text" id="db_name" name="db_name" value="{{db_name}}" placeholder="your_db_instance"  required>
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%"><span>数据库主机:</span>
                 <input type="text" id="db_host" name="db_host" value="{{db_host}}" placeholder="192.168.1.1" >
             </div>
             <div>&nbsp;</div>
-            <div align="center" style="margin-bottom: 0.5%"><span>用&nbsp;&nbsp;&nbsp;户&nbsp;&nbsp;&nbsp;名:&nbsp;&nbsp;</span>
-                <input type="text" id="db_usr"  name="db_usr" value="{{db_usr}}" placeholder="my_username" required>
+            <div align="center" style="margin-bottom: 0.5%"><span>数据库端口:</span>
+                <input type="text" id="db_port" name="db_port" value="{{db_port}}" placeholder="13306" >
             </div>
             <div>&nbsp;</div>
-            <div align="center" style="margin-bottom: 0.5%"><span>密&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;码:</span>
-                <input type="password" id="db_psw"  name="db_psw" value="{{db_psw}}" placeholder="my_password" required>
+            <div align="center" style="margin-bottom: 0.5%"><span>数据库用户:</span>
+                <input type="text" id="db_usr"  name="db_usr" value="{{db_usr}}" placeholder="your_db_username" required>
+            </div>
+            <div>&nbsp;</div>
+            <div align="center" style="margin-bottom: 0.5%"><span>数据库密码:</span>
+                <input type="password" id="db_psw"  name="db_psw" value="{{db_psw}}" placeholder="your_db_password" required>
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%">
                 <button type="submit" content="" id="button">&nbsp;保&nbsp;&nbsp;存&nbsp;</button>
             </div>
+            <input type="hidden" id="uid" name="uid" value="{{uid}}">
             <div align="center"><span style="color: red">{{waring_info}}</span></div>
         </form>
     </div>

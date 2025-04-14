@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama langchain_core langchain_community pandas tabulate pymysql cx_Oracle
+pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama \
+ langchain_core langchain_community pandas tabulate pymysql cx_Oracle
 """
 import json
 import logging.config
 import os
-import sqlite3
 
 from flask import Flask, request, jsonify, render_template, Response
 
 import config_util
-import db_util
 from sql_agent import get_dt_with_nl
 from sys_init import init_yml_cfg
-from audio import transcribe_webm_audio_bytes, webm_to_wav
+from audio import transcribe_webm_audio_bytes
 
 # 加载配置
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -28,7 +27,7 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
-config_db = "test_config.db"
+
 
 @app.route('/gt/dt/idx', methods=['GET'])
 def query_data_index():
@@ -53,46 +52,46 @@ def config_index():
     """
     logger.info(f"request_args_in_config_index {request.args}")
     try:
-        usr = request.args.get('usr')
-        if not usr:
+        uid = request.args.get('uid').strip()
+        if not uid:
             return "user is null in config, please submit your username in config request"
     except Exception as e:
         logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
         raise jsonify("err_in_config_index")
-
-    uid = config_util.get_uid_by_user(usr, config_db)
-    ctx = config_util.get_db_config_by_uid(uid, config_db)
-    ctx['usr'] = usr
+    ctx = config_util.get_data_source_config_by_uid(uid)
+    ctx['sys_name']=my_cfg['sys']['name']
     ctx["waring_info"]=""
     dt_idx = "config_index.html"
-    logger.info(f"return page {dt_idx}")
+    logger.info(f"return page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
 
 @app.route('/cfg/idx', methods=['POST'])
 def save_config():
     logger.info(f"save config info {request.form}")
     dt_idx = "config_index.html"
-    usr = request.form.get('usr').strip()
+    uid = request.form.get('uid').strip()
     db_type = request.form.get('db_type').strip()
     db_host = request.form.get('db_host').strip()
+    db_port = request.form.get('db_port').strip()
     db_name = request.form.get('db_name').strip()
-    db_usr = request.form.get('db_usr').strip()
-    db_psw = request.form.get('db_psw').strip()
+    db_usr  = request.form.get('db_usr').strip()
+    db_psw  = request.form.get('db_psw').strip()
     config_info = {
         "sys_name": my_cfg['sys']['name'],
         "waring_info": "",
-        "usr": usr,
+        "uid": uid,
         "db_type": db_type,
         "db_name": db_name,
         "db_host": db_host,
+        "db_port": db_port,
         "db_usr": db_usr,
         "db_psw": db_psw,
     }
-    uid = config_util.get_uid_by_user(usr, config_db)
-    if not uid:
-        config_info['waring_info'] = '用户非法'
+    usr = config_util.get_user_by_uid(uid)
+    if not usr:
+        config_info['waring_info'] = '当前用户非法'
         return render_template(dt_idx, **config_info)
-    save_cfg_result = config_util.save_data_source_config(config_db, config_info)
+    save_cfg_result = config_util.save_data_source_config(config_info)
     if save_cfg_result:
         config_info['waring_info'] = '保存成功'
     else:
@@ -140,22 +139,19 @@ def login():
     user = request.form.get('usr').strip()
     t = request.form.get('t').strip()
     logger.info(f"user login: {user}, {t}")
-    with sqlite3.connect(config_db) as my_conn:
-        sql = f"select id from user where name='{user}' and t = '{t}' limit 1"
-        check_info = db_util.sqlite_query_tool(my_conn, sql)
-        user_id = json.loads(check_info)['data']
-    if not user_id:
+    auth_result = config_util.auth_user(user, t)
+
+    if not auth_result["pass"]:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
         ctx = {
             "user" : user,
             "sys_name" : my_cfg['sys']['name'],
             "waring_info" : "用户名或密码输入错误",
-
         }
         return render_template("login.html", **ctx)
     else:
         logger.info(f"return_page {dt_idx}")
-        return render_template(dt_idx, uid=user_id[0][0], sys_name=my_cfg['sys']['name'])
+        return render_template(dt_idx, uid=auth_result["uid"], sys_name=my_cfg['sys']['name'])
 
 @app.route('/query/data', methods=['POST'])
 def query_data(catch=None):
@@ -188,19 +184,13 @@ def authenticate(req)->bool:
     if not my_cfg['sys']['auth']:
         return True
     result = False
-    with sqlite3.connect(config_db) as my_conn:
-        try:
-            uid = req.form.get('uid').strip()
-            sql = f"select id from user where id='{uid}' limit 1"
-            check_info = db_util.sqlite_query_tool(my_conn, sql)
-            check_user_id = json.loads(check_info)['data']
-            check_user_id = check_user_id[0][0]
-            logger.info(f"rcv_uid {check_user_id}")
-            if not check_user_id:
-                logger.error(f"illegal_request {req}")
+    try:
+        if config_util.get_user_by_uid(req.form.get('uid').strip()):
             result = True
-        except Exception as e:
-            logger.error(f"authenticate_err, {req}, {e}", exc_info=True)
+        else:
+            logger.error(f"illegal_request {req}")
+    except Exception as e:
+        logger.error(f"authenticate_err, {req}, {e}", exc_info=True)
     return result
 
 

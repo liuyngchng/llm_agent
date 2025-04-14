@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="/static/purify.min.js"></script>
-    <script src="/static/marked.min.js"></script>
-    <script src="/static/my.js"></script>
-    <script src="/static/chart.min.3.8.0.js"></script>
+    <script type="text/javascript" src="/static/purify.min.js"></script>
+    <script type="text/javascript" src="/static/marked.min.js"></script>
+    <script type="text/javascript" src="/static/chart.min.3.8.0.js"></script>
+<!--    <script type="text/javascript" src="/static/my.js"></script>-->
     <link rel="stylesheet" href="/static/my.css">
     <title>{{ sys_name | default('智能问答系统') }}</title>
 </head>
@@ -15,7 +15,7 @@
         <div class="header">
             <h1>{{ sys_name | default('智能问答系统') }}</h1>
         </div>
-        <a href="/cfg/idx" class="system-settings-link">系统设置</a>
+        <a href="/cfg/idx?uid={{uid}}" class="system-settings-link">系统设置</a>
         <div class="chat-container" id="chat-container">
             <!-- 聊天内容将在这里动态生成 -->
         </div>
