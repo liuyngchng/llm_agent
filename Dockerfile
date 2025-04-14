@@ -1,10 +1,11 @@
-FROM ubuntu:24.04
+#FROM ubuntu:24.04
+FROM llm_agent:1.1
 
 WORKDIR /opt
 ARG PROXY=""
 # ARG PROXY=" -i http:///root/pypi/+simple --trusted-host devpi.11.11.77.81.nip.io"
 #ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple"
-RUN apt-get update
+#RUN apt-get update
 # for rag
 # RUN apt-get -y install python3 python3-dev python3-pip virtualenv vim curl gcc g++ tesseract-ocr fonts-noto-color-emoji
 # for sql_agent
