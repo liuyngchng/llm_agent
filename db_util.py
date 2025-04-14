@@ -6,6 +6,7 @@ import sqlite3
 import json
 import pandas as pd
 import logging.config
+import cx_Oracle
 
 from urllib.parse import urlparse, unquote, urlencode
 from sys_init import init_yml_cfg
@@ -13,6 +14,17 @@ from sys_init import init_yml_cfg
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+
+def oracle_query_tool(db_con, query: str) -> str:
+    try:
+        cursor = db_con.cursor()
+        cursor.execute(query)
+        columns = [desc[0] for desc in cursor.description] if cursor.description else []
+        data = cursor.fetchall()
+        return json.dumps({"columns": columns, "data": data}, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"oracle_query_tool_err: {e}")
+        raise e
 
 def mysql_query_tool(db_con, query: str) -> str:
     try:
@@ -53,8 +65,10 @@ def output_data(db_con, sql:str, data_format:str) -> str:
         result = sqlite_query_tool(db_con, sql)
     elif isinstance(db_con, pymysql.Connection):
         result = mysql_query_tool(db_con, sql)
+    elif isinstance(db_con, cx_Oracle.Connection):
+        result = oracle_query_tool(db_con, sql)
     else:
-        print(f"database_type_error, {__file__}")
+        logger.error(f"database_type_error, {__file__}")
         raise "database type error"
 
     data = json.loads(result)
@@ -98,6 +112,7 @@ def mysql_output(cfg: dict, sql:str, data_format:str):
         logger.info("connect db with name, host, user, password")
         my_conn = pymysql.connect(
             host=db_config['host'],
+            port = db_config.get("port", 3306),
             user=db_config['user'],
             password=db_config['password'],
             database=db_config['name'],
@@ -106,9 +121,11 @@ def mysql_output(cfg: dict, sql:str, data_format:str):
     else:
         logger.info("connect db with db_uri")
         parsed_uri = urlparse(db_config['uri'])
-        logger.info(f"host[{parsed_uri.hostname}], user[{parsed_uri.username}], password[{parsed_uri.password}], database[{parsed_uri.path[1:]}]")
+        logger.info(f"host[{parsed_uri.hostname}], user[{parsed_uri.username}], "
+                    f"password[{parsed_uri.password}], database[{parsed_uri.path[1:]}]")
         my_conn = pymysql.connect(
             host=unquote(parsed_uri.hostname),
+            port= parsed_uri.port or 3306,
             user=unquote(parsed_uri.username),
             password=unquote(parsed_uri.password),
             database=parsed_uri.path[1:],
@@ -117,6 +134,40 @@ def mysql_output(cfg: dict, sql:str, data_format:str):
     logger.info(f"output_data({my_conn}, \n{sql}\n, {data_format})")
     dt = output_data(my_conn, sql, data_format)
     my_conn.close()
+    return dt
+
+def oracle_output(cfg: dict, sql: str, data_format: str):
+    """
+    cfg['db']['uri'] = oracle+cx_oracle://user:password@host:port/service_name
+    """
+    db_config = cfg.get('db', {})
+    if all(key in db_config for key in ['name', 'host', 'user', 'password']):
+        dsn = cx_Oracle.makedsn(
+            db_config['host'],
+            db_config.get('port', 1521),
+            service_name=db_config['name']
+        )
+        conn = cx_Oracle.connect(
+            user=db_config['user'],
+            password=db_config['password'],
+            dsn=dsn
+        )
+    else:
+        parsed_uri = urlparse(db_config['uri'])
+        port = parsed_uri.port or 1521
+        dsn = cx_Oracle.makedsn(
+            unquote(parsed_uri.hostname),
+            port,
+            service_name=unquote(parsed_uri.path[1:])
+        )
+        conn = cx_Oracle.connect(
+            user=unquote(parsed_uri.username),
+            password=unquote(parsed_uri.password),
+            dsn=dsn
+        )
+
+    dt = output_data(conn, sql, data_format)
+    conn.close()
     return dt
 
 def sqlite_output(db_uri: str, sql:str, data_format:str):
@@ -132,12 +183,21 @@ def sqlite_output(db_uri: str, sql:str, data_format:str):
     return my_dt
 
 def get_db_uri(cfg: dict) -> str:
+    """
+    mysql+pymysql://user:pswd@host/db
+    oracle+cx_oracle://user:password@host:port/service_name
+    """
     db_config = cfg.get('db', {})
     if all(key in db_config for key in ['type', 'name', 'host', 'user', 'password']):
-        if 'mysql' in db_config['type']:
-            my_db_uri = f"mysql+pymysql://{db_config['user']}:{db_config['password']}@{db_config['host']}/{db_config['name']}"
-        elif 'sqlite' in db_config['type']:
+        db_type_cfg = db_config['type'].lower()
+        if 'mysql' in db_type_cfg:
+            my_db_uri = (f"mysql+pymysql://{db_config['user']}:{db_config['password']}"
+                         f"@{db_config['host']}:{db_config.get('port', 3306)}/{db_config['name']}")
+        elif 'sqlite' in db_type_cfg:
             my_db_uri = f"sqlite:///{db_config['name']}"
+        elif 'oracle' in db_type_cfg:
+            my_db_uri = (f"oracle+cx_oracle://{db_config['user']}:{db_config['password']}"
+                         f"@{db_config['host']}:{db_config.get('port', 1521)}/?service_name={db_config['name']}")
         else:
             raise "unknown db type in config file"
     else:

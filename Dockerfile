@@ -19,7 +19,7 @@ RUN ls llm_py_env/bin/activate
 # RUN ./llm_py_env/bin/pip install --no-cache-dir gunicorn langgraph langchain_ollama langchain_openai langchain_community langchain langchain_huggingface langchain_text_splitters langchain_huggingface langchain_unstructured unstructured unstructured[pdf] langchain_core flask pydantic python-docx nltk sentence-transformers faiss_cpu torch $PROXY
 
 # for sql_agent
-RUN ./llm_py_env/bin/pip install --no-cache-dir gunicorn flask concurrent-log-handler langchain_openai langchain_ollama langchain_core langchain_community openai pandas tabulate pymysql sounddevice pydub
+RUN ./llm_py_env/bin/pip install --no-cache-dir gunicorn flask concurrent-log-handler langchain_openai langchain_ollama langchain_core langchain_community openai pandas tabulate pymysql cx_Oracle sounddevice pydub
 RUN  rm -rf ~/.cache/pip
 RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime'
 RUN ulimit -n 65535
