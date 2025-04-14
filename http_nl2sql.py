@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama \
- langchain_core langchain_community pandas tabulate pymysql cx_Oracle
+ langchain_core langchain_community pandas tabulate pymysql cx_Oracle pycryptodome
 """
 import json
 import logging.config
@@ -58,7 +58,8 @@ def config_index():
     except Exception as e:
         logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
         raise jsonify("err_in_config_index")
-    ctx = config_util.get_data_source_config_by_uid(uid)
+    ctx = config_util.get_data_source_config_by_uid(uid, my_cfg)
+    ctx["uid"] = uid
     ctx['sys_name']=my_cfg['sys']['name']
     ctx["waring_info"]=""
     dt_idx = "config_index.html"
@@ -76,7 +77,7 @@ def save_config():
     db_name = request.form.get('db_name').strip()
     db_usr  = request.form.get('db_usr').strip()
     db_psw  = request.form.get('db_psw').strip()
-    config_info = {
+    data_source_cfg = {
         "sys_name": my_cfg['sys']['name'],
         "waring_info": "",
         "uid": uid,
@@ -89,14 +90,14 @@ def save_config():
     }
     usr = config_util.get_user_by_uid(uid)
     if not usr:
-        config_info['waring_info'] = '当前用户非法'
-        return render_template(dt_idx, **config_info)
-    save_cfg_result = config_util.save_data_source_config(config_info)
+        data_source_cfg['waring_info'] = '当前用户非法'
+        return render_template(dt_idx, **data_source_cfg)
+    save_cfg_result = config_util.save_data_source_config(data_source_cfg, my_cfg)
     if save_cfg_result:
-        config_info['waring_info'] = '保存成功'
+        data_source_cfg['waring_info'] = '保存成功'
     else:
-        config_info['waring_info'] = '保存失败'
-    return render_template(dt_idx, **config_info)
+        data_source_cfg['waring_info'] = '保存失败'
+    return render_template(dt_idx, **data_source_cfg)
 
 
 @app.route('/status', methods=['GET'])
@@ -140,7 +141,7 @@ def login():
     t = request.form.get('t').strip()
     logger.info(f"user login: {user}, {t}")
     auth_result = config_util.auth_user(user, t)
-
+    logger.info(f"user login result: {user}, {t}, {auth_result}")
     if not auth_result["pass"]:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
         ctx = {
