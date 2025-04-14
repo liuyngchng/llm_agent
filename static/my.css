@@ -4,6 +4,8 @@ body {
     padding: 0;
     background-color: #f5f7fa;
     color: #333;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 body::before {
     content: '';
@@ -52,11 +54,7 @@ button:disabled {
     border: 1px solid rgba(255,255,255,0.2);
     border-radius: 16px;
 
-    box-shadow:
-        0 8px 32px rgba(0,0,0,0.1),
-        0 4px 12px rgba(0,0,0,0.08),
-        inset 2px 2px 4px rgba(255,255,255,0.5),
-        inset -2px -2px 4px rgba(222,222,222,0.3);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     padding: 20px;
     margin-bottom: 20px;
     height: calc(100vh - 150px);
@@ -64,7 +62,7 @@ button:disabled {
     display: flex;
     flex-direction: column;
     flex: 1;
-    transform: translateZ(20px);
+    transform: none;
 
 }
 .message {
@@ -74,12 +72,12 @@ button:disabled {
     max-width: 80%;
 }
 .user-message {
-    background-color: #e6f7ff;
+    background-color: #fff;
     align-self: flex-end;
     margin-left: auto;
 }
 .bot-message {
-    background-color: #f5f5f5;
+    background-color: #fff;
     align-self: flex-start;
 }
 .bot-icon {
@@ -111,16 +109,12 @@ button:disabled {
 }
 .send-button:hover {
     background-color: #40a9ff;
-    transform: translateY(-1px);
-    box-shadow:
-        4px 4px 10px rgba(78,205,196,0.3),
-        -3px -3px 6px rgba(255,255,255,0.6);
+    transform: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 .send-button:active {
-    transform: translateY(1px);
-    box-shadow:
-        1px 1px 4px rgba(78,205,196,0.1),
-        -1px -1px 2px rgba(255,255,255,0.4);
+    transform: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 .send-button:disabled {
     background-color: #ccc;
@@ -144,21 +138,17 @@ button:disabled {
 }
 .message-bubble {
     position: relative;
-    transform-style: preserve-3d;
+    transform: none;
     max-width: 100%;
     width: auto;
 }
 .user-message-bubble {
     background-color: #e6f7ff;
-    box-shadow:
-        4px 4px 8px rgba(0,0,0,0.08),
-        inset 1px 1px 2px rgba(255,255,255,0.5);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 .bot-message-bubble {
     background-color: #f5f5f5;
-    box-shadow:
-        -4px 4px 8px rgba(0,0,0,0.08),
-        inset -1px 1px 2px rgba(255,255,255,0.5);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 .loading-dots {
     display: inline-block;
@@ -223,7 +213,7 @@ button:disabled {
     position: fixed;
     bottom: 70px;
     left: 50%;
-    transform: translateX(-50%);
+    transform: none;
     background: rgba(0,0,0,0.7);
     color: white;
     padding: 8px 16px;
@@ -251,7 +241,7 @@ button:disabled {
     position: fixed;
     bottom: 100px;
     left: 50%;
-    transform: translateX(-50%);
+    transform: none;
     display: flex;
     align-items: center;
     gap: 3px;
@@ -308,9 +298,7 @@ button:disabled {
     .input-field {
         border-radius: 5px;
         padding-right: 45px;
-        box-shadow:
-            3px 3px 8px rgba(78,205,196,0.2),
-            -2px -2px 4px rgba(255,255,255,0.5);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         transition: all 0.2s;
     }
     .send-button {
@@ -323,6 +311,6 @@ button:disabled {
         position: absolute;
         right: 15px;
         top: 50%;
-        transform: translateY(-50%);
+        transform: none;
     }
 }
