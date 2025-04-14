@@ -90,7 +90,7 @@ def save_config():
     }
     usr = config_util.get_user_by_uid(uid)
     if not usr:
-        data_source_cfg['waring_info'] = '当前用户非法'
+        data_source_cfg['waring_info'] = '非法访问，请您先登录系统'
         return render_template(dt_idx, **data_source_cfg)
     save_cfg_result = config_util.save_data_source_config(data_source_cfg, my_cfg)
     if save_cfg_result:

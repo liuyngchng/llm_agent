@@ -110,7 +110,6 @@ def save_data_source_config(data_source_cfg: dict, cfg: dict) -> bool:
                     f"'{data_source_cfg["db_usr_cypher"]}', "
                     f"'{data_source_cfg["db_psw_cypher"]}')")
     with sqlite3.connect(config_db) as my_conn:
-        save_result = False
         try:
             result = sqlite_insert_tool(my_conn, exec_sql)
             logger.info(f"exec_sql_success {exec_sql}")
