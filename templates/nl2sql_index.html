@@ -91,10 +91,11 @@
         
         // 发送API请求
         async function fetchQueryData(query) {
+            let loadingMsg;
             try {
                 sendButton.disabled = true;
                 isFetching = true;      // 表示正在请求数据
-                const loadingMsg = addMessage('<div class="loading-dots">处理中</div>', 'bot');
+                loadingMsg = addMessage('<div class="loading-dots">处理中</div>', 'bot');
                 const controller = new AbortController();
                 setTimeout(() => controller.abort(), 30000);
                 const response = await fetch('/query/data', {
@@ -197,6 +198,7 @@
                         backgroundColor: colors.slice(0, chartData.labels.length),
                         borderColor: chartType === 'line' ? '#45B7D1' : undefined,
                         borderWidth: chartType === 'line' ? 2 : 1,
+                        tension: 0.4,
                         fill: chartType === 'line' ? false : true
                     }]
                 },
