@@ -17,8 +17,21 @@ Oracle 数据库需要额外安装其客户端动态库
     详见  https://www.oracle.com/database/technologies/instant-client/downloads.html
     
     #ubuntu
-    sudo apt-get install alien
-    sudo alien ***.rpm
+    1) libaio
+    sudo apt-get install libaio1t64
+    sudo apt-get install libaio-dev
+    sudo find /usr -name libaio*
+    sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
+    
+    2) libclntsh.so
+    cd /usr/local/lib
+    sudo mkdir oracle
+    cd oracle/instantclient-basic-linux.x64-12.1.0.2.0/instantclient_12_1
+    sudo cp *.so /usr/local/lib/oracle/
+    sudo cp *.so.* /usr/local/lib/oracle/
+    cd /usr/local/lib/oracle
+    sudo ln -s libclntsh.so.11.1 libclntsh.so
+    export LD_LIBRARY_PATH=/usr/local/lib/oracle:$LD_LIBRARY_PATH
 (2) install pip package
     pip install pymysql cx_Oracle pycryptodome 
 """
@@ -65,8 +78,8 @@ def output_data(db_con, sql:str, data_format:str) -> str:
         result = sqlite_query_tool(db_con, sql)
     elif isinstance(db_con, pymysql.Connection):
         result = mysql_query_tool(db_con, sql)
-    # elif isinstance(db_con, cx_Oracle.Connection):
-    #     result = oracle_query_tool(db_con, sql)
+    elif isinstance(db_con, cx_Oracle.Connection):
+        result = oracle_query_tool(db_con, sql)
     else:
         logger.error(f"database_type_error, {__file__}")
         raise "database type error"
@@ -152,8 +165,11 @@ def oracle_query_tool(db_con, query: str) -> str:
 def oracle_output(cfg: dict, sql: str, data_format: str):
     """
     cfg['db']['uri'] = oracle+cx_oracle://user:password@host:port/service_name
+    连接上oracle服务之后，可以通过以下方法获取 service_name
+    SELECT VALUE FROM V$PARAMETER WHERE NAME = 'service_names';
     """
     db_config = cfg.get('db', {})
+    logger.info(f"db_config {db_config}")
     if all(key in db_config for key in ['name', 'host', 'user', 'password']):
         dsn = cx_Oracle.makedsn(
             db_config['host'],
@@ -223,14 +239,18 @@ def get_db_uri(cfg: dict) -> str:
 
 def test_db():
     # sql = "SELECT * FROM customer_info LIMIT 2"
-    my_sql = "SELECT id, 支付金额 from order_info "
+    # my_sql = "SELECT id, 支付金额 from order_info;"
+    my_sql = "SELECT * from stu"
     my_cfg = init_yml_cfg()
     logger.info(f"my_cfg {my_cfg}")
     db_uri = get_db_uri(my_cfg)
+    db_uri = db_uri.lower()
     if "sqlite" in db_uri:
         my_dt = sqlite_output(db_uri, my_sql, 'json')
     elif "mysql" in db_uri:
         my_dt = mysql_output(my_cfg, my_sql, 'json')
+    elif "oracle" in db_uri:
+        my_dt = oracle_output(my_cfg, my_sql, 'json')
     else:
         my_dt = None
         raise "check your config file to config correct [dt_uri]"

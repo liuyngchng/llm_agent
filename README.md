@@ -4,9 +4,13 @@
 
 a RAG demo with local knowledge in private domain, you can input question in URI `http://localhost:19000`;
 
- **(2) sql_agent.py**
+**(2) http_nl2sql.py**
 
-is a SQL agent demo, used so-called TextToSQL. you can ask question about database, and agent will give question back to you
+A SQL demo, user can input there question about data, then data returned and be rendered as a chart by chart.js.
+
+ **(3) sql_agent.py**
+
+A SQL agent demo, used so-called TextToSQL. you can ask question about database, and agent will give data back to you
 
 # 2. deploy
 
@@ -68,14 +72,18 @@ curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/health' -H "Content-Type:
 curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"msg":"who are you?"}'
 ```
 
-# 5. config
+# 5. db source config
 
-自定义数据库配置，usr 为登录用户名， tkn的为config.yml 中配置的 sys.cfg_tkn
+系统支持自定义数据库配置，目前支持mysql， sqlite，oracle 的支持正在开发中
 ```html
 http://127.0.0.1:19000/cfg/idx?usr=test&tkn=12345
 ```
 
 # 6. ASR
+
+通过语音转文本，实现再页面上进行语音输入。
+
+## 6.1 基础库安装
 
 安装  ffmpeg
 
@@ -88,7 +96,7 @@ sudo apt install ffmpeg
 
 
 
-
+## 6.2 语音识别服务
 
 ```sh
 pip install "vllm[audio]"
@@ -107,7 +115,9 @@ vllm serve whisper-large-v3-turbo \
 
 ```
 
-webm测试语音生成
+## 6.3 语音识别自测
+
+目前页面输入的语音流行是webm格式的。测试语音生成
 
 ```sh
 pip install edge-tts 
@@ -118,9 +128,7 @@ edge-tts -t "测试语句" --write-media temp.webm
 ffmpeg -i temp.webm -c:a libopus asr_test.webm
 ```
 
-接口测试
-
-
+对http 接口进行测试
 
 ```sh
 curl -X POST http://127.0.0.1:19000/trans/audio \
