@@ -3,7 +3,7 @@
 
 """
 apt-get install ffmpeg
-pip install pydub
+pip install pydub sounddevice
 """
 import io
 import os

@@ -11,6 +11,18 @@ import logging.config
 from urllib.parse import urlparse, unquote, urlencode
 from sys_init import init_yml_cfg
 
+"""
+Oracle 数据库需要额外安装其客户端动态库
+(1) 安装 oracle的 instant client,
+    详见  https://www.oracle.com/database/technologies/instant-client/downloads.html
+    
+    #ubuntu
+    sudo apt-get install alien
+    sudo alien ***.rpm
+(2) install pip package
+    pip install pymysql cx_Oracle pycryptodome 
+"""
+
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
