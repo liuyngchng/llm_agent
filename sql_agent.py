@@ -133,7 +133,7 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     """
     sql =""
     dt = ""
-
+    nl_dt_dict={"chart":{}, "raw_dt": {}}
     agent = SQLGenerator(cfg, is_remote_model)
     try:
         # 生成SQL
@@ -153,18 +153,32 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
             raise "other data type need to be done"
     except Exception as e:
         logger.error(f"error, {e}，sql: {sql}", exc_info=True)
-    if cfg['ai']['prompts']['add_desc_to_dt']:
-        logger.info("add_description_to_data")
-        nl_dt = agent.get_nl_with_dt(dt)
-        nl_dt_dict = json.loads(nl_dt)
-        nl_dt_dict["raw_dt"] = dt
-        nl_dt_dict_str = json.dumps(nl_dt_dict, ensure_ascii=False)
-        logger.info(f"nl_with_dt:\n{nl_dt_dict_str}")
+    nl_dt_dict["raw_dt"] = dt
+    logger.info(f"nl_dt_dict:\n {nl_dt_dict}")
+    if not cfg['ai']['prompts']['add_desc_to_dt']:
+        logger.info(f"nl_raw_dt:\n{dt}")
+        return json.dumps(nl_dt_dict, ensure_ascii=False)
+    return add_chart_to_dt(agent, dt, nl_dt_dict)
 
-        return nl_dt_dict_str
+
+def add_chart_to_dt(agent: SQLGenerator, dt:str, nl_dt_dict:dict)-> str:
+    """
+    add chart data to raw dt
+    """
+    logger.info("add_chart_to_dt")
+    chart_dt = {}
+    try:
+        nl_dt = agent.get_nl_with_dt(dt)
+        chart_dt = json.loads(nl_dt)
+    except Exception as e:
+        logger.exception("err_to_add_description_to_data", dt)
+    if chart_dt['chart']:
+        nl_dt_dict['chart'] = chart_dt['chart']
     else:
-        logger.info(f"only_dt:\n{dt}")
-        return dt
+        logger.error(f"chart_dt['chart'] is null, chart_dt {chart_dt}")
+    nl_dt_dict_str = json.dumps(nl_dt_dict, ensure_ascii=False)
+    logger.info(f"nl_chart_dt_with_raw_dt:\n{nl_dt_dict_str}")
+    return nl_dt_dict_str
 
 
 if __name__ == "__main__":
