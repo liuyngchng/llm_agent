@@ -9,7 +9,15 @@
         div, button {font-weight:bold;text-align: center;}
         span {text-align: center;}
         input {width: 300px;}
-        select {width: 308px;}
+        select {
+            width: 308px;
+            min-height: 26px;
+        }
+        select option {
+            font-size: 16px;
+            padding: 5px;
+            min-height: 26px;
+        }
     </style>
     <script>
         var CryptoJS=CryptoJS||function(s,p){var m={},l=m.lib={},n=function(){},r=l.Base={extend:function(b){n.prototype=this;var h=new n;b&&h.mixIn(b);h.hasOwnProperty("init")||(h.init=function(){h.$super.init.apply(this,arguments)});h.init.prototype=h;h.$super=this;return h},create:function(){var b=this.extend();b.init.apply(b,arguments);return b},init:function(){},mixIn:function(b){for(var h in b)b.hasOwnProperty(h)&&(this[h]=b[h]);b.hasOwnProperty("toString")&&(this.toString=b.toString)},clone:function(){return this.init.prototype.extend(this)}},
