@@ -34,7 +34,11 @@
         <form style="margin-top: 2%" action="/cfg/idx" method="post">
             <div style="display: flex; align-items: center; gap: 8px; margin: 0 auto; width: fit-content">
                 <span>数据库类型:</span>
-                <input type="text" id="db_type" name="db_type" value="{{db_type}}" placeholder="sqlite/mysql/oracle" required>
+                <select id="db_type" name="db_type" required>
+                    <option value="sqlite">Sqlite数据库</option>
+                    <option value="mysql">MySQL数据库</option>
+                    <option value="oracle">Oracle数据库</option>
+                </select>
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%"><span>数据库名称:</span>
