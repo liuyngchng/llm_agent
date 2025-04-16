@@ -42,7 +42,7 @@ CREATE TABLE `order_info` (
 
 LOCK TABLES `order_info` WRITE;
 /*!40000 ALTER TABLE `order_info` DISABLE KEYS */;
-INSERT INTO `order_info` VALUES (1,123,'山东','山东天然气销售分公司','居民天然气',2025,'2025-03-02','昆仑慧享家公众号','123'),(2,2234,'辽宁','辽宁天然气销售分公司','居民天然气',2025,'2025-01-05','微信','456');
+INSERT INTO `order_info` VALUES (1,123,'山东','山东天然气销售分公司_msq','居民天然气',2025,'2025-03-02','昆仑慧享家公众号','123'),(2,2234,'辽宁','辽宁天然气销售分公司_msq','居民天然气',2025,'2025-01-05','微信','456');
 /*!40000 ALTER TABLE `order_info` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
