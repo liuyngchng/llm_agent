@@ -73,12 +73,12 @@
             queryInput.value = '';            
             // 发送API请求
             fetchQueryData(query).then(data => {
-                    if (data.chart) {
+                    if (data.chart && data.chart.labels?.length && data.chart.values?.length) {
                         const msgElement = addMessage(' ', 'bot', true);
                         const chartType = detectChartType(query); // 新增类型判断
                         renderChart(msgElement.querySelector('canvas'), data.chart, data.raw_dt, chartType); // 传入类型
                     } else {
-                        addMessage(data, 'bot');
+                        addMessage(data.raw_dt || '暂无符合条件的数据', 'bot');
                     }
                 })
                 .catch(error => {

@@ -88,6 +88,8 @@ def output_data(db_con, sql:str, data_format:str) -> str:
     logger.info(f"data {data} for {db_con}")
     # 生成表格
     df = pd.DataFrame(data['data'], columns=data['columns'])
+
+
     if 'html' in data_format:
         # dt = df.to_html()  #生成网页表格
         dt = df.to_html(
@@ -104,7 +106,10 @@ def output_data(db_con, sql:str, data_format:str) -> str:
             '<td style="padding:6px; border-bottom:1px solid #eee">'
         )
     elif 'markdown' in data_format:
-        dt = df.to_markdown(index=False)  # 控制台打印美观表格
+        if df.empty:
+            dt = ''
+        else:
+            dt = df.to_markdown(index=False)  # 控制台打印美观表格
     elif 'json' in data_format:
         dt = df.to_json(force_ascii=False, orient='records')
     else:

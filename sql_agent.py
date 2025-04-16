@@ -194,6 +194,9 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
         logger.error(f"error, {e}，sql: {sql}", exc_info=True)
     nl_dt_dict["raw_dt"] = dt
     logger.info(f"nl_dt_dict:\n {nl_dt_dict}")
+    if not dt:
+        return json.dumps(nl_dt_dict, ensure_ascii=False)
+
     if not cfg['ai']['prompts']['add_desc_to_dt']:
         logger.info(f"nl_raw_dt:\n{dt}")
         return json.dumps(nl_dt_dict, ensure_ascii=False)
