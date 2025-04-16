@@ -191,5 +191,5 @@ if __name__ == "__main__":
     #     input_q = input("请输入您的问题(输入q退出)：")
     #     if input_q == "q":
     #         exit(0)
-    input_q = "查询stu表的数据明细"
+    input_q = "查询2025年的数据明细"
     get_dt_with_nl(input_q, my_cfg, 'json', True)

@@ -225,13 +225,17 @@ def get_db_uri(cfg: dict) -> str:
         if 'mysql' in db_type_cfg:
             my_db_uri = (f"mysql+pymysql://{db_config['user']}:{db_config['password']}"
                          f"@{db_config['host']}:{db_config.get('port', 3306)}/{db_config['name']}")
-        elif 'sqlite' in db_type_cfg:
-            my_db_uri = f"sqlite:///{db_config['name']}"
         elif 'oracle' in db_type_cfg:
             my_db_uri = (f"oracle+cx_oracle://{db_config['user']}:{db_config['password']}"
                          f"@{db_config['host']}:{db_config.get('port', 1521)}/?service_name={db_config['name']}")
         else:
             raise "unknown db type in config file"
+    elif all(key in db_config for key in ['type', 'name']):
+        db_type_cfg = db_config['type'].lower()
+        if 'sqlite' in db_type_cfg:
+            my_db_uri = f"sqlite:///{db_config['name']}"
+        else:
+            raise "one of the following key ['type', 'name'] missed in config file"
     else:
         raise "one of the following key ['type', 'name', 'host', 'user', 'password'] missed in config file"
     logger.info(f"db_uri {my_db_uri}")
