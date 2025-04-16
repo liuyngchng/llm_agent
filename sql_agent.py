@@ -167,7 +167,7 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     nl_dt_dict={"chart":{}, "raw_dt": {}}
     agent = SQLGenerator(cfg, is_remote_model)
     agent_detected_tables = agent.get_table_list()
-    logger.info(f"agent_detected_tables:{agent_detected_tables}")
+    logger.info(f"agent_detected_tables:{agent_detected_tables} for db {cfg['db']['type']}")
     if not agent_detected_tables or len(agent_detected_tables)> 1:
         info = f"please_check_your_data_source_user_privilege, none_table_or_too_much_table_can_be_accessed_by_the_user{cfg['db']}"
         raise Exception(info)
