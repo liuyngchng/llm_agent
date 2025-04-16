@@ -51,8 +51,7 @@
         let isFetching = false;                                     //是否正在请求数据
 
         window.onload = function() {
-            const greeting = `Hi，我是问数小助手～ 很高兴遇见你！你可以随时问我天燃气销售数据的问题，我来帮你查查
-            `;
+            const greeting = `Hi，我是问数小助手～ 很高兴遇见你！你可以随时问我天然气销售数据的问题，我来帮你查查`;
             addMessage(greeting, 'bot');
         };
         // 表单提交
@@ -72,6 +71,7 @@
             // 清空输入框
             queryInput.value = '';            
             // 发送API请求
+            // 返回的 data 数据格式如下 {"chart":{}, "raw_dt":"markdown格式数据表格", "unit":"数据物理量的量纲"}
             fetchQueryData(query).then(data => {
                     if (data.chart && data.chart.labels?.length && data.chart.values?.length) {
                         const msgElement = addMessage(' ', 'bot', true);
