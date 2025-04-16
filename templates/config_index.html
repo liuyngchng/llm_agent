@@ -43,9 +43,9 @@
             <div style="display: flex; align-items: center; gap: 8px; margin: 0 auto; width: fit-content">
                 <span>数据库类型:</span>
                 <select id="db_type" name="db_type" required>
-                    <option value="sqlite">Sqlite数据库</option>
-                    <option value="mysql">MySQL数据库</option>
-                    <option value="oracle">Oracle数据库</option>
+                    <option value="sqlite" {% if db_type == 'sqlite' %}selected{% endif %}>Sqlite数据库</option>
+                    <option value="mysql" {% if db_type == 'mysql' %}selected{% endif %}>MySQL数据库</option>
+                    <option value="oracle" {% if db_type == 'oracle' %}selected{% endif %}>Oracle数据库</option>
                 </select>
             </div>
             <div>&nbsp;</div>
