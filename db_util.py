@@ -199,6 +199,13 @@ def oracle_output(cfg: dict, sql: str, data_format: str):
     conn.close()
     return dt
 
+def get_orc_db_info(cfg: dict) -> list:
+    dsn = cx_Oracle.makedsn(cfg['db']['host'], cfg['db']['port'], service_name=cfg['db']['name'])
+    with cx_Oracle.connect(user=cfg['db']['user'], password=cfg['db']['password'], dsn=dsn) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT table_name FROM user_tables")
+            return [row[0] for row in cursor]
+
 #################### for support oracle DB #########################
 
 

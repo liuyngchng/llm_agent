@@ -15,7 +15,7 @@ import logging.config
 import httpx
 from pydantic import SecretStr
 
-from db_util import sqlite_output, mysql_output, get_db_uri, oracle_output
+from db_util import sqlite_output, mysql_output, get_db_uri, oracle_output, get_orc_db_info
 from sys_init import init_yml_cfg
 
 """
@@ -32,6 +32,7 @@ class SQLGenerator:
     # db_uri = "mysql+pymysql://db_user:db_password@db_host/db_name"
     """
     def __init__(self, cfg:dict , is_remote_model:bool):
+        self.cfg = cfg
         self.db = SQLDatabase.from_uri(get_db_uri(cfg))
         self.db_type = cfg['db']['type']
         self.api_uri = cfg['ai']['api_uri']
@@ -84,7 +85,37 @@ class SQLGenerator:
             logger.error(f"SQL执行失败：{e}")
             return {"success": False, "error": str(e)}
 
+    def get_table_list(self)-> list:
+        if "oracle" in self.db_type.lower():
+            table_list = get_orc_db_info(self.cfg)
+        else:
+            table_list = self.db.get_usable_table_names()
+        return table_list
+
     def get_schema_info(self) -> str:
+        """获取数据库结构信息"""
+        schema_entries = []
+
+        for table in self.get_table_list():
+            # 使用新的字段获取方式
+            if "oracle" in self.db_type.lower():
+                table = table.upper()
+            columns = self.db._inspector.get_columns(table)
+            column_str = ",".join([col["name"] for col in columns])
+            if "oracle" in self.db_type.lower():
+                limit = "WHERE ROWNUM <= 3"
+            else:
+                limit = "LIMIT 3"
+            sample_dt_sql = f'SELECT * FROM {table} {limit}'
+            schema_entries.extend([
+                f"表名：{table}",
+                f"字段：{column_str}",
+                f"示例数据：{self.db.run(sample_dt_sql)}",
+                "-----------------"
+            ])
+        return "\n".join(schema_entries)
+
+    def get_orc_schema_info(self) -> str:
         """获取数据库结构信息"""
         schema_entries = []
         for table in self.db.get_usable_table_names():
@@ -135,6 +166,11 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     dt = ""
     nl_dt_dict={"chart":{}, "raw_dt": {}}
     agent = SQLGenerator(cfg, is_remote_model)
+    agent_detected_tables = agent.get_table_list()
+    logger.info(f"agent_detected_tables:{agent_detected_tables}")
+    if not agent_detected_tables or len(agent_detected_tables)> 1:
+        info = f"please_check_your_data_source_user_privilege, none_table_or_too_much_table_can_be_accessed_by_the_user{cfg['db']}"
+        raise Exception(info)
     try:
         # 生成SQL
         logger.info(f"summit_question_to_llm：{q}")
@@ -191,5 +227,5 @@ if __name__ == "__main__":
     #     input_q = input("请输入您的问题(输入q退出)：")
     #     if input_q == "q":
     #         exit(0)
-    input_q = "查询2025年的数据明细"
+    input_q = "查询数据明细"
     get_dt_with_nl(input_q, my_cfg, 'json', True)
