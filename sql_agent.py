@@ -15,7 +15,7 @@ import logging.config
 import httpx
 from pydantic import SecretStr
 
-from db_util import sqlite_output, mysql_output, get_db_uri
+from db_util import sqlite_output, mysql_output, get_db_uri, oracle_output
 from sys_init import init_yml_cfg
 
 """
@@ -149,6 +149,9 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
         elif "mysql" in db_uri:
             logger.debug(f"connect to mysql db {db_uri}")
             dt = mysql_output(cfg, sql, output_data_format)
+        elif "oracle" in db_uri:
+            logger.debug(f"connect to oracle db {db_uri}")
+            dt = oracle_output(cfg, sql, output_data_format)
         else:
             raise "other data type need to be done"
     except Exception as e:
@@ -188,5 +191,5 @@ if __name__ == "__main__":
     #     input_q = input("请输入您的问题(输入q退出)：")
     #     if input_q == "q":
     #         exit(0)
-    input_q = "查询2025年的数据"
-    # get_dt_with_nl(input_q, my_cfg, 'json', True)
+    input_q = "查询stu表的数据明细"
+    get_dt_with_nl(input_q, my_cfg, 'json', True)

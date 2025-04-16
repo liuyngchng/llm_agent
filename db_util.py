@@ -159,7 +159,7 @@ def oracle_query_tool(db_con, query: str) -> str:
         data = cursor.fetchall()
         return json.dumps({"columns": columns, "data": data}, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"oracle_query_tool_err: {e}")
+        logger.exception("oracle_query_tool_err")
         raise e
 
 def oracle_output(cfg: dict, sql: str, data_format: str):
