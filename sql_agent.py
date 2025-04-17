@@ -4,6 +4,8 @@ import json
 import os
 import re
 from typing import Dict
+from datetime import datetime
+
 
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -43,7 +45,8 @@ class SQLGenerator:
         self.llm = self.get_llm()
 
         # 带数据库结构的提示模板
-        sql_gen_sys_msg = f"""{cfg['ai']['prompts']['sql_gen_sys_msg']}"""
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        sql_gen_sys_msg = f"""{cfg['ai']['prompts']['sql_gen_sys_msg']}\n当前时间是{current_time}"""
         # try:
         #     sql_gen_sys_msg = sql_gen_sys_msg.replace("{sql_dialect}", cfg['db']['type'])
         # except Exception as e:
@@ -150,7 +153,9 @@ def extract_sql(raw_sql: str) -> str:
         clean_sql = match.group(1)
         # 清理首尾空白/换行（保留分号）
         return clean_sql.strip(" \n\t")
-    return raw_sql  # 无代码块时返回原始内容
+    else:
+        raw_sql = rmv_think_block(raw_sql)
+    return raw_sql
 
 def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: bool) -> str:
     """
@@ -208,7 +213,7 @@ def add_chart_to_raw_dt(agent: SQLGenerator, dt:str, nl_dt_dict:dict)-> str:
     try:
         nl_dt = agent.get_nl_with_dt(dt)
         logger.debug(f"nl_dt_from_agent\n{nl_dt}\n")
-        nl_dt = re.sub(r'<think>.*?</think>', '', nl_dt, flags=re.DOTALL)
+        nl_dt = rmv_think_block(nl_dt)
         logger.debug(f"nl_dt_without_think\n{nl_dt}\n")
         # 只取从第一个 { 开始， 到最后哦一个 } 结束的部分
         nl_dt = re.sub(r'^.*?(\{.*\}).*$', r'\1', nl_dt, flags=re.DOTALL)
@@ -223,6 +228,11 @@ def add_chart_to_raw_dt(agent: SQLGenerator, dt:str, nl_dt_dict:dict)-> str:
     nl_dt_dict_str = json.dumps(nl_dt_dict, ensure_ascii=False)
     logger.info(f"nl_chart_dt_with_raw_dt:\n{nl_dt_dict_str}\n")
     return nl_dt_dict_str
+
+
+def rmv_think_block(dt:str):
+    dt = re.sub(r'<think>.*?</think>', '', dt, flags=re.DOTALL)
+    return dt
 
 
 if __name__ == "__main__":

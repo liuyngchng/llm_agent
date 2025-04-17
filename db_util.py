@@ -52,12 +52,13 @@ def mysql_query_tool(db_con, query: str) -> str:
 def sqlite_query_tool(db_con, query: str) -> str:
     try:
         cursor = db_con.cursor()
+        logger.debug(f"execute_query {query}")
         cursor.execute(query)
         columns = [desc[0] for desc in cursor.description] if cursor.description else []
         data = cursor.fetchall()
         return json.dumps({"columns": columns, "data": data}, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"init_cfg_error: {e}")
+        logger.exception(f"sqlite_query_err")
         return json.dumps({"error": str(e)})
 
 def sqlite_insert_tool(db_con, query: str) -> dict:
