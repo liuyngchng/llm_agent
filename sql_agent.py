@@ -196,10 +196,10 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     if not cfg['ai']['prompts']['add_desc_to_dt']:
         logger.info(f"nl_raw_dt:\n{dt}\n")
         return json.dumps(nl_dt_dict, ensure_ascii=False)
-    return add_chart_to_dt(agent, dt, nl_dt_dict)
+    return add_chart_to_raw_dt(agent, dt, nl_dt_dict)
 
 
-def add_chart_to_dt(agent: SQLGenerator, dt:str, nl_dt_dict:dict)-> str:
+def add_chart_to_raw_dt(agent: SQLGenerator, dt:str, nl_dt_dict:dict)-> str:
     """
     add chart data to raw dt
     """
