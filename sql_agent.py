@@ -93,15 +93,21 @@ class SQLGenerator:
         return table_list
 
     def get_schema_info(self) -> str:
-        """获取数据库结构信息"""
         schema_entries = []
-
         for table in self.get_table_list():
             # 使用新的字段获取方式
             if "oracle" in self.db_type.lower():
                 table = table.upper()
             columns = self.db._inspector.get_columns(table)
-            column_str = ",".join([col["name"] for col in columns])
+            table_header = "| 字段名 | 字段类型 | 字段注释 |\n|--------|----------|----------|"
+            table_rows = []
+            for col in columns:
+                name = col["name"]
+                col_type = str(col.get("type", "N/A"))
+                comment = col.get("comment", "")
+                table_rows.append(f"| {name} | {col_type} | {comment} |")
+
+            column_table = "\n".join([table_header] + table_rows)
             if "oracle" in self.db_type.lower():
                 limit = "WHERE ROWNUM <= 3"
             else:
@@ -109,26 +115,14 @@ class SQLGenerator:
             sample_dt_sql = f'SELECT * FROM {table} {limit}'
             schema_entries.extend([
                 f"表名：{table}",
-                f"字段：{column_str}",
-                f"示例数据：{self.db.run(sample_dt_sql)}",
+                f"字段信息：\n{column_table}",
+                f"示例数据：\n{self.db.run(sample_dt_sql)}",
                 "-----------------"
             ])
-        return "\n".join(schema_entries)
+        schema_info = "\n".join(schema_entries)
+        logger.debug(f"schema_info:\n {schema_info}")
+        return schema_info
 
-    def get_orc_schema_info(self) -> str:
-        """获取数据库结构信息"""
-        schema_entries = []
-        for table in self.db.get_usable_table_names():
-            # 使用新的字段获取方式
-            columns = self.db._inspector.get_columns(table)  # 访问私有_inspector属性
-            column_str = ",".join([col["name"] for col in columns])
-            schema_entries.extend([
-                f"表名：{table}",
-                f"字段：{column_str}",
-                f"示例数据：{self.db.run(f'SELECT * FROM {table} LIMIT 3')}",
-                "-----------------"
-            ])
-        return "\n".join(schema_entries)
 
     def get_llm(self):
         if self.is_remote_model:
