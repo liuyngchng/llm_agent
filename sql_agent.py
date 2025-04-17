@@ -137,7 +137,7 @@ class SQLGenerator:
                 model = ChatOllama(model=self.model_name, base_url=self.api_uri, temperature=0)
         else:
             model = ChatOllama(model=self.model_name, base_url=self.api_uri, temperature=0)
-        logger.debug(f"model type {type(model)}, model: {model}")
+        logger.debug(f"modeltype {type(model)}, model: {model}")
         return model
 
 
@@ -189,12 +189,12 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     except Exception as e:
         logger.error(f"error, {e}，sql: {sql}", exc_info=True)
     nl_dt_dict["raw_dt"] = dt
-    logger.info(f"nl_dt_dict:\n {nl_dt_dict}")
+    logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
     if not dt:
         return json.dumps(nl_dt_dict, ensure_ascii=False)
 
     if not cfg['ai']['prompts']['add_desc_to_dt']:
-        logger.info(f"nl_raw_dt:\n{dt}")
+        logger.info(f"nl_raw_dt:\n{dt}\n")
         return json.dumps(nl_dt_dict, ensure_ascii=False)
     return add_chart_to_dt(agent, dt, nl_dt_dict)
 
@@ -203,10 +203,16 @@ def add_chart_to_dt(agent: SQLGenerator, dt:str, nl_dt_dict:dict)-> str:
     """
     add chart data to raw dt
     """
-    logger.info("add_chart_to_dt")
+    logger.info("start_add_chart_to_raw_dt")
     chart_dt = {}
     try:
         nl_dt = agent.get_nl_with_dt(dt)
+        logger.info(f"nl_dt_from_agent\n{nl_dt}\n")
+        nl_dt = re.sub(r'<think>.*?</think>', '', nl_dt, flags=re.DOTALL)
+        logger.info(f"nl_dt_without_think\n{nl_dt}\n")
+        # 只取从第一个 { 开始， 到最后哦一个 } 结束的部分
+        nl_dt = re.sub(r'^.*?(\{.*\}).*$', r'\1', nl_dt, flags=re.DOTALL)
+        logger.info(f"nl_dt_only_json_str\n{nl_dt}\n")
         chart_dt = json.loads(nl_dt)
     except Exception as e:
         logger.exception("err_to_add_description_to_data", dt)
@@ -215,7 +221,7 @@ def add_chart_to_dt(agent: SQLGenerator, dt:str, nl_dt_dict:dict)-> str:
     else:
         logger.error(f"chart_dt['chart'] is null, chart_dt {chart_dt}")
     nl_dt_dict_str = json.dumps(nl_dt_dict, ensure_ascii=False)
-    logger.info(f"nl_chart_dt_with_raw_dt:\n{nl_dt_dict_str}")
+    logger.info(f"nl_chart_dt_with_raw_dt:\n{nl_dt_dict_str}\n")
     return nl_dt_dict_str
 
 
@@ -226,5 +232,5 @@ if __name__ == "__main__":
     #     input_q = input("请输入您的问题(输入q退出)：")
     #     if input_q == "q":
     #         exit(0)
-    input_q = "查询数据明细"
+    input_q = "查询2024年的数据明细"
     get_dt_with_nl(input_q, my_cfg, 'json', True)

@@ -115,7 +115,7 @@ def output_data(db_con, sql:str, data_format:str) -> str:
         info = f"error data format {data_format}"
         logger.error(info)
         raise info
-    logger.info(f"output_data_dt: {dt}")
+    logger.info(f"output_data_dt:\n{dt}\n")
     return dt
 
 
@@ -207,6 +207,8 @@ def sqlite_output(db_uri: str, sql:str, data_format:str):
     with sqlite3.connect(db_file) as my_conn:
         logger.debug(f"connect to db {db_file}")
         my_dt = output_data(my_conn, sql, data_format)
+    if DataType.JSON.value ==  data_format:
+        my_dt = json.loads(my_dt)
     return my_dt
 
 def get_db_uri(cfg: dict) -> str:
@@ -253,7 +255,7 @@ def test_db():
         my_dt = None
         raise "check your config file to config correct [dt_uri]"
 
-    logger.info(f"my_dt\n {my_dt}\n")
+    logger.info(f"my_dt\n{my_dt}\n")
 
 def test_url():
     url_params = urlencode({"test":'张三'}, encoding="UTF-8")
