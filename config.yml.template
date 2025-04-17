@@ -1,8 +1,8 @@
 # config.yaml，文件格式必须严格遵循 yaml配置文件格式
 db:
-#  数据库类型, mysql sqlite oracle
+#  数据库类型, mysql sqlite oracle，最好使用MySQL
   type: mysql
-#  数据库名称，如果是sqlite，直接写文件名称，本地需存在相应的文件名
+#  数据库（实例）名称，如果是sqlite，直接写文件名称，本地需存在相应的文件名
   name: your_db_name
 #  数据库连接的IP地址或者域名
   host: your_db_host_IP_or_domain
@@ -12,6 +12,9 @@ db:
   user: your_db_user_name
 #  读取数据库的用户密码
   password: 12345
+
+# 限制使用的表的数量，最佳实践是1表， 随着表的数量的增加，大模型输出的SQL质量会有一定程度的下降
+  restrict_table_number: 1
 sys:
 #  系统名称(title) 配置
   name: 巴拉巴拉小魔仙

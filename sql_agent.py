@@ -34,7 +34,7 @@ class SQLGenerator:
     def __init__(self, cfg:dict , is_remote_model:bool):
         self.cfg = cfg
         self.db = SQLDatabase.from_uri(get_db_uri(cfg))
-        self.db_type = cfg['db']['type']
+        self.db_type = cfg['db']['type'].lower()
         self.api_uri = cfg['ai']['api_uri']
         self.api_key = SecretStr(cfg['ai']['api_key'])
         self.model_name = cfg['ai']['model_name']
@@ -162,8 +162,10 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     agent = SQLGenerator(cfg, is_remote_model)
     agent_detected_tables = agent.get_table_list()
     logger.info(f"agent_detected_tables:{agent_detected_tables} for db {cfg['db']['type']}")
-    if not agent_detected_tables or len(agent_detected_tables)> 1:
-        info = f"please_check_your_data_source_user_privilege, none_table_or_too_much_table_can_be_accessed_by_the_user{cfg['db']}"
+    if not agent_detected_tables or len(agent_detected_tables)> cfg['db']['restrict_table_number']:
+        info = (f"please_check_your_data_source_user_privilege_or_db_schema, "
+                f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
+                f" cfg['db']={cfg['db']}")
         raise Exception(info)
     try:
         # 生成SQL
