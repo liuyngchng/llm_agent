@@ -6,8 +6,7 @@ import sqlite3
 import json
 import pandas as pd
 import logging.config
-
-
+from my_enum import DataType, DBType
 from urllib.parse import urlparse, unquote, urlencode
 from sys_init import init_yml_cfg
 
@@ -88,9 +87,9 @@ def output_data(db_con, sql:str, data_format:str) -> str:
     logger.info(f"data {data} for {db_con}")
     # 生成表格
     df = pd.DataFrame(data['data'], columns=data['columns'])
+    dt_fmt = data_format.lower()
 
-
-    if 'html' in data_format:
+    if DataType.HTML.value in dt_fmt:
         # dt = df.to_html()  #生成网页表格
         dt = df.to_html(
             index=False,
@@ -105,18 +104,18 @@ def output_data(db_con, sql:str, data_format:str) -> str:
             '<td>',
             '<td style="padding:6px; border-bottom:1px solid #eee">'
         )
-    elif 'markdown' in data_format:
+    elif DataType.MARKDOWN.value in dt_fmt:
         if df.empty:
             dt = ''
         else:
             dt = df.to_markdown(index=False)  # 控制台打印美观表格
-    elif 'json' in data_format:
+    elif DataType.JSON.value in dt_fmt:
         dt = df.to_json(force_ascii=False, orient='records')
     else:
         info = f"error data format {data_format}"
         logger.error(info)
         raise info
-    logger.info(f"returned dt \n{df.to_markdown(index=False)}")
+    logger.info(f"output_data_dt: {dt}")
     return dt
 
 
@@ -126,33 +125,34 @@ def mysql_output(cfg: dict, sql:str, data_format:str):
     """
     db_config = cfg.get('db', {})
 
+    cif = build_mysql_con_dict_from_cfg(db_config)
+    with pymysql.connect(host=cif['host'],port=cif['port'],user=cif['user'],password=cif['password'],
+                         database=cif['database'],charset=cif['charset']) as my_conn:
+        logger.info(f"output_data({my_conn}, \n{sql}\n, {data_format})")
+        dt = output_data(my_conn, sql, data_format)
+    return dt
+
+
+def build_mysql_con_dict_from_cfg(db_config: dict) -> dict:
+    cif = {"charset":"utf8mb4"}
     if all(key in db_config for key in ['name', 'host', 'user', 'password']):
         logger.info("connect db with name, host, user, password")
-        my_conn = pymysql.connect(
-            host=db_config['host'],
-            port = db_config.get("port", 3306),
-            user=db_config['user'],
-            password=db_config['password'],
-            database=db_config['name'],
-            charset='utf8mb4'
-        )
+        cif['host'] = db_config['host']
+        cif['port'] = db_config.get("port", 3306)
+        cif['user'] = db_config['user']
+        cif['password'] = db_config['password']
+        cif['database'] = db_config['name']
     else:
         logger.info("connect db with db_uri")
         parsed_uri = urlparse(db_config['uri'])
         logger.info(f"host[{parsed_uri.hostname}], user[{parsed_uri.username}], "
                     f"password[{parsed_uri.password}], database[{parsed_uri.path[1:]}]")
-        my_conn = pymysql.connect(
-            host=unquote(parsed_uri.hostname),
-            port= parsed_uri.port or 3306,
-            user=unquote(parsed_uri.username),
-            password=unquote(parsed_uri.password),
-            database=parsed_uri.path[1:],
-            charset='utf8mb4'
-        )
-    logger.info(f"output_data({my_conn}, \n{sql}\n, {data_format})")
-    dt = output_data(my_conn, sql, data_format)
-    my_conn.close()
-    return dt
+        cif['host'] = unquote(parsed_uri.hostname)
+        cif['port'] = parsed_uri.port or 3306
+        cif['user'] = unquote(parsed_uri.username)
+        cif['password'] = unquote(parsed_uri.password)
+        cif['database'] = parsed_uri.path[1:]
+    return cif
 
 #################### for support oracle DB #########################
 import cx_Oracle
@@ -176,29 +176,13 @@ def oracle_output(cfg: dict, sql: str, data_format: str):
     db_config = cfg.get('db', {})
     logger.info(f"db_config {db_config}")
     if all(key in db_config for key in ['name', 'host', 'user', 'password']):
-        dsn = cx_Oracle.makedsn(
-            db_config['host'],
-            db_config.get('port', 1521),
-            service_name=db_config['name']
-        )
-        conn = cx_Oracle.connect(
-            user=db_config['user'],
-            password=db_config['password'],
-            dsn=dsn
-        )
+        dsn = cx_Oracle.makedsn(db_config['host'],db_config.get('port', 1521),service_name=db_config['name'])
+        conn =  cx_Oracle.connect(user=db_config['user'],password=db_config['password'],dsn=dsn )
     else:
         parsed_uri = urlparse(db_config['uri'])
         port = parsed_uri.port or 1521
-        dsn = cx_Oracle.makedsn(
-            unquote(parsed_uri.hostname),
-            port,
-            service_name=unquote(parsed_uri.path[1:])
-        )
-        conn = cx_Oracle.connect(
-            user=unquote(parsed_uri.username),
-            password=unquote(parsed_uri.password),
-            dsn=dsn
-        )
+        dsn = cx_Oracle.makedsn(unquote(parsed_uri.hostname),port,service_name=unquote(parsed_uri.path[1:]))
+        conn = cx_Oracle.connect(user=unquote(parsed_uri.username), password=unquote(parsed_uri.password), dsn=dsn)
 
     dt = output_data(conn, sql, data_format)
     conn.close()
@@ -220,10 +204,9 @@ def sqlite_output(db_uri: str, sql:str, data_format:str):
     """
 
     db_file = db_uri.split('/')[-1]
-    my_conn = sqlite3.connect(db_file)
-    logger.debug(f"connect to db {db_file}")
-    my_dt = output_data(my_conn, sql, data_format)
-    my_conn.close()
+    with sqlite3.connect(db_file) as my_conn:
+        logger.debug(f"connect to db {db_file}")
+        my_dt = output_data(my_conn, sql, data_format)
     return my_dt
 
 def get_db_uri(cfg: dict) -> str:
@@ -234,17 +217,17 @@ def get_db_uri(cfg: dict) -> str:
     db_cfg = cfg.get('db', {})
     if all(key in db_cfg for key in ['type', 'name', 'host', 'user', 'password']):
         db_type_cfg = db_cfg['type'].lower()
-        if 'mysql' in db_type_cfg:
+        if DBType.MYSQL.value in db_type_cfg:
             my_db_uri = (f"mysql+pymysql://{db_cfg['user']}:{db_cfg['password']}"
                          f"@{db_cfg['host']}:{db_cfg.get('port', 3306)}/{db_cfg['name']}")
-        elif 'oracle' in db_type_cfg:
+        elif DBType.ORACLE.value in db_type_cfg:
             my_db_uri = (f"oracle+cx_oracle://{db_cfg['user']}:{db_cfg['password']}"
                          f"@{db_cfg['host']}:{db_cfg.get('port', 1521)}/?service_name={db_cfg['name']}")
         else:
             raise "unknown db type in config file"
     elif all(key in db_cfg for key in ['type', 'name']):
         db_type_cfg = db_cfg['type'].lower()
-        if 'sqlite' in db_type_cfg:
+        if DBType.SQLITE.value in db_type_cfg:
             my_db_uri = f"sqlite:///{db_cfg['name']}"
         else:
             raise "one of the following key ['type', 'name'] missed in config file"
@@ -254,18 +237,17 @@ def get_db_uri(cfg: dict) -> str:
     return my_db_uri
 
 def test_db():
-    # sql = "SELECT * FROM customer_info LIMIT 2"
-    # my_sql = "SELECT id, 支付金额 from order_info;"
-    my_sql = "SELECT * from stu"
+    my_sql = "SELECT * from order_info"
     my_cfg = init_yml_cfg()
     logger.info(f"my_cfg {my_cfg}")
     db_uri = get_db_uri(my_cfg)
     db_uri = db_uri.lower()
-    if "sqlite" in db_uri:
+    logger.info(f"db_uri {db_uri}")
+    if DBType.SQLITE.value in db_uri:
         my_dt = sqlite_output(db_uri, my_sql, 'json')
-    elif "mysql" in db_uri:
+    elif DBType.MYSQL.value in db_uri:
         my_dt = mysql_output(my_cfg, my_sql, 'json')
-    elif "oracle" in db_uri:
+    elif DBType.ORACLE.value in db_uri:
         my_dt = oracle_output(my_cfg, my_sql, 'json')
     else:
         my_dt = None
