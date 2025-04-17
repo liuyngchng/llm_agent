@@ -120,7 +120,7 @@ class SQLGenerator:
                 "-----------------"
             ])
         schema_info = "\n".join(schema_entries)
-        logger.debug(f"schema_info:\n {schema_info}")
+        logger.debug(f"schema_info:\n{schema_info}")
         return schema_info
 
 
@@ -207,12 +207,12 @@ def add_chart_to_raw_dt(agent: SQLGenerator, dt:str, nl_dt_dict:dict)-> str:
     chart_dt = {}
     try:
         nl_dt = agent.get_nl_with_dt(dt)
-        logger.info(f"nl_dt_from_agent\n{nl_dt}\n")
+        logger.debug(f"nl_dt_from_agent\n{nl_dt}\n")
         nl_dt = re.sub(r'<think>.*?</think>', '', nl_dt, flags=re.DOTALL)
-        logger.info(f"nl_dt_without_think\n{nl_dt}\n")
+        logger.debug(f"nl_dt_without_think\n{nl_dt}\n")
         # 只取从第一个 { 开始， 到最后哦一个 } 结束的部分
         nl_dt = re.sub(r'^.*?(\{.*\}).*$', r'\1', nl_dt, flags=re.DOTALL)
-        logger.info(f"nl_dt_only_json_str\n{nl_dt}\n")
+        logger.debug(f"nl_dt_only_json_str\n{nl_dt}\n")
         chart_dt = json.loads(nl_dt)
     except Exception as e:
         logger.exception("err_to_add_description_to_data", dt)
