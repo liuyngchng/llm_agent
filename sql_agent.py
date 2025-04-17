@@ -14,6 +14,7 @@ from langchain_ollama import ChatOllama
 import logging.config
 import httpx
 from pydantic import SecretStr
+from my_enum import DBType
 
 from db_util import sqlite_output, mysql_output, get_db_uri, oracle_output, get_orc_db_info
 from sys_init import init_yml_cfg
@@ -95,8 +96,7 @@ class SQLGenerator:
     def get_schema_info(self) -> str:
         schema_entries = []
         for table in self.get_table_list():
-            # 使用新的字段获取方式
-            if "oracle" in self.db_type:
+            if DBType.ORACLE.value in self.db_type:
                 table = table.upper()
             columns = self.db._inspector.get_columns(table)
             table_header = "| 字段名 | 字段类型 | 字段注释 |\n|--------|----------|----------|"
@@ -108,7 +108,7 @@ class SQLGenerator:
                 table_rows.append(f"| {name} | {col_type} | {comment} |")
 
             column_table = "\n".join([table_header] + table_rows)
-            if "oracle" in self.db_type:
+            if DBType.ORACLE.value in self.db_type:
                 limit = "WHERE ROWNUM <= 3"
             else:
                 limit = "LIMIT 3"
@@ -160,9 +160,9 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     dt = ""
     nl_dt_dict={"chart":{}, "raw_dt": {}}
     agent = SQLGenerator(cfg, is_remote_model)
-    agent_detected_tables = agent.get_table_list()
-    logger.info(f"agent_detected_tables:{agent_detected_tables} for db {cfg['db']['type']}")
-    if not agent_detected_tables or len(agent_detected_tables)> cfg['db']['max_table_num']:
+    adt = agent.get_table_list()
+    logger.info(f"agent_detected_tables:{adt} for db_type {cfg['db']['type']}")
+    if not adt or len(adt)> cfg['db']['max_table_num']:
         info = (f"please_check_your_data_source_user_privilege_or_db_schema, "
                 f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
                 f" cfg['db']={cfg['db']}")
@@ -175,13 +175,13 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
         sql = extract_sql(sql)
         logger.debug(f"extract_sql\n\n{sql}\n")
         db_uri = get_db_uri(cfg)
-        if "sqlite" in db_uri:
+        if DBType.SQLITE.value in db_uri:
             logger.debug(f"connect to sqlite db {db_uri}")
             dt = sqlite_output(db_uri, sql, output_data_format)
-        elif "mysql" in db_uri:
+        elif DBType.MYSQL.value in db_uri:
             logger.debug(f"connect to mysql db {db_uri}")
             dt = mysql_output(cfg, sql, output_data_format)
-        elif "oracle" in db_uri:
+        elif DBType.ORACLE.value in db_uri:
             logger.debug(f"connect to oracle db {db_uri}")
             dt = oracle_output(cfg, sql, output_data_format)
         else:
