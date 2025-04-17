@@ -14,7 +14,7 @@ from langchain_ollama import ChatOllama
 import logging.config
 import httpx
 from pydantic import SecretStr
-from my_enum import DBType
+from my_enum import DBType, DataType
 
 from db_util import sqlite_output, mysql_output, get_db_uri, oracle_output, get_orc_db_info
 from sys_init import init_yml_cfg
@@ -233,4 +233,4 @@ if __name__ == "__main__":
     #     if input_q == "q":
     #         exit(0)
     input_q = "查询2024年的数据明细"
-    get_dt_with_nl(input_q, my_cfg, 'json', True)
+    get_dt_with_nl(input_q, my_cfg, DataType.JSON.value, True)
