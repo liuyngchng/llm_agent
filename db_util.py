@@ -231,21 +231,21 @@ def get_db_uri(cfg: dict) -> str:
     mysql+pymysql://user:pswd@host/db
     oracle+cx_oracle://user:password@host:port/service_name
     """
-    db_config = cfg.get('db', {})
-    if all(key in db_config for key in ['type', 'name', 'host', 'user', 'password']):
-        db_type_cfg = db_config['type'].lower()
+    db_cfg = cfg.get('db', {})
+    if all(key in db_cfg for key in ['type', 'name', 'host', 'user', 'password']):
+        db_type_cfg = db_cfg['type'].lower()
         if 'mysql' in db_type_cfg:
-            my_db_uri = (f"mysql+pymysql://{db_config['user']}:{db_config['password']}"
-                         f"@{db_config['host']}:{db_config.get('port', 3306)}/{db_config['name']}")
+            my_db_uri = (f"mysql+pymysql://{db_cfg['user']}:{db_cfg['password']}"
+                         f"@{db_cfg['host']}:{db_cfg.get('port', 3306)}/{db_cfg['name']}")
         elif 'oracle' in db_type_cfg:
-            my_db_uri = (f"oracle+cx_oracle://{db_config['user']}:{db_config['password']}"
-                         f"@{db_config['host']}:{db_config.get('port', 1521)}/?service_name={db_config['name']}")
+            my_db_uri = (f"oracle+cx_oracle://{db_cfg['user']}:{db_cfg['password']}"
+                         f"@{db_cfg['host']}:{db_cfg.get('port', 1521)}/?service_name={db_cfg['name']}")
         else:
             raise "unknown db type in config file"
-    elif all(key in db_config for key in ['type', 'name']):
-        db_type_cfg = db_config['type'].lower()
+    elif all(key in db_cfg for key in ['type', 'name']):
+        db_type_cfg = db_cfg['type'].lower()
         if 'sqlite' in db_type_cfg:
-            my_db_uri = f"sqlite:///{db_config['name']}"
+            my_db_uri = f"sqlite:///{db_cfg['name']}"
         else:
             raise "one of the following key ['type', 'name'] missed in config file"
     else:

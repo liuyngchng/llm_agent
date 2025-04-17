@@ -86,7 +86,7 @@ class SQLGenerator:
             return {"success": False, "error": str(e)}
 
     def get_table_list(self)-> list:
-        if "oracle" in self.db_type.lower():
+        if "oracle" in self.db_type:
             table_list = get_orc_db_info(self.cfg)
         else:
             table_list = self.db.get_usable_table_names()
@@ -96,7 +96,7 @@ class SQLGenerator:
         schema_entries = []
         for table in self.get_table_list():
             # 使用新的字段获取方式
-            if "oracle" in self.db_type.lower():
+            if "oracle" in self.db_type:
                 table = table.upper()
             columns = self.db._inspector.get_columns(table)
             table_header = "| 字段名 | 字段类型 | 字段注释 |\n|--------|----------|----------|"
@@ -108,7 +108,7 @@ class SQLGenerator:
                 table_rows.append(f"| {name} | {col_type} | {comment} |")
 
             column_table = "\n".join([table_header] + table_rows)
-            if "oracle" in self.db_type.lower():
+            if "oracle" in self.db_type:
                 limit = "WHERE ROWNUM <= 3"
             else:
                 limit = "LIMIT 3"
@@ -162,7 +162,7 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     agent = SQLGenerator(cfg, is_remote_model)
     agent_detected_tables = agent.get_table_list()
     logger.info(f"agent_detected_tables:{agent_detected_tables} for db {cfg['db']['type']}")
-    if not agent_detected_tables or len(agent_detected_tables)> cfg['db']['restrict_table_number']:
+    if not agent_detected_tables or len(agent_detected_tables)> cfg['db']['max_table_num']:
         info = (f"please_check_your_data_source_user_privilege_or_db_schema, "
                 f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
                 f" cfg['db']={cfg['db']}")
