@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM ubuntu:24.04 as builder
 #FROM llm_nl2sql:1.1
 
 WORKDIR /opt
@@ -15,9 +15,15 @@ RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl
     openai pandas tabulate pymysql cx_Oracle sounddevice pydub pycryptodome && \
     rm -rf /tmp/whl && \
     rm -rf ~/.cache/pip
+
+
+FROM ubuntu:24.04
+RUN apt-get update && \
+    apt-get -y install python3 python3-pip portaudio19-dev ffmpeg && \
+    apt-get clean
 RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime'
 RUN ulimit -n 65535
-
+COPY --from=builder /opt/llm_py_env /opt/llm_py_env
 WORKDIR /opt/app
 EXPOSE 19000
 ENTRYPOINT ["sh", "./start_nl2sql.sh"]

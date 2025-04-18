@@ -17,8 +17,6 @@ RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl
     concurrent_log_handler pymysql cx_Oracle sounddevice pydub pycryptodome $PROXY && \
     rm -rf /tmp/whl && \
     rm -rf ~/.cache/pip
-RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime' && \
-    ulimit -n 65535
 
 
 FROM ubuntu:24.04
@@ -26,6 +24,8 @@ RUN apt-get update && \
     apt-get -y install python3 python3-pip  tesseract-ocr fonts-noto-color-emoji && \
     apt-get clean
 COPY --from=builder /opt/llm_py_env /opt/llm_py_env
+RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime' && \
+    ulimit -n 65535
 WORKDIR /opt/app
 EXPOSE 19000
 ENTRYPOINT ["sh", "./start_rag.sh"]
