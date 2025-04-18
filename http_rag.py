@@ -10,7 +10,7 @@ import re
 
 from flask import Flask, request, jsonify, render_template, Response, send_from_directory, abort
 
-import config_util
+from config_util import auth_user
 from semantic_search import search, classify_question
 from sys_init import init_yml_cfg
 
@@ -52,7 +52,7 @@ def login():
     user = request.form.get('usr').strip()
     t = request.form.get('t').strip()
     logger.info(f"user login: {user}, {t}")
-    auth_result = config_util.auth_user(user, t)
+    auth_result = auth_user(user, t)
     logger.info(f"user login result: {user}, {t}, {auth_result}")
     if not auth_result["pass"]:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
