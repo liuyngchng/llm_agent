@@ -86,12 +86,13 @@ button:disabled {
     border-radius: 4px;
 }
 .input-container {
+    gap: 10px;
     display: flex;
     margin-bottom: 20px;
 
 }
 .input-field {
-    flex: 0.9;
+    flex: 1;
     padding: 12px 15px;
     border: 1px solid #ddd;
     border-radius: 5px 0 0 5px;

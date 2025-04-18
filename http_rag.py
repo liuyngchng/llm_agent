@@ -9,6 +9,8 @@ import os
 import re
 
 from flask import Flask, request, jsonify, render_template, Response, send_from_directory, abort
+
+import config_util
 from semantic_search import search, classify_question
 from sys_init import init_yml_cfg
 
@@ -25,22 +27,44 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 
-
 @app.route('/', methods=['GET'])
-def rag_index():
+def login_index():
+    auth_flag = my_cfg['sys']['auth']
+    if auth_flag:
+        login_idx = "login.html"
+        logger.info(f"return page {login_idx}")
+        return render_template(login_idx, waring_info="", sys_name=my_cfg['sys']['name'])
+    else:
+        dt_idx = "rag_index.html"
+        logger.info(f"return_page_with_no_auth {dt_idx}")
+        return render_template(dt_idx, uid='foo', sys_name=my_cfg['sys']['name'])
+
+@app.route('/login', methods=['POST'])
+def login():
     """
-     A index for static
-    curl -s --noproxy '*' http://127.0.0.1:19000 | jq
+    form submit, get data from form
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"user":"test"}'
     :return:
+    echo -n 'my_str' |  md5sum
     """
-    ctx = {
-        "sys_name" : my_cfg['sys']['name'],
-
-    }
-    idx = 'rag_index.html'
-    logger.info(f"return page {idx}")
-    return render_template(idx, **ctx)
-
+    dt_idx = "rag_index.html"
+    logger.debug(f"request.form: {request.form}")
+    user = request.form.get('usr').strip()
+    t = request.form.get('t').strip()
+    logger.info(f"user login: {user}, {t}")
+    auth_result = config_util.auth_user(user, t)
+    logger.info(f"user login result: {user}, {t}, {auth_result}")
+    if not auth_result["pass"]:
+        logger.error(f"用户名或密码输入错误 {user}, {t}")
+        ctx = {
+            "user" : user,
+            "sys_name" : my_cfg['sys']['name'],
+            "waring_info" : "用户名或密码输入错误",
+        }
+        return render_template("login.html", **ctx)
+    else:
+        logger.info(f"return_page {dt_idx}")
+        return render_template(dt_idx, uid=auth_result["uid"], sys_name=my_cfg['sys']['name'])
 
 
 @app.route('/health', methods=['GET'])
