@@ -91,7 +91,11 @@ def classify_question(question: str, cfg: dict, is_remote=True) -> str:
           根据以下问题的内容，将用户问题分为以下几类
            (1)缴费;
            (2)上门服务;
-           (3)其他;
+           (3)个人资料;
+           (4)自我介绍;
+           (5)个人信息;
+           (6)身份登记;
+           (7)其他;
            问题： {question}\n分类结果:
            
           """
@@ -112,7 +116,7 @@ def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[st
     search user questions in knowledge base,
     submit the search result and user question to LLM, return the answer
     """
-    logger.info("sim_search [{}] in doc {}".format(question, doc))
+    logger.info(f"sim_search [{question}] in doc {doc}")
     # 搜索部分
     docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(question, k=5)
 
@@ -125,13 +129,12 @@ def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[st
         {context}
         回答：{question}
         (1) 上下文中没有的信息，请不要自行编造
-        (2) 当需要提供上门服务的时候， 提供一个用户可填写的表格
         """
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info("submit question[{}] to llm {}, {}".format(question, cfg['ai']['api_uri'], cfg['ai']['model_name']))
+    logger.info(f"submit question[{question}] to llm {cfg['ai']['api_uri']}, {cfg['ai']['model_name']}")
     response = chain.invoke({
         "context": "\n\n".join([doc.page_content for doc, score in docs_with_scores]),
         "question": question
@@ -140,6 +143,31 @@ def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[st
     torch.cuda.empty_cache()
     return response.content
 
+def fill_table(user_info: str, html_form: str, cfg: dict, is_remote=True) -> Union[str, list[Union[str, dict]]]:
+    """
+    search user questions in knowledge base,
+    submit the search result and user question to LLM, return the answer
+    """
+    logger.info(f"user_info [{user_info}] , html_form {html_form}")
+    template = """
+        基于用户提供的个人信息：
+        {context}
+        填写HTML表格相应内容：{html_form}
+        (1) 上下文中没有的信息，请不要自行编造
+        (2) 不要破坏 HTML本身的结构
+        """
+    prompt = ChatPromptTemplate.from_template(template)
+    logger.info(f"prompt {prompt}")
+    model = get_model(cfg, is_remote)
+    chain = prompt | model
+    logger.info(f"submit user_info[{user_info}] to llm {cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
+    response = chain.invoke({
+        "context": user_info,
+        "html_form": html_form,
+    })
+    del model
+    torch.cuda.empty_cache()
+    return response.content
 
 def get_model(cfg, is_remote):
     if is_remote:

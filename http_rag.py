@@ -11,7 +11,7 @@ import re
 from flask import Flask, request, jsonify, render_template, Response, send_from_directory, abort
 
 from config_util import auth_user
-from semantic_search import search, classify_question
+from semantic_search import search, classify_question, fill_table
 from sys_init import init_yml_cfg
 from utils import rmv_think_block
 
@@ -27,6 +27,7 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
+person_info = {}
 
 @app.route('/', methods=['GET'])
 def login_index():
@@ -105,8 +106,9 @@ def submit():
     :return:
     """
     msg = request.form.get('msg')
+    uid = request.form.get('uid')
     logger.info("rcv_msg: {}".format(msg))
-    labels = ["缴费", "上门服务", "其他"]
+    labels = ["缴费", "上门服务", "个人资料", "自我介绍", "个人信息", "身份登记", "其他"]
     classify_result = classify_question(msg, my_cfg, True)
     logger.info(f"classify_result: {classify_result}")
     content_type='text/markdown; charset=utf-8'
@@ -116,8 +118,16 @@ def submit():
     elif labels[1] in classify_result:
         with open('static/service1.html', 'r', encoding='utf-8') as file:
             content = file.read()
+        if person_info[uid]:
+            answer_html = fill_table(person_info[uid], content, my_cfg, True)
+            logger.info(f"html_table_with_personal_info_filled_in {answer_html}")
+        else:
+            answer_html = content
         content_type = 'text/html; charset=utf-8'
-        answer = f"<div>请填写以下信息，我们将安排工作人员上门为您提供服务</div> {content}"
+        answer = f"<div>请填写以下信息，我们将安排工作人员上门为您提供服务</div> {answer_html}"
+    elif any(label in classify_result for label in labels[2:6]):
+        person_info[uid] += person_info[uid]
+        answer = "您提供的信息我们已经记下来了，您接着说"
     else:
         answer = "目前还没有有效的信息提供给您"
     logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")
