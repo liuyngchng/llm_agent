@@ -1,0 +1,29 @@
+FROM ubuntu:24.04 as builder
+#FROM llm_nl2sql:1.1
+
+WORKDIR /opt
+ARG PROXY=""
+# ARG PROXY=" -i http:///root/pypi/+simple --trusted-host devpi.11.11.77.81.nip.io"
+#ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple"
+RUN apt-get update && \
+    apt-get -y install python3 python3-dev python3-pip virtualenv vim curl portaudio19-dev ffmpeg && \
+    apt-get clean
+RUN virtualenv llm_py_env && pwd && ls && ls llm_py_env/bin/activate
+COPY ./llm_py_env_whl.Python.3.12.3 /tmp/whl
+RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn flask \
+    concurrent-log-handler langchain_openai langchain_ollama langchain_core langchain_community \
+    openai pandas tabulate pymysql cx_Oracle sounddevice pydub pycryptodome wheel && \
+    rm -rf /tmp/whl && \
+    rm -rf ~/.cache/pip
+
+
+FROM ubuntu:24.04
+RUN apt-get update && \
+    apt-get -y install python3 python3-pip portaudio19-dev ffmpeg && \
+    apt-get clean
+RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime'
+RUN ulimit -n 65535
+COPY --from=builder /opt/llm_py_env /opt/llm_py_env
+WORKDIR /opt/app
+EXPOSE 19000
+ENTRYPOINT ["sh", "./start_nl2sql.sh"]

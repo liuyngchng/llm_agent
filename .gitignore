@@ -33,3 +33,4 @@ sqlite_vss
 config.yml
 cert/*
 **/*.cer
+llm_py_env_whl.Python.3.12.3/*
