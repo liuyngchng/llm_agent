@@ -1,10 +1,11 @@
 <div style="background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);padding:20px;margin:15px 0">
     <meta charset="UTF-8">
     <div style="color:#1890ff;text-align:center;margin:0 0 25px 0;font-size:1.2em">燃气上门服务申请表</div>
-    <form id="doorSrvReqForm" style="display:flex;flex-direction:column;gap:15px" method="post" action="/door/srv">
-        <div style="display:flex;flex-direction:column;gap:8px">
-            <label style="color:#666;font-weight:500"><span style="color:red">* </span>服务类型</label>
-            <select id="serviceType" name="serviceType" style="padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px" required>
+    <form id="doorSrvReqForm" method="post" action="/door/srv" style="display:flex;flex-direction:column;gap:15px">
+
+        <div style="display:flex;align-items:center;gap:15px">
+            <label style="flex:0 0 150px;text-align:right;color:#666;font-weight:500;margin:0"><span style="color:red">* </span>服务类型</label>
+            <select id="serviceType" name="serviceType" style="flex:1;padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px" required>
                 <option value="">-- 请选择 --</option>
                 <option value="报装服务">报装服务</option>
                 <option value="安全检查">安全检查</option>
@@ -16,29 +17,29 @@
             </select>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:8px">
-            <label style="color:#666;font-weight:500"><span style="color:red">* </span>客户姓名</label>
-            <input type="text" id="customerName" name="customerName" style="padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px" required>
+        <div style="display:flex;align-items:center;gap:15px">
+            <label style="flex:0 0 150px;text-align:right;color:#666;font-weight:500;margin:0"><span style="color:red">* </span>客户姓名</label>
+            <input type="text" id="customerName" name="customerName" style="flex:1;padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px" required>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:8px">
-            <label style="color:#666;font-weight:500"><span style="color:red">* </span>联系电话</label>
-            <input type="tel" id="contactNumber" name="contactNumber" style="padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px" required>
+        <div style="display:flex;align-items:center;gap:15px">
+            <label style="flex:0 0 150px;text-align:right;color:#666;font-weight:500;margin:0"><span style="color:red">* </span>联系电话</label>
+            <input type="tel" id="contactNumber" name="contactNumber" style="flex:1;padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px" required>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:8px">
-            <label style="color:#666;font-weight:500"><span style="color:red">* </span>服务地址</label>
-            <input type="text" id="address" name="address" style="padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px" required>
+        <div style="display:flex;align-items:center;gap:15px">
+            <label style="flex:0 0 150px;text-align:right;color:#666;font-weight:500;margin:0"><span style="color:red">* </span>服务地址</label>
+            <input type="text" id="address" name="address" style="flex:1;padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px" required>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:8px">
-            <label style="color:#666;font-weight:500"><span style="color:red">* </span>期望上门日期</label>
-            <input type="date" id="preferredDate" name="preferredDate" style="padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px" required>
+        <div style="display:flex;align-items:center;gap:15px">
+            <label style="flex:0 0 150px;text-align:right;color:#666;font-weight:500;margin:0"><span style="color:red">* </span>期望上门日期</label>
+            <input type="date" id="preferredDate" name="preferredDate" style="flex:1;padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px" required>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:8px">
-            <label style="color:#666;font-weight:500">期望上门时间段</label>
-            <select id="preferredTime" name="preferredTime" style="padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px">
+        <div style="display:flex;align-items:center;gap:15px">
+            <label style="flex:0 0 150px;text-align:right;color:#666;font-weight:500;margin:0">期望上门时间段</label>
+            <select id="preferredTime" name="preferredTime" style="flex:1;padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px">
                 <option value="">任意时间</option>
                 <option value="08:00-12:00">上午 (08:00-12:00)</option>
                 <option value="12:00-14:00">中午 (12:00-14:00)</option>
@@ -47,26 +48,25 @@
             </select>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:8px">
-            <label style="color:#666;font-weight:500"><span style="color:red">* </span>问题描述/服务需求</label>
-            <textarea id="problemDescription" name="problemDescription" style="padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px;height:80px" required></textarea>
+        <div style="display:flex;align-items:center;gap:15px">
+            <label style="flex:0 0 150px;text-align:right;color:#666;font-weight:500;margin:0"><span style="color:red">* </span>问题描述/服务需求</label>
+            <textarea id="problemDescription" name="problemDescription" style="flex:1;padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px;height:80px" required></textarea>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:8px">
-            <label style="color:#666;font-weight:500">客户类型</label>
-            <select id="customerType" name="customerType" style="padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px">
+        <div style="display:flex;align-items:center;gap:15px">
+            <label style="flex:0 0 150px;text-align:right;color:#666;font-weight:500;margin:0">客户类型</label>
+            <select id="customerType" name="customerType" style="flex:1;padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px">
                 <option value="居民客户">居民客户</option>
                 <option value="非居民客户">非居民客户</option>
                 <option value="农村管道客户">农村管道客户</option>
             </select>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:8px">
-            <label style="color:#666;font-weight:500">备注信息</label>
-            <textarea id="additionalNotes" style="padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px;height:80px"></textarea>
-            <p style="color:#999;font-size:0.9em;margin:5px 0 0 0">如有特殊需求或其他说明请在此填写</p>
+        <div style="display:flex;align-items:center;gap:15px">
+            <label style="flex:0 0 150px;text-align:right;color:#666;font-weight:500;margin:0">备注信息</label>
+            <textarea id="additionalNotes" style="flex:1;padding:12px 15px;border:1px solid #ddd;border-radius:5px;font-size:16px;height:80px"></textarea>
         </div>
 
-        <button type="submit" class="send-button" style="width:150px;margin-top:10px;align-self:flex-end">提交申请</button>
+        <button type="submit" style="width:150px;padding:12px;background:linear-gradient(135deg, #4ECDC4, #45B7D1);color:#fff;border:none;border-radius:5px;align-self:flex-end;margin-top:10px">提交申请</button>
     </form>
 </div>
