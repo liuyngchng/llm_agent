@@ -1,17 +1,22 @@
-#FROM ubuntu:24.04
-FROM llm_agent:1.1
+FROM ubuntu:24.04
+#FROM llm_agent:1.1
 
 WORKDIR /opt
 ARG PROXY=""
 # ARG PROXY=" -i http:///root/pypi/+simple --trusted-host devpi.11.11.77.81.nip.io"
 #ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple"
-#RUN apt-get update
+RUN echo 'stage1'
+RUN apt-get update
 # for rag
 # RUN apt-get -y install python3 python3-dev python3-pip virtualenv vim curl gcc g++ tesseract-ocr fonts-noto-color-emoji
 # for sql_agent
+RUN echo 'stage2'
 RUN apt-get -y install python3 python3-dev python3-pip virtualenv vim curl portaudio19-dev ffmpeg
+RUN echo 'stage3'
 RUN apt-get clean
+RUN echo 'stage4'
 RUN virtualenv llm_py_env
+RUN echo 'stage5'
 RUN pwd
 RUN ls llm_py_env/bin/activate
 # RUN ["/bin/bash", "-c", "source llm_py_env/bin/activate"]
