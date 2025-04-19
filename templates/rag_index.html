@@ -107,8 +107,8 @@
             const sanitizedContent = DOMPurify.sanitize(
                 contentType?.includes('markdown') ? marked.parse(text) : text,
                 {
-                    ALLOWED_TAGS: ['div','h1','form','label','select','option','input','textarea','button','p','br','span','a','strong','em','img'],
-                    ALLOWED_ATTR: ['id','class','for','name','required','type','value','href','placeholder','src']
+                    ALLOWED_TAGS: ['div','h1','form','label','select','option','input','textarea','button','p','br','span','a','strong','em','img', 'meta', 'style'],
+                    ALLOWED_ATTR: ['id','class','for','name','required','type','value','href','placeholder','src','method', 'action', 'style','charset', 'colspan', 'rowspan']
                 }
             );
             if (type === 'user') {
@@ -130,6 +130,30 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return messageContainer;
         }
+
+        // for door to door service
+        document.getElementById('chat-container').addEventListener('submit', async function(e) {
+            if (e.target.id === 'doorSrvReqForm') {
+                e.preventDefault();
+                const form = e.target;
+                const sendButton = form.querySelector('button[type="submit"]');
+
+                try {
+                    sendButton.disabled = true;
+                    const response = await fetch(form.action, {
+                        method: form.method,
+                        body: new URLSearchParams(new FormData(form))
+                    });
+
+                    if (response.ok) {
+                        const html = await response.text();
+                        addMessage(html, 'bot', 'text/html'); // 添加服务端返回的HTML作为新消息
+                    }
+                } finally {
+                sendButton.disabled = false;
+                }
+            }
+        });
     </script>
 </body>
 </html>
