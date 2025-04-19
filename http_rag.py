@@ -126,7 +126,11 @@ def submit():
         content_type = 'text/html; charset=utf-8'
         answer = f"<div>请填写以下信息，我们将安排工作人员上门为您提供服务</div> {answer_html}"
     elif any(label in classify_result for label in labels[2:6]):
-        person_info[uid] += person_info[uid]
+        if uid not in person_info:
+            person_info[uid] = msg
+        else:
+            person_info[uid] += ", " + msg
+        logger.info(f"person_info[{uid}] = {person_info[uid]} ")
         answer = "您提供的信息我们已经记下来了，您接着说"
     else:
         answer = "目前还没有有效的信息提供给您"

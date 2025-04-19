@@ -16,6 +16,7 @@ import socket
 import faiss
 import torch
 import httpx
+from utils import extract_html
 
 from sys_init import init_yml_cfg
 
@@ -89,15 +90,14 @@ def classify_question(question: str, cfg: dict, is_remote=True) -> str:
     logger.info(f"classify_question [{question}]")
     template = """
           根据以下问题的内容，将用户问题分为以下几类
-           (1)缴费;
-           (2)上门服务;
-           (3)个人资料;
-           (4)自我介绍;
-           (5)个人信息;
-           (6)身份登记;
-           (7)其他;
-           问题： {question}\n分类结果:
-           
+           缴费;
+           上门服务;
+           个人资料;
+           自我介绍;
+           个人信息;
+           身份登记;
+           其他;
+           问题： {question}\n输出结果中直接给出分类结果，不要有其他多余文字:
           """
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
@@ -141,7 +141,7 @@ def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[st
     })
     del model
     torch.cuda.empty_cache()
-    return response.content
+    return extract_html(response.content)
 
 def fill_table(user_info: str, html_form: str, cfg: dict, is_remote=True) -> Union[str, list[Union[str, dict]]]:
     """
@@ -155,6 +155,7 @@ def fill_table(user_info: str, html_form: str, cfg: dict, is_remote=True) -> Uni
         填写HTML表格相应内容：{html_form}
         (1) 上下文中没有的信息，请不要自行编造
         (2) 不要破坏 HTML本身的结构
+        (3) 直接返回填写好的HTML内容，不要有任何其他额外内容
         """
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
