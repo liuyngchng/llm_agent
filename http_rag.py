@@ -144,9 +144,20 @@ def door_service():
     echo -n 'my_str' |  md5sum
     """
     dt_idx = "rag_index.html"
-    logger.debug(f"request.form: {request.form}")
+    serviceType = request.form.get("serviceType")
+    customerName = request.form.get("customerName")
+    contactNumber = request.form.get("contactNumber")
+    address = request.form.get("address")
+    preferredDate = request.form.get("preferredDate")
+    preferredTime = request.form.get("preferredTime")
+    problemDescription = request.form.get("problemDescription")
+    content = (f"<div>[1]服务类型:{serviceType}</div><div>[2]客户姓名:{customerName}</div>"
+               f"<div>[3]客户电话:{contactNumber}</div>"
+               f"<div>[4]客户地址:{address}</div><div>[5]期望时间:{preferredDate} {preferredTime}</div>"
+               f"<div>[6]问题描述:{problemDescription}</div>")
+    logger.debug(f"request.form: {content}")
     content_type = 'text/html; charset=utf-8'
-    answer = f"<div>感谢您提供的详细信息，我们将尽快安排工作人员上门为您提供服务</div>"
+    answer = f"{content}<div>感谢您提供以上详细信息，我们将尽快安排工作人员上门为您提供服务</div>"
     return Response(answer, content_type=content_type, status=200)
 
 
