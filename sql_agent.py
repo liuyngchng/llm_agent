@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 import json
 import os
-import re
+
 from typing import Dict
 from datetime import datetime
 
-
+from utils import extract_sql, rmv_think_block, extract_json
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.utilities import SQLDatabase
@@ -144,18 +144,6 @@ class SQLGenerator:
         return model
 
 
-def extract_sql(raw_sql: str) -> str:
-    # 精准匹配 ```sql...``` 代码块
-    pattern = r"```sql(.*?)```"
-    match = re.search(pattern, raw_sql, re.DOTALL)  # DOTALL模式匹配换行
-
-    if match:
-        clean_sql = match.group(1)
-        # 清理首尾空白/换行（保留分号）
-        return clean_sql.strip(" \n\t")
-    else:
-        raw_sql = rmv_think_block(raw_sql)
-    return raw_sql
 
 def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: bool) -> str:
     """
@@ -215,8 +203,7 @@ def add_chart_to_raw_dt(agent: SQLGenerator, dt:str, nl_dt_dict:dict)-> str:
         logger.debug(f"nl_dt_from_agent\n{nl_dt}\n")
         nl_dt = rmv_think_block(nl_dt)
         logger.debug(f"nl_dt_without_think\n{nl_dt}\n")
-        # 只取从第一个 { 开始， 到最后哦一个 } 结束的部分
-        nl_dt = re.sub(r'^.*?(\{.*\}).*$', r'\1', nl_dt, flags=re.DOTALL)
+        nl_dt = extract_json(nl_dt)
         logger.debug(f"nl_dt_only_json_str\n{nl_dt}\n")
         chart_dt = json.loads(nl_dt)
     except Exception as e:
@@ -229,10 +216,6 @@ def add_chart_to_raw_dt(agent: SQLGenerator, dt:str, nl_dt_dict:dict)-> str:
     logger.info(f"nl_chart_dt_with_raw_dt:\n{nl_dt_dict_str}\n")
     return nl_dt_dict_str
 
-
-def rmv_think_block(dt:str):
-    dt = re.sub(r'<think>.*?</think>', '', dt, flags=re.DOTALL)
-    return dt
 
 
 if __name__ == "__main__":

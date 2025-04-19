@@ -13,6 +13,7 @@ from flask import Flask, request, jsonify, render_template, Response, send_from_
 from config_util import auth_user
 from semantic_search import search, classify_question
 from sys_init import init_yml_cfg
+from utils import rmv_think_block
 
 # 加载配置
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -111,6 +112,7 @@ def submit():
     content_type='text/markdown; charset=utf-8'
     if labels[0] in classify_result:
         answer = search(msg, my_cfg, True)
+        answer = rmv_think_block(answer)
     elif labels[1] in classify_result:
         with open('static/service1.html', 'r', encoding='utf-8') as file:
             content = file.read()
@@ -118,7 +120,7 @@ def submit():
         answer = f"<div>请填写以下信息，我们将安排工作人员上门为您提供服务</div> {content}"
     else:
         answer = "目前还没有有效的信息提供给您"
-    logger.info(f"answer is：{answer}")
+    logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")
     return Response(answer, content_type=content_type, status=200)
 def test_req():
     """
