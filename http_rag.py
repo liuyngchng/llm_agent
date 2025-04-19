@@ -135,6 +135,18 @@ def test_req():
     answer = search(my_question, my_cfg, True)
     logger.info(f"answer is \r\n{answer}")
 
+@app.route('/customer/service', methods=['POST'])
+def customer_service():
+    """
+    form submit, get data from form
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"user":"test"}'
+    :return:
+    echo -n 'my_str' |  md5sum
+    """
+    dt_idx = "rag_index.html"
+    logger.debug(f"request.form: {request.form}")
+
+
 
 if __name__ == '__main__':
     # test_req()
