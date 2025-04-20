@@ -23,10 +23,7 @@ knowledge_file = "./1.txt"
 embedding_model = "../bge-large-zh-v1.5"
 vector_file = "./faiss_index"
 
-# 加载配置
 logging.config.fileConfig('logging.conf', encoding="utf-8")
-
-# 创建 logger
 logger = logging.getLogger(__name__)
 
 def vectoring(file: str):
