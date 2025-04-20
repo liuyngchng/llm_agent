@@ -8,10 +8,10 @@ import logging.config
 import os
 import re
 
-from flask import Flask, request, jsonify, render_template, Response, send_from_directory, abort
+from flask import Flask, request, jsonify, render_template, Response, send_from_directory, abort, make_response
 
 from config_util import auth_user
-from semantic_search import search, classify_question, fill_table
+from semantic_search import search, classify_question, fill_dict
 from sys_init import init_yml_cfg
 from utils import rmv_think_block
 
@@ -115,25 +115,33 @@ def submit():
     classify_result = classify_question(labels, msg, my_cfg, True)
     logger.info(f"classify_result: {classify_result}")
     content_type='text/markdown; charset=utf-8'
+    if labels[1] in classify_result:
+        # with open('static/dor_srv.html', 'r', encoding='utf-8') as file:
+        #     content = file.read()
+        user_dict = {"客户姓名": "", "联系电话": "", "服务地址": "", "期望上门日期": "", "问题描述": ""}
+        if uid in person_info and person_info[uid]:
+
+            user_dict = fill_dict(person_info[uid], user_dict, my_cfg, True)
+            logger.info(f"html_table_with_personal_info_filled_in for {labels[1]}")
+        else:
+            logger.info(f"{uid},current_id_not_in_person_info, {person_info}")
+            # answer_html = content
+        content_type = 'text/html; charset=utf-8'
+        # txt = "<div>请您填写以下信息，我们将安排工作人员上门为您提供服务</div>"
+        # answer = f"{answer_html}"
+        logger.info(f"answer_for_classify {labels[1]}:\nuser_dict: {user_dict}")
+        response = make_response(render_template("door_service.html", **user_dict))
+        response.headers['Content-Type'] = content_type
+        response.status_code = 201  # 自定义状态码
+        return response
+
+        # return Response(answer, content_type=content_type, status=200)
     if labels[0] in classify_result:
         answer = search(msg, my_cfg, True)
         # answer = rmv_think_block(answer)
         txt = '''<div>请通过微信小程序搜索"昆仑惠享+" 小程序，或者扫描以下二维码了解相关缴费信息</div>'''
         answer = f'''{txt}<div style="width: 200px; height: 200px">{bill_addr}</div>'''
         logger.info(f"answer_for_classify {labels[0]}:\n{txt}")
-    elif labels[1] in classify_result:
-        with open('static/dor_srv.html', 'r', encoding='utf-8') as file:
-            content = file.read()
-        if uid in person_info and person_info[uid]:
-            answer_html = fill_table(person_info[uid], content, my_cfg, True)
-            logger.info(f"html_table_with_personal_info_filled_in for {labels[1]}")
-        else:
-            logger.info(f"{uid},current_id_not_in_person_info, {person_info}")
-            answer_html = content
-        content_type = 'text/html; charset=utf-8'
-        txt = "<div>请填写以下信息，我们将安排工作人员上门为您提供服务</div>"
-        answer = f"{txt} {answer_html}"
-        logger.info(f"answer_for_classify {labels[1]}:\n{txt}")
     elif any(label in classify_result for label in labels[2:6]):
         if uid not in person_info:
             logger.info(f"{uid} uid_not_in_person_info {person_info}")

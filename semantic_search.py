@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+import json
 from typing import Union
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -16,7 +16,7 @@ import socket
 import faiss
 import torch
 import httpx
-from utils import extract_html
+from utils import extract_html, extract_json, rmv_think_block
 
 from sys_init import init_yml_cfg
 
@@ -137,19 +137,19 @@ def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[st
     torch.cuda.empty_cache()
     return extract_html(response.content)
 
-def fill_table(user_info: str, html_form: str, cfg: dict, is_remote=True) -> Union[str, list[Union[str, dict]]]:
+def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dict:
     """
     search user questions in knowledge base,
     submit the search result and user question to LLM, return the answer
     """
-    logger.info(f"user_info [{user_info}] , html_form {html_form}")
+    logger.info(f"user_info [{user_info}] , user_dict {user_dict}")
     template = """
         基于用户提供的个人信息：
         {context}
-        填写HTML表格相应内容：{html_form}
+        填写 JSON 体中的相应内容：{user_dict}
         (1) 上下文中没有的信息，请不要自行编造
-        (2) 不要破坏 HTML本身的结构
-        (3) 直接返回填写好的HTML内容，不要有任何其他额外内容
+        (2) 不要破坏 JSON 本身的结构
+        (3) 直接返回填写好的纯文本的 JSON 内容，不要有任何其他额外内容，不要输出Markdown格式
         """
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
@@ -158,12 +158,16 @@ def fill_table(user_info: str, html_form: str, cfg: dict, is_remote=True) -> Uni
     logger.info(f"submit user_info[{user_info}] to llm {cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
     response = chain.invoke({
         "context": user_info,
-        "html_form": html_form,
+        "user_dict": user_dict,
     })
     del model
     torch.cuda.empty_cache()
-    return response.content
-
+    fill_result = user_dict
+    try:
+        fill_result =  json.loads(rmv_think_block(response.content))
+    except Exception as es:
+        logger.error(f"json_loads_err_for {response.content}")
+    return fill_result
 def get_model(cfg, is_remote):
     if is_remote:
         model = ChatOpenAI(api_key=cfg['ai']['api_key'],
@@ -192,13 +196,24 @@ def test():
     logger.info("cuda released")
 
 
-if __name__ == "__main__":
+def test_fill_dict():
+    info = "我叫张三, 我的电话是 13800138000, 我家住在新疆克拉玛依下城区111123号"
+    user_dict = {"客户姓名": "", "联系电话": "", "服务地址": "", "期望上门日期": "", "问题描述": ""}
     my_cfg = init_yml_cfg()
-    labels = ["缴费", "上门服务", "个人资料", "自我介绍", "个人信息", "身份登记", "其他"]
-    result = classify_question(labels, "我要缴费", my_cfg, True)
-    logger.info(f"result: {result}")
-    result = classify_question(labels, "你们能派个人来吗？", my_cfg, True)
-    logger.info(f"result: {result}")
-    result = classify_question(labels, "我家住辽宁省沈阳市", my_cfg, True)
-    logger.info(f"result: {result}")
-    # test()
+    test_fill_result = fill_dict(info, user_dict, my_cfg, True)
+    logger.info(f"{test_fill_result}")
+
+def test_classify():
+     my_cfg = init_yml_cfg()
+     labels = ["缴费", "上门服务", "个人资料", "自我介绍", "个人信息", "身份登记", "其他"]
+     result = classify_question(labels, "我要缴费", my_cfg, True)
+     logger.info(f"result: {result}")
+     result = classify_question(labels, "你们能派个人来吗？", my_cfg, True)
+     logger.info(f"result: {result}")
+     result = classify_question(labels, "我家住辽宁省沈阳市", my_cfg, True)
+     logger.info(f"result: {result}")
+
+
+if __name__ == "__main__":
+
+    test_fill_dict()
