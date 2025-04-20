@@ -128,7 +128,7 @@ def submit():
             answer_html = fill_table(person_info[uid], content, my_cfg, True)
             logger.info(f"html_table_with_personal_info_filled_in for {labels[1]}")
         else:
-            logger.info(f"{uid},current_id_not_in person_info, {person_info}")
+            logger.info(f"{uid},current_id_not_in_person_info, {person_info}")
             answer_html = content
         content_type = 'text/html; charset=utf-8'
         txt = "<div>请填写以下信息，我们将安排工作人员上门为您提供服务</div>"
@@ -136,6 +136,7 @@ def submit():
         logger.info(f"answer_for_classify {labels[1]}:\n{txt}")
     elif any(label in classify_result for label in labels[2:6]):
         if uid not in person_info:
+            logger.info(f"{uid} uid_not_in_person_info {person_info}")
             person_info[uid] = msg
         else:
             person_info[uid] += ", " + msg
