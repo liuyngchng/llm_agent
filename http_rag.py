@@ -109,16 +109,16 @@ def submit():
     uid = request.form.get('uid')
     logger.info("rcv_msg: {}".format(msg))
     labels = ["缴费", "上门服务", "个人资料", "自我介绍", "个人信息", "身份登记", "其他"]
-    classify_result = classify_question(msg, my_cfg, True)
+    classify_result = classify_question(labels, msg, my_cfg, True)
     logger.info(f"classify_result: {classify_result}")
     content_type='text/markdown; charset=utf-8'
     if labels[0] in classify_result:
         answer = search(msg, my_cfg, True)
         answer = rmv_think_block(answer)
     elif labels[1] in classify_result:
-        with open('static/service1.html', 'r', encoding='utf-8') as file:
+        with open('static/service2.html', 'r', encoding='utf-8') as file:
             content = file.read()
-        if person_info[uid]:
+        if uid in person_info and person_info[uid]:
             answer_html = fill_table(person_info[uid], content, my_cfg, True)
             logger.info(f"html_table_with_personal_info_filled_in {answer_html}")
         else:
@@ -133,7 +133,7 @@ def submit():
         logger.info(f"person_info[{uid}] = {person_info[uid]} ")
         answer = "您提供的信息我们已经记下来了，您接着说"
     else:
-        answer = "目前还没有有效的信息提供给您"
+        answer = "目前暂无有的信息提供给您"
     logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")
     return Response(answer, content_type=content_type, status=200)
 def test_req():

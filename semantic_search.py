@@ -71,7 +71,7 @@ def get_vector_db() -> FAISS:
         vector_db.save_local(idx)
         return vector_db
 
-def classify_question(question: str, cfg: dict, is_remote=True) -> str:
+def classify_question(classify_label: list, question: str, cfg: dict, is_remote=True) -> str:
     """
     from transformers import pipeline
 
@@ -87,17 +87,11 @@ def classify_question(question: str, cfg: dict, is_remote=True) -> str:
     print(f"问题类型: {classify_query(user_input)}")
 
     """
+    label_str = ';\n'.join(map(str, classify_label))
     logger.info(f"classify_question [{question}]")
-    template = """
-          根据以下问题的内容，将用户问题分为以下几类
-           缴费;
-           上门服务;
-           个人资料;
-           自我介绍;
-           个人信息;
-           身份登记;
-           其他;
-           问题： {question}\n输出结果中直接给出分类结果，不要有其他多余文字:
+    template = f"""
+          根据以下问题的内容，将用户问题分为以下几类\n{label_str}\n
+          问题：{question}\n输出结果直接给出分类结果，不要有其他多余文字
           """
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
@@ -200,8 +194,11 @@ def test():
 
 if __name__ == "__main__":
     my_cfg = init_yml_cfg()
-    result = classify_question("我要缴费", my_cfg, True)
+    labels = ["缴费", "上门服务", "个人资料", "自我介绍", "个人信息", "身份登记", "其他"]
+    result = classify_question(labels, "我要缴费", my_cfg, True)
     logger.info(f"result: {result}")
-    result = classify_question("你们能派个人来吗？", my_cfg, True)
+    result = classify_question(labels, "你们能派个人来吗？", my_cfg, True)
+    logger.info(f"result: {result}")
+    result = classify_question(labels, "我家住辽宁省沈阳市", my_cfg, True)
     logger.info(f"result: {result}")
     # test()

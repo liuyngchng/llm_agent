@@ -346,3 +346,51 @@ button:disabled {
         transform: none;
     }
 }
+
+.door_service {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  padding: 20px;
+  margin: 15px 0
+}
+
+.door_service .title {
+  color: #1890ff;
+  text-align: center;
+  margin: 0 0 25px;
+  font-size: 1.2em
+}
+
+.door_service .form-row {
+  display: flex;
+  align-items: center;
+  gap: 15px
+}
+
+.door_service .form-row label {
+  flex: 0 0 150px;
+  text-align: right;
+  color: #666;
+  font-weight: 500;
+  margin: 0
+}
+
+.door_service .input-group {
+  flex: 1;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px
+}
+
+.door_service .submit-btn {
+  width: 150px;
+  padding: 12px;
+  background: linear-gradient(135deg, #4ECDC4, #45B7D1);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  align-self: flex-end;
+  margin-top: 10px
+}
