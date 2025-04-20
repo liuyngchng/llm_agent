@@ -116,7 +116,7 @@ def submit():
         answer = search(msg, my_cfg, True)
         answer = rmv_think_block(answer)
     elif labels[1] in classify_result:
-        with open('static/service2.html', 'r', encoding='utf-8') as file:
+        with open('static/dor_srv.html', 'r', encoding='utf-8') as file:
             content = file.read()
         if uid in person_info and person_info[uid]:
             answer_html = fill_table(person_info[uid], content, my_cfg, True)

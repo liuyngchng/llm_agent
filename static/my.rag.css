@@ -365,7 +365,9 @@ button:disabled {
 .door_service .form-row {
   display: flex;
   align-items: center;
-  gap: 15px
+  gap: 15px;
+  padding: 0 10px;
+  margin: 10px 0;
 }
 
 .door_service .form-row label {
@@ -381,7 +383,13 @@ button:disabled {
   padding: 12px 15px;
   border: 1px solid #ddd;
   border-radius: 5px;
-  font-size: 16px
+  font-size: 16px;
+  max-width: 95%; /* 防止撑满容器 */
+  margin-right: 10px;
+}
+.door_service #problemDescription {
+  width: 100% !important;
+  min-width: 600px;
 }
 
 .door_service .submit-btn {
@@ -392,5 +400,8 @@ button:disabled {
   border: none;
   border-radius: 5px;
   align-self: flex-end;
-  margin-top: 10px
+  margin-top: 10px;
+  margin-left: auto; /* 右侧对齐 */
+  display: block;
+  margin-right: 10px; /* 与右边距保持间隙 */
 }
