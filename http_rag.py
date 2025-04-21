@@ -127,7 +127,7 @@ def submit():
         answer = search(msg, my_cfg, True)
         # answer = rmv_think_block(answer)
         txt = get_const("wechat_txt")
-        bill_addr = get_const("bill_addr")
+        bill_addr = get_const("bill_addr_svg")
         answer = f'''{txt}<div style="width: 200px; height: 200px">{bill_addr}</div>'''
         logger.info(f"answer_for_classify {labels[0]}:\n{txt}")
     elif any(label in classify_result for label in labels[2:6]):
