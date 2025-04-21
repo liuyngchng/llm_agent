@@ -92,23 +92,27 @@ def save_data_source_config(data_source_cfg: dict, cfg: dict) -> bool:
     data_source_cfg['db_psw_cypher'] = encrypt(data_source_cfg['db_psw'], cfg['sys']['cypher_key'])
     current_config = get_data_source_config_by_uid(data_source_cfg['uid'], cfg)
     if current_config:
-        exec_sql = (f"update db_config set "
-                    f"db_type ='{data_source_cfg["db_type"]}', "
-                    f"db_host ='{data_source_cfg["db_host"]}', "
-                    f"db_port ='{data_source_cfg["db_port"]}',"
-                    f"db_name='{data_source_cfg["db_name"]}', "
-                    f"db_usr='{data_source_cfg["db_usr_cypher"]}', "
-                    f"db_psw='{data_source_cfg["db_psw_cypher"]}'"
-                    f" where uid = '{data_source_cfg["uid"]}'")
+        exec_sql = (f'''
+                    update db_config set 
+                    db_type ='{data_source_cfg["db_type"]}', 
+                    db_host ='{data_source_cfg["db_host"]}', 
+                    db_port ='{data_source_cfg["db_port"]}',
+                    db_name='{data_source_cfg["db_name"]}', 
+                    db_usr='{data_source_cfg["db_usr_cypher"]}', 
+                    db_psw='{data_source_cfg["db_psw_cypher"]}'
+                    where uid = '{data_source_cfg["uid"]}
+                    ''')
     else:
-        exec_sql = (f"insert into db_config (uid, db_type, db_host, db_port, db_name, db_usr, db_psw) "
-                    f"values ('{data_source_cfg["uid"]}', "
-                    f"'{data_source_cfg["db_type"]}', "
-                    f"'{data_source_cfg["db_host"]}', "
-                    f"'{data_source_cfg["db_port"]}', "
-                    f"'{data_source_cfg["db_name"]}', "
-                    f"'{data_source_cfg["db_usr_cypher"]}', "
-                    f"'{data_source_cfg["db_psw_cypher"]}')")
+        exec_sql = (f'''
+                    insert into db_config (uid, db_type, db_host, db_port, db_name, db_usr, db_psw)
+                    values ('{data_source_cfg["uid"]}', 
+                    '{data_source_cfg["db_type"]}',
+                    '{data_source_cfg["db_host"]}', 
+                    '{data_source_cfg["db_port"]}', 
+                    '{data_source_cfg["db_name"]}', 
+                    '{data_source_cfg["db_usr_cypher"]}', 
+                    '{data_source_cfg["db_psw_cypher"]}')
+                    ''')
     with sqlite3.connect(config_db) as my_conn:
         try:
             result = sqlite_insert_tool(my_conn, exec_sql)

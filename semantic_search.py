@@ -103,7 +103,7 @@ def classify_question(classify_label: list, question: str, cfg: dict, is_remote=
     })
     del model
     torch.cuda.empty_cache()
-    return response.content
+    return rmv_think_block(response.content)
 
 def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[str, dict]]]:
     """

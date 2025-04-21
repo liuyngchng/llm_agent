@@ -3,7 +3,7 @@ FROM ubuntu_py:24.04 as builder
 
 WORKDIR /opt
 ARG PROXY=""
-# ARG PROXY=" -i http:///root/pypi/+simple --trusted-host devpi.11.11.77.81.nip.io"
+# ARG PROXY=" -i http://devpi.11.11.77.81.nip.io/root/pypi/+simple --trusted-host devpi.11.11.77.81.nip.io"
 #ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple"
 COPY ./llm_py_env_whl.Python.3.12.3 /tmp/whl
 RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn flask \
