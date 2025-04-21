@@ -157,6 +157,19 @@ def decrypt(dt: str, key: str) -> str:
     logger.info(f"return {dt_rt} for cypher_txt {dt}")
     return dt_rt
 
+def get_const(key:str)->str | None:
+    value = None
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            sql = f"select value from const where key='{key}' limit 1"
+            check_info = sqlite_query_tool(my_conn, sql)
+            value_dt = json.loads(check_info)['data']
+            value = value_dt[0][0]
+            logger.info(f"get_const {value} with uid {value}")
+        except Exception as e:
+            logger.info(f"no_value_info_found_for_key, {key}")
+    return value
+
 if __name__ == '__main__':
     """
     just for test, not for a production environment.

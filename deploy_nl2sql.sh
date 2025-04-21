@@ -1,3 +1,4 @@
+#!/bin/bash
 docker stop llm_nl2sql
 docker rm llm_nl2sql
 #docker run -dit --name llm_nl2sql --network host --rm \

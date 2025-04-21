@@ -1,3 +1,4 @@
+#!/bin/bash
 docker stop llm_rag
 docker rm llm_rag
 #docker run -dit --name llm_rag --network host --rm \
