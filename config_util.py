@@ -10,9 +10,7 @@ import base64
 
 from db_util import sqlite_query_tool, sqlite_insert_tool
 
-# 加载配置
 logging.config.fileConfig('logging.conf', encoding="utf-8")
-
 logger = logging.getLogger(__name__)
 config_db = "config.db"
 
@@ -170,13 +168,30 @@ def get_const(key:str)->str | None:
             logger.info(f"no_value_info_found_for_key, {key}")
     return value
 
+def get_consts()-> dict:
+    const = {}
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            sql = f"select key, value from const limit 100"
+            check_info = sqlite_query_tool(my_conn, sql)
+            value_dt = json.loads(check_info)['data']
+            value = value_dt[0][0]
+            for key, value in value_dt:
+                const[key] = value
+            logger.info(f"get_const {value} with uid {value}")
+        except Exception as e:
+            logger.info(f"no_value_info_found_for_key, {key}")
+    return const
+
 if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
-    key0 = '1234567890123456'
-    dt0 = 'test'
-    dt1 =encrypt(dt0, key0)
-    logger.info(dt1)
-    dt2 = decrypt(dt1, key0)
-    logger.info(dt2)
+    # key0 = '1234567890123456'
+    # dt0 = 'test'
+    # dt1 =encrypt(dt0, key0)
+    # logger.info(dt1)
+    # dt2 = decrypt(dt1, key0)
+    # logger.info(dt2)
+    a = get_consts()
+    logger.info(f"a {a}")

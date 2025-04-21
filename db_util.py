@@ -239,6 +239,7 @@ def get_db_uri(cfg: dict) -> str:
     logger.info(f"db_uri {my_db_uri}")
     return my_db_uri
 
+
 def test_db():
     my_sql = "SELECT * from order_info"
     my_cfg = init_yml_cfg()

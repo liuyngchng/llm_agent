@@ -10,7 +10,7 @@ import re
 
 from flask import Flask, request, jsonify, render_template, Response, send_from_directory, abort, make_response
 
-from config_util import auth_user, get_const
+from config_util import auth_user, get_consts
 from semantic_search import search, classify_question, fill_dict
 from sys_init import init_yml_cfg
 
@@ -24,6 +24,7 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 session_dict = {}
+const_dict = get_consts()
 
 
 @app.route('/', methods=['GET'])
@@ -37,6 +38,7 @@ def login_index():
         dt_idx = "rag_index.html"
         logger.info(f"return_page_with_no_auth {dt_idx}")
         return render_template(dt_idx, uid='foo', sys_name=my_cfg['sys']['name'])
+
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -77,6 +79,7 @@ def get_data():
     print(data)
     return jsonify({"message": "Data received successfully!", "data": data}), 200
 
+
 @app.route('/static/<file_name>', methods=['GET'])
 def get_file(file_name):
     """
@@ -95,6 +98,7 @@ def get_file(file_name):
     logger.info(f"return static file {file_name}")
     return send_from_directory(static_dir, file_name)
 
+
 @app.route('/rag/submit', methods=['POST'])
 def submit():
     """
@@ -105,12 +109,12 @@ def submit():
     msg = request.form.get('msg')
     uid = request.form.get('uid')
     logger.info("rcv_msg: {}".format(msg))
-    labels = json.loads(get_const("classify_label"))
+    labels = json.loads(const_dict.get("classify_label"))
     classify_result = classify_question(labels, msg, my_cfg, True)
     logger.info(f"classify_result: {classify_result}")
     content_type='text/markdown; charset=utf-8'
     if labels[1] in classify_result:
-        user_dict = json.loads(get_const("chat4"))
+        user_dict = json.loads(const_dict.get("chat4"))
         if uid in session_dict and session_dict[uid]:
 
             user_dict = fill_dict(session_dict[uid], user_dict, my_cfg, True)
@@ -126,8 +130,8 @@ def submit():
     if labels[0] in classify_result:
         answer = search(msg, my_cfg, True)
         # answer = rmv_think_block(answer)
-        txt = get_const("wechat_txt")
-        bill_addr = get_const("bill_addr_svg")
+        txt = const_dict.get("wechat_txt")
+        bill_addr = const_dict.get("bill_addr_svg")
         answer = f'''{txt}<div style="width: 200px; height: 200px">{bill_addr}</div>'''
         logger.info(f"answer_for_classify {labels[0]}:\n{txt}")
     elif any(label in classify_result for label in labels[2:6]):
@@ -137,24 +141,13 @@ def submit():
         else:
             session_dict[uid] += ", " + msg
         logger.info(f"person_info[{uid}] = {session_dict[uid]} ")
-        answer = get_const("chat1")
+        answer = const_dict.get("chat1")
         logger.info(f"answer_for_classify {labels[2:6]}:\n{answer}")
     else:
-        answer = get_const("chat2")
+        answer = const_dict.get("chat2")
         logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")
     return Response(answer, content_type=content_type, status=200)
-def test_req():
-    """
-    ask the LLM for some private question not public to outside,
-    let LLM retrieve the information from local vector database, 
-    and the output the answer.
-    """
-    logger.info(f"config {my_cfg}")
-    my_question = "我想充值缴费？"
-    logger.info(f"invoke question: {my_question}")
 
-    answer = search(my_question, my_cfg, True)
-    logger.info(f"answer is \r\n{answer}")
 
 @app.route('/door/srv', methods=['POST'])
 def door_service():
@@ -171,6 +164,18 @@ def door_service():
     response.status_code = 200
     return response
 
+
+def test_req():
+    """
+    ask the LLM for some private question not public to outside,
+    let LLM retrieve the information from local vector database,
+    and the output the answer.
+    """
+    logger.info(f"config {my_cfg}")
+    my_question = "我想充值缴费？"
+    logger.info(f"invoke question: {my_question}")
+    answer = search(my_question, my_cfg, True)
+    logger.info(f"answer is \r\n{answer}")
 
 if __name__ == '__main__':
     # test_req()
