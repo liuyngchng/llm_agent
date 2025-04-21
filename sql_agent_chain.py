@@ -21,7 +21,7 @@ from langgraph.graph.message import AnyMessage, add_messages
 import logging.config
 
 import db_util
-from sys_init import init_txt_cfg
+from sys_init import init_yml_cfg
 
 """
 curl -s --noproxy '*' -X POST http://127.0.0.1:11434/api/chat -d '{
@@ -39,13 +39,14 @@ logger = logging.getLogger(__name__)
 # 支持 tools 调用
 #model_name="llama3.1:8b"
 
-model_name = "deepseek-r1"
-api_url = "http://127.0.0.1:11434"
-api_key = SecretStr("123456789")
-db_file = "test2.db"
-db_uri = f"sqlite:///{db_file}"
-question ="查询张三2025年的订单详细信息"
-# question = "查询山东天然气销售分公司2025年的订单详细信息"
+my_cfg = init_yml_cfg()
+
+model_name = my_cfg['ai']['model_name']
+api_url = my_cfg['ai']['api_uri']
+api_key = SecretStr(my_cfg['ai']['api_key'])
+db_file = my_cfg['db']['name']
+db_uri = db_util.get_db_uri(my_cfg)
+question = "查询山东天然气销售分公司2025年的订单详细信息"
 
 
 def get_llm(is_remote: False):
@@ -194,7 +195,6 @@ if __name__ == "__main__":
     a question input about the information in DB will be turned into a SQL query,
     then data retrieved from DB returned back from LLM to user.
     """
-    init_txt_cfg()
     # use SQLite DB
     db = SQLDatabase.from_uri(db_uri)
 

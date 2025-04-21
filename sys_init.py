@@ -8,34 +8,6 @@ import logging.config
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-def init_txt_cfg(cfg_file="env.cfg")-> dict[str, str] | None:
-    """
-    env.cfg 中， 各行参数如下
-    [1] api_uri
-    [2] api_key
-    [3] model_name
-    [4] db_uri
-    """
-    # global api_uri, api_key, model_name
-    _my_cfg = {"api_uri":"http://127.0.0.1:11434", "api_key":"", "model_name":"deepseek-r1"}
-    if not os.path.exists(cfg_file):
-        raise FileNotFoundError(f"配置文件不存在: {cfg_file}")
-    with open(cfg_file, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-    if len(lines) < 2:
-        logger.error("cfg_err_in_file_{}".format(cfg_file))
-        return _my_cfg
-    try:
-        _my_cfg["api_uri"] = lines[0].strip()
-        _my_cfg["api_key"] = lines[1].strip()
-        _my_cfg["model_name"] = lines[2].strip()
-        _my_cfg["db_uri"]= lines[3].strip()
-        logger.info(f"init_cfg_info, {_my_cfg}")
-    except Exception as e:
-        logger.error(f"init_cfg_error: {e}")
-        raise e
-    return _my_cfg
-
 def init_yml_cfg(cfg_file="config.yml")-> dict[str, any]:
     """
     yaml config.yml file content as following
