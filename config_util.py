@@ -171,16 +171,14 @@ def get_const(key:str)->str | None:
 def get_consts()-> dict:
     const = {}
     with sqlite3.connect(config_db) as my_conn:
+        sql = f"select key, value from const limit 100"
         try:
-            sql = f"select key, value from const limit 100"
             check_info = sqlite_query_tool(my_conn, sql)
             value_dt = json.loads(check_info)['data']
-            value = value_dt[0][0]
             for key, value in value_dt:
                 const[key] = value
-            logger.info(f"get_const {value} with uid {value}")
         except Exception as e:
-            logger.info(f"no_value_info_found_for_key, {key}")
+            logger.exception(f"err_occurred_for_db {config_db}, sql {sql}")
     return const
 
 if __name__ == '__main__':
