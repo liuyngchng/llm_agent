@@ -21,4 +21,4 @@ RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime' && \
     ulimit -n 65535
 WORKDIR /opt/app
 EXPOSE 19000
-ENTRYPOINT ["sh", "./start_rag.sh"]
+ENTRYPOINT ["sh", "./entrypoint.sh"]

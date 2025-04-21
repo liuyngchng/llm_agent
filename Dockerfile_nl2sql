@@ -19,4 +19,4 @@ RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime' && \
 COPY --from=builder /opt/llm_py_env /opt/llm_py_env
 WORKDIR /opt/app
 EXPOSE 19000
-ENTRYPOINT ["sh", "./start_nl2sql.sh"]
+ENTRYPOINT ["sh", "./entrypoint.sh"]
