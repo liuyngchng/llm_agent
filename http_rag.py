@@ -75,9 +75,10 @@ def get_data():
     curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/ask' -H "Content-Type: application/json"  -d '{"msg":"who are you?"}'
     :return:
     """
-    data = request.get_json()
-    print(data)
-    return jsonify({"message": "Data received successfully!", "data": data}), 200
+    logger.info("health_check")
+    return jsonify({"status": 200}), 200
+    # return Response({"status":200}, content_type=content_type, status=200)
+
 
 
 @app.route('/static/<file_name>', methods=['GET'])

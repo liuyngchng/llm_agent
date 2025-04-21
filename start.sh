@@ -3,6 +3,8 @@
 MODULE=${1:-http_rag}
 # delete de suffix '.py'
 MODULE=${MODULE%.py}
+# you can go to module dir here
+#cd 'module_dir'
 echo 'starting module '${MODULE}
 # active the virtual env for python, or you can hardcode your env python location
 source ../llm_py_env/bin/activate
