@@ -5,6 +5,8 @@ import json
 import copy
 import sqlite3
 import logging.config
+import time
+
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 import base64
@@ -16,15 +18,17 @@ logger = logging.getLogger(__name__)
 config_db = "config.db"
 
 
-def auth_user(user:str, t: str) -> dict:
+def auth_user(user:str, t: str, cfg: dict) -> dict:
     auth_result ={"pass": False, "uid": ""}
     with sqlite3.connect(config_db) as my_conn:
         sql = f"select id from user where name='{user}' and t = '{t}' limit 1"
         check_info = sqlite_query_tool(my_conn, sql)
         user_id = json.loads(check_info)['data']
+
     if user_id:
         auth_result["pass"] = True
         auth_result["uid"] = user_id[0][0]
+        auth_result["t"] = encrypt(str(time.time() * 1000), cfg['sys']['cypher_key'])
     return auth_result
 
 def get_uid_by_user(usr:str) ->str:

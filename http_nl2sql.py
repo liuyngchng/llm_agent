@@ -10,7 +10,7 @@ import os
 
 from flask import Flask, request, jsonify, render_template, Response
 
-import config_util
+import config_util as cfg_utl
 from sql_agent import get_dt_with_nl
 from sys_init import init_yml_cfg
 from audio import transcribe_webm_audio_bytes
@@ -58,7 +58,7 @@ def config_index():
     except Exception as e:
         logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
         raise jsonify("err_in_config_index")
-    ctx = config_util.get_data_source_config_by_uid(uid, my_cfg)
+    ctx = cfg_utl.get_data_source_config_by_uid(uid, my_cfg)
     ctx["uid"] = uid
     ctx['sys_name']=my_cfg['sys']['name']
     ctx["waring_info"]=""
@@ -88,11 +88,11 @@ def save_config():
         "db_usr": db_usr,
         "db_psw": db_psw,
     }
-    usr = config_util.get_user_by_uid(uid)
+    usr = cfg_utl.get_user_by_uid(uid)
     if not usr:
         data_source_cfg['waring_info'] = '非法访问，请您先登录系统'
         return render_template(dt_idx, **data_source_cfg)
-    save_cfg_result = config_util.save_data_source_config(data_source_cfg, my_cfg)
+    save_cfg_result = cfg_utl.save_data_source_config(data_source_cfg, my_cfg)
     if save_cfg_result:
         data_source_cfg['waring_info'] = '保存成功'
     else:
@@ -140,7 +140,7 @@ def login():
     user = request.form.get('usr').strip()
     t = request.form.get('t').strip()
     logger.info(f"user login: {user}, {t}")
-    auth_result = config_util.auth_user(user, t)
+    auth_result = cfg_utl.auth_user(user, t, my_cfg)
     logger.info(f"user login result: {user}, {t}, {auth_result}")
     if not auth_result["pass"]:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
@@ -152,7 +152,12 @@ def login():
         return render_template("login.html", **ctx)
     else:
         logger.info(f"return_page {dt_idx}")
-        return render_template(dt_idx, uid=auth_result["uid"], sys_name=my_cfg['sys']['name'])
+        ctx = {
+            "uid": auth_result["uid"],
+            "t": auth_result["t"],
+            "sys_name": my_cfg['sys']['name'],
+        }
+        return render_template(dt_idx, **ctx)
 
 @app.route('/query/data', methods=['POST'])
 def query_data(catch=None):
@@ -176,7 +181,7 @@ def query_data(catch=None):
     logger.info(f"ask_question({msg}, my_cfg, html, True)")
     if uid and uid != 'foo':
         logger.info(f"build_data_source_cfg_with_uid_{uid}")
-        db_source_cfg = config_util.build_data_source_cfg_with_uid(uid, my_cfg)
+        db_source_cfg = cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg)
     else:
         db_source_cfg = my_cfg
     answer = get_dt_with_nl(msg, db_source_cfg, 'markdown', True)
@@ -192,7 +197,7 @@ def authenticate(req)->bool:
         return True
     result = False
     try:
-        if config_util.get_user_by_uid(req.form.get('uid').strip()):
+        if cfg_utl.get_user_by_uid(req.form.get('uid').strip()):
             result = True
         else:
             logger.error(f"illegal_request {req}")

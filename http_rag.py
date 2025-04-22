@@ -53,7 +53,7 @@ def login():
     user = request.form.get('usr').strip()
     t = request.form.get('t').strip()
     logger.info(f"user login: {user}, {t}")
-    auth_result = auth_user(user, t)
+    auth_result = auth_user(user, t, my_cfg)
     logger.info(f"user login result: {user}, {t}, {auth_result}")
     if not auth_result["pass"]:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
@@ -65,7 +65,12 @@ def login():
         return render_template("login.html", **ctx)
     else:
         logger.info(f"return_page {dt_idx}")
-        return render_template(dt_idx, uid=auth_result["uid"], sys_name=my_cfg['sys']['name'])
+        ctx = {
+            "uid": auth_result["uid"],
+            "t": auth_result["t"],
+            "sys_name": my_cfg['sys']['name'],
+        }
+        return render_template(dt_idx, **ctx)
 
 
 @app.route('/health', methods=['GET'])
