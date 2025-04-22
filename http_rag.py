@@ -147,6 +147,9 @@ def submit():
         logger.info(f"person_info[{uid}] = {session_dict[uid]} ")
         answer = const_dict.get("chat1")
         logger.info(f"answer_for_classify {labels[2:6]}:\n{answer}")
+    elif labels[6] in classify_result:
+        answer = const_dict.get("chat5")
+        logger.info(f"answer_for_classify {labels[6]}:\n{answer}")
     else:
         answer = const_dict.get("chat2")
         logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")

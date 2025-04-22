@@ -205,15 +205,18 @@ def test_fill_dict():
 
 def test_classify():
      my_cfg = init_yml_cfg()
-     labels = ["缴费", "上门服务", "个人资料", "自我介绍", "个人信息", "身份登记", "其他"]
-     result = classify_question(labels, "我要缴费", my_cfg, True)
-     logger.info(f"result: {result}")
-     result = classify_question(labels, "你们能派个人来吗？", my_cfg, True)
-     logger.info(f"result: {result}")
-     result = classify_question(labels, "我家住辽宁省沈阳市", my_cfg, True)
-     logger.info(f"result: {result}")
+     labels = ["缴费", "上门服务", "个人资料", "自我介绍", "个人信息", "身份登记", "信息查询", "其他"]
+     # result = classify_question(labels, "我要缴费", my_cfg, True)
+     # logger.info(f"result: {result}")
+     # result = classify_question(labels, "你们能派个人来吗？", my_cfg, True)
+     # logger.info(f"result: {result}")
+     # result = classify_question(labels, "我家住辽宁省沈阳市", my_cfg, True)
+     # logger.info(f"result: {result}")
+     result = classify_question(labels, "我用户号忘了你们给查一下", my_cfg, True)
+     if labels[6] in result:
+        logger.info(f"classify_result:labels[6] {labels[6]}")
 
 
 if __name__ == "__main__":
 
-    test_fill_dict()
+    test_classify()
