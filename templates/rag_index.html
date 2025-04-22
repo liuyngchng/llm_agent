@@ -72,11 +72,13 @@
             try {
                 sendButton.disabled = true;
                 loadingMsg = addMessage('<div class="loading-dots">处理中</div>', 'bot');
-
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), 300000);
                 const response = await fetch('/rag/submit', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(document.getElementById('uid').value)}`
+                    body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(document.getElementById('uid').value)}`,
+                    signal: controller.signal
                 });
 
                 loadingMsg && chatContainer.contains(loadingMsg) && chatContainer.removeChild(loadingMsg);

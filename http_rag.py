@@ -117,7 +117,6 @@ def submit():
     if labels[1] in classify_result:
         user_dict = json.loads(const_dict.get("chat4"))
         if uid in session_dict and session_dict[uid]:
-
             user_dict = fill_dict(session_dict[uid], user_dict, my_cfg, True)
             logger.info(f"html_table_with_personal_info_filled_in for {labels[1]}")
         else:
@@ -129,8 +128,7 @@ def submit():
         response.status_code = 200
         return response
     if labels[0] in classify_result:
-        answer = search(msg, my_cfg, True)
-        # answer = rmv_think_block(answer)
+        # answer = search(msg, my_cfg, True)
         txt = const_dict.get("wechat_txt")
         bill_addr = const_dict.get("bill_addr_svg")
         answer = f'''{txt}<div style="width: 200px; height: 200px">{bill_addr}</div>'''
