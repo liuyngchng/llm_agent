@@ -168,6 +168,37 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
     except Exception as es:
         logger.error(f"json_loads_err_for {response.content}")
     return fill_result
+
+def complete_user_info(user_info: str, append_info: str, cfg: dict, is_remote=True) -> str:
+    """
+    search user questions in knowledge base,
+    submit the search result and user question to LLM, return the answer
+    """
+    logger.info(f"user_info [{user_info}], append_info {append_info}")
+    template = """
+        基于已知的个人信息：{context}，以及新提供的个人信息 {append_info}, 输出更新后个人信息
+        (1) 如果同类的信息有冲突，以新提供的信息为准
+        (2) 直接返回填写好的纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
+        """
+    prompt = ChatPromptTemplate.from_template(template)
+    logger.info(f"prompt {prompt}")
+    model = get_model(cfg, is_remote)
+    chain = prompt | model
+    logger.info(f"submit user_info[{user_info}], append_info[{append_info}] to llm {cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
+    response = chain.invoke({
+        "context": user_info,
+        "append_info": append_info,
+    })
+    del model
+    torch.cuda.empty_cache()
+    fill_result = user_info
+    try:
+        fill_result = rmv_think_block(response.content)
+    except Exception as ex:
+        logger.error(f"json_loads_err_for {response.content}")
+    return fill_result
+
+
 def get_model(cfg, is_remote):
     if is_remote:
         model = ChatOpenAI(api_key=cfg['ai']['api_key'],
@@ -203,6 +234,18 @@ def test_fill_dict():
     test_fill_result = fill_dict(info, user_dict, my_cfg, True)
     logger.info(f"{test_fill_result}")
 
+def test_complete_user_info():
+    user_info = "我叫张三, 我的电话是 13800138000, 我家住在新疆克拉玛依下城区111123号"
+    user_info1 = "我的电话是 18918918999, 我家住在湖南张家界上城区222666号"
+    user_info2 = "我叫李四"
+    my_cfg = init_yml_cfg()
+    logger.info(f"base_user_info={user_info}")
+    complete_user_info_result = complete_user_info(user_info, user_info1, my_cfg, True)
+    logger.info(f"complete_user_info_result1={complete_user_info_result}")
+    complete_user_info_result = complete_user_info(user_info1, user_info2, my_cfg, True)
+    logger.info(f"complete_user_info_result2={complete_user_info_result}")
+
+
 def test_classify():
      my_cfg = init_yml_cfg()
      labels = ["缴费", "上门服务", "个人资料", "自我介绍", "个人信息", "身份登记", "信息查询", "其他"]
@@ -219,4 +262,5 @@ def test_classify():
 
 if __name__ == "__main__":
 
-    test_classify()
+    # test_classify()
+    test_complete_user_info()

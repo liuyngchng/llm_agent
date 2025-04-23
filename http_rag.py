@@ -11,7 +11,7 @@ import re
 from flask import Flask, request, jsonify, render_template, Response, send_from_directory, abort, make_response
 
 from config_util import auth_user, get_consts
-from semantic_search import search, classify_question, fill_dict
+from semantic_search import search, classify_question, fill_dict, complete_user_info
 from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -150,6 +150,7 @@ def submit():
             session_dict[uid] = msg
         else:
             session_dict[uid] += ", " + msg
+            session_dict[uid] = complete_user_info(session_dict[uid], msg, my_cfg, True)
         logger.info(f"person_info[{uid}] = {session_dict[uid]} ")
         answer = const_dict.get("chat1")
         logger.info(f"answer_for_classify {labels[2:6]}:\n{answer}")
