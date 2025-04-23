@@ -11,7 +11,7 @@ import re
 from flask import Flask, request, jsonify, render_template, Response, send_from_directory, abort, make_response
 
 from config_util import auth_user, get_consts
-from semantic_search import search, classify_question, fill_dict, complete_user_info
+from semantic_search import search, classify_question, fill_dict, update_session_info, extract_session_info
 from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -23,7 +23,7 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
-session_dict = {}
+session_info = {}
 const_dict = get_consts()
 
 
@@ -125,13 +125,20 @@ def submit():
     classify_result = classify_question(labels, msg, my_cfg, True)
     logger.info(f"classify_result: {classify_result}")
     content_type='text/markdown; charset=utf-8'
+    s_info=extract_session_info(msg, my_cfg, True)
+    if s_info:
+        if uid not in session_info:
+            logger.info(f"{uid} uid_not_in_session_dict {session_info}")
+            session_info[uid] = s_info
+        else:
+            session_info[uid] = update_session_info(session_info[uid], s_info, my_cfg, True)
     if labels[1] in classify_result:
         user_dict = json.loads(const_dict.get("chat4"))
-        if uid in session_dict and session_dict[uid]:
-            user_dict = fill_dict(session_dict[uid], user_dict, my_cfg, True)
+        if uid in session_info and session_info[uid]:
+            user_dict = fill_dict(session_info[uid], user_dict, my_cfg, True)
             logger.info(f"html_table_with_personal_info_filled_in for {labels[1]}")
         else:
-            logger.info(f"{uid},current_id_not_in_person_info, {session_dict}")
+            logger.info(f"{uid},current_id_not_in_person_info, {session_info}")
         content_type = 'text/html; charset=utf-8'
         logger.info(f"answer_for_classify {labels[1]}:\nuser_dict: {user_dict}")
         response = make_response(render_template("door_service.html", **user_dict))
@@ -145,12 +152,7 @@ def submit():
         answer = f'''{txt}<div style="width: 200px; height: 200px">{bill_addr}</div>'''
         logger.info(f"answer_for_classify {labels[0]}:\n{txt}")
     elif any(label in classify_result for label in labels[2:6]):
-        if uid not in session_dict:
-            logger.info(f"{uid} uid_not_in_person_info {session_dict}")
-            session_dict[uid] = msg
-        else:
-            session_dict[uid] = complete_user_info(session_dict[uid], msg, my_cfg, True)
-        logger.info(f"person_info[{uid}] = {session_dict[uid]} ")
+        logger.info(f"session_dict[{uid}] = {session_info[uid]} ")
         answer = const_dict.get("chat1")
         logger.info(f"answer_for_classify {labels[2:6]}:\n{answer}")
     elif labels[6] in classify_result:

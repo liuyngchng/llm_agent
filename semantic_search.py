@@ -169,7 +169,7 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
         logger.error(f"json_loads_err_for {response.content}")
     return fill_result
 
-def complete_user_info(user_info: str, append_info: str, cfg: dict, is_remote=True) -> str:
+def update_session_info(user_info: str, append_info: str, cfg: dict, is_remote=True) -> str:
     """
     search user questions in knowledge base,
     submit the search result and user question to LLM, return the answer
@@ -198,6 +198,34 @@ def complete_user_info(user_info: str, append_info: str, cfg: dict, is_remote=Tr
         logger.error(f"json_loads_err_for {response.content}")
     return fill_result
 
+def extract_session_info(chat_log: str, cfg: dict, is_remote=True) -> str:
+    """
+    extract_session_info from chat log
+    """
+    logger.info(f"chat_log [{chat_log}]")
+    template = """
+        基于以下文本：
+        {context}
+        请输出涉及到个人信息的部分文本
+        (1)直接返回填写好的纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
+        (2)若没有个人信息，则输出空字符串
+        """
+    prompt = ChatPromptTemplate.from_template(template)
+    logger.info(f"prompt {prompt}")
+    model = get_model(cfg, is_remote)
+    chain = prompt | model
+    logger.info(f"submit chat_log[{chat_log}] to llm {cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
+    response = chain.invoke({
+        "context": chat_log
+    })
+    del model
+    torch.cuda.empty_cache()
+    final_result = chat_log
+    try:
+        final_result = rmv_think_block(response.content)
+    except Exception as ex:
+        logger.error(f"json_loads_err_for {response.content}")
+    return final_result
 
 def get_model(cfg, is_remote):
     if is_remote:
@@ -240,9 +268,9 @@ def test_complete_user_info():
     user_info2 = "我叫李四"
     my_cfg = init_yml_cfg()
     logger.info(f"base_user_info={user_info}")
-    complete_user_info_result = complete_user_info(user_info, user_info1, my_cfg, True)
+    complete_user_info_result = update_session_info(user_info, user_info1, my_cfg, True)
     logger.info(f"complete_user_info_result1={complete_user_info_result}")
-    complete_user_info_result = complete_user_info(user_info1, user_info2, my_cfg, True)
+    complete_user_info_result = update_session_info(user_info1, user_info2, my_cfg, True)
     logger.info(f"complete_user_info_result2={complete_user_info_result}")
 
 
