@@ -105,7 +105,7 @@
                 contentType?.includes('markdown') ? marked.parse(text) : text,
                 {
                     ALLOWED_TAGS: ['div','h1','form','label','select','option','input','textarea','button','p','br','span','a','strong','em','img', 'meta', 'style', 'svg','path','circle','rect','line',],
-                    ALLOWED_ATTR: ['id','class','for','name','required','type','value','href','placeholder','src','method', 'action', 'style','charset', 'colspan', 'rowspan', 'viewBox','d','cx','cy','r','x','y','stroke','fill',]
+                    ALLOWED_ATTR: ['id','class','for','name','required','type','value','target', 'href','placeholder','src','method', 'action', 'style','charset', 'colspan', 'rowspan', 'viewBox','d','cx','cy','r','x','y','stroke','fill',]
                 }
             );
             if (type === 'user') {
