@@ -44,7 +44,9 @@ def login_index():
 def login():
     """
     form submit, get data from form
-    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"user":"test"}'
+    curl -s --noproxy '*' -X POST 'http://127.0.0.1:19000/login' \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d '{"user":"test"}'
     :return:
     echo -n 'my_str' |  md5sum
     """
@@ -77,7 +79,9 @@ def login():
 def get_data():
     """
     JSON submit, get data from application JSON
-    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/ask' -H "Content-Type: application/json"  -d '{"msg":"who are you?"}'
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/ask' \
+        -H "Content-Type: application/json" \
+        -d '{"msg":"who are you?"}'
     :return:
     """
     logger.info("health_check")
@@ -109,7 +113,9 @@ def get_file(file_name):
 def submit():
     """
     form submit, get data from form
-    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/rag/submit' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"msg":"who are you?"}'
+    curl -s --noproxy '*' -X POST 'http://127.0.0.1:19000/rag/submit' \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d '{"msg":"who are you?"}'
     :return:
     """
     msg = request.form.get('msg')
@@ -160,7 +166,9 @@ def submit():
 def door_service():
     """
     form submit, get data from form
-    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"user":"test"}'
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d '{"user":"test"}'
     :return:
     echo -n 'my_str' |  md5sum
     """

@@ -104,7 +104,8 @@ def save_config():
 def get_status():
     """
     JSON submit, get data from application JSON
-    curl -s --noproxy '*' -X GET  'http://127.0.0.1:19000/status' -H "Content-Type: application/json"
+    curl -s --noproxy '*' -X GET  'http://127.0.0.1:19000/status' \
+        -H "Content-Type: application/json"
     :return:
     """
     data = {"message": "数据正常, service OK"}
@@ -131,7 +132,9 @@ def login_index():
 def login():
     """
     form submit, get data from form
-    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"user":"test"}'
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d '{"user":"test"}'
     :return:
     echo -n 'my_str' |  md5sum
     """
@@ -163,7 +166,9 @@ def login():
 def query_data(catch=None):
     """
     form submit, get data from form
-    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"msg":"who are you?"}'
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d '{"msg":"who are you?"}'
     :return:
     """
     msg = request.form.get('msg').strip()
@@ -210,7 +215,9 @@ def authenticate(req)->bool:
 def get_db_dt():
     """
     form submit, get data from form
-    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000//gt/db/dt' -H "Content-Type: application/json"  -d '{"msg":"把数据明细给我调出来"}'
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000//gt/db/dt' \
+        -H "Content-Type: application/json" \
+        -d '{"msg":"把数据明细给我调出来"}'
     :return:
     """
     msg = request.get_json().get('msg').strip()
@@ -227,7 +234,8 @@ def get_db_dt():
 @app.route('/trans/audio', methods=['POST'])
 def transcribe_audio() -> tuple[Response, int] | Response:
     """
-    curl -s --noproxy '*' -w '\n' -X POST -F 'audio=@static/asr_test.webm' 'http://localhost:19000/trans/audio'
+    curl -s --noproxy '*' -w '\n' -X POST 'http://localhost:19000/trans/audio'
+        -F 'audio=@static/asr_test.webm'
     """
     if request.content_length > 10 * 1024 * 1024:
         return Response(
