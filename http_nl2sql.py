@@ -15,10 +15,7 @@ from sql_agent import get_dt_with_nl
 from sys_init import init_yml_cfg
 from audio import transcribe_webm_audio_bytes
 
-# 加载配置
 logging.config.fileConfig('logging.conf', encoding="utf-8")
-
-# 创建 logger
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)

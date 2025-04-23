@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from semantic_search import search,check_ollama
-
 import logging.config
-
 from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
