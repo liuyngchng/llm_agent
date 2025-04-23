@@ -9,9 +9,9 @@ import os
 import re
 
 from flask import Flask, request, jsonify, render_template, Response, send_from_directory, abort, make_response
-
 from config_util import auth_user, get_consts
-from semantic_search import search, classify_question, fill_dict, update_session_info, extract_session_info
+from semantic_search import search
+from agt_util import classify_question, fill_dict, update_session_info, extract_session_info
 from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
