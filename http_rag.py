@@ -9,11 +9,14 @@ import os
 import re
 import time
 
-from flask import Flask, request, jsonify, render_template, Response, send_from_directory, abort, make_response
+from flask import (Flask, request, jsonify, render_template, Response,
+                   send_from_directory, abort, make_response)
 from config_util import auth_user, get_consts
 from semantic_search import search
-from agt_util import classify_msg, fill_dict, update_session_info, extract_session_info, get_abs_of_txt
+from agt_util import (classify_msg, fill_dict, update_session_info,
+                      extract_session_info, get_abs_of_chat)
 from sys_init import init_yml_cfg
+from utils import convert_list_to_md_table, convert_list_to_html_table
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -124,15 +127,8 @@ def submit():
     msg = request.form.get('msg')
     uid = request.form.get('uid')
     logger.info(f"rcv_msg: {msg}")
-    msg_history.append(
-        {
-            "id":len(msg_history),
-            "msg": msg,
-            "type": "用户",
-            "timestamp": int(time.time() * 1000)
-        }
-    )
-    logger.debug(f"msg_history: {msg_history}")
+    refresh_msg_history(msg, "用户")
+    logger.debug("msg_history:\n%s", '\n'.join(map(str, msg_history)))
     labels = json.loads(const_dict.get("classify_label"))
     classify_results = classify_msg(labels, msg, my_cfg, True)
     logger.info(f"classify_result: {classify_results}")
@@ -154,6 +150,7 @@ def submit():
                 logger.info(f"html_table_with_personal_info_filled_in for {labels[1]}")
             else:
                 logger.info(f"{uid},current_id_not_in_person_info, {session_info}")
+            refresh_msg_history(const_dict.get("label11"))
             content_type = 'text/html; charset=utf-8'
             logger.info(f"answer_for_classify {labels[1]}:\nuser_dict: {user_dict}")
             response = make_response(render_template("door_service.html", **user_dict))
@@ -167,32 +164,30 @@ def submit():
             bill_addr = const_dict.get("bill_addr_svg")
             answer += f'''{txt}<div style="width: 200px; height: 200px">{bill_addr}</div>'''
             logger.info(f"answer_for_classify {labels[0]}:\n{txt}")
+            refresh_msg_history(txt)
         # for submit personal information
         elif labels[2] in classify_result:
             logger.info(f"session_dict[{uid}] = {session_info[uid]} ")
             answer += const_dict.get("label2")
             logger.info(f"answer_for_classify {labels[2]}:\n{answer}")
+            refresh_msg_history(answer)
         # for information retrieval
         elif labels[3] in classify_result:
             answer += const_dict.get("label3")
             logger.info(f"answer_for_classify {labels[3]}:\n{answer}")
+            refresh_msg_history(answer)
         # for redirect to human talk
         elif labels[4] in classify_result:
             answer += const_dict.get("label4")
-            get_abs_of_txt(','.join(msg_history), my_cfg, True)
+            answer += f"<br>\n{convert_list_to_html_table(msg_history)}"
+            chat_abs = get_abs_of_chat(msg_history, my_cfg, True)
+            answer += f"<br><div>{chat_abs}</div>"
             logger.info(f"answer_for_classify {labels[4]}:\n{answer}")
         # for other labels
         else:
             answer += const_dict.get("label5")
             logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")
-    msg_history.append(
-        {
-            "id": len(msg_history),
-            "msg": answer,
-            "type": "机器人",
-            "timestamp": int(time.time() * 1000)
-        }
-    )
+            refresh_msg_history(answer)
     return Response(answer, content_type=content_type, status=200)
 
 
@@ -225,6 +220,16 @@ def test_req():
     logger.info(f"invoke msg: {my_question}")
     answer = search(my_question, my_cfg, True)
     logger.info(f"answer is \r\n{answer}")
+
+def refresh_msg_history(msg: str, msg_type="机器人"):
+    msg_history.append(
+        {
+            "id": len(msg_history),
+            "msg": msg,
+            "type": msg_type,
+            "timestamp": int(time.time() * 1000)
+        }
+    )
 
 if __name__ == '__main__':
     # test_req()

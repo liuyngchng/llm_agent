@@ -151,7 +151,7 @@ def extract_session_info(chat_log: str, cfg: dict, is_remote=True) -> str:
         logger.error(f"json_loads_err_for {response.content}")
     return final_result
 
-def get_abs_of_txt(txt: str, cfg: dict, is_remote=True) -> str:
+def get_abs_of_chat(txt: list, cfg: dict, is_remote=True) -> str:
     """
     get abstract of a long text
     """

@@ -171,7 +171,25 @@ button:disabled {
     margin-left: -10px;
     margin-right: -10px;
 }
+/* 添加表格基础样式 */
+.bot-message-bubble table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  background: white;
+}
 
+.bot-message-bubble td,
+.bot-message-bubble th {
+  border: 1px solid #e8e8e8;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.bot-message-bubble {
+  overflow-x: auto;
+  min-width: 0;
+}
 
 #doorSrvReqForm,
 #doorSrvReqForm > div[style*="display:flex"] {

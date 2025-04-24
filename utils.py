@@ -23,3 +23,21 @@ def extract_md_content(raw_md: str, language: str) -> str:
 def rmv_think_block(dt:str):
     dt = re.sub(r'<think>.*?</think>', '', dt, flags=re.DOTALL)
     return dt
+
+def convert_list_to_md_table(my_list: list):
+
+    headers = list(my_list[0].keys()) if my_list else []
+    markdown_table = f"| {' | '.join(headers)} |\n| {' | '.join(['---'] * len(headers))} |\n"
+    for item in my_list:
+        row = ' | '.join(str(item[h]).replace('\n', '<br>') for h in headers)
+        markdown_table += f"| {row} |\n"
+    return markdown_table
+
+def convert_list_to_html_table(my_list: list):
+    headers = list(my_list[0].keys()) if my_list else []
+    html = ('<table>\n<thead>\n<tr>' + ''.join(f'<th>{h}</th>' for h in headers)
+            + '</tr>\n</thead>\n<tbody>')
+    for item in my_list:
+        row = ''.join(f'<td>{str(item[h]).replace("\n", "<br>")}</td>' for h in headers)
+        html += f'\n<tr>{row}</tr>'
+    return html + '\n</tbody>\n</table>'

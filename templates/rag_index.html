@@ -29,6 +29,11 @@
     </div>
 
     <script>
+        // 设置markdown的渲染风格， 启用GitHub风格Markdown
+        marked.setOptions({
+          breaks: true,
+          gfm: true
+        });
         // 聊天容器
         const chatContainer = document.getElementById('chat-container');
         const queryForm = document.getElementById('query-form');
@@ -101,10 +106,12 @@
             const messageContainer = document.createElement('div');
             messageContainer.classList.add('message-container');
             // 安全处理并解析markdown/html
+            console.log('sanitizedContent_contentType', contentType)
+            console.log('sanitizedContent_text', text)
             const sanitizedContent = DOMPurify.sanitize(
                 contentType?.includes('markdown') ? marked.parse(text) : text,
                 {
-                    ALLOWED_TAGS: ['div','h1','form','label','select','option','input','textarea','button','p','br','span','a','strong','em','img', 'meta', 'style', 'svg','path','circle','rect','line',],
+                    ALLOWED_TAGS: ['div','h1','form','label','select','option','input','textarea','button','p','br','span','a','strong','em','img', 'meta', 'style', 'svg','path','circle','rect','line','table','thead','tbody','tr','th','td'],
                     ALLOWED_ATTR: ['id','class','for','name','required','type','value','target', 'href','placeholder','src','method', 'action', 'style','charset', 'colspan', 'rowspan', 'viewBox','d','cx','cy','r','x','y','stroke','fill',]
                 }
             );
