@@ -16,7 +16,7 @@ import socket
 import faiss
 import torch
 import httpx
-from utils import extract_html
+from utils import extract_md_content
 
 from sys_init import init_yml_cfg
 
@@ -77,7 +77,7 @@ def get_vector_db() -> FAISS:
 def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[str, dict]]]:
     """
     search user questions in knowledge base,
-    submit the search result and user question to LLM, return the answer
+    submit the search result and user msg to LLM, return the answer
     """
     logger.info(f"sim_search [{question}] in doc {doc}")
     # 搜索部分
@@ -90,21 +90,21 @@ def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[st
     template = """
         基于以下上下文：
         {context}
-        回答：{question}
+        回答：{msg}
         (1) 上下文中没有的信息，请不要自行编造
         """
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit question[{question}] to llm {cfg['ai']['api_uri']}, {cfg['ai']['model_name']}")
+    logger.info(f"submit msg[{question}] to llm {cfg['ai']['api_uri']}, {cfg['ai']['model_name']}")
     response = chain.invoke({
         "context": "\n\n".join([doc.page_content for doc, score in docs_with_scores]),
-        "question": question
+        "msg": question
     })
     del model
     torch.cuda.empty_cache()
-    return extract_html(response.content)
+    return extract_md_content(response.content, "html")
 
 
 def get_model(cfg, is_remote):

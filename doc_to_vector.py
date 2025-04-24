@@ -81,7 +81,7 @@ if __name__ == "__main__":
     """
     read the local document like txt, docx, pdf etc., and embedding the content 
     to a FAISS vector database.
-    submit a question about the local documents to the LLM, let LLM give a response
+    submit a msg about the local documents to the LLM, let LLM give a response
     that about the documents.
     """
     # os.putenv("CUDA_VISIBLE_DEVICES", "1")

@@ -16,11 +16,11 @@ def get_data(line_txt):
     注意：1. 必须是合法JSON 2. 禁止注释 3. 使用双引号
          2. 不要输出 <think> </think>所包含的内容，直接给出最终结果
          3. 禁用注释/代码块,确保数组闭合
-    输入文本：{question}"""
+    输入文本：{msg}"""
     prompt = ChatPromptTemplate.from_template(template)
     chain = prompt | model | RunnableLambda(lambda x: x.content)
     response = chain.invoke({
-        "question":f"请为以下文本生成10个不同提问角度的问题：{line_txt}"
+        "msg":f"请为以下文本生成10个不同提问角度的问题：{line_txt}"
     })
     logger.info(f"response: {response}")
     try:

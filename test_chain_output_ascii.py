@@ -7,7 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 # Define your desired data structure.
 class Joke(BaseModel):
-    setup: str = Field(description="question to set up a joke")
+    setup: str = Field(description="msg to set up a joke")
     punchline: str = Field(description="answer to resolve the joke")
 
 def get_chain():

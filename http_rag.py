@@ -7,11 +7,12 @@ import json
 import logging.config
 import os
 import re
+import time
 
 from flask import Flask, request, jsonify, render_template, Response, send_from_directory, abort, make_response
 from config_util import auth_user, get_consts
 from semantic_search import search
-from agt_util import classify_question, fill_dict, update_session_info, extract_session_info
+from agt_util import classify_msg, fill_dict, update_session_info, extract_session_info, get_abs_of_txt
 from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -26,6 +27,8 @@ os.system(
 session_info = {}
 const_dict = get_consts()
 
+# TODO: to limit the size of history to the maximum token size of LLM
+msg_history = []
 
 @app.route('/', methods=['GET'])
 def login_index():
@@ -120,47 +123,76 @@ def submit():
     """
     msg = request.form.get('msg')
     uid = request.form.get('uid')
-    logger.info("rcv_msg: {}".format(msg))
+    logger.info(f"rcv_msg: {msg}")
+    msg_history.append(
+        {
+            "id":len(msg_history),
+            "msg": msg,
+            "type": "用户",
+            "timestamp": int(time.time() * 1000)
+        }
+    )
+    logger.debug(f"msg_history: {msg_history}")
     labels = json.loads(const_dict.get("classify_label"))
-    classify_result = classify_question(labels, msg, my_cfg, True)
-    logger.info(f"classify_result: {classify_result}")
-    content_type='text/markdown; charset=utf-8'
-    s_info=extract_session_info(msg, my_cfg, True)
+    classify_results = classify_msg(labels, msg, my_cfg, True)
+    logger.info(f"classify_result: {classify_results}")
+    content_type = 'text/markdown; charset=utf-8'
+    s_info = extract_session_info(msg, my_cfg, True)
     if s_info:
         if uid not in session_info:
             logger.info(f"{uid} uid_not_in_session_dict {session_info}")
             session_info[uid] = s_info
         else:
             session_info[uid] = update_session_info(session_info[uid], s_info, my_cfg, True)
-    if labels[1] in classify_result:
-        user_dict = json.loads(const_dict.get("chat4"))
-        if uid in session_info and session_info[uid]:
-            user_dict = fill_dict(session_info[uid], user_dict, my_cfg, True)
-            logger.info(f"html_table_with_personal_info_filled_in for {labels[1]}")
+    answer = ""
+    for classify_result in  classify_results:
+        # for to door service
+        if labels[1] in classify_result:
+            user_dict = json.loads(const_dict.get("label1"))
+            if uid in session_info and session_info[uid]:
+                user_dict = fill_dict(session_info[uid], user_dict, my_cfg, True)
+                logger.info(f"html_table_with_personal_info_filled_in for {labels[1]}")
+            else:
+                logger.info(f"{uid},current_id_not_in_person_info, {session_info}")
+            content_type = 'text/html; charset=utf-8'
+            logger.info(f"answer_for_classify {labels[1]}:\nuser_dict: {user_dict}")
+            response = make_response(render_template("door_service.html", **user_dict))
+            response.headers['Content-Type'] = content_type
+            response.status_code = 200
+            return response
+         # for online pay service
+        if labels[0] in classify_result:
+            # answer = search(msg, my_cfg, True)
+            txt = const_dict.get("label0")
+            bill_addr = const_dict.get("bill_addr_svg")
+            answer += f'''{txt}<div style="width: 200px; height: 200px">{bill_addr}</div>'''
+            logger.info(f"answer_for_classify {labels[0]}:\n{txt}")
+        # for submit personal information
+        elif labels[2] in classify_result:
+            logger.info(f"session_dict[{uid}] = {session_info[uid]} ")
+            answer += const_dict.get("label2")
+            logger.info(f"answer_for_classify {labels[2]}:\n{answer}")
+        # for information retrieval
+        elif labels[3] in classify_result:
+            answer += const_dict.get("label3")
+            logger.info(f"answer_for_classify {labels[3]}:\n{answer}")
+        # for redirect to human talk
+        elif labels[4] in classify_result:
+            answer += const_dict.get("label4")
+            get_abs_of_txt(','.join(msg_history), my_cfg, True)
+            logger.info(f"answer_for_classify {labels[4]}:\n{answer}")
+        # for other labels
         else:
-            logger.info(f"{uid},current_id_not_in_person_info, {session_info}")
-        content_type = 'text/html; charset=utf-8'
-        logger.info(f"answer_for_classify {labels[1]}:\nuser_dict: {user_dict}")
-        response = make_response(render_template("door_service.html", **user_dict))
-        response.headers['Content-Type'] = content_type
-        response.status_code = 200
-        return response
-    if labels[0] in classify_result:
-        # answer = search(msg, my_cfg, True)
-        txt = const_dict.get("wechat_txt")
-        bill_addr = const_dict.get("bill_addr_svg")
-        answer = f'''{txt}<div style="width: 200px; height: 200px">{bill_addr}</div>'''
-        logger.info(f"answer_for_classify {labels[0]}:\n{txt}")
-    elif any(label in classify_result for label in labels[2:6]):
-        logger.info(f"session_dict[{uid}] = {session_info[uid]} ")
-        answer = const_dict.get("chat1")
-        logger.info(f"answer_for_classify {labels[2:6]}:\n{answer}")
-    elif labels[6] in classify_result:
-        answer = const_dict.get("chat5")
-        logger.info(f"answer_for_classify {labels[6]}:\n{answer}")
-    else:
-        answer = const_dict.get("chat2")
-        logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")
+            answer += const_dict.get("label5")
+            logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")
+    msg_history.append(
+        {
+            "id": len(msg_history),
+            "msg": answer,
+            "type": "机器人",
+            "timestamp": int(time.time() * 1000)
+        }
+    )
     return Response(answer, content_type=content_type, status=200)
 
 
@@ -184,13 +216,13 @@ def door_service():
 
 def test_req():
     """
-    ask the LLM for some private question not public to outside,
+    ask the LLM for some private msg not public to outside,
     let LLM retrieve the information from local vector database,
     and the output the answer.
     """
     logger.info(f"config {my_cfg}")
     my_question = "我想充值缴费？"
-    logger.info(f"invoke question: {my_question}")
+    logger.info(f"invoke msg: {my_question}")
     answer = search(my_question, my_cfg, True)
     logger.info(f"answer is \r\n{answer}")
 

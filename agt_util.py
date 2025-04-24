@@ -6,7 +6,7 @@ from sys_init import init_yml_cfg
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
-from utils import rmv_think_block
+from utils import rmv_think_block, extract_md_content
 import httpx
 import torch
 import logging.config
@@ -25,54 +25,56 @@ def get_model(cfg, is_remote):
         model = ChatOllama(model=cfg['ai']['model_name'], base_url=cfg['ai']['api_uri'])
     return model
 
-def classify_question(classify_label: list, question: str, cfg: dict, is_remote=True) -> str:
+def classify_msg(labels: list, msg: str, cfg: dict, is_remote=True) -> dict:
     """
     from transformers import pipeline
-
     classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
-
     def classify_query(text):
         labels = ["投诉", "缴费", "维修"]
         result = classifier(text, labels, multi_label=False)
         return result['labels'][0]
-
     # 示例使用
     user_input = "我家水管爆了需要处理"
     print(f"问题类型: {classify_query(user_input)}")
-
     """
-    label_str = ';\n'.join(map(str, classify_label))
-    logger.info(f"classify_question [{question}]")
-    template = f"""
+
+    label_str = ';\n'.join(map(str, labels))
+    logger.info(f"classify_question: {msg}")
+    template = f'''
           根据以下问题的内容，将用户问题分为以下几类\n{label_str}\n
-          问题：{question}\n输出结果直接给出分类结果，不要有其他多余文字
-          """
+          问题：{msg}\n分类结果输出为 JSONArray\n当文本涉及多个分类时，请同时输出多个分类
+          '''
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info("submit question[{}] to llm {}, {}".format(question, cfg['ai']['api_uri'], cfg['ai']['model_name']))
+    logger.info(f"submit msg[{msg}] to llm {cfg['ai']['api_uri']}, {cfg['ai']['model_name']}")
     response = chain.invoke({
-        "question": question
+        "msg": msg
     })
     del model
     torch.cuda.empty_cache()
-    return rmv_think_block(response.content)
+    return json.loads(
+        extract_md_content(
+            rmv_think_block(response.content),
+            "json"
+        )
+    )
 
 def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dict:
     """
     search user questions in knowledge base,
-    submit the search result and user question to LLM, return the answer
+    submit the search result and user msg to LLM, return the answer
     """
     logger.info(f"user_info [{user_info}] , user_dict {user_dict}")
-    template = """
+    template = '''
         基于用户提供的个人信息：
         {context}
         填写 JSON 体中的相应内容：{user_dict}
         (1) 上下文中没有的信息，请不要自行编造
         (2) 不要破坏 JSON 本身的结构
         (3) 直接返回填写好的纯文本的 JSON 内容，不要有任何其他额外内容，不要输出Markdown格式
-        """
+        '''
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
@@ -94,7 +96,7 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
 def update_session_info(user_info: str, append_info: str, cfg: dict, is_remote=True) -> str:
     """
     search user questions in knowledge base,
-    submit the search result and user question to LLM, return the answer
+    submit the search result and user msg to LLM, return the answer
     """
     logger.info(f"user_info [{user_info}], append_info {append_info}")
     template = """
@@ -125,13 +127,13 @@ def extract_session_info(chat_log: str, cfg: dict, is_remote=True) -> str:
     extract_session_info from chat log
     """
     logger.info(f"chat_log [{chat_log}]")
-    template = """
+    template = '''
         基于以下文本：
         {context}
         请输出涉及到个人信息的部分文本
         (1)直接返回填写好的纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
         (2)若没有个人信息，则输出空字符串
-        """
+        '''
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
@@ -148,6 +150,35 @@ def extract_session_info(chat_log: str, cfg: dict, is_remote=True) -> str:
     except Exception as ex:
         logger.error(f"json_loads_err_for {response.content}")
     return final_result
+
+def get_abs_of_txt(txt: str, cfg: dict, is_remote=True) -> str:
+    """
+    get abstract of a long text
+    """
+    logger.info(f"start_extract_abstract_of_txt [{txt}]")
+    template = '''
+        基于用户和机器人客服的对话文本
+        {context}
+        抽取重要内容，以便于提供给人工客服\n
+        其中 id 为聊天消息序号,msg 为具体的消息\n
+        type 为消息类型, timestamp 为毫秒级的系统时间戳
+        '''
+    prompt = ChatPromptTemplate.from_template(template)
+    logger.info(f"prompt {prompt}")
+    model = get_model(cfg, is_remote)
+    chain = prompt | model
+    logger.info(f"submit user_info[{txt}] to llm {cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
+    response = chain.invoke({
+        "context": txt,
+    })
+    del model
+    torch.cuda.empty_cache()
+    abstract = ""
+    try:
+        abstract = rmv_think_block(response.content)
+    except Exception as es:
+        logger.error(f"start_extract_abstract_of_txt {response.content}")
+    return abstract
 
 def test_fill_dict():
     info = "我叫张三, 我的电话是 13800138000, 我家住在新疆克拉玛依下城区111123号"
@@ -170,19 +201,19 @@ def test_complete_user_info():
 
 def test_classify():
      my_cfg = init_yml_cfg()
-     labels = ["缴费", "上门服务", "个人资料", "自我介绍", "个人信息", "身份登记", "信息查询", "其他"]
+     labels = ["缴费", "上门服务", "个人信息", "信息查询", "转接人工客服", "其他"]
      # result = classify_question(labels, "我要缴费", my_cfg, True)
      # logger.info(f"result: {result}")
      # result = classify_question(labels, "你们能派个人来吗？", my_cfg, True)
      # logger.info(f"result: {result}")
-     # result = classify_question(labels, "我家住辽宁省沈阳市", my_cfg, True)
-     # logger.info(f"result: {result}")
-     result = classify_question(labels, "我用户号忘了你们给查一下", my_cfg, True)
-     if labels[6] in result:
-        logger.info(f"classify_result:labels[6] {labels[6]}")
+     result = classify_msg(labels, "我叫张三，我家住辽宁省沈阳市皇姑屯xxx街道xxx小区，我家燃气不好使了，能派人来给看吗?", my_cfg, True)
+     logger.info(f"result: {result}")
+     # result = classify_question(labels, "我用户号忘了你们给查一下", my_cfg, True)
+     # if labels[6] in result:
+     #    logger.info(f"classify_result:labels[6] {labels[6]}")
 
 
 if __name__ == "__main__":
 
-    # test_classify()
-    test_complete_user_info()
+    test_classify()
+    # test_complete_user_info()

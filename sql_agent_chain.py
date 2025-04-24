@@ -133,7 +133,7 @@ def first_tool_call(state: State) -> dict[str, list[AIMessage]]:
 
 def model_get_schema_call(state: State) -> dict[str, list[AIMessage]]:
     # print("input_in_model_get_schema_call:", state)
-    # Add a node for a model to choose the relevant tables based on the question and available tables
+    # Add a node for a model to choose the relevant tables based on the msg and available tables
     # just for localhost call
     # model_get_schema = ChatOllama(model="llama3.1:8b", base_url=api_url, temperature=0).bind_tools(
     #     [get_schema_tool]
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     A SQL agent demo.
     give LLM a JDBC uri, let it get the database and table schema.
     LLM read the database schema, and get the information.
-    a question input about the information in DB will be turned into a SQL query,
+    a msg input about the information in DB will be turned into a SQL query,
     then data retrieved from DB returned back from LLM to user.
     """
     # use SQLite DB
@@ -236,7 +236,7 @@ if __name__ == "__main__":
     
     You are a helpful assistant with tool calling capabilities.
     
-    When you receive a tool call response, use the output to format an answer to the orginal user question.
+    When you receive a tool call response, use the output to format an answer to the orginal user msg.
 
     Double check the SQLite query for common mistakes, including:
     - Using NOT IN with NULL values
@@ -285,31 +285,31 @@ if __name__ == "__main__":
 
     workflow.add_node("model_get_schema",model_get_schema_call)
 
-    # Add a node for a model to generate a query based on the question and schema
+    # Add a node for a model to generate a query based on the msg and schema
     query_gen_system = """You are a SQLite database expert with a strong attention to detail.
     
-    When you receive a tool call response, use the output to format an answer to the orginal user question.
+    When you receive a tool call response, use the output to format an answer to the orginal user msg.
 
     You are a helpful assistant with tool calling capabilities.
 
-    Given an input question, output a syntactically correct SQLite query to run, then look at the results of the query and return the answer.
+    Given an input msg, output a syntactically correct SQLite query to run, then look at the results of the query and return the answer.
     
     DO NOT call any tool besides SubmitFinalAnswer to submit the final answer.
     
     When generating the query:
     
-    Output the SQL query that answers the input question without a tool call.
+    Output the SQL query that answers the input msg without a tool call.
     
     Unless the user specifies a specific number of examples they wish to obtain, always limit your query to at most 5 results.
     You can order the results by a relevant column to return the most interesting examples in the database.
-    Never query for all the columns from a specific table, only ask for the relevant columns given the question.
+    Never query for all the columns from a specific table, only ask for the relevant columns given the msg.
     
     If you get an error while executing a query, rewrite the query and try again.
     
     If you get an empty result set, you should try to rewrite the query to get a non-empty result set. 
     NEVER make stuff up if you don't have enough information to answer the query... just say you don't have enough information.
     
-    If you have enough information to answer the input question, simply invoke the appropriate tool to submit the final answer to the user.
+    If you have enough information to answer the input msg, simply invoke the appropriate tool to submit the final answer to the user.
     
     DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the database."""
     query_gen_prompt = ChatPromptTemplate.from_messages(
@@ -350,7 +350,7 @@ if __name__ == "__main__":
     #print("save the graph to local file {}".format(img_name))
     #app.get_graph().draw_png(img_na信息me)
     user_question = question
-    logger.info("question is: {}".format(user_question))
+    logger.info("msg is: {}".format(user_question))
     messages = app.invoke(
         {"messages": [("user", user_question)]}, {"recursion_limit":100 }
     )

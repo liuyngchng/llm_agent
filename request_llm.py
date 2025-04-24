@@ -29,7 +29,7 @@ def req_ollama(question):
 
 
     llm = OllamaLLM(model=model_name, base_url=llm_url)
-    logger.info("invoke question: {}".format(question))
+    logger.info("invoke msg: {}".format(question))
     answer = llm.invoke(question)
     logger.info("answer is: {}".format(answer))
 

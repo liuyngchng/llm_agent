@@ -6,7 +6,7 @@ import os
 from typing import Dict
 from datetime import datetime
 
-from utils import extract_sql, rmv_think_block, extract_json
+from utils import extract_md_content, rmv_think_block, extract_json
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.utilities import SQLDatabase
@@ -54,20 +54,20 @@ class SQLGenerator:
         logger.debug(f"sql_gen_sys_msg {sql_gen_sys_msg}")
         self.sql_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", sql_gen_sys_msg),
-            ("human", "用户问题：{question}")
+            ("human", "用户问题：{msg}")
         ])
         nl_gen_sys_msg = f"""{cfg['ai']['prompts']['nl_gen_sys_msg']}"""
         logger.debug(f"nl_gen_sys_msg {nl_gen_sys_msg}")
         self.nl_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", nl_gen_sys_msg),
-            ("human", "用户问题：{question}")
+            ("human", "用户问题：{msg}")
         ])
 
     def generate_sql(self, question: str) -> str:
         """生成SQL查询"""
         chain = self.sql_gen_prompt_template | self.llm
         response = chain.invoke({
-            "question": question,
+            "msg": question,
             "schema": self.get_schema_info(),
             "sql_dialect": self.db_type,
         })
@@ -76,7 +76,7 @@ class SQLGenerator:
     def get_nl_with_dt(self, markdown_dt: str):
         chain = self.nl_gen_prompt_template | self.llm
         response = chain.invoke({
-            "question": markdown_dt
+            "msg": markdown_dt
         })
         return response.content
 
@@ -165,7 +165,7 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
         logger.info(f"summit_question_to_llm：{q}")
         sql = agent.generate_sql(q)
         logger.debug(f"llm_output_sql\n{sql}")
-        sql = extract_sql(sql)
+        sql = extract_md_content(sql, "sql")
         logger.debug(f"extract_sql\n\n{sql}\n")
         db_uri = get_db_uri(cfg)
         if DBType.SQLITE.value in db_uri:

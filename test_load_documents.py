@@ -53,14 +53,14 @@ class VectorStoreQA:
         #     ("user", """上下文信息：
         #     {context}
             
-        #     用户问题：{question}
+        #     用户问题：{msg}
             
         #     请提供你的回答：""")
         # ])
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", """上下文中没有相关资料的不要编造信息、不要从你历史库中搜索，直接说：在知识库中我找不到相关答案。"""),
             ("user", """上下文信息：{context}
-            用户问题：{question}
+            用户问题：{msg}
             请提供你的回答：""")
         ])
             
@@ -131,14 +131,14 @@ class VectorStoreQA:
         )  
         print(formatted_prompt)  
         print("=" * 50)  
-        # docs = self.retriever.get_relevant_documents(question)  
+        # docs = self.retriever.get_relevant_documents(msg)
         # 将文档内容合并为上下文  
         # context = "\n\n".join(doc.page_content for doc in docs)  
         # print(context)
         # 创建chain并调用
         chain = self.prompt | self.llm  
         response = chain.invoke({  
-            "question": question,  
+            "msg": question,
             "context": context  
         })  
         return response
@@ -164,6 +164,6 @@ if __name__ == "__main__":
     qa_system.load_documents("/tmp/1.txt")
     
     # 提问
-    question = "my question is？"
+    question = "my msg is？"
     result = qa_system.get_answer(question)
     print(result)
