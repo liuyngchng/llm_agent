@@ -11,6 +11,7 @@ import os
 from flask import Flask, request, jsonify, render_template, Response
 
 import config_util as cfg_utl
+from my_enum import DataType
 from sql_agent import get_dt_with_nl
 from sys_init import init_yml_cfg
 from audio import transcribe_webm_audio_bytes
@@ -186,7 +187,7 @@ def query_data(catch=None):
         db_source_cfg = cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg)
     else:
         db_source_cfg = my_cfg
-    answer = get_dt_with_nl(msg, db_source_cfg, 'markdown', True)
+    answer = get_dt_with_nl(msg, db_source_cfg, DataType.MARKDOWN.value, True)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
@@ -220,7 +221,7 @@ def get_db_dt():
     msg = request.get_json().get('msg').strip()
     logger.info(f"rcv_msg: {msg}")
     logger.info(f"ask_question({msg}, {my_cfg}, 'json')")
-    answer = get_dt_with_nl(msg, my_cfg, 'json', True)
+    answer = get_dt_with_nl(msg, my_cfg, DataType.JSON.value, True)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer='{"msg":"没有查询到相关数据，请您尝试换个问题进行提问", "code":404}'
@@ -271,7 +272,7 @@ def test_query_data():
     """
     msg = "查询2025年的数据"
     logger.info(f"ask_question({msg}, {my_cfg}, markdown, True)")
-    answer = get_dt_with_nl(msg, my_cfg, 'markdown', True)
+    answer = get_dt_with_nl(msg, my_cfg, DataType.MARKDOWN.value, True)
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
     logger.info(f"answer is：\n{answer}")

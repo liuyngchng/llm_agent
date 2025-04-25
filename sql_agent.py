@@ -34,7 +34,8 @@ class SQLGenerator:
     for mysql
     # db_uri = "mysql+pymysql://db_user:db_password@db_host/db_name"
     """
-    def __init__(self, cfg:dict , is_remote_model:bool):
+
+    def __init__(self, cfg:dict , is_remote_model:bool, prompt_padding=""):
         self.cfg = cfg
         self.db = SQLDatabase.from_uri(get_db_uri(cfg))
         self.db_type = cfg['db']['type'].lower()
@@ -53,7 +54,7 @@ class SQLGenerator:
         #     logger.error("set_sql_dialect_err", e)
         logger.debug(f"sql_gen_sys_msg {sql_gen_sys_msg}")
         self.sql_gen_prompt_template = ChatPromptTemplate.from_messages([
-            ("system", sql_gen_sys_msg),
+            ("system", f"{sql_gen_sys_msg}, {prompt_padding}"),
             ("human", "用户问题：{msg}")
         ])
         nl_gen_sys_msg = f"""{cfg['ai']['prompts']['nl_gen_sys_msg']}"""
@@ -63,8 +64,38 @@ class SQLGenerator:
             ("human", "用户问题：{msg}")
         ])
 
+        self.desc_usr_dt_template = ChatPromptTemplate.from_messages([
+            ("system", "根据查询到的数据\n{usr_dt}\n回答用户的问题"),
+            ("human", "用户问题：{msg}")
+        ])
+
     def generate_sql(self, question: str) -> str:
-        """生成SQL查询"""
+        """
+        generate sql
+        """
+        chain = self.sql_gen_prompt_template | self.llm
+        response = chain.invoke({
+            "msg": question,
+            "schema": self.get_schema_info(),
+            "sql_dialect": self.db_type,
+        })
+        return response.content
+
+    def desc_usr_dt(self, question: str, usr_dt: dict) -> str:
+        """
+        generate sql
+        """
+        chain = self.desc_usr_dt_template | self.llm
+        response = chain.invoke({
+            "msg": question,
+            "usr_dt": usr_dt,
+        })
+        return response.content
+
+    def gen_usr_dt_check_sql(self, question: str) -> str:
+        """
+        generate sql for get user data from user account database
+        """
         chain = self.sql_gen_prompt_template | self.llm
         response = chain.invoke({
             "msg": question,
@@ -143,16 +174,22 @@ class SQLGenerator:
         logger.debug(f"modeltype {type(model)}, model: {model}")
         return model
 
+def desc_usr_dt(q: str, cfg: dict, is_remote_model: bool, usr_dt: dict) -> str:
+    """
+    通过自然语言查询数据库中的数据
+    """
+    agent = SQLGenerator(cfg, is_remote_model)
+    return agent.desc_usr_dt(q, usr_dt)
 
 
-def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: bool) -> str:
+def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: bool, prompt_padding: "") -> str:
     """
     通过自然语言查询数据库中的数据
     """
     sql =""
     dt = ""
     nl_dt_dict={"chart":{}, "raw_dt": {}}
-    agent = SQLGenerator(cfg, is_remote_model)
+    agent = SQLGenerator(cfg, is_remote_model, prompt_padding)
     adt = agent.get_table_list()
     logger.info(f"agent_detected_tables:{adt} for db_type {cfg['db']['type']}")
     if not adt or len(adt)> cfg['db']['max_table_num']:
@@ -186,7 +223,7 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     if not dt:
         return json.dumps(nl_dt_dict, ensure_ascii=False)
 
-    if not cfg['ai']['prompts']['add_desc_to_dt']:
+    if not cfg['ai']['prompts']['add_chart_to_dt']:
         logger.info(f"nl_raw_dt:\n{dt}\n")
         return json.dumps(nl_dt_dict, ensure_ascii=False)
     return add_chart_to_raw_dt(agent, dt, nl_dt_dict)
