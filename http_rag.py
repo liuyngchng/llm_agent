@@ -17,6 +17,7 @@ from agt_util import (classify_msg, fill_dict, update_session_info,
                       extract_session_info, get_abs_of_chat)
 from sys_init import init_yml_cfg
 from utils import convert_list_to_md_table, convert_list_to_html_table
+from datetime import datetime
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -222,12 +223,13 @@ def test_req():
     logger.info(f"answer is \r\n{answer}")
 
 def refresh_msg_history(msg: str, msg_type="机器人"):
+    now = datetime.now()
     msg_history.append(
         {
-            "id": len(msg_history),
-            "msg": msg,
-            "type": msg_type,
-            "timestamp": int(time.time() * 1000)
+            "编号": len(msg_history),
+            "消息": msg,
+            "发送者": msg_type,
+            "时间":  now.strftime('%Y-%m-%d %H:%M:%S')
         }
     )
 

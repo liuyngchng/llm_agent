@@ -159,9 +159,7 @@ def get_abs_of_chat(txt: list, cfg: dict, is_remote=True) -> str:
     template = '''
         基于用户和机器人客服的对话文本
         {context}
-        抽取重要内容，以便于提供给人工客服\n
-        其中 id 为聊天消息序号,msg 为具体的消息\n
-        type 为消息类型, timestamp 为毫秒级的系统时间戳
+        抽取重要内容，以便于提供给人工客服
         '''
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
