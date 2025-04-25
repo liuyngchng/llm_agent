@@ -163,7 +163,7 @@ def submit():
             # answer = search(msg, my_cfg, True)
             txt = const_dict.get("label0")
             bill_addr = const_dict.get("bill_addr_svg")
-            answer += f'''{txt}<div style="width: 200px; height: 200px">{bill_addr}</div>'''
+            answer += f'''{txt}<div style="width: 150px; height: 150px">{bill_addr}</div>'''
             logger.info(f"answer_for_classify {labels[0]}:\n{txt}")
             refresh_msg_history(txt)
         # for submit personal information
