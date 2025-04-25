@@ -16,8 +16,9 @@ from semantic_search import search
 from agt_util import (classify_msg, fill_dict, update_session_info,
                       extract_session_info, get_abs_of_chat)
 from sys_init import init_yml_cfg
-from utils import convert_list_to_md_table, convert_list_to_html_table
+from utils import convert_list_to_html_table
 from datetime import datetime
+from sql_agent import get_dt_with_nl
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -174,6 +175,7 @@ def submit():
             refresh_msg_history(answer)
         # for information retrieval
         elif labels[3] in classify_result:
+            get_dt_with_nl(msg, )
             answer += const_dict.get("label3")
             logger.info(f"answer_for_classify {labels[3]}:\n{answer}")
             refresh_msg_history(answer)

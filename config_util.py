@@ -11,11 +11,14 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 import base64
 
+from sqlalchemy import false
+
 from db_util import sqlite_query_tool, sqlite_insert_tool
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 config_db = "config.db"
+user_sample_data_db = "user_info.db"
 
 
 def auth_user(user:str, t: str, cfg: dict) -> dict:
@@ -185,6 +188,32 @@ def get_consts()-> dict:
         except Exception as e:
             logger.exception(f"err_occurred_for_db {config_db}, sql {sql}")
     return const
+
+def get_user_sample_data(sql: str)-> dict:
+    """
+    get sample data for user consumption data
+    """
+    const = {}
+    with sqlite3.connect(user_sample_data_db) as my_conn:
+        try:
+            check_info = sqlite_query_tool(my_conn, sql)
+            value_dt = json.loads(check_info)['data']
+            for key, value in value_dt:
+                const[key] = value
+        except Exception as e:
+            logger.exception(f"err_occurred_for_db {config_db}, sql {sql}")
+    return const
+
+
+def get_user_sample_data_rd_cfg_dict(cfg_dict: dict) -> dict:
+    user_sample_data_rd_dict = {}
+    user_sample_data_rd_dict["db"]["type"] = "sqlite"
+    user_sample_data_rd_dict["db"]["name"] = user_sample_data_db
+    user_sample_data_rd_dict["ai"] = cfg_dict["ai"]
+    user_sample_data_rd_dict["ai"]["prompts"] = None
+    user_sample_data_rd_dict["ai"]["prompts"]["add_desc_to_dt"] = False
+    return user_sample_data_rd_dict
+
 
 if __name__ == '__main__':
     """

@@ -10,31 +10,6 @@ from my_enum import DataType, DBType
 from urllib.parse import urlparse, unquote, urlencode
 from sys_init import init_yml_cfg
 
-"""
-Oracle 数据库需要额外安装其客户端动态库
-(1) 安装 oracle的 instant client,
-    详见  https://www.oracle.com/database/technologies/instant-client/downloads.html
-    
-    #ubuntu
-    1) libaio
-    sudo apt-get install libaio1t64
-    sudo apt-get install libaio-dev
-    sudo find /usr -name libaio*
-    sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
-    
-    2) libclntsh.so
-    cd /usr/local/lib
-    sudo mkdir oracle
-    cd oracle/instantclient-basic-linux.x64-12.1.0.2.0/instantclient_12_1
-    sudo cp *.so /usr/local/lib/oracle/
-    sudo cp *.so.* /usr/local/lib/oracle/
-    cd /usr/local/lib/oracle
-    sudo ln -s libclntsh.so.11.1 libclntsh.so
-    export LD_LIBRARY_PATH=/usr/local/lib/oracle:$LD_LIBRARY_PATH
-(2) install pip package
-    pip install pymysql cx_Oracle pycryptodome 
-"""
-
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
