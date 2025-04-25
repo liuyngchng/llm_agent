@@ -1,0 +1,33 @@
+<body>
+
+    <pre id="output" style="max-width:600px; width:100%; margin:0 auto; height:300px; overflow:auto; border:1px solid #ccc; padding:10px"></pre>
+
+    <div style="max-width:600px; margin:10px auto">
+        <input id="input" style="width:70%" placeholder="输入消息">
+        <button onclick="send()" style="width:28%">发送</button>
+    </div>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:18765');
+        const output = document.getElementById('output');
+
+        // 接收消息
+        ws.onmessage = (e) => {
+            output.innerHTML += `服务器: ${e.data}\n`;
+            output.scrollTop = output.scrollHeight; // 自动滚动到底部
+        }
+
+        // 发送消息
+        function send() {
+            const input = document.getElementById('input');
+            ws.send(input.value);
+            output.innerHTML += `我: ${input.value}\n`;
+            input.value = '';
+        }
+
+        // 回车发送
+        document.getElementById('input').onkeypress = (e) => {
+            if(e.key === 'Enter') send()
+        }
+    </script>
+</body>
