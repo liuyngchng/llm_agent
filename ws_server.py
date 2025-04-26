@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+"""
+pip install uvicorn websockets
+"""
 import json
 import time
 
@@ -121,4 +125,13 @@ async def start_server():
         await asyncio.Future()  # process blocked here
 
 if __name__ == "__main__":
+    """
+    in production environment ,you can start the server like this
+    unicorn your_py_file_without_suffix:start_server
+    uvicorn ws_server:start_server --ws websockets --host 0.0.0.0 --port 18765
+    uvicorn is developed base on NIO, so it is unnecessary to start a multi-thread start to run your program.
+    accordingly, you can run with '-w 3 ' to start your program with 3 process, which is in multi-progress mode   
+    and ,you can see, now some keep alive used in program, 
+    you should make sure the max connection param in linux kernel config can satisfy your remand
+    """
     asyncio.run(start_server())
