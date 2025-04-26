@@ -1,33 +1,62 @@
-<body>
+<html>
+    <head>
+        <title>ws client demo</title>
+         <meta charset="UTF-8">
+    </head>
+    <body>
+        <pre id="output" style="max-width:600px; width:100%; margin:0 auto; height:300px; overflow:auto; border:1px solid #ccc; padding:10px"></pre>
+        <div style="max-width:600px; margin:10px auto">
+            <input id="input" style="width:70%" placeholder="输入消息">
+            <input id="uid" type="hidden" value="33456789" >
+            <input id="to" type="hidden" value="" >
+            <button onclick="send()" style="width:28%">发送</button>
+        </div>
+        <script>
+            const ws = new WebSocket('ws://localhost:18765');
+            const output = document.getElementById('output');
+            ws.onopen = () => {
+                ws.send(JSON.stringify({uid: document.getElementById('uid').value}))
+                output.innerHTML += "[服务状态]：已连接服务器\n";
+            }
+            ws.onclose = () => output.innerHTML += "[服务状态]：连接断开\n";
+            ws.onerror = (e) => output.innerHTML += `[服务错误]：${e.message}\n`;
 
-    <pre id="output" style="max-width:600px; width:100%; margin:0 auto; height:300px; overflow:auto; border:1px solid #ccc; padding:10px"></pre>
+            // 接收消息
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                output.innerHTML += `${data.from}: ${data.msg}\n`;
+                output.scrollTop = output.scrollHeight; // 自动滚动到底部
+            }
 
-    <div style="max-width:600px; margin:10px auto">
-        <input id="input" style="width:70%" placeholder="输入消息">
-        <button onclick="send()" style="width:28%">发送</button>
-    </div>
+            // 发送消息
+            function send() {
+                if (ws.readyState !== WebSocket.OPEN) {
+                    alert('未连接服务器');
+                    return;
+                }
+                const input = document.getElementById('input');
+                const uid = document.getElementById('uid').value;
+                const to= document.getElementById('to').value;
+                const msg = input.value.trim().replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m])
+                if (!msg) {
+                    console.log("no legal msg need to be send")
+                    return;
+                }
 
-    <script>
-        const ws = new WebSocket('ws://localhost:18765');
-        const output = document.getElementById('output');
+                const payload = JSON.stringify({
+                    "uid":uid,
+                    "msg": msg,
+                    "to": to
+                });
+                ws.send(payload);
+                 output.innerHTML += `我: ${msg}\n`;
+                input.value = '';
+            }
 
-        // 接收消息
-        ws.onmessage = (e) => {
-            output.innerHTML += `服务器: ${e.data}\n`;
-            output.scrollTop = output.scrollHeight; // 自动滚动到底部
-        }
-
-        // 发送消息
-        function send() {
-            const input = document.getElementById('input');
-            ws.send(input.value);
-            output.innerHTML += `我: ${input.value}\n`;
-            input.value = '';
-        }
-
-        // 回车发送
-        document.getElementById('input').onkeypress = (e) => {
-            if(e.key === 'Enter') send()
-        }
-    </script>
-</body>
+            // 回车发送
+            document.getElementById('input').onkeypress = (e) => {
+                if(e.key === 'Enter') send()
+            }
+        </script>
+    </body>
+</html>
