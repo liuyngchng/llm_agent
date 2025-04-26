@@ -48,7 +48,12 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
         uid = json.loads(register_msg)['uid']
         usr = get_user_by_uid(uid)
         if not usr:
-            err_msg = {"msg": "此用户不存在", "uid": uid}
+            err_msg = {
+                "type": "error",
+                "from": "system",
+                "msg": "此用户不存在",
+                "uid": uid
+            }
             await websocket.send(json.dumps(err_msg))
             await websocket.close()
             logger.error(f"illegal_user, {err_msg}")
@@ -68,6 +73,7 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
                     "from": "server",
                     "to": uid,
                     "type": "heartbeat_ack",
+                    "msg": "pong",
                     "seq": data.get('seq'),
                     "timestamp": time.time()
                 }))
@@ -107,6 +113,7 @@ async def check_timeout():
             for uid in expired:
                 await connected_clients[uid]['ws'].close()
                 del connected_clients[uid]
+                logger.info(f"user {uid} disconnected, removed_from_connected_clients")
 
 async def start_server():
     async with serve(handler, "localhost", 18765):
