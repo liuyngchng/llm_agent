@@ -6,6 +6,7 @@ import time
 from websockets import serve, ConnectionClosed
 import asyncio
 import logging.config
+from config_util import get_user_by_uid
 
 from websockets.legacy.server import WebSocketServerProtocol
 
@@ -15,24 +16,26 @@ logger = logging.getLogger(__name__)
 MAX_CLIENTS = 1000
 clients_lock = asyncio.Lock()
 
-""" data structure 
-    {
-        "uid1":{
-            "ws":ws1, 
-            "last_active":12134567
-        }, 
-        "uid2":{
-            "ws":wss, 
-            "last_active":2234567
-        },   
-    }
+""" 
+data structure 
+{
+    "uid1":{
+        "ws":ws1, 
+        "last_active":12134567
+    }, 
+    "uid2":{
+        "ws":wss, 
+        "last_active":2234567
+    },   
+}
 """
 connected_clients = dict()
 
 
 async def handler(websocket: WebSocketServerProtocol) -> None:
     """
-    connection handler, to handle connected socket
+    connection handler, to handle connected socket, client should not be disconnected immediately
+    there is a timeout check in function check_timeout to delete the dead connected clients from server side
     """
     if len(connected_clients) >= MAX_CLIENTS:
         await websocket.send(json.dumps({"error": "连接数已饱和"}))
@@ -43,6 +46,13 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
         # 先等待客户端发送UID注册, TODO 注册漏洞：未验证重复注册（允许UID劫持）
         register_msg = await websocket.recv()
         uid = json.loads(register_msg)['uid']
+        usr = get_user_by_uid(uid)
+        if not usr:
+            err_msg = {"msg": "此用户不存在", "uid": uid}
+            await websocket.send(json.dumps(err_msg))
+            await websocket.close()
+            logger.error(f"illegal_user, {err_msg}")
+            return
         connected_clients[uid] = {
             'ws': websocket,
             'last_active': time.time()
@@ -52,8 +62,11 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
             logger.info(f"rcv_msg {data}")
             async with clients_lock:
                 connected_clients[uid]['last_active'] = time.time()
+
             if data.get('type') == 'heartbeat':
                 await websocket.send(json.dumps({
+                    "from": "server",
+                    "to": uid,
                     "type": "heartbeat_ack",
                     "seq": data.get('seq'),
                     "timestamp": time.time()
@@ -65,7 +78,7 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
             uid = data['uid']
             msg = data['msg']
             to = data['to']
-            logger.info(f"rcv_msg_from_client {uid}, {msg}")
+            logger.info(f"rcv_msg_from_client_{uid}, {msg}")
             if not to:
                 logger.info("no_msg_route_information")
                 return
@@ -80,7 +93,7 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
             else:
                 logger.error(f"msg route target {to} can't be engaged")
     except (asyncio.TimeoutError, ConnectionClosed):
-        logger.warning(f"client {uid} disconnected")
+        logger.warning(f"client_disconnected, uid {uid}")
     finally:
         logger.info("handler_finished")
 
