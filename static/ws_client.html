@@ -8,19 +8,30 @@
         <div style="max-width:600px; margin:10px auto">
             <input id="input" style="width:70%" placeholder="输入消息">
             <input id="uid" type="hidden" value="33456789" >
-            <input id="to" type="hidden" value="" >
+            <input id="to" type="text" placeholder="接收方UID" style="width:100px">
             <button onclick="send()" style="width:28%">发送</button>
         </div>
         <script>
-            const ws = new WebSocket('ws://localhost:18765');
+            let lastAckMap = {};
+            ws = new WebSocket('ws://localhost:18765');
             // heart beat timer, snd msg in each 8 seconds
             setInterval(() => {
                 if (ws.readyState === WebSocket.OPEN) {
+                    const heartbeatId = Date.now();
+                    // 发送带唯一ID的心跳
                     ws.send(JSON.stringify({
                         type: 'heartbeat',
-                        uid: document.getElementById('uid').value
+                        uid: document.getElementById('uid').value,
+                        seq: heartbeatId
                     }));
-                    console.log("snd heart beat to svr");
+
+                    // 设置响应超时检测
+                    setTimeout(() => {
+                        if (!lastAckMap[heartbeatId]) {
+                            console.warn("心跳响应超时，尝试重连");
+                            reconnect();
+                        }
+                    }, 3000);
                 }
             }, 8000);
             const output = document.getElementById('output');
@@ -28,13 +39,20 @@
                 ws.send(JSON.stringify({uid: document.getElementById('uid').value}))
                 output.innerHTML += "[服务状态]：已连接服务器\n";
             }
-            ws.onclose = () => output.innerHTML += "[服务状态]：连接断开\n";
+            ws.onclose = () => {
+                output.innerHTML += "[服务状态]：连接断开\n";
+                setTimeout(reconnect, 3000);
+            }
+
             ws.onerror = (e) => output.innerHTML += `[服务错误]：${e.message}\n`;
 
             // 接收消息
             ws.onmessage = (e) => {
                 const data = JSON.parse(e.data);
-                output.innerHTML += `${data.from}: ${data.msg.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m])}\n`;
+                if (data.type === 'heartbeat_ack') {
+                    lastAckMap[data.seq] = true;
+                }
+                output.textContent += `${data.from}: ${data.msg}\n`;
                 output.scrollTop = output.scrollHeight; // 自动滚动到底部
             }
 
@@ -47,7 +65,7 @@
                 const input = document.getElementById('input');
                 const uid = document.getElementById('uid').value;
                 const to= document.getElementById('to').value;
-                const msg = input.value.trim().replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m])
+                const msg = input.value.trim();
                 if (!msg) {
                     console.log("no legal msg need to be send")
                     return;
@@ -66,6 +84,16 @@
             // 回车发送
             document.getElementById('input').onkeypress = (e) => {
                 if(e.key === 'Enter') send()
+            }
+            function reconnect() {
+                ws.close();
+                output.innerHTML += "[服务状态]：尝试重新连接...\n";
+                const newWs = new WebSocket('ws://localhost:18765');
+                // 重新绑定事件处理器
+                newWs.onopen = ws.onopen;
+                newWs.onmessage = ws.onmessage;
+                newWs.onclose = () => setTimeout(reconnect, 3000);
+                ws = newWs;
             }
         </script>
     </body>

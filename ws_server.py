@@ -12,6 +12,7 @@ from websockets.legacy.server import WebSocketServerProtocol
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+MAX_CLIENTS = 1000
 clients_lock = asyncio.Lock()
 
 """ data structure 
@@ -29,26 +30,17 @@ clients_lock = asyncio.Lock()
 connected_clients = dict()
 
 
-async def heartbeat(websocket: WebSocketServerProtocol):
-    """
-    for heart beat check from server, it is not the best practice
-    """
-    while True:
-        logger.info(f"connected_clients: {connected_clients.keys()}")
-        await websocket.ping()
-        await asyncio.sleep(10)
-
 async def handler(websocket: WebSocketServerProtocol) -> None:
     """
     connection handler, to handle connected socket
     """
+    if len(connected_clients) >= MAX_CLIENTS:
+        await websocket.send(json.dumps({"error": "连接数已饱和"}))
+        await websocket.close()
+        return
     uid = "-1"
-
-    # i don't want to let server maintain the heart beat, it should be the clients' task
-    # heartbeat_task = asyncio.create_task(heartbeat(websocket))
-
     try:
-        # 先等待客户端发送UID注册
+        # 先等待客户端发送UID注册, TODO 注册漏洞：未验证重复注册（允许UID劫持）
         register_msg = await websocket.recv()
         uid = json.loads(register_msg)['uid']
         connected_clients[uid] = {
@@ -61,6 +53,11 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
             async with clients_lock:
                 connected_clients[uid]['last_active'] = time.time()
             if data.get('type') == 'heartbeat':
+                await websocket.send(json.dumps({
+                    "type": "heartbeat_ack",
+                    "seq": data.get('seq'),
+                    "timestamp": time.time()
+                }))
                 continue
             if not all(key in data for key in ('uid', 'msg', 'to')):
                 logger.warning(f"Invalid message format: {data}")
@@ -86,12 +83,6 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
         logger.warning(f"client {uid} disconnected")
     finally:
         logger.info("handler_finished")
-        # i don't want to close client here, client can be closed in function check_timeout() and heart beat can be cancelled there
-        # if uid in connected_clients:
-        #     logger.info(f"disconnect client {uid}")
-        #     del connected_clients[uid]
-        # heartbeat_task.cancel()
-
 
 async def check_timeout():
     while True:
