@@ -20,5 +20,9 @@ class MsgType(Enum):
     MSG = "msg"
     WARN = "warn"
 
+class UserRole(Enum):
+    CUSTOMER = 0
+    HUMAN_SERVICE = 1
+
 if __name__ == "__main__":
     print(MsgType.ERROR.value)

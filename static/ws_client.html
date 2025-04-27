@@ -14,28 +14,26 @@
             <button onclick="send()" style="width:28%">发送</button>
         </div>
         <script>
+            let max_retry_connect_time = 5;
             let ws;
             let heartbeatTimer;
             let reconnectCount = 0; // 添加计数器
             let disableReconnect = false;
             const output = document.getElementById('output');
-
             function connect(isManual = true) {
-
                 if (isManual) {
                     reconnectCount = 0;
                     disableReconnect = false;
                 }
-                if(disableReconnect) return;
-                if (reconnectCount >= 10) {
-                    output.innerHTML += "[服务状态]：已达最大重连次数(10次)，请检查服务器的状态\n";
+                if (disableReconnect) return;
+                if (reconnectCount >= max_retry_connect_time) {
+                    output.innerHTML += "[服务状态]：已达最大重连次数(" + max_retry_connect_time + "次)，请检查服务器的状态\n";
                     return;
                 }
                 const uid = document.getElementById('uid').value.trim();
                 if (!uid) return alert("请输入UID");
                 output.innerHTML = ""
                 ws = new WebSocket('ws://localhost:18765');
-
                 ws.onopen = () => {
                     ws.send(JSON.stringify({uid}));
                     output.innerHTML += `[服务状态]：${uid} 已连接服务器\n`;
@@ -50,7 +48,7 @@
                 };
 
                 ws.onclose = () => {
-                    if (reconnectCount < 10) { // 仅当未超过次数时输出断开提示
+                    if (reconnectCount < max_retry_connect_time) { // 仅当未超过次数时输出断开提示
                         output.innerHTML += "[服务状态]：连接断开\n";
                     }
                     clearInterval(heartbeatTimer);

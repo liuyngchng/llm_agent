@@ -32,7 +32,12 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 session_info = {}
+
+# {"uid_12345":["msg1", "msg2"], "uid_2345":["msg1", "msg2"],}
+# uid id is the msg receiver
+msg_box = {"332987916":["这是个测试消息,需要发送给 332987916"]}
 const_dict = get_consts()
+
 
 # TODO: to limit the size of history to the maximum token size of LLM
 msg_history = []
@@ -79,8 +84,9 @@ def login():
         logger.info(f"return_page {dt_idx}")
         ctx = {
             "uid": auth_result["uid"],
-            "t": auth_result["t"],
             "sys_name": my_cfg['sys']['name'],
+            "role": auth_result["role"],
+            "t": auth_result["t"],
         }
         return render_template(dt_idx, **ctx)
 
@@ -117,6 +123,21 @@ def get_file(file_name):
         abort(404)
     logger.info(f"return static file {file_name}")
     return send_from_directory(static_dir, file_name)
+
+@app.route('/msg/box/<uid>', methods=['GET'])
+def get_msg(uid):
+    """
+    返回 msg box 中的消息
+    """
+    content_type = 'text/markdown; charset=utf-8'
+    if not uid:
+        logger.error("illegal_uid")
+        return Response("", content_type=content_type, status=502)
+    my_msg = msg_box.get(uid)
+    answer = ""
+    if my_msg:
+        answer = my_msg.pop(0)
+    return Response(answer, content_type=content_type, status=200)
 
 
 @app.route('/rag/submit', methods=['POST'])

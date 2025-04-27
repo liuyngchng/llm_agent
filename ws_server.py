@@ -11,7 +11,7 @@ from my_enums import MsgType
 from websockets import serve, ConnectionClosed
 import asyncio
 import logging.config
-from config_util import get_user_by_uid
+from config_util import get_user_info_by_uid
 
 from websockets.legacy.server import WebSocketServerProtocol
 
@@ -52,7 +52,7 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
         register_msg = await websocket.recv()
         uid = json.loads(register_msg)['uid']
 
-        usr = get_user_by_uid(uid)
+        usr = get_user_info_by_uid(uid)
         if not usr:
             err_msg = build_msg("system", uid, MsgType.ERROR.value, "此用户不存在")
             await websocket.send(err_msg)
