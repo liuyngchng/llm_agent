@@ -51,10 +51,11 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
         # 先等待客户端发送UID注册, TODO 注册漏洞：未验证重复注册（允许UID劫持）
         register_msg = await websocket.recv()
         uid = json.loads(register_msg)['uid']
+
         usr = get_user_by_uid(uid)
         if not usr:
             err_msg = build_msg("system", uid, MsgType.ERROR.value, "此用户不存在")
-            await websocket.send(json.dumps(err_msg))
+            await websocket.send(err_msg)
             await websocket.close()
             logger.error(f"illegal_user, {err_msg}")
             return
@@ -133,7 +134,7 @@ def build_msg(frm: str, to: str, msg_type: str, msg:str, seq="") -> str:
         "msg": msg,
         "seq": seq,
         "timestamp": time.time()
-    })
+    }, ensure_ascii=False)
 
 if __name__ == "__main__":
     """

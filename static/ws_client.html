@@ -7,7 +7,7 @@
         <pre id="output" style="max-width:600px; width:100%; margin:0 auto; height:300px; overflow:auto; border:1px solid #ccc; padding:10px"></pre>
         <div style="max-width:600px; margin:10px auto">
             <input id="uid" type="text" placeholder="输入UID" style="width:120px">
-            <button onclick="connect()" style="width:80px">登录</button>
+            <button onclick="connect(true)" style="width:80px">登录</button>
             <hr>
             <input id="input" style="width:70%" placeholder="输入消息">
             <input id="to" type="text" placeholder="接收方UID" style="width:100px">
@@ -17,10 +17,17 @@
             let ws;
             let heartbeatTimer;
             let reconnectCount = 0; // 添加计数器
+            let disableReconnect = false;
             const output = document.getElementById('output');
 
-            function connect() {
-                if(reconnectCount >= 10) {
+            function connect(isManual = true) {
+
+                if (isManual) {
+                    reconnectCount = 0;
+                    disableReconnect = false;
+                }
+                if(disableReconnect) return;
+                if (reconnectCount >= 10) {
                     output.innerHTML += "[服务状态]：已达最大重连次数(10次)，请检查服务器的状态\n";
                     return;
                 }
@@ -48,7 +55,7 @@
                     }
                     clearInterval(heartbeatTimer);
                     reconnectCount++; // 增加计数
-                    setTimeout(connect, 3000);
+                    setTimeout(() => connect(false), 3000);
                 };
 
                 ws.onerror = (e) => {
@@ -62,11 +69,17 @@
                 try {
                     const data = JSON.parse(e.data);
                     if (data.type === 'heartbeat_ack') {
-                        console.log ("rcv_pong," + data)
+                        console.log ("rcv_pong, " + data)
+                        return;
+                    }
+                    if (data.type === 'error') {
+                        output.textContent += `[系统错误]：停止重连（${data.msg}）\n`;
+                        disableReconnect = true;
+                        ws.close();
                         return;
                     }
                     const from = data.from || 'system';
-                    const msg = data.msg || data.error || ''; // 兼容error字段
+                    const msg = data.msg;
                     output.textContent += `[${from}]: ${msg}\n`;
                     output.scrollTop = output.scrollHeight;
                 } catch(err) {
