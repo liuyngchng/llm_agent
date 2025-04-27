@@ -20,9 +20,13 @@ class MsgType(Enum):
     MSG = "msg"
     WARN = "warn"
 
-class UserRole(Enum):
-    CUSTOMER = 0
-    HUMAN_SERVICE = 1
+class ActorRole(Enum):
+    """
+    the role of actor engaged in system
+    """
+    HUMAN_CUSTOMER = 0      # human being customer of the system
+    HUMAN_SERVICE = 1       # human being who provide customer service to consumer
+    AI_MACHINE = 2          # an AI role in system, such as LLM, etc.
 
 if __name__ == "__main__":
     print(MsgType.ERROR.value)

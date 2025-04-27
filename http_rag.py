@@ -35,12 +35,41 @@ session_info = {}
 
 # {"uid_12345":["msg1", "msg2"], "uid_2345":["msg1", "msg2"],}
 # uid id is the msg receiver
-msg_box = {"332987916":["这是个测试消息,需要发送给 332987916"]}
+human_customer_service_target_uid = "332987916"
+human_being_uid = "332987919"
+# mail_outbox_list = {
+#     human_customer_service_target_uid:["这是一条人工客服发送的测试消息,需要发送给 332987916"],
+#     human_being_uid:["这是一条用户需要转人工客服的测试消息，需要发送给人工客服"]
+# }
+mail_outbox_list = {
+    human_customer_service_target_uid:[],
+    human_being_uid:[]
+}
 const_dict = get_consts()
 
 
 # TODO: to limit the size of history to the maximum token size of LLM
 msg_history = []
+
+def rcv_mail(uid: str) -> str:
+    """
+    :param uid: receive the oldest mail for user uid
+    """
+    my_msg_outbox = mail_outbox_list.get(uid)
+    mail = ""
+    if my_msg_outbox:
+        mail = my_msg_outbox.pop(0)
+    return mail
+
+def snd_mail(to_uid: str, msg: str)-> None:
+    """
+    :param to_uid: mail receiver
+    :param msg: the mail txt need to be sent
+    """
+    target_msg_outbox = mail_outbox_list.get(to_uid, [])
+    target_msg_outbox.append(msg)
+    logger.info(f"mail_outbox_list.get({to_uid}): {mail_outbox_list.get(to_uid)}")
+
 
 @app.route('/', methods=['GET'])
 def login_index():
@@ -133,10 +162,7 @@ def get_msg(uid):
     if not uid:
         logger.error("illegal_uid")
         return Response("", content_type=content_type, status=502)
-    my_msg = msg_box.get(uid)
-    answer = ""
-    if my_msg:
-        answer = my_msg.pop(0)
+    answer = rcv_mail(uid)
     return Response(answer, content_type=content_type, status=200)
 
 
@@ -152,12 +178,21 @@ def submit():
     msg = request.form.get('msg')
     uid = request.form.get('uid')
     logger.info(f"rcv_msg: {msg}")
-    refresh_msg_history(msg, "用户")
+    content_type = 'text/markdown; charset=utf-8'
+    if uid == human_being_uid:
+        logger.info(f"rcv_msg_from_human_being_need_route_to_customer_directly, "
+                    f"from {uid}, to {human_customer_service_target_uid}, msg {msg}")
+        snd_mail(human_customer_service_target_uid, msg)
+        logger.info(f"msg_outbox_list: {mail_outbox_list}")
+        answer = f"消息已经发送至用户 {human_customer_service_target_uid}， 等待用户回答"
+        return Response(answer, content_type=content_type, status=200)
+    else:
+        refresh_msg_history(msg, "用户")
     logger.debug("msg_history:\n%s", '\n'.join(map(str, msg_history)))
     labels = json.loads(const_dict.get("classify_label"))
     classify_results = classify_msg(labels, msg, my_cfg, True)
     logger.info(f"classify_result: {classify_results}")
-    content_type = 'text/markdown; charset=utf-8'
+
     s_info = extract_session_info(msg, my_cfg, True)
     if s_info:
         if uid not in session_info:
@@ -212,10 +247,14 @@ def submit():
             refresh_msg_history(answer)
         # for redirect to human talk
         elif labels[4] in classify_result:
-            answer += const_dict.get("label4")
-            answer += f"<br>\n{convert_list_to_html_table(msg_history)}"
+            msg_boxing = const_dict.get("label4")
+            msg_boxing += f"<br>\n{convert_list_to_html_table(msg_history)}"
             chat_abs = get_abs_of_chat(msg_history, my_cfg, True)
-            answer += f"<br>{chat_abs}"
+            msg_boxing += f"<br>{chat_abs}"
+            logger.info(f"msg_boxing_for_classify_snd_to_human_being {human_being_uid}, classify {labels[4]}:\n{msg_boxing}")
+            snd_mail(human_being_uid, msg_boxing)
+            msg_history.clear()
+            answer = const_dict.get("label41")
             logger.info(f"answer_for_classify {labels[4]}:\n{answer}")
         # for other labels
         else:
