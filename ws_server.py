@@ -7,6 +7,7 @@ pip install uvicorn websockets
 import json
 import time
 
+from my_enums import MsgType
 from websockets import serve, ConnectionClosed
 import asyncio
 import logging.config
@@ -42,7 +43,7 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
     there is a timeout check in function check_timeout to delete the dead connected clients from server side
     """
     if len(connected_clients) >= MAX_CLIENTS:
-        await websocket.send(json.dumps({"error": "连接数已饱和"}))
+        await websocket.send(build_msg("system", "", MsgType.ERROR.value, "连接数已饱和"))
         await websocket.close()
         return
     uid = "-1"
@@ -52,12 +53,7 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
         uid = json.loads(register_msg)['uid']
         usr = get_user_by_uid(uid)
         if not usr:
-            err_msg = {
-                "type": "error",
-                "from": "system",
-                "msg": "此用户不存在",
-                "uid": uid
-            }
+            err_msg = build_msg("system", uid, MsgType.ERROR.value, "此用户不存在")
             await websocket.send(json.dumps(err_msg))
             await websocket.close()
             logger.error(f"illegal_user, {err_msg}")
@@ -72,15 +68,10 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
             async with clients_lock:
                 connected_clients[uid]['last_active'] = time.time()
 
-            if data.get('type') == 'heartbeat':
-                await websocket.send(json.dumps({
-                    "from": "server",
-                    "to": uid,
-                    "type": "heartbeat_ack",
-                    "msg": "pong",
-                    "seq": data.get('seq'),
-                    "timestamp": time.time()
-                }))
+            if data.get('type') == MsgType.HEARTBEAT.value:
+                await websocket.send(
+                    build_msg("server", uid, MsgType.HEARTBEAT_ACK.value, "pong", data.get('seq'))
+                )
                 continue
             if not all(key in data for key in ('uid', 'msg', 'to')):
                 logger.warning(f"Invalid message format: {data}")
@@ -91,17 +82,17 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
             logger.info(f"rcv_msg_from_client_{uid}, {msg}")
             if not to:
                 logger.info("no_msg_route_information")
-                return
+                continue
             if to in connected_clients:
                 async with clients_lock:
-                    await connected_clients[to]["ws"].send(json.dumps({
-                        "type": "msg",
-                        "from": uid,
-                        "msg": msg,
-                        "timestamp": time.time()
-                    }))
+                    await connected_clients[to]["ws"].send(
+                        build_msg(uid, to, MsgType.MSG.value, msg)
+                    )
             else:
-                logger.error(f"msg route target {to} can't be engaged")
+                logger.error(f"msg_route_target_can_not_be_engaged, client {to} is offline")
+                await websocket.send(
+                    build_msg("system", uid, MsgType.WARN.value, "此用户目前不在线")
+                )
     except (asyncio.TimeoutError, ConnectionClosed):
         logger.warning(f"client_disconnected, uid {uid}")
     finally:
@@ -112,8 +103,10 @@ async def check_timeout():
         await asyncio.sleep(15)
         async with clients_lock:
             now = time.time()
-            expired = [uid for uid, info in connected_clients.items()
-                       if now - info['last_active'] > 30]  # 30秒无活动判定超时
+            expired = [
+                uid for uid, info in connected_clients.items()
+                if now - info['last_active'] > 30
+            ]  # 30秒无活动判定超时
             for uid in expired:
                 await connected_clients[uid]['ws'].close()
                 del connected_clients[uid]
@@ -123,6 +116,24 @@ async def start_server():
     async with serve(handler, "localhost", 18765):
         asyncio.create_task(check_timeout())
         await asyncio.Future()  # process blocked here
+
+
+def build_msg(frm: str, to: str, msg_type: str, msg:str, seq="") -> str:
+    """
+    :param frm: where the msg from
+    :param to: where the msg want to be sent to
+    :param msg_type: msg type
+    :param msg: the txt msg want to be delivered
+    :param seq: the sequence number of msg, something like in TCP packet
+    """
+    return json.dumps({
+        "from": frm,
+        "to": to,
+        "type": msg_type,
+        "msg": msg,
+        "seq": seq,
+        "timestamp": time.time()
+    })
 
 if __name__ == "__main__":
     """

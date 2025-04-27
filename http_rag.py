@@ -12,7 +12,7 @@ import time
 from flask import (Flask, request, jsonify, render_template, Response,
                    send_from_directory, abort, make_response)
 from config_util import auth_user, get_consts, get_user_sample_data_rd_cfg_dict
-from my_enum import DataType
+from my_enums import DataType
 from semantic_search import search
 from agt_util import (classify_msg, fill_dict, update_session_info,
                       extract_session_info, get_abs_of_chat)

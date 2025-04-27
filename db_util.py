@@ -6,7 +6,7 @@ import sqlite3
 import json
 import pandas as pd
 import logging.config
-from my_enum import DataType, DBType
+from my_enums import DataType, DBType
 from urllib.parse import urlparse, unquote, urlencode
 from sys_init import init_yml_cfg
 

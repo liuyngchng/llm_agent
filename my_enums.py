@@ -12,3 +12,13 @@ class DataType(Enum):
     HTML = "html"
     MARKDOWN = "markdown"
     JSON = "json"
+
+class MsgType(Enum):
+    ERROR = "error"
+    HEARTBEAT = "heartbeat"
+    HEARTBEAT_ACK = "heartbeat_ack"
+    MSG = "msg"
+    WARN = "warn"
+
+if __name__ == "__main__":
+    print(MsgType.ERROR.value)

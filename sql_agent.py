@@ -16,7 +16,7 @@ from langchain_ollama import ChatOllama
 import logging.config
 import httpx
 from pydantic import SecretStr
-from my_enum import DBType, DataType
+from my_enums import DBType, DataType
 
 from db_util import sqlite_output, mysql_output, get_db_uri, oracle_output, get_orc_db_info
 from sys_init import init_yml_cfg

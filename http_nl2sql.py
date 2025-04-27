@@ -11,7 +11,7 @@ import os
 from flask import Flask, request, jsonify, render_template, Response
 
 import config_util as cfg_utl
-from my_enum import DataType
+from my_enums import DataType
 from sql_agent import get_dt_with_nl
 from sys_init import init_yml_cfg
 from audio import transcribe_webm_audio_bytes
