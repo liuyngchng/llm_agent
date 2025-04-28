@@ -206,19 +206,7 @@ def submit():
     for classify_result in  classify_results:
         # for to door service
         if labels[1] in classify_result:
-            user_dict = json.loads(const_dict.get("label1"))
-            if uid in session_info and session_info[uid]:
-                user_dict = fill_dict(session_info[uid], user_dict, my_cfg, True)
-                logger.info(f"html_table_with_personal_info_filled_in for {labels[1]}")
-            else:
-                logger.info(f"{uid},current_id_not_in_person_info, {session_info}")
-            refresh_msg_history(const_dict.get("label11"))
-            content_type = 'text/html; charset=utf-8'
-            logger.info(f"answer_for_classify {labels[1]}:\nuser_dict: {user_dict}")
-            response = make_response(render_template("door_service.html", **user_dict))
-            response.headers['Content-Type'] = content_type
-            response.status_code = 200
-            return response
+            return process_door_service(uid, labels[1])
          # for online pay service
         if labels[0] in classify_result:
             # answer = search(msg, my_cfg, True)
@@ -268,16 +256,40 @@ def submit():
 
 
 def process_human_service_msg(content_type, msg, uid) -> Response:
+    """
+    for human provided customer service instead of AI
+        (1) send human made msg directly to customer
+        (2) when service finished , switch service provider to AI
+    """
     if const_dict.get("str2") in msg.upper():
+        logger.info(f"switch_service_provider_to_AI_for_uid {human_customer_service_target_uid}")
         ai_service_status[human_customer_service_target_uid] = AI_SERVICE_STATUS.OPEN
         return Response(const_dict.get("str3"), content_type=content_type, status=200)
     logger.info(f"rcv_msg_from_human_being_need_route_to_customer_directly, "
-                f"from {uid}, to {human_customer_service_target_uid}, msg {msg}")
+        f"from {uid}, to {human_customer_service_target_uid}, msg {msg}")
     snd_mail(human_customer_service_target_uid, f"[人工客服]{msg}")
     logger.info(f"msg_outbox_list: {mail_outbox_list}")
     answer = f"消息已经发送至用户 {human_customer_service_target_uid}"
     return Response(answer, content_type=content_type, status=200)
 
+def process_door_service(uid: str, classify_label: str) -> Response:
+    """
+    :param uid: user id of whom ask for door service
+    :param classify_label: the service type label
+    """
+    user_dict = json.loads(const_dict.get("label1"))
+    if uid in session_info and session_info[uid]:
+        user_dict = fill_dict(session_info[uid], user_dict, my_cfg, True)
+        logger.info(f"html_table_with_personal_info_filled_in for {classify_label}")
+    else:
+        logger.info(f"{uid},current_id_not_in_person_info, {session_info}")
+    refresh_msg_history(const_dict.get("label11"))
+    content_type = 'text/html; charset=utf-8'
+    logger.info(f"answer_for_classify {classify_label}:\nuser_dict: {user_dict}")
+    response = make_response(render_template("door_service.html", **user_dict))
+    response.headers['Content-Type'] = content_type
+    response.status_code = 200
+    return response
 
 @app.route('/door/srv', methods=['POST'])
 def door_service():
