@@ -7,13 +7,19 @@
     <script src="/static/marked.min.js"></script>
     <link rel="stylesheet" href="/static/my.rag.css?t=224">
 <!--    <title>{{sys_name}}</title>-->
-    <title>智能客服</title>
+    <title>
+        {% if role == 1 %}
+            <h1>人工客服座席[编号{{uid}}]</h1>
+        {% else %}
+            <h1>{{ sys_name }}</h1>
+        {% endif %}
+    </title>
 </head>
 <body>
     <div class="container">
         <div class="header">
             {% if role == 1 %}
-                <h1>人工客服</h1>
+                <h1>人工客服座席[编号{{uid}}]</h1>
             {% else %}
                 <h1>{{ sys_name }}</h1>
             {% endif %}
@@ -49,7 +55,7 @@
         window.onload = function() {
             let greeting =''
              {% if role == 1 %}
-                greeting = `Hi，我是客服小助手, 若有用户要求人工服务，我将发送给您消息，请您持续关注消息`;
+                greeting = `Hi，我是客服小助手, 若有人工服务请求，我将发送给您消息，请您持续关注～～`;
             {% else %}
                 greeting = `Hi，我是客服小助手～ 很高兴遇见你！你可以随时问我关于燃气使用过程中遇到的问题，我来帮你看看`;
             {% endif %}
@@ -182,7 +188,7 @@
         // for get message from message box, a fake instant message,
         // if msg pulled, then stop work until user give a answer to the msg
         function startMsgPolling() {
-            clearInterval(fetchInterval);
+<!--            clearInterval(fetchInterval);-->
             fetchInterval = setInterval(async () => {
                 try {
                     const uid = document.getElementById('uid').value;
@@ -191,7 +197,7 @@
                         const msg = (await response.text()).trim();
                         if (msg) {
                             addMessage(msg, 'bot', 'text/markdown');
-                            clearInterval(fetchInterval);   // 收到消息后停止轮询
+<!--                            clearInterval(fetchInterval);   // 收到消息后停止轮询-->
                         }
                     }
                 } catch(e) {
