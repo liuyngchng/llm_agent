@@ -86,7 +86,7 @@ def save_config():
         "db_usr": db_usr,
         "db_psw": db_psw,
     }
-    usr = cfg_utl.get_user_info_by_uid(uid)
+    usr = cfg_utl.get_user_name_by_uid(uid)
     if not usr:
         data_source_cfg['waring_info'] = '非法访问，请您先登录系统'
         return render_template(dt_idx, **data_source_cfg)
@@ -200,7 +200,7 @@ def authenticate(req)->bool:
         return True
     result = False
     try:
-        if cfg_utl.get_user_info_by_uid(req.form.get('uid').strip()):
+        if cfg_utl.get_user_name_by_uid(req.form.get('uid').strip()):
             result = True
         else:
             logger.error(f"illegal_request {req}")

@@ -29,5 +29,14 @@ class ActorRole(Enum):
     HUMAN_SERVICE = 1       # human being who provide customer service to consumer
     AI_MACHINE = 2          # an AI role in system, such as LLM, etc.
 
+
+class AI_SERVICE_STATUS(Enum):
+    """
+    the status of AI service provided to human customers
+    """
+    OPEN = 1
+    ClOSE = 0
+
+
 if __name__ == "__main__":
     print(MsgType.ERROR.value)

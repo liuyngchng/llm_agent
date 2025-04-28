@@ -10,8 +10,8 @@ import re
 
 from flask import (Flask, request, jsonify, render_template, Response,
                    send_from_directory, abort, make_response)
-from config_util import auth_user, get_consts, get_user_sample_data_rd_cfg_dict
-from my_enums import DataType
+from config_util import auth_user, get_consts, get_user_sample_data_rd_cfg_dict, get_user_role_by_uid
+from my_enums import DataType, ActorRole, AI_SERVICE_STATUS
 from semantic_search import search
 from agt_util import (classify_msg, fill_dict, update_session_info,
                       extract_session_info, get_abs_of_chat)
@@ -180,7 +180,11 @@ def submit():
     uid = request.form.get('uid')
     logger.info(f"rcv_msg: {msg}")
     content_type = 'text/markdown; charset=utf-8'
+    usr_role = get_user_role_by_uid(uid)
     if uid == human_being_uid:
+        if const_dict.get("str2") in msg.upper():
+            ai_service_status[human_customer_service_target_uid] = AI_SERVICE_STATUS.OPEN
+            return Response(const_dict.get("str3"), content_type=content_type, status=200)
         logger.info(f"rcv_msg_from_human_being_need_route_to_customer_directly, "
                     f"from {uid}, to {human_customer_service_target_uid}, msg {msg}")
         snd_mail(human_customer_service_target_uid, msg)
@@ -189,6 +193,11 @@ def submit():
         return Response(answer, content_type=content_type, status=200)
     else:
         refresh_msg_history(msg, "用户")
+    if usr_role == ActorRole.HUMAN_CUSTOMER.value \
+        and ai_service_status.get(uid) == AI_SERVICE_STATUS.ClOSE.value:
+        snd_mail(human_being_uid, msg)
+        logger.info(f"snd_mail to uid {human_being_uid}, {msg}")
+        return Response("", content_type=content_type, status=200)
     logger.debug("msg_history:\n%s", '\n'.join(map(str, msg_history)))
     labels = json.loads(const_dict.get("classify_label"))
     classify_results = classify_msg(labels, msg, my_cfg, True)
@@ -256,6 +265,7 @@ def submit():
             snd_mail(human_being_uid, msg_boxing)
             msg_history.clear()
             answer = const_dict.get("label41")
+            ai_service_status[uid] = AI_SERVICE_STATUS.ClOSE.value          # transform AI service to human service
             logger.info(f"answer_for_classify {labels[4]}:\n{answer}")
         # for other labels
         else:
