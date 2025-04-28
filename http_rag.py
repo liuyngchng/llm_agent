@@ -189,7 +189,7 @@ def submit():
                     f"from {uid}, to {human_customer_service_target_uid}, msg {msg}")
         snd_mail(human_customer_service_target_uid, f"[人工客服]{msg}")
         logger.info(f"msg_outbox_list: {mail_outbox_list}")
-        answer = f"消息已经发送至用户 {human_customer_service_target_uid}， 等待用户回答"
+        answer = f"消息已经发送至用户 {human_customer_service_target_uid}"
         return Response(answer, content_type=content_type, status=200)
     else:
         refresh_msg_history(msg, "用户")
