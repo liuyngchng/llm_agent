@@ -193,7 +193,7 @@ button:disabled {
 
 #doorSrvReqForm,
 #doorSrvReqForm > div[style*="display:flex"] {
-    width: 100% !important;
+    width: 80% !important;
     box-sizing: border-box;
 }
 #doorSrvReqForm label[style*="flex:0 0 150px"] {
@@ -406,8 +406,8 @@ button:disabled {
   margin-right: 10px;
 }
 .door_service #problemDescription {
-  width: 100% !important;
-  min-width: 600px;
+    width: 100% !important;
+    min-width: unset !important;
 }
 
 .door_service .submit-btn {
