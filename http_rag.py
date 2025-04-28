@@ -7,7 +7,6 @@ import json
 import logging.config
 import os
 import re
-import time
 
 from flask import (Flask, request, jsonify, render_template, Response,
                    send_from_directory, abort, make_response)
@@ -46,6 +45,8 @@ mail_outbox_list = {
     human_being_uid:[]
 }
 const_dict = get_consts()
+
+ai_service_status = {}
 
 
 # TODO: to limit the size of history to the maximum token size of LLM
@@ -166,11 +167,11 @@ def get_msg(uid):
     return Response(answer, content_type=content_type, status=200)
 
 
-@app.route('/rag/submit', methods=['POST'])
+@app.route('/usr/ask', methods=['POST'])
 def submit():
     """
     form submit, get data from form
-    curl -s --noproxy '*' -X POST 'http://127.0.0.1:19000/rag/submit' \
+    curl -s --noproxy '*' -X POST 'http://127.0.0.1:19000/usr/ask' \
         -H "Content-Type: application/x-www-form-urlencoded" \
         -d '{"msg":"who are you?"}'
     :return:
