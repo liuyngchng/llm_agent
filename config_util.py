@@ -22,7 +22,7 @@ user_sample_data_db = "user_info.db"
 
 
 def auth_user(user:str, t: str, cfg: dict) -> dict:
-    auth_result ={"pass": False, "uid": ""}
+    auth_result ={"pass": False, "msg_from_uid": ""}
     with sqlite3.connect(config_db) as my_conn:
         sql = f"select id, role from user where name='{user}' and t = '{t}' limit 1"
         check_info = sqlite_query_tool(my_conn, sql)
@@ -30,7 +30,7 @@ def auth_user(user:str, t: str, cfg: dict) -> dict:
 
     if user_dt:
         auth_result["pass"] = True
-        auth_result["uid"] = user_dt[0][0]
+        auth_result["msg_from_uid"] = user_dt[0][0]
         auth_result["role"] = user_dt[0][1]
         auth_result["t"] = encrypt(str(time.time() * 1000), cfg['sys']['cypher_key'])
     return auth_result
@@ -56,7 +56,7 @@ def get_user_name_by_uid(uid:str)-> str | None:
             check_info = sqlite_query_tool(my_conn, sql)
             user_dt = json.loads(check_info)['data']
             user = user_dt[0][0]
-            logger.info(f"get_user {user} with uid {uid}")
+            logger.info(f"get_user {user} with msg_from_uid {uid}")
         except Exception as e:
             logger.info(f"no_user_info_found_for_uid, {uid}")
     return user
@@ -69,7 +69,7 @@ def get_user_role_by_uid(uid:str)-> str | None:
             check_info = sqlite_query_tool(my_conn, sql)
             user_dt = json.loads(check_info)['data']
             role = user_dt[0][0]
-            logger.info(f"role {role}, uid {uid}")
+            logger.info(f"role {role}, msg_from_uid {uid}")
         except Exception as e:
             logger.info(f"no_user_info_found_for_uid, {uid}")
     return role
@@ -77,8 +77,8 @@ def get_user_role_by_uid(uid:str)-> str | None:
 def get_data_source_config_by_uid(uid:str, cfg: dict) -> dict:
     config = {}
     with sqlite3.connect(config_db) as my_conn:
-        check_sql = (f"select uid, db_type, db_name, db_host, db_port,"
-                     f" db_usr, db_psw from db_config where uid='{uid}' limit 1")
+        check_sql = (f"select msg_from_uid, db_type, db_name, db_host, db_port,"
+                     f" db_usr, db_psw from db_config where msg_from_uid='{uid}' limit 1")
         db_config_info = sqlite_query_tool(my_conn, check_sql)
         logger.debug(f"check_sql {check_sql}")
         check_info = json.loads(db_config_info)['data']
@@ -88,7 +88,7 @@ def get_data_source_config_by_uid(uid:str, cfg: dict) -> dict:
         try:
             check_uid = check_info[0][0]
             config = {
-                "uid": check_uid,
+                "msg_from_uid": check_uid,
                 "db_type": check_info[0][1],
                 "db_name": check_info[0][2],
                 "db_host": check_info[0][3],
@@ -104,13 +104,13 @@ def get_data_source_config_by_uid(uid:str, cfg: dict) -> dict:
 
 def save_data_source_config(data_source_cfg: dict, cfg: dict) -> bool:
     save_result = False
-    if not data_source_cfg['uid']:
+    if not data_source_cfg['msg_from_uid']:
         logger.error("uid_in_data_source_cfg_is_null")
         return save_result
     logger.info("start_encrypt_db_source_user_and_password")
     data_source_cfg['db_usr_cypher'] = encrypt(data_source_cfg['db_usr'], cfg['sys']['cypher_key'])
     data_source_cfg['db_psw_cypher'] = encrypt(data_source_cfg['db_psw'], cfg['sys']['cypher_key'])
-    current_config = get_data_source_config_by_uid(data_source_cfg['uid'], cfg)
+    current_config = get_data_source_config_by_uid(data_source_cfg['msg_from_uid'], cfg)
     if current_config:
         exec_sql = (f'''
                     update db_config set 
@@ -120,12 +120,12 @@ def save_data_source_config(data_source_cfg: dict, cfg: dict) -> bool:
                     db_name='{data_source_cfg["db_name"]}', 
                     db_usr='{data_source_cfg["db_usr_cypher"]}', 
                     db_psw='{data_source_cfg["db_psw_cypher"]}'
-                    where uid = '{data_source_cfg["uid"]}
+                    where msg_from_uid = '{data_source_cfg["msg_from_uid"]}
                     ''')
     else:
         exec_sql = (f'''
-                    insert into db_config (uid, db_type, db_host, db_port, db_name, db_usr, db_psw)
-                    values ('{data_source_cfg["uid"]}', 
+                    insert into db_config (msg_from_uid, db_type, db_host, db_port, db_name, db_usr, db_psw)
+                    values ('{data_source_cfg["msg_from_uid"]}', 
                     '{data_source_cfg["db_type"]}',
                     '{data_source_cfg["db_host"]}', 
                     '{data_source_cfg["db_port"]}', 
@@ -185,7 +185,7 @@ def get_const(key:str)->str | None:
             check_info = sqlite_query_tool(my_conn, sql)
             value_dt = json.loads(check_info)['data']
             value = value_dt[0][0]
-            logger.info(f"get_const {value} with uid {value}")
+            logger.info(f"get_const {value} with msg_from_uid {value}")
         except Exception as e:
             logger.info(f"no_value_info_found_for_key, {key}")
     return value

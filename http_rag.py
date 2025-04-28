@@ -33,7 +33,7 @@ os.system(
 session_info = {}
 
 # {"uid_12345":["msg1", "msg2"], "uid_2345":["msg1", "msg2"],}
-# uid id is the msg receiver
+# msg_from_uid id is the msg receiver
 human_customer_service_target_uid = "332987916"
 human_being_uid = "332987919"
 # mail_outbox_list = {
@@ -54,7 +54,7 @@ msg_history = []
 
 def rcv_mail(uid: str) -> str:
     """
-    :param uid: receive the oldest mail for user uid
+    :param uid: receive the oldest mail for user msg_from_uid
     """
     my_msg_outbox = mail_outbox_list.get(uid)
     mail = ""
@@ -113,7 +113,7 @@ def login():
     else:
         logger.info(f"return_page {dt_idx}")
         ctx = {
-            "uid": auth_result["uid"],
+            "msg_from_uid": auth_result["msg_from_uid"],
             "sys_name": my_cfg['sys']['name'],
             "role": auth_result["role"],
             "t": auth_result["t"],
@@ -154,7 +154,7 @@ def get_file(file_name):
     logger.info(f"return static file {file_name}")
     return send_from_directory(static_dir, file_name)
 
-@app.route('/msg/box/<uid>', methods=['GET'])
+@app.route('/msg/box/<msg_from_uid>', methods=['GET'])
 def get_msg(uid):
     """
     返回 msg box 中的消息
@@ -177,18 +177,17 @@ def submit():
     :return:
     """
     msg = request.form.get('msg')
-    uid = request.form.get('uid')
+    uid = request.form.get('msg_from_uid')
     logger.info(f"rcv_msg: {msg}")
     content_type = 'text/markdown; charset=utf-8'
     usr_role = get_user_role_by_uid(uid)
     if uid == human_being_uid:
-        return process_human_service_msg(content_type, msg, uid)
-    else:
-        refresh_msg_history(msg, "用户")
+        return process_human_service_msg(msg, uid)
+    refresh_msg_history(msg, "用户")
     if usr_role == ActorRole.HUMAN_CUSTOMER.value \
         and ai_service_status.get(uid) == AI_SERVICE_STATUS.ClOSE.value:
         snd_mail(human_being_uid, f"[用户{human_customer_service_target_uid}]{msg}")
-        logger.info(f"snd_mail to uid {human_being_uid}, {msg}")
+        logger.info(f"snd_mail to msg_from_uid {human_being_uid}, {msg}")
         return Response("", content_type=content_type, status=200)
     logger.debug("msg_history:\n%s", '\n'.join(map(str, msg_history)))
     labels = json.loads(const_dict.get("classify_label"))
@@ -255,22 +254,25 @@ def submit():
     return Response(answer, content_type=content_type, status=200)
 
 
-def process_human_service_msg(content_type, msg, uid) -> Response:
+def process_human_service_msg(msg: str, msg_from_uid: str) -> Response:
     """
     for human provided customer service instead of AI
         (1) send human made msg directly to customer
         (2) when service finished , switch service provider to AI
     """
+    content_type = 'text/markdown; charset=utf-8'
     if const_dict.get("str2") in msg.upper():
         logger.info(f"switch_service_provider_to_AI_for_uid {human_customer_service_target_uid}")
         ai_service_status[human_customer_service_target_uid] = AI_SERVICE_STATUS.OPEN
-        return Response(const_dict.get("str3"), content_type=content_type, status=200)
-    logger.info(f"rcv_msg_from_human_being_need_route_to_customer_directly, "
-        f"from {uid}, to {human_customer_service_target_uid}, msg {msg}")
-    snd_mail(human_customer_service_target_uid, f"[人工客服]{msg}")
-    logger.info(f"msg_outbox_list: {mail_outbox_list}")
-    answer = f"消息已经发送至用户 {human_customer_service_target_uid}"
+        answer =const_dict.get("str3")
+    else:
+        logger.info(f"snd_msg_to_customer_directly, "
+            f"from {msg_from_uid}, to {human_customer_service_target_uid}, msg {msg}")
+        snd_mail(human_customer_service_target_uid, f"[人工客服]{msg}")
+        logger.info(f"msg_outbox_list: {mail_outbox_list}")
+        answer = f"消息已经发至用户[{human_customer_service_target_uid}]"
     return Response(answer, content_type=content_type, status=200)
+
 
 def process_door_service(uid: str, classify_label: str) -> Response:
     """
@@ -291,36 +293,6 @@ def process_door_service(uid: str, classify_label: str) -> Response:
     response.status_code = 200
     return response
 
-@app.route('/door/srv', methods=['POST'])
-def door_service():
-    """
-    form submit, get data from form
-    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' \
-        -H "Content-Type: application/x-www-form-urlencoded" \
-        -d '{"user":"test"}'
-    :return:
-    echo -n 'my_str' |  md5sum
-    """
-    user_dict = request.form
-    content_type = 'text/html; charset=utf-8'
-    response = make_response(render_template("door_service_answer.html", **user_dict))
-    response.headers['Content-Type'] = content_type
-    response.status_code = 200
-    return response
-
-
-def test_req():
-    """
-    ask the LLM for some private msg not public to outside,
-    let LLM retrieve the information from local vector database,
-    and the output the answer.
-    """
-    logger.info(f"config {my_cfg}")
-    my_question = "查下我的余额度？"
-    logger.info(f"invoke msg: {my_question}")
-    answer = search(my_question, my_cfg, True)
-    logger.info(f"answer is \r\n{answer}")
-
 def refresh_msg_history(msg: str, msg_type="机器人"):
     now = datetime.now()
     msg_history.append(
@@ -333,5 +305,4 @@ def refresh_msg_history(msg: str, msg_type="机器人"):
     )
 
 if __name__ == '__main__':
-    # test_req()
     app.run(host='0.0.0.0', port=19000)

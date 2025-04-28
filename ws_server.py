@@ -50,7 +50,7 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
     try:
         # 先等待客户端发送UID注册, TODO 注册漏洞：未验证重复注册（允许UID劫持）
         register_msg = await websocket.recv()
-        uid = json.loads(register_msg)['uid']
+        uid = json.loads(register_msg)['msg_from_uid']
 
         usr = get_user_name_by_uid(uid)
         if not usr:
@@ -74,10 +74,10 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
                     build_msg("server", uid, MsgType.HEARTBEAT_ACK.value, "pong", data.get('seq'))
                 )
                 continue
-            if not all(key in data for key in ('uid', 'msg', 'to')):
+            if not all(key in data for key in ('msg_from_uid', 'msg', 'to')):
                 logger.warning(f"Invalid message format: {data}")
                 continue
-            uid = data['uid']
+            uid = data['msg_from_uid']
             msg = data['msg']
             to = data['to']
             logger.info(f"rcv_msg_from_client_{uid}, {msg}")
@@ -95,7 +95,7 @@ async def handler(websocket: WebSocketServerProtocol) -> None:
                     build_msg("system", uid, MsgType.WARN.value, "此用户目前不在线")
                 )
     except (asyncio.TimeoutError, ConnectionClosed):
-        logger.warning(f"client_disconnected, uid {uid}")
+        logger.warning(f"client_disconnected, msg_from_uid {uid}")
     finally:
         logger.info("handler_finished")
 

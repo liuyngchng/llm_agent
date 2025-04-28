@@ -27,7 +27,7 @@ class ActorRole(Enum):
     """
     HUMAN_CUSTOMER = 0      # human being customer of the system
     HUMAN_SERVICE = 1       # human being who provide customer service to consumer
-    AI_MACHINE = 2          # an AI role in system, such as LLM, etc.
+    AI_MACHINE_SERVICE = 2          # an AI role in system, such as LLM, etc.
 
 
 class AI_SERVICE_STATUS(Enum):
