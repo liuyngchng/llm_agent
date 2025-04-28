@@ -182,15 +182,7 @@ def submit():
     content_type = 'text/markdown; charset=utf-8'
     usr_role = get_user_role_by_uid(uid)
     if uid == human_being_uid:
-        if const_dict.get("str2") in msg.upper():
-            ai_service_status[human_customer_service_target_uid] = AI_SERVICE_STATUS.OPEN
-            return Response(const_dict.get("str3"), content_type=content_type, status=200)
-        logger.info(f"rcv_msg_from_human_being_need_route_to_customer_directly, "
-                    f"from {uid}, to {human_customer_service_target_uid}, msg {msg}")
-        snd_mail(human_customer_service_target_uid, f"[人工客服]{msg}")
-        logger.info(f"msg_outbox_list: {mail_outbox_list}")
-        answer = f"消息已经发送至用户 {human_customer_service_target_uid}"
-        return Response(answer, content_type=content_type, status=200)
+        return process_human_service_msg(content_type, msg, uid)
     else:
         refresh_msg_history(msg, "用户")
     if usr_role == ActorRole.HUMAN_CUSTOMER.value \
@@ -272,6 +264,18 @@ def submit():
             answer += const_dict.get("label5")
             logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")
             refresh_msg_history(answer)
+    return Response(answer, content_type=content_type, status=200)
+
+
+def process_human_service_msg(content_type, msg, uid) -> Response:
+    if const_dict.get("str2") in msg.upper():
+        ai_service_status[human_customer_service_target_uid] = AI_SERVICE_STATUS.OPEN
+        return Response(const_dict.get("str3"), content_type=content_type, status=200)
+    logger.info(f"rcv_msg_from_human_being_need_route_to_customer_directly, "
+                f"from {uid}, to {human_customer_service_target_uid}, msg {msg}")
+    snd_mail(human_customer_service_target_uid, f"[人工客服]{msg}")
+    logger.info(f"msg_outbox_list: {mail_outbox_list}")
+    answer = f"消息已经发送至用户 {human_customer_service_target_uid}"
     return Response(answer, content_type=content_type, status=200)
 
 
