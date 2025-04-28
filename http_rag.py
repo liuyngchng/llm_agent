@@ -187,7 +187,7 @@ def submit():
             return Response(const_dict.get("str3"), content_type=content_type, status=200)
         logger.info(f"rcv_msg_from_human_being_need_route_to_customer_directly, "
                     f"from {uid}, to {human_customer_service_target_uid}, msg {msg}")
-        snd_mail(human_customer_service_target_uid, msg)
+        snd_mail(human_customer_service_target_uid, f"[人工客服]{msg}")
         logger.info(f"msg_outbox_list: {mail_outbox_list}")
         answer = f"消息已经发送至用户 {human_customer_service_target_uid}， 等待用户回答"
         return Response(answer, content_type=content_type, status=200)
@@ -195,7 +195,7 @@ def submit():
         refresh_msg_history(msg, "用户")
     if usr_role == ActorRole.HUMAN_CUSTOMER.value \
         and ai_service_status.get(uid) == AI_SERVICE_STATUS.ClOSE.value:
-        snd_mail(human_being_uid, msg)
+        snd_mail(human_being_uid, f"[用户{human_customer_service_target_uid}]{msg}")
         logger.info(f"snd_mail to uid {human_being_uid}, {msg}")
         return Response("", content_type=content_type, status=200)
     logger.debug("msg_history:\n%s", '\n'.join(map(str, msg_history)))
