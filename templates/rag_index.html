@@ -125,6 +125,7 @@
         
         // 添加消息到聊天
         function addMessage(text, type, contentType) {
+            if (!text || text.trim() === '') return null;
             const messageContainer = document.createElement('div');
             messageContainer.classList.add('message-container');
             // 安全处理并解析markdown/html
