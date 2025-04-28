@@ -247,7 +247,7 @@ def submit():
                 my_cfg,
                 DataType.JSON.value,
                 True,
-                f"{const_dict.get("str1")} {uid}"
+                f"{const_dict.get('str1')} {uid}"
             )
             usr_dt_dict = json.loads(dt)
             usr_dt_desc = desc_usr_dt(msg, my_cfg, True, usr_dt_dict["raw_dt"][0])
