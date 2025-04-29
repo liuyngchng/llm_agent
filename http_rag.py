@@ -10,14 +10,16 @@ import re
 
 from flask import (Flask, request, jsonify, render_template, Response,
                    send_from_directory, abort, make_response)
-from config_util import auth_user, get_consts, get_user_sample_data_rd_cfg_dict, get_user_role_by_uid
+from config_util import auth_user, get_user_role_by_uid
+from csm_service import rcv_mail, get_human_being_uid, get_ai_service_status_dict, snd_mail, \
+    get_human_customer_service_target_uid, get_const_dict, get_msg_history_list, \
+    refresh_msg_history, refresh_session_info, process_door_to_door_service, \
+    process_online_pay_service, process_personal_info_msg, process_human_service_msg
 from my_enums import DataType, ActorRole, AI_SERVICE_STATUS
-from semantic_search import search
-from agt_util import (classify_msg, fill_dict, update_session_info,
-                      extract_session_info, get_abs_of_chat)
+from agt_util import (classify_msg, get_abs_of_chat)
 from sys_init import init_yml_cfg
 from utils import convert_list_to_html_table
-from datetime import datetime
+
 from sql_agent import get_dt_with_nl, desc_usr_dt
 
 
@@ -30,46 +32,6 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
-session_info = {}
-
-# {"uid_12345":["msg1", "msg2"], "uid_2345":["msg1", "msg2"],}
-# msg_from_uid id is the msg receiver
-human_customer_service_target_uid = "332987916"
-human_being_uid = "332987919"
-# mail_outbox_list = {
-#     human_customer_service_target_uid:["这是一条人工客服发送的测试消息,需要发送给 332987916"],
-#     human_being_uid:["这是一条用户需要转人工客服的测试消息，需要发送给人工客服"]
-# }
-mail_outbox_list = {
-    human_customer_service_target_uid:[],
-    human_being_uid:[]
-}
-const_dict = get_consts()
-
-ai_service_status = {}
-
-
-# TODO: to limit the size of history to the maximum token size of LLM
-msg_history = []
-
-def rcv_mail(uid: str) -> str:
-    """
-    :param uid: receive the oldest mail for user msg_from_uid
-    """
-    my_msg_outbox = mail_outbox_list.get(uid)
-    mail = ""
-    if my_msg_outbox:
-        mail = my_msg_outbox.pop(0)
-    return mail
-
-def snd_mail(to_uid: str, msg: str)-> None:
-    """
-    :param to_uid: mail receiver
-    :param msg: the mail txt need to be sent
-    """
-    target_msg_outbox = mail_outbox_list.get(to_uid, [])
-    target_msg_outbox.append(msg)
-    logger.info(f"mail_outbox_list.get({to_uid}): {mail_outbox_list.get(to_uid)}")
 
 
 @app.route('/', methods=['GET'])
@@ -181,52 +143,46 @@ def submit():
     logger.info(f"rcv_msg: {msg}")
     content_type = 'text/markdown; charset=utf-8'
     usr_role = get_user_role_by_uid(uid)
-    if uid == human_being_uid:
-        return process_human_service_msg(msg, uid)
-    refresh_msg_history(msg, "用户")
+    # human being customer service msg should be sent to the customer directly
+    # no AI interfere
+    if uid == get_human_being_uid():
+        answer= process_human_service_msg(msg, uid)
+        return Response(answer, content_type=content_type, status=200)
+    # if not in AI service mode , customer user msg should be sent to human being who provide service directly
     if usr_role == ActorRole.HUMAN_CUSTOMER.value \
-        and ai_service_status.get(uid) == AI_SERVICE_STATUS.ClOSE.value:
-        snd_mail(human_being_uid, f"[用户{human_customer_service_target_uid}]{msg}")
-        logger.info(f"snd_mail to msg_from_uid {human_being_uid}, {msg}")
+        and get_ai_service_status_dict().get(uid) == AI_SERVICE_STATUS.ClOSE.value:
+        snd_mail(get_human_being_uid(), f"[用户{get_human_customer_service_target_uid()}]{msg}")
+        logger.info(f"snd_mail to msg_from_uid {get_human_being_uid()}, {msg}")
         return Response("", content_type=content_type, status=200)
-    logger.debug("msg_history:\n%s", '\n'.join(map(str, msg_history)))
-    labels = json.loads(const_dict.get("classify_label"))
+
+    refresh_msg_history(msg, "用户")
+    labels = json.loads(get_const_dict().get("classify_label"))
+
     classify_results = classify_msg(labels, msg, my_cfg, True)
     logger.info(f"classify_result: {classify_results}")
 
-    s_info = extract_session_info(msg, my_cfg, True)
-    if s_info:
-        if uid not in session_info:
-            logger.info(f"{uid} uid_not_in_session_dict {session_info}")
-            session_info[uid] = s_info
-        else:
-            session_info[uid] = update_session_info(session_info[uid], s_info, my_cfg, True)
+    refresh_session_info(msg, uid, my_cfg)
     answer = ""
     for classify_result in  classify_results:
-        # for to door service
         if labels[1] in classify_result:
-            return process_door_service(uid, labels[1])
+            answer = process_door_to_door_service(uid, labels[1])
+            response = make_response(answer)
+            response.headers['Content-Type'] = content_type
+            response.status_code = 200
+            return response
          # for online pay service
         if labels[0] in classify_result:
-            # answer = search(msg, my_cfg, True)
-            txt = const_dict.get("label0")
-            bill_addr = const_dict.get("bill_addr_svg")
-            answer += f'''{txt}<div style="width: 100px; height: 100px; overflow: hidden">{bill_addr}</div>'''
-            logger.info(f"answer_for_classify {labels[0]}:\n{txt}")
-            refresh_msg_history(txt)
+            answer = process_online_pay_service(answer, labels[0])
         # for submit personal information
         elif labels[2] in classify_result:
-            logger.info(f"session_dict[{uid}] = {session_info[uid]} ")
-            answer += const_dict.get("label2")
-            logger.info(f"answer_for_classify {labels[2]}:\n{answer}")
-            refresh_msg_history(answer)
+            answer = process_personal_info_msg(answer, labels[2], uid)
         # for information retrieval
         elif labels[3] in classify_result:
             dt = get_dt_with_nl(msg,
                 my_cfg,
                 DataType.JSON.value,
                 True,
-                f"{const_dict.get('str1')} {uid}"
+                f"{get_const_dict().get('str1')} {uid}"
             )
             usr_dt_dict = json.loads(dt)
             usr_dt_desc = desc_usr_dt(msg, my_cfg, True, usr_dt_dict["raw_dt"][0])
@@ -236,73 +192,23 @@ def submit():
             refresh_msg_history(answer)
         # for redirect to human talk
         elif labels[4] in classify_result:
-            msg_boxing = const_dict.get("label4")
-            msg_boxing += f"<br>\n{convert_list_to_html_table(msg_history)}"
-            chat_abs = get_abs_of_chat(msg_history, my_cfg, True)
+            msg_boxing = get_const_dict().get("label4")
+            msg_boxing += f"<br>\n{convert_list_to_html_table(get_msg_history_list())}"
+            chat_abs = get_abs_of_chat(get_msg_history_list(), my_cfg, True)
             msg_boxing += f"<br>{chat_abs}"
-            logger.info(f"msg_boxing_for_classify_snd_to_human_being {human_being_uid}, classify {labels[4]}:\n{msg_boxing}")
-            snd_mail(human_being_uid, msg_boxing)
-            msg_history.clear()
-            answer = const_dict.get("label41")
-            ai_service_status[uid] = AI_SERVICE_STATUS.ClOSE.value          # transform AI service to human service
+            logger.info(f"msg_boxing_for_classify_snd_to_human_being "
+                        f"{get_human_being_uid()}, classify {labels[4]}:\n{msg_boxing}")
+            snd_mail(get_human_being_uid(), msg_boxing)
+            get_msg_history_list().clear()
+            answer = get_const_dict().get("label41")
+            get_ai_service_status_dict()[uid] = AI_SERVICE_STATUS.ClOSE.value          # transform AI service to human service
             logger.info(f"answer_for_classify {labels[4]}:\n{answer}")
         # for other labels
         else:
-            answer += const_dict.get("label5")
+            answer += get_const_dict().get("label5")
             logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")
             refresh_msg_history(answer)
     return Response(answer, content_type=content_type, status=200)
-
-
-def process_human_service_msg(msg: str, msg_from_uid: str) -> Response:
-    """
-    for human provided customer service instead of AI
-        (1) send human made msg directly to customer
-        (2) when service finished , switch service provider to AI
-    """
-    content_type = 'text/markdown; charset=utf-8'
-    if const_dict.get("str2") in msg.upper():
-        logger.info(f"switch_service_provider_to_AI_for_uid {human_customer_service_target_uid}")
-        ai_service_status[human_customer_service_target_uid] = AI_SERVICE_STATUS.OPEN
-        answer =const_dict.get("str3")
-    else:
-        logger.info(f"snd_msg_to_customer_directly, "
-            f"from {msg_from_uid}, to {human_customer_service_target_uid}, msg {msg}")
-        snd_mail(human_customer_service_target_uid, f"[人工客服]{msg}")
-        logger.info(f"msg_outbox_list: {mail_outbox_list}")
-        answer = f"消息已经发至用户[{human_customer_service_target_uid}]"
-    return Response(answer, content_type=content_type, status=200)
-
-
-def process_door_service(uid: str, classify_label: str) -> Response:
-    """
-    :param uid: user id of whom ask for door service
-    :param classify_label: the service type label
-    """
-    user_dict = json.loads(const_dict.get("label1"))
-    if uid in session_info and session_info[uid]:
-        user_dict = fill_dict(session_info[uid], user_dict, my_cfg, True)
-        logger.info(f"html_table_with_personal_info_filled_in for {classify_label}")
-    else:
-        logger.info(f"{uid},current_id_not_in_person_info, {session_info}")
-    refresh_msg_history(const_dict.get("label11"))
-    content_type = 'text/html; charset=utf-8'
-    logger.info(f"answer_for_classify {classify_label}:\nuser_dict: {user_dict}")
-    response = make_response(render_template("door_service.html", **user_dict))
-    response.headers['Content-Type'] = content_type
-    response.status_code = 200
-    return response
-
-def refresh_msg_history(msg: str, msg_type="机器人"):
-    now = datetime.now()
-    msg_history.append(
-        {
-            "编号": len(msg_history),
-            "消息": msg,
-            "发送者": msg_type,
-            "时间":  now.strftime('%Y-%m-%d %H:%M:%S')
-        }
-    )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=19000)

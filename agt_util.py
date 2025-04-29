@@ -27,6 +27,7 @@ def get_model(cfg, is_remote):
 
 def classify_msg(labels: list, msg: str, cfg: dict, is_remote=True) -> dict:
     """
+    classify user's question first, multi-label can be obtained
     from transformers import pipeline
     classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
     def classify_query(text):
@@ -36,6 +37,10 @@ def classify_msg(labels: list, msg: str, cfg: dict, is_remote=True) -> dict:
     # 示例使用
     user_input = "我家水管爆了需要处理"
     print(f"问题类型: {classify_query(user_input)}")
+    :param labels: the label list collection which AI can produce label within it
+    :param msg: the msg need to be classified by AI
+    :param cfg: the configuration information of system
+    :param is_remote: is the LLM is deployed in remote endpoint
     """
 
     label_str = ';\n'.join(map(str, labels))
