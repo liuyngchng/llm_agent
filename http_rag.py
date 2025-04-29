@@ -123,7 +123,7 @@ def get_msg(uid):
     if not uid:
         logger.error("illegal_uid")
         return Response("", content_type=content_type, status=502)
-    logger.info(f"rcv_mail for {uid}")
+    # logger.info(f"rcv_mail for {uid}")
     answer = rcv_mail(uid)
     return Response(answer, content_type=content_type, status=200)
 
