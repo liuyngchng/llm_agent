@@ -12,15 +12,13 @@ from flask import (Flask, request, jsonify, render_template, Response,
                    send_from_directory, abort, make_response)
 from config_util import auth_user, get_user_role_by_uid
 from csm_service import rcv_mail, get_human_being_uid, get_ai_service_status_dict, snd_mail, \
-    get_human_customer_service_target_uid, get_const_dict, get_msg_history_list, \
+    get_human_customer_service_target_uid, get_const_dict, \
     refresh_msg_history, refresh_session_info, process_door_to_door_service, \
-    process_online_pay_service, process_personal_info_msg, process_human_service_msg
-from my_enums import DataType, ActorRole, AI_SERVICE_STATUS
-from agt_util import (classify_msg, get_abs_of_chat)
+    process_online_pay_service, process_personal_info_msg, process_human_service_msg, retrieval_data, \
+    init_customer_service, talk_with_human
+from my_enums import ActorRole, AI_SERVICE_STATUS
+from agt_util import classify_msg
 from sys_init import init_yml_cfg
-from utils import convert_list_to_html_table
-
-from sql_agent import get_dt_with_nl, desc_usr_dt
 
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -75,7 +73,7 @@ def login():
     else:
         logger.info(f"return_page {dt_idx}")
         ctx = {
-            "msg_from_uid": auth_result["msg_from_uid"],
+            "uid": auth_result["uid"],
             "sys_name": my_cfg['sys']['name'],
             "role": auth_result["role"],
             "t": auth_result["t"],
@@ -116,7 +114,7 @@ def get_file(file_name):
     logger.info(f"return static file {file_name}")
     return send_from_directory(static_dir, file_name)
 
-@app.route('/msg/box/<msg_from_uid>', methods=['GET'])
+@app.route('/msg/box/<uid>', methods=['GET'])
 def get_msg(uid):
     """
     返回 msg box 中的消息
@@ -125,12 +123,13 @@ def get_msg(uid):
     if not uid:
         logger.error("illegal_uid")
         return Response("", content_type=content_type, status=502)
+    logger.info(f"rcv_mail for {uid}")
     answer = rcv_mail(uid)
     return Response(answer, content_type=content_type, status=200)
 
 
 @app.route('/usr/ask', methods=['POST'])
-def submit():
+def submit_user_question():
     """
     form submit, get data from form
     curl -s --noproxy '*' -X POST 'http://127.0.0.1:19000/usr/ask' \
@@ -139,7 +138,7 @@ def submit():
     :return:
     """
     msg = request.form.get('msg')
-    uid = request.form.get('msg_from_uid')
+    uid = request.form.get('uid')
     logger.info(f"rcv_msg: {msg}")
     content_type = 'text/markdown; charset=utf-8'
     usr_role = get_user_role_by_uid(uid)
@@ -165,7 +164,8 @@ def submit():
     answer = ""
     for classify_result in  classify_results:
         if labels[1] in classify_result:
-            answer = process_door_to_door_service(uid, labels[1])
+            content_type = 'text/html; charset=utf-8'
+            answer = process_door_to_door_service(uid, labels[1], my_cfg)
             response = make_response(answer)
             response.headers['Content-Type'] = content_type
             response.status_code = 200
@@ -178,31 +178,10 @@ def submit():
             answer = process_personal_info_msg(answer, labels[2], uid)
         # for information retrieval
         elif labels[3] in classify_result:
-            dt = get_dt_with_nl(msg,
-                my_cfg,
-                DataType.JSON.value,
-                True,
-                f"{get_const_dict().get('str1')} {uid}"
-            )
-            usr_dt_dict = json.loads(dt)
-            usr_dt_desc = desc_usr_dt(msg, my_cfg, True, usr_dt_dict["raw_dt"][0])
-            answer += usr_dt_desc
-            # answer += const_dict.get("label3")
-            logger.info(f"answer_for_classify {labels[3]}:\n{answer}")
-            refresh_msg_history(answer)
+            answer = retrieval_data(answer, labels[3], msg, uid, my_cfg)
         # for redirect to human talk
         elif labels[4] in classify_result:
-            msg_boxing = get_const_dict().get("label4")
-            msg_boxing += f"<br>\n{convert_list_to_html_table(get_msg_history_list())}"
-            chat_abs = get_abs_of_chat(get_msg_history_list(), my_cfg, True)
-            msg_boxing += f"<br>{chat_abs}"
-            logger.info(f"msg_boxing_for_classify_snd_to_human_being "
-                        f"{get_human_being_uid()}, classify {labels[4]}:\n{msg_boxing}")
-            snd_mail(get_human_being_uid(), msg_boxing)
-            get_msg_history_list().clear()
-            answer = get_const_dict().get("label41")
-            get_ai_service_status_dict()[uid] = AI_SERVICE_STATUS.ClOSE.value          # transform AI service to human service
-            logger.info(f"answer_for_classify {labels[4]}:\n{answer}")
+            answer = talk_with_human(answer, labels, uid, my_cfg)
         # for other labels
         else:
             answer += get_const_dict().get("label5")
@@ -210,5 +189,7 @@ def submit():
             refresh_msg_history(answer)
     return Response(answer, content_type=content_type, status=200)
 
+
 if __name__ == '__main__':
+    init_customer_service()
     app.run(host='0.0.0.0', port=19000)
