@@ -64,34 +64,24 @@ def vector_pdf(pdf_file: str):
     texts = text_splitter.split_documents(documents)
 
     # 加载Embedding模型，进行自然语言处理
-    logger.info(f"load embedding model: {embedding_model}")
+    logger.info(f"load_embedding_model: {embedding_model}")
     embeddings = HuggingFaceEmbeddings(
-        model_name=embedding_model,
-        cache_folder='./bge-cache',
-        model_kwargs={'device': 'cpu'}
+        model_name=embedding_model, cache_folder='./bge-cache', model_kwargs={'device': 'cpu'}
     )
-
-    # 创建向量数据库
     logger.info("build vector db")
     db = FAISS.from_documents(texts, embeddings)
-    logger.info("start save vector db to local txt_file")
-
+    logger.info("localize_vector_db")
     db.save_local(vector_db)
-
-    logger.info("vector db saved to local txt_file {}".format(vector_db))
+    logger.info("localized_vector_db_file {vector_db}")
 
 def vector_pdf_dir(pdf_dir: str):
 
     # 加载知识库文件
     logger.info(f"load local file from {pdf_dir}")
-    loader = UnstructuredLoader(pdf_dir)
-    # load txt txt_file
-    loader = TextLoader(txt_file, encoding='utf8')
-    # load a directory
-    # loader = DirectoryLoader(path=knowledge_dir, recursive=True, load_hidden=False,
-    #                          loader_cls=TextLoader, glob="**/*.java")
+    loader = DirectoryLoader(path=pdf_dir, recursive=True, load_hidden=False,
+                              loader_cls=TextLoader, glob="**/*.java")
     documents = loader.load()
-    logger.info("loaded {} documents, files name list as following".format(len(documents)))
+    logger.info("loaded {} documents, files_name_list_as_following".format(len(documents)))
     for doc in documents:
         #print(f"\t{doc.metadata['page_number']}\t{doc.page_content}")
         print(f"{doc.page_content}")
@@ -112,11 +102,9 @@ def vector_pdf_dir(pdf_dir: str):
     # 创建向量数据库
     logger.info("build vector db")
     db = FAISS.from_documents(texts, embeddings)
-    logger.info("start save vector db to local txt_file")
-
+    logger.info("start_save_vector_db_to_local_txt_file")
     db.save_local(vector_db)
-
-    logger.info("vector db saved to local txt_file {}".format(vector_db))
+    logger.info("vector_db_saved_to_local_txt_file {}".format(vector_db))
 
 if __name__ == "__main__":
     """
@@ -128,7 +116,6 @@ if __name__ == "__main__":
     # os.putenv("CUDA_VISIBLE_DEVICES", "1")
     # a = os.environ.get("CUDA_VISIBLE_DEVICES")
     # print(a)
-
     # os.environ["CUDA_VISIBLE_DEVICES"] = 0
-
-    vector_txt(my_txt_file)
+    # vector_txt(my_txt_file)
+    vector_pdf("/home/rd/doc/文档生成/knowledge_base/1.pdf")
