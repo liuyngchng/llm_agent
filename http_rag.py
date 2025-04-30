@@ -30,7 +30,7 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
-
+init_customer_service()
 
 @app.route('/', methods=['GET'])
 def login_index():
@@ -191,5 +191,4 @@ def submit_user_question():
 
 
 if __name__ == '__main__':
-    init_customer_service()
     app.run(host='0.0.0.0', port=19000)
