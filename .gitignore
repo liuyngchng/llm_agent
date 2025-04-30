@@ -12,6 +12,7 @@ log/*
 **/_*
 native-image/*
 **/*.log
+**/*.log.*
 **/*.o
 faiss_index/*
 **/*.txt
