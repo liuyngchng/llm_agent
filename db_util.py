@@ -9,6 +9,13 @@ import logging.config
 from my_enums import DataType, DBType
 from urllib.parse import urlparse, unquote, urlencode
 from sys_init import init_yml_cfg
+"""
+mysql+pymysql://root:123456@localhost:3306/test
+postgresql+psycopg2://postgres:123456@localhost:5432/test
+sqlite:///test.db
+mssql+pymssql://<username>:<password>@<freetds_name>/?charset=utf8
+oracle+oracledb://user:pass@hostname:port[/dbname][?service_name=<service>[&key=value&key=value...]]
+"""
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -53,7 +60,7 @@ def output_data(db_con, sql:str, data_format:str) -> str:
         result = sqlite_query_tool(db_con, sql)
     elif isinstance(db_con, pymysql.Connection):
         result = mysql_query_tool(db_con, sql)
-    elif isinstance(db_con, cx_Oracle.Connection):
+    elif isinstance(db_con, oracledb.Connection):
         result = oracle_query_tool(db_con, sql)
     else:
         logger.error(f"database_type_error, {__file__}")
@@ -131,7 +138,7 @@ def build_mysql_con_dict_from_cfg(db_config: dict) -> dict:
     return cif
 
 #################### for support oracle DB #########################
-import cx_Oracle
+import oracledb
 def oracle_query_tool(db_con, query: str) -> str:
     try:
         cursor = db_con.cursor()
@@ -145,28 +152,30 @@ def oracle_query_tool(db_con, query: str) -> str:
 
 def oracle_output(cfg: dict, sql: str, data_format: str):
     """
-    cfg['db']['uri'] = oracle+cx_oracle://user:password@host:port/service_name
+    cfg['db']['uri'] =
+    oracle+cx_oracle://user:password@host:port/service_name
+    oracle+oracledb://user:pass@hostname:port[/dbname][?service_name=<service>[&key=value&key=value...]]
     连接上oracle服务之后，可以通过以下方法获取 service_name
     SELECT VALUE FROM V$PARAMETER WHERE NAME = 'service_names';
     """
     db_config = cfg.get('db', {})
     logger.info(f"db_config {db_config}")
     if all(key in db_config for key in ['name', 'host', 'user', 'password']):
-        dsn = cx_Oracle.makedsn(db_config['host'],db_config.get('port', 1521),service_name=db_config['name'])
-        conn =  cx_Oracle.connect(user=db_config['user'],password=db_config['password'],dsn=dsn )
+        dsn = oracledb.makedsn(db_config['host'],db_config.get('port', 1521),service_name=db_config['name'])
+        conn =  oracledb.connect(user=db_config['user'],password=db_config['password'],dsn=dsn )
     else:
         parsed_uri = urlparse(db_config['uri'])
         port = parsed_uri.port or 1521
-        dsn = cx_Oracle.makedsn(unquote(parsed_uri.hostname),port,service_name=unquote(parsed_uri.path[1:]))
-        conn = cx_Oracle.connect(user=unquote(parsed_uri.username), password=unquote(parsed_uri.password), dsn=dsn)
+        dsn = oracledb.makedsn(unquote(parsed_uri.hostname),port,service_name=unquote(parsed_uri.path[1:]))
+        conn = oracledb.connect(user=unquote(parsed_uri.username), password=unquote(parsed_uri.password), dsn=dsn)
 
     dt = output_data(conn, sql, data_format)
     conn.close()
     return dt
 
 def get_orc_db_info(cfg: dict) -> list:
-    dsn = cx_Oracle.makedsn(cfg['db']['host'], cfg['db']['port'], service_name=cfg['db']['name'])
-    with cx_Oracle.connect(user=cfg['db']['user'], password=cfg['db']['password'], dsn=dsn) as conn:
+    dsn = oracledb.makedsn(cfg['db']['host'], cfg['db']['port'], service_name=cfg['db']['name'])
+    with oracledb.connect(user=cfg['db']['user'], password=cfg['db']['password'], dsn=dsn) as conn:
         with conn.cursor() as cursor:
             cursor.execute("SELECT table_name FROM user_tables")
             return [row[0] for row in cursor]
