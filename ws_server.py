@@ -3,6 +3,7 @@
 
 """
 pip install uvicorn websockets
+uvicorn ws_server:start_server --ws websockets --host 0.0.0.0 --port 18765
 """
 import json
 import time

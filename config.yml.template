@@ -43,7 +43,7 @@ ai:
 #  与大模型相关的提示词配置
   prompts:
 #   是否需要在读取数据库数据的基础上，添加chartjs 绘图数据，true 需要; false，不需要，直接输出数据
-    add_chart_to_dt: true
+    add_chart_to_dt: false
 #   通过自然语言生成SQL语句的大模型提示词，内嵌变量 {schema} 不可更改，其他可自定义，多行
     sql_gen_sys_msg: |
       你是一个专业的SQL生成助手。已知数据库结构：
