@@ -22,7 +22,8 @@ from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-doc = "1.txt"
+# doc = "1.txt"
+doc = "/home/rd/Downloads/1.pdf"
 emb_name = os.path.abspath("../bge-large-zh-v1.5")
 idx = "faiss_index"
 
@@ -128,7 +129,7 @@ def test_search():
     # gpu_index.reset()
     # res.noTempMemory()
     start_ollama()
-    my_question = "居民如何开户?"
+    my_question = "鉴定环节的频率?"
     answer = search(my_question, init_yml_cfg())
     logger.info("answer： {}".format(answer))
     torch.cuda.empty_cache()

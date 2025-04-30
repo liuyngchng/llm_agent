@@ -24,13 +24,14 @@ user_sample_data_db = "user_info.db"
 def auth_user(user:str, t: str, cfg: dict) -> dict:
     auth_result ={"pass": False, "uid": ""}
     with sqlite3.connect(config_db) as my_conn:
-        sql = f"select id from user where name='{user}' and t = '{t}' limit 1"
+        sql = f"select id, role from user where name='{user}' and t = '{t}' limit 1"
         check_info = sqlite_query_tool(my_conn, sql)
-        user_id = json.loads(check_info)['data']
+        user_dt = json.loads(check_info)['data']
 
-    if user_id:
+    if user_dt:
         auth_result["pass"] = True
-        auth_result["uid"] = user_id[0][0]
+        auth_result["uid"] = user_dt[0][0]
+        auth_result["role"] = user_dt[0][1]
         auth_result["t"] = encrypt(str(time.time() * 1000), cfg['sys']['cypher_key'])
     return auth_result
 
@@ -47,7 +48,7 @@ def get_uid_by_user(usr:str) ->str:
             logger.info(f"user info for {usr} can't be found")
     return uid
 
-def get_user_by_uid(uid:str)->str | None:
+def get_user_name_by_uid(uid:str)-> str | None:
     user = None
     with sqlite3.connect(config_db) as my_conn:
         try:
@@ -59,6 +60,19 @@ def get_user_by_uid(uid:str)->str | None:
         except Exception as e:
             logger.info(f"no_user_info_found_for_uid, {uid}")
     return user
+
+def get_user_role_by_uid(uid:str)-> str | None:
+    role = None
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            sql = f"select role from user where id='{uid}' limit 1"
+            check_info = sqlite_query_tool(my_conn, sql)
+            user_dt = json.loads(check_info)['data']
+            role = user_dt[0][0]
+            logger.info(f"role {role}, uid {uid}")
+        except Exception as e:
+            logger.info(f"no_user_info_found_for_uid, {uid}")
+    return role
 
 def get_data_source_config_by_uid(uid:str, cfg: dict) -> dict:
     config = {}

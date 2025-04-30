@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def init_yml_cfg(cfg_file="config.yml")-> dict[str, any]:
     """
-    yaml config.yml file content as following
+    yaml config.yml txt_file content as following
     database:
       name: ***
       user: **

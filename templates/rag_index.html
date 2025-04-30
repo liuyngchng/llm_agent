@@ -7,13 +7,23 @@
     <script src="/static/marked.min.js"></script>
     <link rel="stylesheet" href="/static/my.rag.css?t=224">
 <!--    <title>{{sys_name}}</title>-->
-    <title>智能客服</title>
+    <title>
+        {% if role == 1 %}
+            人工客服座席
+        {% else %}
+            {{ sys_name }}
+        {% endif %}
+    </title>
 </head>
 <body>
     <div class="container">
         <div class="header">
-<!--            <h1>{{sys_name}}</h1>-->
-            <h1>智能客服</h1>
+            {% if role == 1 %}
+                <h1>人工客服座席[编号{{uid}}]</h1>
+            {% else %}
+                <h1>{{ sys_name }}</h1>
+            {% endif %}
+<!--            <h1>智能客服</h1>-->
         </div>
         
         <div class="chat-container" id="chat-container">
@@ -31,6 +41,7 @@
     </div>
 
     <script>
+        let fetchInterval = null;
         // 设置markdown的渲染风格， 启用GitHub风格Markdown
         marked.setOptions({
           breaks: true,
@@ -42,8 +53,15 @@
         const queryInput = document.getElementById('query-input');
         const dbUriInput = document.getElementById('db-uri-input');
         window.onload = function() {
-            const greeting = `Hi，我是客服小助手～ 很高兴遇见你！你可以随时问我关于燃气使用过程中遇到的问题，我来帮你看看`;
+            let greeting =''
+             {% if role == 1 %}
+                greeting = `Hi，我是客服小助手, 若有人工服务请求，我将发送给您消息，请您持续关注～～`;
+            {% else %}
+                greeting = `Hi，我是客服小助手～ 很高兴遇见你！你可以随时问我关于燃气使用过程中遇到的问题，我来帮你看看`;
+            {% endif %}
+
             addMessage(greeting, 'bot');
+            startMsgPolling();
         };
         // 表单提交
         queryForm.addEventListener('submit', function(e) {
@@ -62,7 +80,7 @@
             // 清空输入框
             queryInput.value = '';            
             // 发送API请求
-            fetchQueryData(query)
+            sendMsg(query)
                 .then(({data, contentType})  => {
                     // 添加机器人消息到聊天
                     addMessage(data, 'bot', contentType);
@@ -72,9 +90,8 @@
                 });
         });
         
-        // 发送API请求
-        // 修改后的fetch逻辑
-        async function fetchQueryData(query) {
+        // send msg to server
+        async function sendMsg(query) {
             const sendButton = document.querySelector('.send-button');
             let loadingMsg = null;
             try {
@@ -82,7 +99,7 @@
                 loadingMsg = addMessage('<div class="loading-dots">处理中</div>', 'bot');
                 const controller = new AbortController();
                 setTimeout(() => controller.abort(), 300000);
-                const response = await fetch('/rag/submit', {
+                const response = await fetch('/usr/ask', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                     body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(document.getElementById('uid').value)}`,
@@ -100,11 +117,15 @@
                 loadingMsg && chatContainer.contains(loadingMsg) && chatContainer.removeChild(loadingMsg);
                 sendButton.disabled = false;
                 throw error;
+            } finally {
+                console.log("start_msg_polling_after_snd_msg_to_server")
+                startMsgPolling();
             }
         }
         
         // 添加消息到聊天
         function addMessage(text, type, contentType) {
+            if (!text || text.trim() === '') return null;
             const messageContainer = document.createElement('div');
             messageContainer.classList.add('message-container');
             // 安全处理并解析markdown/html
@@ -160,10 +181,31 @@
                     }
 
                 } finally {
-
+<!--                    do nothing here-->
                 }
             }
         });
+
+        // for get message from message box, a fake instant message,
+        // if msg pulled, then stop work until user give a answer to the msg
+        function startMsgPolling() {
+<!--            clearInterval(fetchInterval);-->
+            fetchInterval = setInterval(async () => {
+                try {
+                    const uid = document.getElementById('uid').value;
+                    const response = await fetch(`/msg/box/${encodeURIComponent(uid)}`);
+                    if (response.ok) {
+                        const msg = (await response.text()).trim();
+                        if (msg) {
+                            addMessage(msg, 'bot', 'text/markdown');
+<!--                            clearInterval(fetchInterval);   // 收到消息后停止轮询-->
+                        }
+                    }
+                } catch(e) {
+                    console.error("msg_polling_err:", e)
+                }
+            }, 2000);
+        }
     </script>
 </body>
 </html>

@@ -11,7 +11,7 @@ import os
 from flask import Flask, request, jsonify, render_template, Response
 
 import config_util as cfg_utl
-from my_enum import DataType
+from my_enums import DataType
 from sql_agent import get_dt_with_nl
 from sys_init import init_yml_cfg
 from audio import transcribe_webm_audio_bytes
@@ -50,14 +50,14 @@ def config_index():
     """
     logger.info(f"request_args_in_config_index {request.args}")
     try:
-        uid = request.args.get('uid').strip()
+        uid = request.args.get('msg_from_uid').strip()
         if not uid:
             return "user is null in config, please submit your username in config request"
     except Exception as e:
         logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
         raise jsonify("err_in_config_index")
     ctx = cfg_utl.get_data_source_config_by_uid(uid, my_cfg)
-    ctx["uid"] = uid
+    ctx["msg_from_uid"] = uid
     ctx['sys_name']=my_cfg['sys']['name']
     ctx["waring_info"]=""
     dt_idx = "config_index.html"
@@ -68,7 +68,7 @@ def config_index():
 def save_config():
     logger.info(f"save config info {request.form}")
     dt_idx = "config_index.html"
-    uid = request.form.get('uid').strip()
+    uid = request.form.get('msg_from_uid').strip()
     db_type = request.form.get('db_type').strip()
     db_host = request.form.get('db_host').strip()
     db_port = request.form.get('db_port').strip()
@@ -78,7 +78,7 @@ def save_config():
     data_source_cfg = {
         "sys_name": my_cfg['sys']['name'],
         "waring_info": "",
-        "uid": uid,
+        "msg_from_uid": uid,
         "db_type": db_type,
         "db_name": db_name,
         "db_host": db_host,
@@ -86,7 +86,7 @@ def save_config():
         "db_usr": db_usr,
         "db_psw": db_psw,
     }
-    usr = cfg_utl.get_user_by_uid(uid)
+    usr = cfg_utl.get_user_name_by_uid(uid)
     if not usr:
         data_source_cfg['waring_info'] = '非法访问，请您先登录系统'
         return render_template(dt_idx, **data_source_cfg)
@@ -154,7 +154,7 @@ def login():
     else:
         logger.info(f"return_page {dt_idx}")
         ctx = {
-            "uid": auth_result["uid"],
+            "msg_from_uid": auth_result["msg_from_uid"],
             "t": auth_result["t"],
             "sys_name": my_cfg['sys']['name'],
         }
@@ -170,7 +170,7 @@ def query_data(catch=None):
     :return:
     """
     msg = request.form.get('msg').strip()
-    uid = request.form.get('uid').strip()
+    uid = request.form.get('msg_from_uid').strip()
     auth_result = authenticate(request)
     if not auth_result:
         data = {"chart":{}, "raw_dt":{}, "msg":"illegal access"}
@@ -200,7 +200,7 @@ def authenticate(req)->bool:
         return True
     result = False
     try:
-        if cfg_utl.get_user_by_uid(req.form.get('uid').strip()):
+        if cfg_utl.get_user_name_by_uid(req.form.get('msg_from_uid').strip()):
             result = True
         else:
             logger.error(f"illegal_request {req}")
@@ -244,7 +244,7 @@ def transcribe_audio() -> tuple[Response, int] | Response:
     try:
         audio_file = request.files.get('audio')
         if not audio_file or not audio_file.filename.endswith('.webm'):
-            return jsonify({"error": "invalid webm file"}), 400
+            return jsonify({"error": "invalid webm txt_file"}), 400
         audio_bytes = audio_file.read()
         result = transcribe_webm_audio_bytes(audio_bytes, my_cfg)
         data = {"text": result}

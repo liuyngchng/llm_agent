@@ -7,19 +7,18 @@ import json
 import logging.config
 import os
 import re
-import time
 
 from flask import (Flask, request, jsonify, render_template, Response,
                    send_from_directory, abort, make_response)
-from config_util import auth_user, get_consts, get_user_sample_data_rd_cfg_dict
-from my_enum import DataType
-from semantic_search import search
-from agt_util import (classify_msg, fill_dict, update_session_info,
-                      extract_session_info, get_abs_of_chat)
+from config_util import auth_user, get_user_role_by_uid
+from csm_service import rcv_mail, get_human_being_uid, get_ai_service_status_dict, snd_mail, \
+    get_human_customer_service_target_uid, get_const_dict, \
+    refresh_msg_history, refresh_session_info, process_door_to_door_service, \
+    process_online_pay_service, process_personal_info_msg, process_human_service_msg, retrieval_data, \
+    init_customer_service, talk_with_human
+from my_enums import ActorRole, AI_SERVICE_STATUS
+from agt_util import classify_msg
 from sys_init import init_yml_cfg
-from utils import convert_list_to_html_table
-from datetime import datetime
-from sql_agent import get_dt_with_nl, desc_usr_dt
 
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -31,11 +30,7 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
-session_info = {}
-const_dict = get_consts()
-
-# TODO: to limit the size of history to the maximum token size of LLM
-msg_history = []
+init_customer_service()
 
 @app.route('/', methods=['GET'])
 def login_index():
@@ -79,8 +74,9 @@ def login():
         logger.info(f"return_page {dt_idx}")
         ctx = {
             "uid": auth_result["uid"],
-            "t": auth_result["t"],
             "sys_name": my_cfg['sys']['name'],
+            "role": auth_result["role"],
+            "t": auth_result["t"],
         }
         return render_template(dt_idx, **ctx)
 
@@ -118,12 +114,25 @@ def get_file(file_name):
     logger.info(f"return static file {file_name}")
     return send_from_directory(static_dir, file_name)
 
+@app.route('/msg/box/<uid>', methods=['GET'])
+def get_msg(uid):
+    """
+    返回 msg box 中的消息
+    """
+    content_type = 'text/markdown; charset=utf-8'
+    if not uid:
+        logger.error("illegal_uid")
+        return Response("", content_type=content_type, status=502)
+    # logger.info(f"rcv_mail for {uid}")
+    answer = rcv_mail(uid)
+    return Response(answer, content_type=content_type, status=200)
 
-@app.route('/rag/submit', methods=['POST'])
-def submit():
+
+@app.route('/usr/ask', methods=['POST'])
+def submit_user_question():
     """
     form submit, get data from form
-    curl -s --noproxy '*' -X POST 'http://127.0.0.1:19000/rag/submit' \
+    curl -s --noproxy '*' -X POST 'http://127.0.0.1:19000/usr/ask' \
         -H "Content-Type: application/x-www-form-urlencoded" \
         -d '{"msg":"who are you?"}'
     :return:
@@ -131,120 +140,55 @@ def submit():
     msg = request.form.get('msg')
     uid = request.form.get('uid')
     logger.info(f"rcv_msg: {msg}")
+    content_type = 'text/markdown; charset=utf-8'
+    usr_role = get_user_role_by_uid(uid)
+    # human being customer service msg should be sent to the customer directly
+    # no AI interfere
+    if uid == get_human_being_uid():
+        answer= process_human_service_msg(msg, uid)
+        return Response(answer, content_type=content_type, status=200)
+    # if not in AI service mode , customer user msg should be sent to human being who provide service directly
+    if usr_role == ActorRole.HUMAN_CUSTOMER.value \
+        and get_ai_service_status_dict().get(uid) == AI_SERVICE_STATUS.ClOSE.value:
+        snd_mail(get_human_being_uid(), f"[用户{get_human_customer_service_target_uid()}]{msg}")
+        logger.info(f"snd_mail to msg_from_uid {get_human_being_uid()}, {msg}")
+        return Response("", content_type=content_type, status=200)
+
     refresh_msg_history(msg, "用户")
-    logger.debug("msg_history:\n%s", '\n'.join(map(str, msg_history)))
-    labels = json.loads(const_dict.get("classify_label"))
+    labels = json.loads(get_const_dict().get("classify_label"))
+
     classify_results = classify_msg(labels, msg, my_cfg, True)
     logger.info(f"classify_result: {classify_results}")
-    content_type = 'text/markdown; charset=utf-8'
-    s_info = extract_session_info(msg, my_cfg, True)
-    if s_info:
-        if uid not in session_info:
-            logger.info(f"{uid} uid_not_in_session_dict {session_info}")
-            session_info[uid] = s_info
-        else:
-            session_info[uid] = update_session_info(session_info[uid], s_info, my_cfg, True)
+
+    refresh_session_info(msg, uid, my_cfg)
     answer = ""
     for classify_result in  classify_results:
-        # for to door service
         if labels[1] in classify_result:
-            user_dict = json.loads(const_dict.get("label1"))
-            if uid in session_info and session_info[uid]:
-                user_dict = fill_dict(session_info[uid], user_dict, my_cfg, True)
-                logger.info(f"html_table_with_personal_info_filled_in for {labels[1]}")
-            else:
-                logger.info(f"{uid},current_id_not_in_person_info, {session_info}")
-            refresh_msg_history(const_dict.get("label11"))
             content_type = 'text/html; charset=utf-8'
-            logger.info(f"answer_for_classify {labels[1]}:\nuser_dict: {user_dict}")
-            response = make_response(render_template("door_service.html", **user_dict))
+            answer = process_door_to_door_service(uid, labels[1], my_cfg)
+            response = make_response(answer)
             response.headers['Content-Type'] = content_type
             response.status_code = 200
             return response
          # for online pay service
         if labels[0] in classify_result:
-            # answer = search(msg, my_cfg, True)
-            txt = const_dict.get("label0")
-            bill_addr = const_dict.get("bill_addr_svg")
-            answer += f'''{txt}<div style="width: 100px; height: 100px; overflow: hidden">{bill_addr}</div>'''
-            logger.info(f"answer_for_classify {labels[0]}:\n{txt}")
-            refresh_msg_history(txt)
+            answer = process_online_pay_service(answer, labels[0])
         # for submit personal information
         elif labels[2] in classify_result:
-            logger.info(f"session_dict[{uid}] = {session_info[uid]} ")
-            answer += const_dict.get("label2")
-            logger.info(f"answer_for_classify {labels[2]}:\n{answer}")
-            refresh_msg_history(answer)
+            answer = process_personal_info_msg(answer, labels[2], uid)
         # for information retrieval
         elif labels[3] in classify_result:
-            dt = get_dt_with_nl(msg,
-                my_cfg,
-                DataType.JSON.value,
-                True,
-                f"{const_dict.get("str1")} {uid}"
-            )
-            usr_dt_dict = json.loads(dt)
-            usr_dt_desc = desc_usr_dt(msg, my_cfg, True, usr_dt_dict["raw_dt"][0])
-            answer += usr_dt_desc
-            # answer += const_dict.get("label3")
-            logger.info(f"answer_for_classify {labels[3]}:\n{answer}")
-            refresh_msg_history(answer)
+            answer = retrieval_data(answer, labels[3], msg, uid, my_cfg)
         # for redirect to human talk
         elif labels[4] in classify_result:
-            answer += const_dict.get("label4")
-            answer += f"<br>\n{convert_list_to_html_table(msg_history)}"
-            chat_abs = get_abs_of_chat(msg_history, my_cfg, True)
-            answer += f"<br>{chat_abs}"
-            logger.info(f"answer_for_classify {labels[4]}:\n{answer}")
+            answer = talk_with_human(answer, labels, uid, my_cfg)
         # for other labels
         else:
-            answer += const_dict.get("label5")
+            answer += get_const_dict().get("label5")
             logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")
             refresh_msg_history(answer)
     return Response(answer, content_type=content_type, status=200)
 
 
-@app.route('/door/srv', methods=['POST'])
-def door_service():
-    """
-    form submit, get data from form
-    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' \
-        -H "Content-Type: application/x-www-form-urlencoded" \
-        -d '{"user":"test"}'
-    :return:
-    echo -n 'my_str' |  md5sum
-    """
-    user_dict = request.form
-    content_type = 'text/html; charset=utf-8'
-    response = make_response(render_template("door_service_answer.html", **user_dict))
-    response.headers['Content-Type'] = content_type
-    response.status_code = 200
-    return response
-
-
-def test_req():
-    """
-    ask the LLM for some private msg not public to outside,
-    let LLM retrieve the information from local vector database,
-    and the output the answer.
-    """
-    logger.info(f"config {my_cfg}")
-    my_question = "查下我的余额度？"
-    logger.info(f"invoke msg: {my_question}")
-    answer = search(my_question, my_cfg, True)
-    logger.info(f"answer is \r\n{answer}")
-
-def refresh_msg_history(msg: str, msg_type="机器人"):
-    now = datetime.now()
-    msg_history.append(
-        {
-            "编号": len(msg_history),
-            "消息": msg,
-            "发送者": msg_type,
-            "时间":  now.strftime('%Y-%m-%d %H:%M:%S')
-        }
-    )
-
 if __name__ == '__main__':
-    # test_req()
     app.run(host='0.0.0.0', port=19000)

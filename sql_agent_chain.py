@@ -347,7 +347,7 @@ if __name__ == "__main__":
     # Compile the workflow into a runnable
     app = workflow.compile()
     img_name = "{}.png".format(__file__.split("/")[-1])
-    #print("save the graph to local file {}".format(img_name))
+    #print("save the graph to local txt_file {}".format(img_name))
     #app.get_graph().draw_png(img_na信息me)
     user_question = question
     logger.info("msg is: {}".format(user_question))

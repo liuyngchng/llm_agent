@@ -64,7 +64,7 @@ def transcribe_audio(audio_path):
     }
 
     files = {
-        "file": open(audio_path, "rb")
+        "txt_file": open(audio_path, "rb")
     }
 
     data = {
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     curl -ks --noproxy '*' -w'\n' --tlsv1 -X POST  '{api_uri}/audio/transcriptions' \
         -H "Content-Type: multipart/form-data" \
         -H 'Authorization: Bearer {api_key}' \
-        -F "file=@static/asr_example_zh.wav" \
+        -F "txt_file=@static/asr_example_zh.wav" \
         -F "model={asr_model_name}" | jq
     """
     logger.info("start test")
