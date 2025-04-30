@@ -202,15 +202,15 @@ def get_db_uri(cfg: dict) -> str:
             my_db_uri = (f"oracle+cx_oracle://{db_cfg['user']}:{db_cfg['password']}"
                          f"@{db_cfg['host']}:{db_cfg.get('port', 1521)}/?service_name={db_cfg['name']}")
         else:
-            raise "unknown db type in config file"
+            raise "unknown db type in config txt_file"
     elif all(key in db_cfg for key in ['type', 'name']):
         db_type_cfg = db_cfg['type'].lower()
         if DBType.SQLITE.value in db_type_cfg:
             my_db_uri = f"sqlite:///{db_cfg['name']}"
         else:
-            raise "one of the following key ['type', 'name'] missed in config file"
+            raise "one of the following key ['type', 'name'] missed in config txt_file"
     else:
-        raise "one of the following key ['type', 'name', 'host', 'user', 'password'] missed in config file"
+        raise "one of the following key ['type', 'name', 'host', 'user', 'password'] missed in config txt_file"
     logger.info(f"db_uri {my_db_uri}")
     return my_db_uri
 
@@ -230,7 +230,7 @@ def test_db():
         my_dt = oracle_output(my_cfg, my_sql, 'json')
     else:
         my_dt = None
-        raise "check your config file to config correct [dt_uri]"
+        raise "check your config txt_file to config correct [dt_uri]"
 
     logger.info(f"my_dt\n{my_dt}\n")
 

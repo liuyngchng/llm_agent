@@ -34,6 +34,6 @@ embeddings = HuggingFaceEmbeddings(model_name="../bge-large-zh-v1.5", cache_fold
 logger.info("build vector db")
 db = FAISS.from_documents(texts, embeddings)
 # 保存向量存储库至本地，save_local() 方法将生成的索引文件保存到本地，以便之后可以重新加载
-logger.info("save vector db to local file")
+logger.info("save vector db to local txt_file")
 db.save_local("./faiss_index")
-logger.info("vector db saved to local file")
+logger.info("vector db saved to local txt_file")

@@ -32,7 +32,7 @@ if __name__ == "__main__":
     """
     file_name = "{}.png".format(__file__.split("/")[-1])
     my_graph = get_graph()
-    print('save graph as png format to local file "{}"'.format(file_name))
+    print('save graph as png format to local txt_file "{}"'.format(file_name))
     my_graph.get_graph().draw_png(file_name)
 
     # user_input = '介绍你自己的模型名称、量化参数、部署需要的资源等'
