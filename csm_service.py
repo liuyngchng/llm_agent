@@ -26,8 +26,8 @@ human_being_uid = "332987919"
 #     human_being_uid:["这是一条用户需要转人工客服的测试消息，需要发送给人工客服"]
 # }
 mail_outbox_list = {
-    human_customer_service_target_uid:[],
-    human_being_uid:[]
+    human_customer_service_target_uid: [],
+    human_being_uid: []
 }
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -40,31 +40,40 @@ msg_history = []
 
 const_dict = {}
 
+
 def init_customer_service():
     global const_dict
     const_dict = get_consts()
     logger.info(f"const: {const_dict}")
 
-def get_const_dict()-> dict:
+
+def get_const_dict() -> dict:
     return const_dict
+
 
 def get_human_being_uid() -> str:
     return human_being_uid
 
+
 def get_human_customer_service_target_uid() -> str:
     return human_customer_service_target_uid
+
 
 def get_ai_service_status_dict() -> dict:
     return ai_service_status
 
-def get_msg_history_list()-> list:
+
+def get_msg_history_list() -> list:
     return msg_history
 
-def get_session_info_dict()-> dict:
+
+def get_session_info_dict() -> dict:
     return session_info
+
 
 def get_mail_outbox_list() -> dict:
     return mail_outbox_list
+
 
 def rcv_mail(uid: str) -> str:
     """
@@ -76,7 +85,8 @@ def rcv_mail(uid: str) -> str:
         mail = my_msg_outbox.pop(0)
     return mail
 
-def snd_mail(to_uid: str, msg: str)-> None:
+
+def snd_mail(to_uid: str, msg: str) -> None:
     """
     :param to_uid: mail receiver
     :param msg: the mail txt need to be sent
@@ -84,6 +94,7 @@ def snd_mail(to_uid: str, msg: str)-> None:
     target_msg_outbox = mail_outbox_list.get(to_uid, [])
     target_msg_outbox.append(msg)
     logger.info(f"mail_outbox_list.get({to_uid}): {mail_outbox_list.get(to_uid)}")
+
 
 def refresh_msg_history(msg: str, msg_type="机器人"):
     """
@@ -97,10 +108,11 @@ def refresh_msg_history(msg: str, msg_type="机器人"):
             "编号": len(get_msg_history_list()),
             "消息": msg,
             "发送者": msg_type,
-            "时间":  now.strftime('%Y-%m-%d %H:%M:%S')
+            "时间": now.strftime('%Y-%m-%d %H:%M:%S')
         }
     )
     logger.debug("msg_history_refreshed:\n%s", '\n'.join(map(str, get_msg_history_list())))
+
 
 def process_personal_info_msg(answer: str, label: str, uid: str):
     logger.info(f"session_dict[{uid}] = {get_session_info_dict().get(uid)} ")
@@ -118,6 +130,7 @@ def process_online_pay_service(answer: str, label: str):
     logger.info(f"answer_for_classify {label}:\n{txt}")
     refresh_msg_history(txt)
     return answer
+
 
 def refresh_session_info(msg: str, msg_uid: str, sys_cfg: dict):
     """
@@ -152,10 +165,10 @@ def process_human_service_msg(msg: str, msg_from_uid: str) -> str:
     if get_const_dict().get("str2") in msg.upper():
         logger.info(f"switch_service_provider_to_AI_for_uid {get_human_customer_service_target_uid()}")
         get_ai_service_status_dict()[get_human_customer_service_target_uid()] = AI_SERVICE_STATUS.OPEN
-        answer =get_const_dict().get("str3")
+        answer = get_const_dict().get("str3")
     else:
         logger.info(f"snd_msg_to_customer_directly, "
-            f"from {msg_from_uid}, to {get_human_customer_service_target_uid()}, msg {msg}")
+                    f"from {msg_from_uid}, to {get_human_customer_service_target_uid()}, msg {msg}")
         snd_mail(get_human_customer_service_target_uid(), f"[人工客服]{msg}")
         logger.info(f"msg_outbox_list: {get_mail_outbox_list()}")
         answer = f"消息已经发至用户[{get_human_customer_service_target_uid()}]"
@@ -180,6 +193,7 @@ def process_door_to_door_service(uid: str, classify_label: str, sys_cfg: dict) -
     result = render_template("door_service.html", **user_dict)
     return result
 
+
 def retrieval_data(answer: str, label: str, msg: str, uid: str, sys_cfg: dict) -> str:
     """
     :param answer: the answer to user's question
@@ -201,6 +215,7 @@ def retrieval_data(answer: str, label: str, msg: str, uid: str, sys_cfg: dict) -
     logger.info(f"answer_for_classify {label}:\n{answer}")
     refresh_msg_history(answer)
     return answer
+
 
 def talk_with_human(answer: str, label: str, uid: str, sys_cfg: dict) -> str:
     """
