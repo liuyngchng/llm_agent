@@ -11,11 +11,7 @@ import re
 from flask import (Flask, request, jsonify, render_template, Response,
                    send_from_directory, abort, make_response)
 from config_util import auth_user, get_user_role_by_uid
-from csm_service import rcv_mail, get_human_being_uid, get_ai_service_status_dict, snd_mail, \
-    get_human_customer_service_target_uid, get_const_dict, \
-    refresh_msg_history, refresh_session_info, process_door_to_door_service, \
-    process_online_pay_service, process_personal_info_msg, process_human_service_msg, retrieval_data, \
-    init_customer_service, talk_with_human
+from csm_service import CsmService
 from my_enums import ActorRole, AI_SERVICE_STATUS
 from agt_util import classify_msg
 from sys_init import init_yml_cfg
@@ -30,7 +26,7 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
-init_customer_service()
+csm_svc = CsmService()
 
 @app.route('/', methods=['GET'])
 def login_index():
@@ -124,7 +120,7 @@ def get_msg(uid):
         logger.error("illegal_uid")
         return Response("", content_type=content_type, status=502)
     # logger.info(f"rcv_mail for {uid}")
-    answer = rcv_mail(uid)
+    answer = csm_svc.rcv_mail(uid)
     return Response(answer, content_type=content_type, status=200)
 
 
@@ -144,49 +140,49 @@ def submit_user_question():
     usr_role = get_user_role_by_uid(uid)
     # human being customer service msg should be sent to the customer directly
     # no AI interfere
-    if uid == get_human_being_uid():
-        answer= process_human_service_msg(msg, uid)
+    if uid == csm_svc.get_human_being_uid():
+        answer= csm_svc.process_human_service_msg(msg, uid)
         return Response(answer, content_type=content_type, status=200)
     # if not in AI service mode , customer user msg should be sent to human being who provide service directly
     if usr_role == ActorRole.HUMAN_CUSTOMER.value \
-        and get_ai_service_status_dict().get(uid) == AI_SERVICE_STATUS.ClOSE.value:
-        snd_mail(get_human_being_uid(), f"[用户{get_human_customer_service_target_uid()}]{msg}")
-        logger.info(f"snd_mail to msg_from_uid {get_human_being_uid()}, {msg}")
+        and csm_svc.get_ai_service_status_dict().get(uid) == AI_SERVICE_STATUS.ClOSE.value:
+        csm_svc.snd_mail(csm_svc.get_human_being_uid(), f"[用户{csm_svc.get_human_customer_service_target_uid()}]{msg}")
+        logger.info(f"snd_mail to msg_from_uid {csm_svc.get_human_being_uid()}, {msg}")
         return Response("", content_type=content_type, status=200)
 
-    refresh_msg_history(msg, "用户")
-    labels = json.loads(get_const_dict().get("classify_label"))
+    csm_svc.refresh_msg_history(msg, "用户")
+    labels = json.loads(csm_svc.get_const_dict().get("classify_label"))
 
     classify_results = classify_msg(labels, msg, my_cfg, True)
     logger.info(f"classify_result: {classify_results}")
 
-    refresh_session_info(msg, uid, my_cfg)
+    csm_svc.refresh_session_info(msg, uid, my_cfg)
     answer = ""
     for classify_result in  classify_results:
         if labels[1] in classify_result:
             content_type = 'text/html; charset=utf-8'
-            answer = process_door_to_door_service(uid, labels[1], my_cfg)
+            answer = csm_svc.process_door_to_door_service(uid, labels[1], my_cfg)
             response = make_response(answer)
             response.headers['Content-Type'] = content_type
             response.status_code = 200
             return response
          # for online pay service
         if labels[0] in classify_result:
-            answer = process_online_pay_service(answer, labels[0])
+            answer = csm_svc.process_online_pay_service(answer, labels[0])
         # for submit personal information
         elif labels[2] in classify_result:
-            answer = process_personal_info_msg(answer, labels[2], uid)
+            answer = csm_svc.process_personal_info_msg(answer, labels[2], uid)
         # for information retrieval
         elif labels[3] in classify_result:
-            answer = retrieval_data(answer, labels[3], msg, uid, my_cfg)
+            answer = csm_svc.retrieval_data(answer, labels[3], msg, uid, my_cfg)
         # for redirect to human talk
         elif labels[4] in classify_result:
-            answer = talk_with_human(answer, labels, uid, my_cfg)
+            answer = csm_svc.talk_with_human(answer, labels, uid, my_cfg)
         # for other labels
         else:
-            answer += get_const_dict().get("label5")
+            answer += csm_svc.get_const_dict().get("label5")
             logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")
-            refresh_msg_history(answer)
+            csm_svc.refresh_msg_history(answer)
     return Response(answer, content_type=content_type, status=200)
 
 
