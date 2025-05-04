@@ -202,6 +202,7 @@ class CsmService:
         :param answer: the answer to user's question
         :param label: classify label for current question
         :param msg: user's question , or called msg.
+        :param uid: the user which msg send from
         :param sys_cfg: the system config information
         """
         dt = get_dt_with_nl(
@@ -225,7 +226,8 @@ class CsmService:
         user asked for talking with human directly, send the user msg to human being in back end directly
         :param answer: the msg response to user's request
         :param label: classify label to user's question
-        :param uid: the uid who sumit a question to system
+        :param uid: the uid who sumit the question
+        :param sys_cfg: system configuration
         """
         msg_boxing = self.get_const_dict().get("label4")
         msg_boxing += f"<br>\n{convert_list_to_html_table(self.get_msg_history_list())}"
