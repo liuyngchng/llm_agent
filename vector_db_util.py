@@ -58,11 +58,12 @@ def process_doc(documents: list[Document], embedding: str, vector_db: str, chunk
         model_kwargs={'device': 'cpu'}
     )
     logger.info("build_vector_db")
-    if exists(vector_db):
-        db = FAISS.load_local(vector_db, embeddings, allow_dangerous_deserialization=True)
-        db.add_documents(texts)
-    else:
-        db = FAISS.from_documents(texts, embeddings)
+    # if exists(vector_db):
+    #     db = FAISS.load_local(vector_db, embeddings, allow_dangerous_deserialization=True)
+    #     db.add_documents(texts)
+    # else:
+    #     db = FAISS.from_documents(texts, embeddings)
+    db = FAISS.from_documents(texts, embeddings)
     logger.info("localize_vector_db")
     db.save_local(vector_db)
     logger.info(f"localized_vector_db_file_dir {vector_db}")
