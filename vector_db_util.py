@@ -12,8 +12,6 @@ from langchain_community.document_loaders import TextLoader, UnstructuredPDFLoad
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-# from langchain_community.vectorstores import SQLiteVSS
-from langchain_unstructured import UnstructuredLoader
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_core.documents import Document
 
@@ -25,17 +23,6 @@ vector_db = "./faiss_index"
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-def vector_txt(txt_file: str):
-    """
-    vector a txt file.
-    :param txt_file: a text file full path
-    """
-    logger.info(f"load_local_doc {txt_file}")
-    loader = TextLoader(txt_file, encoding='utf8')
-    docs = loader.load()
-    process_doc(docs)
-
-
 
 def process_doc(documents: list[Document]) -> None:
     """
@@ -46,7 +33,11 @@ def process_doc(documents: list[Document]) -> None:
     for doc in documents:
         logger.info(f"{doc.page_content}")
     logger.info("split doc")
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=10, separators=['。', '\n\n'])
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=50,
+        separators=['\n\n', '。', '！', '？', '；', '...']
+    )
     texts = text_splitter.split_documents(documents)
     logger.info(f"load_embedding_model: {embedding_model}")
     embeddings = HuggingFaceEmbeddings(
@@ -66,11 +57,34 @@ def vector_pdf(pdf_file: str):
     vector pdf file
     :param pdf_file: a pdf file full path
     """
-    logger.info(f"load_local_file_from {pdf_file}")
-    loader = UnstructuredPDFLoader(pdf_file)
+    logger.info(f"load_local_file {pdf_file}")
+    loader = UnstructuredPDFLoader(
+        pdf_file,
+        strategy="fast",        # 快捷模式
+        # strategy="hi_res",      # hi_res模式下需要 YOLOX 模型分析版面
+        # mode="paged",         # one document per page
+        num_workers=4,          # multi-thread
+    )
+    docs = loader.load()
+    logger.info(f"local_file_loaded")
+    cleaned_docs = []
+    for doc in docs:
+        # 合并被换行符打断的句子
+        text = doc.page_content.replace('\n', '')
+        cleaned_docs.append(Document(page_content=text))
+    logger.info(f"local_file_cleaned")
+    process_doc(cleaned_docs)
+
+
+def vector_txt(txt_file: str):
+    """
+    vector a txt file.
+    :param txt_file: a text file full path
+    """
+    logger.info(f"load_local_doc {txt_file}")
+    loader = TextLoader(txt_file, encoding='utf8')
     docs = loader.load()
     process_doc(docs)
-
 
 def vector_pdf_dir(pdf_dir: str):
     """
@@ -148,6 +162,6 @@ if __name__ == "__main__":
     # print(a)
     # os.environ["CUDA_VISIBLE_DEVICES"] = 0
     # vector_txt("./1.txt")
-    # vector_pdf("/home/rd/doc/文档生成/knowledge_base/1.pdf")
-    result = search("分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等", "faiss_index")
-    logger.info(f"score:{result[0][1]}, \nsource_file:{result[0][0].metadata["source"]}, \ncontent: {result[0][0].page_content}")
+    vector_pdf("/home/rd/doc/文档生成/knowledge_base/1.pdf")
+    # result = search("分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等", "faiss_index")
+    # logger.info(f"score:{result[0][1]}, \nsource_file:{result[0][0].metadata["source"]}, \ncontent: {result[0][0].page_content}")
