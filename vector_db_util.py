@@ -110,6 +110,32 @@ def vector_pdf_dir(pdf_dir: str):
     logger.info("vector_db_saved_to_local_txt_file {}".format(vector_db))
 
 
+def get_vector_db(db_dir: str) -> FAISS:
+    try:
+        vector_db = FAISS.load_local(
+            db_dir,
+            HuggingFaceEmbeddings(model_name=embedding_model, model_kwargs={'device': 'cpu'}),
+            allow_dangerous_deserialization=True
+        )
+        return vector_db
+    except Exception as e:
+        logger.error("load index failed: {}".format(e))
+        raise e
+
+def search(question: str, db_dir: str) -> list[tuple[Document, float]]:
+    """
+    search user questions in knowledge base,
+    submit the search result and user msg to LLM, return the answer
+    """
+    logger.info(f"sim_search [{question}]")
+    docs_with_scores = get_vector_db(db_dir).similarity_search_with_relevance_scores(question, k=5)
+    # 输出结果和相关性分数
+    # for related_doc, score in docs_with_scores:
+    #     logger.debug(f"[相关度：{score:.2f}]\t{related_doc.page_content[:100]}...")
+    return docs_with_scores
+
+
+
 if __name__ == "__main__":
     """
     read the local document like txt, docx, pdf etc., and embedding the content 
@@ -122,4 +148,6 @@ if __name__ == "__main__":
     # print(a)
     # os.environ["CUDA_VISIBLE_DEVICES"] = 0
     # vector_txt("./1.txt")
-    vector_pdf("/home/rd/doc/文档生成/knowledge_base/1.pdf")
+    # vector_pdf("/home/rd/doc/文档生成/knowledge_base/1.pdf")
+    result = search("分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等", "faiss_index")
+    logger.info(f"score:{result[0][1]}, \nsource_file:{result[0][0].metadata["source"]}, \ncontent: {result[0][0].page_content}")
