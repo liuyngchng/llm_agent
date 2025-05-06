@@ -191,7 +191,7 @@ if __name__ == "__main__":
     # os.environ["CUDA_VISIBLE_DEVICES"] = 0
     # vector_txt("/home/rd/doc/文档生成/knowledge_base/1.txt")
     # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base")
-    vector_txt_dir("/home/rd/doc/文档生成/knowledge_base")
     # vector_pdf("/home/rd/doc/文档生成/knowledge_base/1.pdf")
+    vector_txt_dir("/home/rd/doc/文档生成/knowledge_base")
     result = search("分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等", "faiss_index")
     logger.info(f"score:{result[0][1]}, \nsource_file:{result[0][0].metadata["source"]}, \ncontent: {result[0][0].page_content}")
