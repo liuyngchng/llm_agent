@@ -40,7 +40,10 @@ def process_doc(documents: list[Document], embedding: str, vector_db: str, chunk
     cleaned_docs = []
     for doc in documents:
         cleaned_txt = clean_line_breaks(doc.page_content)
-        cleaned_docs.append(Document(page_content=cleaned_txt))
+        cleaned_docs.append(Document(
+            page_content=cleaned_txt,
+            metadata = doc.metadata
+        ))
     logger.info(f"local_file_cleaned")
     for doc in cleaned_docs:
         logger.info(f"{doc.page_content}")
@@ -190,5 +193,5 @@ if __name__ == "__main__":
     # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base")
     vector_txt_dir("/home/rd/doc/文档生成/knowledge_base")
     # vector_pdf("/home/rd/doc/文档生成/knowledge_base/1.pdf")
-    # result = search("分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等", "faiss_index")
-    # logger.info(f"score:{result[0][1]}, \nsource_file:{result[0][0].metadata["source"]}, \ncontent: {result[0][0].page_content}")
+    result = search("分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等", "faiss_index")
+    logger.info(f"score:{result[0][1]}, \nsource_file:{result[0][0].metadata["source"]}, \ncontent: {result[0][0].page_content}")
