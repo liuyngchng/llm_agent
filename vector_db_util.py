@@ -18,10 +18,7 @@ from langchain_community.document_loaders import DirectoryLoader
 from langchain_core.documents import Document
 
 import logging.config
-import os
 
-# knowledge_dir = "../test/"
-my_txt_file = "./1.txt"
 embedding_model = "../bge-large-zh-v1.5"
 vector_db = "./faiss_index"
 
@@ -53,7 +50,9 @@ def process_doc(documents: list[Document]) -> None:
     texts = text_splitter.split_documents(documents)
     logger.info(f"load_embedding_model: {embedding_model}")
     embeddings = HuggingFaceEmbeddings(
-        model_name=embedding_model, cache_folder='./bge-cache', model_kwargs={'device': 'cpu', 'num_threads': 4}
+        model_name=embedding_model,
+        cache_folder='./bge-cache',
+        model_kwargs={'device': 'cpu', 'num_threads': 4}
     )
     logger.info("build_vector_db")
     db = FAISS.from_documents(texts, embeddings)
@@ -80,8 +79,10 @@ def vector_pdf_dir(pdf_dir: str):
 
     # 加载知识库文件
     logger.info(f"load local file from {pdf_dir}")
-    loader = DirectoryLoader(path=pdf_dir, recursive=True, load_hidden=False,
-                              loader_cls=TextLoader, glob="**/*.java")
+    loader = DirectoryLoader(
+        path=pdf_dir, recursive=True, load_hidden=False,
+        loader_cls=TextLoader, glob="**/*.java"
+    )
     documents = loader.load()
     logger.info("loaded {} documents, files_name_list_as_following".format(len(documents)))
     for doc in documents:
@@ -120,5 +121,5 @@ if __name__ == "__main__":
     # a = os.environ.get("CUDA_VISIBLE_DEVICES")
     # print(a)
     # os.environ["CUDA_VISIBLE_DEVICES"] = 0
-    # vector_txt(my_txt_file)
+    # vector_txt("./1.txt")
     vector_pdf("/home/rd/doc/文档生成/knowledge_base/1.pdf")

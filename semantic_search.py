@@ -54,10 +54,11 @@ def get_vector_db() -> FAISS:
     if os.path.exists("{}/index.faiss".format(idx)):
         logger.info("idx existed")
         try:
-            vector_db = FAISS.load_local(idx,
-                                         HuggingFaceEmbeddings(model_name=emb_name,  model_kwargs={'device': 'cpu'}),
-                                         allow_dangerous_deserialization=True
-                                         )
+            vector_db = FAISS.load_local(
+                idx,
+                HuggingFaceEmbeddings(model_name=emb_name,  model_kwargs={'device': 'cpu'}),
+                allow_dangerous_deserialization=True
+            )
             return vector_db
         except Exception as e:
             logger.error("load index failed: {}".format(e))
