@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """
-将本地文档进行向量化，形成矢量数据库文件，用于 LLM 进行 RAG
+将本地文档进行向量化，形成矢量数据库文件，用于进行矢量检索
     需要下载 nltk data
     git clone git@github.com/nltk/nltk_data.git
     进行分词
 """
-
+import httpx
 from langchain_community.document_loaders import TextLoader, UnstructuredPDFLoader
 from langchain_core.embeddings import Embeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -15,13 +15,9 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_core.documents import Document
-from langchain_openai import OpenAIEmbeddings
-from os import cpu_count
-from os.path import exists
 import torch
 
 import logging.config
-import re
 
 from sys_init import init_yml_cfg
 
@@ -74,24 +70,14 @@ def process_doc(documents: list[Document], embedding: str, vector_db: str,
     logger.info(f"localized_vector_db_file_dir {vector_db}")
 
 def get_embedding(sys_cfg: dir) -> Embeddings:
-    # get local embeddings
-    logger.info(f"load_embedding_model: {embedding_model}")
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    logger.info(f"load_local_embedding_model: {embedding_model}")
+    device = 'cpu'      #'cuda' if torch.cuda.is_available() else 'cpu'
     logger.info(f"available_device_for_embedding: {device}")
     embeddings = HuggingFaceEmbeddings(
         model_name=embedding_model,
         cache_folder='./bge-cache',
         model_kwargs={'device': device, 'trust_remote_code': True}
     )
-    # get remote embeddings model
-    # logger.info(f"ai_config: {sys_cfg}")
-    # embeddings = OpenAIEmbeddings(
-    #     model=sys_cfg["embedding_model_name"],
-    #     tiktoken_model_name = sys_cfg["embedding_model_name"],
-    #     tiktoken_enable=False,
-    #     openai_api_base=f"{sys_cfg['api_uri']}/embeddings",
-    #     openai_api_key=sys_cfg["api_key"]
-    # )
     return embeddings
 
 
@@ -159,15 +145,14 @@ def vector_pdf_dir(pdf_dir: str, sys_cfg: dict):
     logger.info(f"loaded {len(documents)} documents")
     process_doc(documents, embedding_model, vector_db_dir, sys_cfg)
 
-def vector_txt_dir(pdf_dir: str, sys_cfg: dict):
+def vector_txt_dir(txt_dir: str, sys_cfg: dict):
     """
-    :param pdf_dir: a directory with all pdf file
+    :param txt_dir: a directory with all pdf file
+    :param sys_cfg: system configuration
     """
-
-    # 加载知识库文件
-    logger.info(f"load local file from {pdf_dir}")
+    logger.info(f"load_local_file_from {txt_dir}")
     loader = DirectoryLoader(
-        path=pdf_dir,
+        path=txt_dir,
         recursive=True,
         load_hidden=False,
         loader_cls=TextLoader,
@@ -198,7 +183,8 @@ def search(question: str, db_dir: str, sys_cfg: dict, doc_num=4) -> list[tuple[D
     submit the search result and user msg to LLM, return the answer
     """
     logger.info(f"sim_search [{question}]")
-    docs_with_scores = get_vector_db(db_dir, sys_cfg).similarity_search_with_relevance_scores(question, k=doc_num)
+    docs_with_scores = (get_vector_db(db_dir, sys_cfg).
+                        similarity_search_with_relevance_scores(question, k=doc_num, score_threshold=0.5))
     # 输出结果和相关性分数
     # for related_doc, score in docs_with_scores:
     #     logger.debug(f"[相关度：{score:.2f}]\t{related_doc.page_content[:100]}...")
@@ -213,16 +199,19 @@ if __name__ == "__main__":
     submit a msg about the local documents to the LLM, let LLM give a response
     that about the documents.
     """
+    my_cfg = init_yml_cfg()
     # os.putenv("CUDA_VISIBLE_DEVICES", "1")
     # a = os.environ.get("CUDA_VISIBLE_DEVICES")
     # print(a)
     # os.environ["CUDA_VISIBLE_DEVICES"] = 0
-    # vector_txt("/home/rd/doc/文档生成/knowledge_base/1.txt")
+    # vector_txt("./1.txt", my_cfg['ai'])
     # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base")
     # vector_pdf("/home/rd/doc/文档生成/knowledge_base/1.pdf")
-    my_cfg = init_yml_cfg()
-    # vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg["ai"])
-    q = "分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等"
-    doc_num = 4
-    result = search(q, "faiss_index", my_cfg, doc_num)
-    logger.info(f"score:{result[0][1]}, \nsource_file:{result[0][0].metadata["source"]}, \ncontent: {result[0][0].page_content}")
+
+    vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg["ai"])
+    # q = "分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等"
+    # doc_num = 4
+    # result = search(q, "faiss_index", my_cfg['ai'], doc_num)
+    # logger.info(f"score:{result[0][1]}, \n"
+    #             f"source_file:{result[0][0].metadata["source"]}, \n"
+    #             f"content: {result[0][0].page_content}")

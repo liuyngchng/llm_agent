@@ -34,5 +34,6 @@ sqlite_vss
 config.yml
 cert/*
 **/*.cer
+**/*.faiss
 llm_py_env_whl.Python.3.12.3/*
 __pycache__
