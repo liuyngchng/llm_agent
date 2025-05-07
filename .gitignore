@@ -15,6 +15,7 @@ native-image/*
 **/*.log.*
 **/*.o
 faiss_index/*
+faiss_oa_vector/*
 **/*.txt
 **/*.pdf
 !requirements.txt
@@ -35,5 +36,6 @@ config.yml
 cert/*
 **/*.cer
 **/*.faiss
+
 llm_py_env_whl.Python.3.12.3/*
 __pycache__
