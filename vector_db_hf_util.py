@@ -6,6 +6,7 @@
     需要下载 nltk data
     git clone git@github.com/nltk/nltk_data.git
     进行分词
+    for HuggingFaceEmbeddings
 """
 import httpx
 from langchain_community.document_loaders import TextLoader, UnstructuredPDFLoader

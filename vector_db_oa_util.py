@@ -3,6 +3,7 @@
 
 """
 通过调用远程的embedding API，将本地文档向量化，形成矢量数据库文件，用于进行向量检索
+for OpenAI compatible remote API
 """
 import httpx
 from langchain_community.document_loaders import TextLoader
