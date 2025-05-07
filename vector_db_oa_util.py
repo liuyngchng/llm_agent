@@ -7,7 +7,7 @@ for OpenAI compatible remote API
 """
 import httpx
 import os
-from langchain_community.document_loaders import TextLoader
+from langchain_community.document_loaders import TextLoader, DirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
@@ -39,20 +39,22 @@ class RemoteEmbeddings(Embeddings):  # 适配器类
 
 
 def process_doc(documents: list[Document], vector_db: str, sys_cfg:dict,
-                chunk_size=15, chunk_overlap=2) -> None:
+                chunk_size=500, chunk_overlap=50) -> None:
     logger.info(f"loaded {len(documents)} documents, files_name_list_as_following")
+    for doc in documents:
+        logger.info(f"file:{doc.metadata['source']}")
     logger.info("split_doc")
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
-        separators=['\n', '。', '！', '？', '；', '...']
+        separators=['\n\n', '。', '！', '？', '；', '...']
     )
-    texts = text_splitter.split_documents(documents)
-    logger.info(f"split_doc_finished, {texts}")
+    doc_list = text_splitter.split_documents(documents)
+    logger.info(f"split_doc_finished")
     client = build_client(sys_cfg)
     logger.info(f"init_client_with_config: {sys_cfg}")
     embeddings = RemoteEmbeddings(client)
-    vectorstore = FAISS.from_documents(texts, embeddings)
+    vectorstore = FAISS.from_documents(doc_list, embeddings)
     vectorstore.save_local(vector_db)
     logger.info(f"save_vector_to_local {vector_db}")
 
@@ -73,18 +75,30 @@ def search_similar_text(query: str, vector_db, sys_cfg: dict, top_k=3):
     return db.similarity_search_with_relevance_scores(query, k=top_k)
 
 
-def vector_txt(txt_file: str, sys_cfg:dict):
+def vector_txt_file(txt_file: str, sys_cfg:dict):
     logger.info(f"load_local_doc {txt_file}")
     loader = TextLoader(txt_file, encoding='utf8')
     docs = loader.load()
     process_doc(docs, vector_db_dir, sys_cfg)
 
 
+def vector_txt_dir(txt_dir: str, sys_cfg: dict):  # 修改函数
+    logger.info(f"load_txt_dir: {txt_dir}")
+    loader = DirectoryLoader(
+        txt_dir,
+        glob="**/*.txt",
+        loader_cls=TextLoader,
+        loader_kwargs={'encoding': 'utf8'},
+        silent_errors=True
+    )
+    documents = loader.load()
+    process_doc(documents, vector_db_dir, sys_cfg)
+
 if __name__ == "__main__":
     os.environ["NO_PROXY"] = "*"  # 禁用代理
     my_cfg = init_yml_cfg()
-    vector_txt("./1.txt", my_cfg['ai'])
-
-    results = search_similar_text("奇怪的句子", vector_db_dir, my_cfg['ai'])
+    # vector_txt_file("/home/rd/doc/文档生成/knowledge_base/1.txt", my_cfg['ai'])
+    # vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg['ai'])
+    results = search_similar_text("分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等", vector_db_dir, my_cfg['ai'])
     for result in results:
-        logger.info(f"search_result: {result[0].page_content}, score {result[1]}")
+        logger.info(f"score {result[1]}, search_result: {result[0].page_content.replace("\n", "")}")
