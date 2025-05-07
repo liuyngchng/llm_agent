@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """
-通过调用远程的embedding API，将本地文档向量化，形成矢量数据库文件，用于进行向量检索
+通过调用远程的 embedding API，将本地文档向量化，形成矢量数据库文件，用于进行向量检索
 for OpenAI compatible remote API
 """
 import httpx
 import os
-from langchain_community.document_loaders import TextLoader, DirectoryLoader
+from langchain_community.document_loaders import TextLoader, DirectoryLoader, UnstructuredPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
@@ -85,7 +85,7 @@ def vector_txt_file(txt_file: str, sys_cfg:dict):
 def vector_txt_dir(txt_dir: str, sys_cfg: dict):  # 修改函数
     logger.info(f"load_txt_dir: {txt_dir}")
     loader = DirectoryLoader(
-        txt_dir,
+        path=txt_dir,
         glob="**/*.txt",
         loader_cls=TextLoader,
         loader_kwargs={'encoding': 'utf8'},
@@ -94,11 +94,34 @@ def vector_txt_dir(txt_dir: str, sys_cfg: dict):  # 修改函数
     documents = loader.load()
     process_doc(documents, vector_db_dir, sys_cfg)
 
+def vector_pdf_dir(pdf_dir: str, sys_cfg: dict):
+    """
+    :param pdf_dir: a directory with all pdf file
+    """
+
+    # 加载知识库文件
+    logger.info(f"load_pdf_dir {pdf_dir}")
+    loader = DirectoryLoader(
+        path=pdf_dir,
+        recursive=True,
+        load_hidden=False,
+        loader_cls=UnstructuredPDFLoader,
+        glob="**/*.pdf"
+    )
+    documents = loader.load()
+    process_doc(documents, vector_db_dir, sys_cfg)
+
+
 if __name__ == "__main__":
     os.environ["NO_PROXY"] = "*"  # 禁用代理
     my_cfg = init_yml_cfg()
     # vector_txt_file("/home/rd/doc/文档生成/knowledge_base/1.txt", my_cfg['ai'])
     # vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg['ai'])
-    results = search_similar_text("分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等", vector_db_dir, my_cfg['ai'])
+    # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg['ai'])
+    q = "分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等"
+    logger.info(f"start_search: {q}")
+    results = search_similar_text(q, vector_db_dir, my_cfg['ai'])
     for result in results:
-        logger.info(f"score {result[1]}, search_result: {result[0].page_content.replace("\n", "")}")
+        logger.info(f"score {result[1]}, search_result: "
+                    f"{result[0].page_content.replace("\n", "")},"
+                    f" from_file: {result[0].metadata['source']}")
