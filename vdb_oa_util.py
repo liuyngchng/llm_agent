@@ -70,9 +70,9 @@ def load_vector_db(vector_db: str, sys_cfg: dict):
     embeddings = RemoteEmbeddings(client)
     return FAISS.load_local(vector_db, embeddings, allow_dangerous_deserialization=True)
 
-def search_similar_text(query: str, vector_db, sys_cfg: dict, top_k=3):
+def search_similar_text(query: str, score_threshold: float, vector_db, sys_cfg: dict, top_k=3):
     db = load_vector_db(vector_db, sys_cfg)
-    return db.similarity_search_with_relevance_scores(query, k=top_k)
+    return db.similarity_search_with_relevance_scores(query,k= top_k, score_threshold = score_threshold)
 
 
 def vector_txt_file(txt_file: str, sys_cfg:dict):
@@ -112,6 +112,17 @@ def vector_pdf_dir(pdf_dir: str, sys_cfg: dict):
     process_doc(documents, vector_db_dir, sys_cfg)
 
 
+def get_txt_by_prompt(prompt: str, score_threshold: float, sys_cfg: dict, txt_num: int) -> str:
+    search_results = search_similar_text(prompt, score_threshold, vector_db_dir, sys_cfg, txt_num)
+    all_txt = ""
+    for s_r in search_results:
+        s_r_txt = s_r[0].page_content.replace("\n", "")
+        if "......................." in s_r_txt:
+            continue
+        logger.info(f"s_r_txt: {s_r_txt}, score: {s_r[1]}, from_file: {s_r[0].metadata['source']}")
+        all_txt += s_r_txt + "\n"
+    return all_txt
+
 if __name__ == "__main__":
     os.environ["NO_PROXY"] = "*"  # 禁用代理
     my_cfg = init_yml_cfg()
@@ -120,8 +131,5 @@ if __name__ == "__main__":
     # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg['ai'])
     q = "分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等"
     logger.info(f"start_search: {q}")
-    results = search_similar_text(q, vector_db_dir, my_cfg['ai'])
-    for result in results:
-        logger.info(f"score {result[1]}, search_result: "
-                    f"{result[0].page_content.replace("\n", "")},"
-                    f" from_file: {result[0].metadata['source']}")
+    results = get_txt_by_prompt(q, 0.5, my_cfg['ai'], 3)
+    logger.info(f"result: {results}")

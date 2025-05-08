@@ -4,10 +4,14 @@
 pip install python-docx
 """
 import logging.config
+import re
 
 from docx import Document
+from docx.shared import RGBColor
 from docx.text.paragraph import Paragraph
-from docx.oxml.ns import nsdecls
+from vdb_oa_util import get_txt_by_prompt
+
+from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -37,23 +41,47 @@ def get_numbering_text(para):
     # 此处需根据fmt和实际计数生成编号(需完整实现计数逻辑)
     return "[编号占位]"
 
-def process_paragraph(para: Paragraph):
-
-    logging.info(f"para txt:\n{para.text}")
+def process_paragraph(paragraph: Paragraph, sys_cfg: dict) -> str:
+    prompt = paragraph.text
+    gen_txt = get_txt_by_prompt(prompt, 0.5, sys_cfg, 1)
+    logging.info(f"gen_txt:\n{gen_txt}\nfor_prompt: {prompt}")
+    return gen_txt
 
 if __name__ == "__main__":
 
-    doc = Document("/home/rd/doc/文档生成/template.docx")
+    # doc = Document("/home/rd/doc/文档生成/template.docx")
+    doc = Document("/home/rd/doc/文档生成/2.docx")
     headings = {1: [], 2: [], 3: [], 4:[], 5:[]}  # 按需扩展层级
-
+    my_cfg = init_yml_cfg()
+    pattern = r'^(图|表)\s*\d+[\.\-\s]'  # 匹配"图1."/"表2-"等开头
     for para in doc.paragraphs:
-        if "Heading" not in para.style.name:
-            if not para.text:
-                continue
-            logging.info(f"it is a text content under heading")
-            process_paragraph(para)
-        else:
+        if "Heading" in para.style.name:
             level = int(para.style.name.split()[-1])  # 提取数字
             headings[level].append(para.text)
-            logging.info(f"H{level}: {para.text}")
-            # get_numbering_text(para)
+            logger.info(f"heading_part: H{level}: {para.text}")
+            continue
+        if "TOC" in para.style.name or  para._element.xpath(".//w:instrText[contains(.,'TOC')]"):
+            logger.info(f"doc_table_of_content: {para.text}")
+            continue
+        if "Caption" in para.style.name or re.match(pattern, para.text):
+            logger.info(f"table_or_picture_title: {para.text}")
+            continue
+        if not para.text:
+            continue
+        if len(para.text.strip()) < 20:
+            logger.info(f"ignored_short_txt {para.text}")
+            continue
+        logging.info(f"a_prompt_text_content_under_heading")
+        my_txt = process_paragraph(para, my_cfg['ai'])
+        # if len(my_txt) > 0:
+        new_para = doc.add_paragraph()
+        red_run = new_para.add_run("[生成文本]")
+        red_run.font.color.rgb = RGBColor(255, 0, 0)
+        new_para.add_run(my_txt)
+        para._p.addnext(new_para._p)
+
+    doc.add_heading("新增标题Test", 1)
+    doc.add_paragraph('新增段落Test')
+    output_file = 'doc_output.docx'
+    doc.save(output_file)
+    logger.info(f"save_content_to_file: {output_file}")
