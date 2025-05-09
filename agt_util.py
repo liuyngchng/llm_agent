@@ -66,6 +66,32 @@ def classify_msg(labels: list, msg: str, cfg: dict, is_remote=True) -> dict:
         )
     )
 
+def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str:
+    """
+    classify txt, multi-label can be obtained
+    """
+
+    label_str = ';\n'.join(map(str, labels))
+    logger.info(f"classify_txt: {txt}")
+    template = f'''
+          对以下文本进行分类\n{label_str}\n
+          文本：{txt}\n分类结果输出为单一分类标签文本，不要输出任何额外信息
+          '''
+    prompt = ChatPromptTemplate.from_template(template)
+    logger.info(f"prompt {prompt}")
+    model = get_model(cfg, is_remote)
+    chain = prompt | model
+    logger.info(f"submit msg[{txt}] to llm {cfg['ai']['api_uri']}, {cfg['ai']['model_name']}")
+    response = chain.invoke({
+        "txt": txt
+    })
+    del model
+    torch.cuda.empty_cache()
+    return extract_md_content(
+        rmv_think_block(response.content),
+        "json"
+    )
+
 def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dict:
     """
     search user questions in knowledge base,

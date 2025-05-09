@@ -76,14 +76,19 @@ def search_similar_text(query: str, score_threshold: float, vector_db, sys_cfg: 
 
 
 def vector_txt_file(txt_file: str, sys_cfg:dict):
-    logger.info(f"load_local_doc {txt_file}")
+    logger.info(f"start_load_txt_doc {txt_file}")
     loader = TextLoader(txt_file, encoding='utf8')
     docs = loader.load()
     process_doc(docs, vector_db_dir, sys_cfg)
 
+def vector_pdf_file(pdf_file: str, sys_cfg:dict):
+    logger.info(f"start_load_pdf_doc {pdf_file}")
+    loader = UnstructuredPDFLoader(pdf_file, encoding='utf8')
+    docs = loader.load()
+    process_doc(docs, vector_db_dir, sys_cfg)
 
 def vector_txt_dir(txt_dir: str, sys_cfg: dict):  # 修改函数
-    logger.info(f"load_txt_dir: {txt_dir}")
+    logger.info(f"start_load_txt_dir: {txt_dir}")
     loader = DirectoryLoader(
         path=txt_dir,
         glob="**/*.txt",
@@ -97,10 +102,11 @@ def vector_txt_dir(txt_dir: str, sys_cfg: dict):  # 修改函数
 def vector_pdf_dir(pdf_dir: str, sys_cfg: dict):
     """
     :param pdf_dir: a directory with all pdf file
+    :param sys_cfg: system configuration info.
     """
 
     # 加载知识库文件
-    logger.info(f"load_pdf_dir {pdf_dir}")
+    logger.info(f"start_load_pdf_dir {pdf_dir}")
     loader = DirectoryLoader(
         path=pdf_dir,
         recursive=True,
@@ -112,8 +118,8 @@ def vector_pdf_dir(pdf_dir: str, sys_cfg: dict):
     process_doc(documents, vector_db_dir, sys_cfg)
 
 
-def get_txt_by_prompt(prompt: str, score_threshold: float, sys_cfg: dict, txt_num: int) -> str:
-    search_results = search_similar_text(prompt, score_threshold, vector_db_dir, sys_cfg, txt_num)
+def search_txt(txt: str, score_threshold: float, sys_cfg: dict, txt_num: int) -> str:
+    search_results = search_similar_text(txt, score_threshold, vector_db_dir, sys_cfg, txt_num)
     all_txt = ""
     for s_r in search_results:
         s_r_txt = s_r[0].page_content.replace("\n", "")
@@ -128,8 +134,9 @@ if __name__ == "__main__":
     my_cfg = init_yml_cfg()
     # vector_txt_file("/home/rd/doc/文档生成/knowledge_base/1.txt", my_cfg['ai'])
     # vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg['ai'])
+    # vector_pdf_file("/home/rd/doc/文档生成/knowledge_base/1.pdf", my_cfg['ai'])
     # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg['ai'])
-    q = "分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等"
-    logger.info(f"start_search: {q}")
-    results = get_txt_by_prompt(q, 0.5, my_cfg['ai'], 3)
-    logger.info(f"result: {results}")
+    # q = "分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等"
+    # logger.info(f"start_search: {q}")
+    # results = search_txt(q, 0.5, my_cfg['ai'], 3)
+    # logger.info(f"result: {results}")
