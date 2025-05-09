@@ -23,7 +23,7 @@ def get_txt_in_dir_by_keywords(keywords: str, dir_path: str, word_count = 500) -
 
 def get_txt_in_file_by_keywords(keywords: str, file_name: str, word_count: int) -> str:
     with open(file_name, 'r', encoding='utf-8') as f:
-        lines = [line for line in f]
+        lines = [line for line in f if line.strip()]
         full_text = ''.join(lines)
         result = []
         for raw_line in lines:
