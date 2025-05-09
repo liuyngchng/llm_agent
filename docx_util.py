@@ -69,7 +69,7 @@ logger = logging.getLogger(__name__)
 def process_paragraph(paragraph: Paragraph, sys_cfg: dict) -> str:
     prompt = paragraph.text
     gen_txt = search_txt(prompt, 0.5, sys_cfg, 1).strip()
-    logging.info(f"vdb_get_txt:\n{gen_txt}\nby_txt:\n{prompt}")
+    logging.info(f"vdb_get_txt:\n{gen_txt}\nby_search_{prompt}")
     return gen_txt
 
 def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool:
@@ -109,14 +109,20 @@ def fill_doc_with_pdf(source_dir: str, target_doc: str, sys_cfg: dict) -> Docume
     doc = Document(target_doc)
     current_heading = []
     for my_para in doc.paragraphs:
-        is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
-        if not is_prompt:
-            continue
-        logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
-        search_result = process_paragraph(my_para, sys_cfg['ai'])
-        source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
-        llm_txt = gen_txt(source_para_txt, my_para.text, sys_cfg)
-        logger.info(f"llm_txt_for_instruction: {my_para.text}\n#############\n{llm_txt}")
+        llm_txt = ""
+        try:
+            is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
+            if not is_prompt:
+                continue
+            logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
+            search_result = process_paragraph(my_para, sys_cfg['ai'])
+            source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
+            llm_ctx_txt = f"{source_para_txt}\n{search_result}"
+            llm_txt = gen_txt(llm_ctx_txt, my_para.text, sys_cfg)
+            logger.info(f"llm_txt_for_instruction[{my_para.text}]\n===gen_llm_txt===\n{llm_txt}")
+        except Exception as ex:
+            logger.error("fill_doc_job_err_to_break")
+            break
         # if len(my_txt) > 0:
         new_para = doc.add_paragraph()
         red_run = new_para.add_run("[生成文本]")
@@ -124,6 +130,8 @@ def fill_doc_with_pdf(source_dir: str, target_doc: str, sys_cfg: dict) -> Docume
         new_para.add_run(llm_txt)
         my_para._p.addnext(new_para._p)
     return doc
+
+
 if __name__ == "__main__":
     my_cfg = init_yml_cfg()
     # doc = Document("/home/rd/doc/文档生成/template.docx")

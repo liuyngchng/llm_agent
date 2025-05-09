@@ -78,16 +78,21 @@ def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str:
     model = get_model(cfg, is_remote)
     chain = prompt | model
     logger.info(f"submit_msg_to_llm, txt[{txt}], llm[{cfg['ai']['api_uri']}, {cfg['ai']['model_name']}]")
-    response = chain.invoke({
-        "txt": txt
-    })
-    del model
-    torch.cuda.empty_cache()
-    return extract_md_content(
-        rmv_think_block(response.content),
-        "json"
-    )
-
+    output_txt = ""
+    try:
+        response = chain.invoke({
+            "txt": txt
+        })
+        del model
+        torch.cuda.empty_cache()
+        output_txt = extract_md_content(
+            rmv_think_block(response.content),
+            "json"
+        )
+    except Exception as ex:
+        logger.error(f"invoke_remote_llm_error_in_classify_txt_for {labels}, {txt}, {cfg['ai']}")
+        raise ex
+    return output_txt
 def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dict:
     """
     search user questions in knowledge base,
@@ -125,16 +130,13 @@ def gen_txt(context: str, instruction: str, cfg: dict, is_remote=True) -> str:
     according to the user's instruction and the context, to generate text
     """
     logger.info(f"user_instruction [{instruction}], context {context}")
-    template = '''
-        基于用户提供的文本：\n{context}\n以及用户提出的要求\n{instruction}\n输出相应的文本
-        (1) 上下文中没有的信息，请不要自行编造
-        (2) 直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
-        '''
+    template = ("基于用户提供的文本：\n{context}\n以及用户提出的要求\n{instruction}\n输出相应的文本\n"
+                "(1) 上下文中没有的信息，请不要自行编造\n(2) 直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式")
     prompt = ChatPromptTemplate.from_template(template)
-    logger.info(f"prompt {prompt}")
+    logger.debug(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit_instruction_and_context_to_llm, [{instruction}],[{context}], "
+    logger.info(f"submit_instruction_and_context_to_llm, instruction[{instruction}],ctx[{context}], "
                 f"{cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
     del model
     torch.cuda.empty_cache()
@@ -144,9 +146,10 @@ def gen_txt(context: str, instruction: str, cfg: dict, is_remote=True) -> str:
             "context": context,
             "instruction": instruction,
         })
-        output_txt =  rmv_think_block(response.content)
+        output_txt = rmv_think_block(response.content)
     except Exception as ex:
-        logger.error(f"invoke_remote_llm_error_for {cfg['ai']}")
+        logger.error(f"invoke_remote_llm_gen_txt_error_for {instruction}, {context}, {cfg['ai']}")
+        raise ex
     return output_txt
 
 def update_session_info(user_info: str, append_info: str, cfg: dict, is_remote=True) -> str:

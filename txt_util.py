@@ -16,8 +16,9 @@ def get_txt_in_dir_by_keywords(keywords: str, dir_path: str, word_count = 500) -
             continue
         file_full_path = os.path.join(dir_path, filename)
         file_result = get_txt_in_file_by_keywords(keywords, file_full_path, word_count)
-        result += f"\n\n[{file_full_path}]\n{file_result}"
-    logger.info(f"get_txt_in_dir_by_keywords_return, {result}")
+        if "" != file_result:
+            result += f"\n\n[{file_full_path}]\n{file_result}"
+    logger.info(f"get_txt_in_dir_by_keywords_return, [{result}]")
     return result
 
 
@@ -31,7 +32,7 @@ def get_txt_in_file_by_keywords(keywords: str, file_name: str, word_count: int) 
             if keywords == clean_line:
                 pos = full_text.find(raw_line)
                 result.append(full_text[pos: pos + len(raw_line) + word_count])
-        return '\n'.join(result)
+        return '\n'.join(result).strip()
 
 def strip_prefix_no(txt: str) -> str:
     return re.sub(r'^\d+(\.\d+)*\s*', '', txt.strip())
