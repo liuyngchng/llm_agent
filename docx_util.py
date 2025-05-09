@@ -13,7 +13,7 @@ from vdb_oa_util import search_txt
 from txt_util import get_txt_in_dir_by_keywords, strip_prefix_no
 
 from sys_init import init_yml_cfg
-from agt_util import classify_txt
+from agt_util import classify_txt, gen_txt
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -72,14 +72,17 @@ def process_paragraph(paragraph: Paragraph, sys_cfg: dict) -> str:
     logging.info(f"vdb_get_txt:\n{gen_txt}\nby_txt:\n{prompt}")
     return gen_txt
 
-def is_prompt_para(heading: list, para: Paragraph) -> bool:
+def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool:
+    headings = {1: [], 2: [], 3: [], 4: [], 5: []}  # 按需扩展层级
+    pattern = r'^(图|表)\s*\d+[\.\-\s]'  # 匹配"图1."/"表2-"等开头
+    labels = ["需要生成文本", "不需要生成文本"]
     if "Heading" in para.style.name:
         level = int(para.style.name.split()[-1])  # 提取数字
         headings[level].append(para.text)
         logger.info(f"heading_part: H{level}: {para.text}")
-        if len(heading) != 0:
-            heading.pop()
-        heading.append(para.text)
+        if len(current_heading) != 0:
+            current_heading.pop()
+        current_heading.append(para.text)
         return False
     if "TOC" in para.style.name or para._element.xpath(".//w:instrText[contains(.,'TOC')]"):
         logger.info(f"doc_table_of_content: {para.text}")
@@ -95,40 +98,42 @@ def is_prompt_para(heading: list, para: Paragraph) -> bool:
     if len(current_heading) == 0 or len(current_heading[0]) < 2:
         logger.info(f"heading_err_for_para, {current_heading}, {para.text}")
         return False
-    classify_result = classify_txt(labels, para.text, my_cfg, True)
+    classify_result = classify_txt(labels, para.text, sys_cfg, True)
     if labels[1] in classify_result:
         logger.info(f"classify={classify_result}, tile={current_heading}, para={para.text}")
         return False
     logger.info(f"classify={classify_result}, tile={current_heading}, para={para.text}")
     return True
 
-if __name__ == "__main__":
-
-    # doc = Document("/home/rd/doc/文档生成/template.docx")
-    source_dir = "/home/rd/doc/文档生成/knowledge_base"
-    target_doc = Document("/home/rd/doc/文档生成/2.docx")
-    headings = {1: [], 2: [], 3: [], 4:[], 5:[]}  # 按需扩展层级
-    my_cfg = init_yml_cfg()
-    pattern = r'^(图|表)\s*\d+[\.\-\s]'  # 匹配"图1."/"表2-"等开头
-    labels = ["需要生成文本", "不需要生成文本"]
+def fill_doc_with_pdf(source_dir: str, target_doc: str, sys_cfg: dict) -> Document:
+    doc = Document(target_doc)
     current_heading = []
-    for my_para in target_doc.paragraphs:
-        is_prompt = is_prompt_para(current_heading, my_para)
+    for my_para in doc.paragraphs:
+        is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
         if not is_prompt:
             continue
-        logging.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
-        search_result = process_paragraph(my_para, my_cfg['ai'])
-        get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
+        logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
+        search_result = process_paragraph(my_para, sys_cfg['ai'])
+        source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
+        llm_txt = gen_txt(source_para_txt, my_para.text, sys_cfg)
+        logger.info(f"instruction: {my_para.text}, llm_txt\n{llm_txt}")
         # if len(my_txt) > 0:
-        new_para = target_doc.add_paragraph()
+        new_para = doc.add_paragraph()
         red_run = new_para.add_run("[生成文本]")
         red_run.font.color.rgb = RGBColor(255, 0, 0)
-        new_para.add_run(search_result)
+        new_para.add_run(llm_txt)
         my_para._p.addnext(new_para._p)
+    return doc
+if __name__ == "__main__":
+    my_cfg = init_yml_cfg()
+    # doc = Document("/home/rd/doc/文档生成/template.docx")
+    my_source_dir = "/home/rd/doc/文档生成/knowledge_base"
+    my_target_doc = "/home/rd/doc/文档生成/2.docx"
+    output_doc = fill_doc_with_pdf(my_source_dir, my_target_doc, my_cfg)
 
     # for test purpose only
-    target_doc.add_heading("新增标题Test", 1)
-    target_doc.add_paragraph('新增段落Test')
+    output_doc.add_heading("新增标题Test", 1)
+    output_doc.add_paragraph('新增段落Test')
     output_file = 'doc_output.docx'
-    target_doc.save(output_file)
+    output_doc.save(output_file)
     logger.info(f"save_content_to_file: {output_file}")

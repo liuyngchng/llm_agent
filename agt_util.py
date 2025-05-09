@@ -124,6 +124,36 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
         logger.error(f"json_loads_err_for {response.content}")
     return fill_result
 
+def gen_txt(context: str, instruction: str, cfg: dict, is_remote=True) -> str:
+    """
+    according to the user's instruction and the context, to generate text
+    """
+    logger.info(f"user_instruction [{instruction}], context {context}")
+    template = '''
+        基于用户提供的文本：\n{context}\n以及用户提出的要求\n{instruction}\n输出相应的文本
+        (1) 上下文中没有的信息，请不要自行编造
+        (2) 直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
+        '''
+    prompt = ChatPromptTemplate.from_template(template)
+    logger.info(f"prompt {prompt}")
+    model = get_model(cfg, is_remote)
+    chain = prompt | model
+    logger.info(f"submit_instruction_and_context_to_llm, [{instruction}],[{context}], "
+                f"{cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
+
+    del model
+    torch.cuda.empty_cache()
+    output_txt = context
+    try:
+        response = chain.invoke({
+            "context": context,
+            "instruction": instruction,
+        })
+        output_txt =  rmv_think_block(response.content)
+    except Exception as ex:
+        logger.error(f"invoke_remote_llm_error_for {cfg['ai']}")
+    return output_txt
+
 def update_session_info(user_info: str, append_info: str, cfg: dict, is_remote=True) -> str:
     """
     search user questions in knowledge base,
