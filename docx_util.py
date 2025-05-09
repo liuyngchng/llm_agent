@@ -116,7 +116,7 @@ def fill_doc_with_pdf(source_dir: str, target_doc: str, sys_cfg: dict) -> Docume
         search_result = process_paragraph(my_para, sys_cfg['ai'])
         source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
         llm_txt = gen_txt(source_para_txt, my_para.text, sys_cfg)
-        logger.info(f"instruction: {my_para.text}, llm_txt\n{llm_txt}")
+        logger.info(f"llm_txt_for_instruction: {my_para.text}\n#############\n{llm_txt}")
         # if len(my_txt) > 0:
         new_para = doc.add_paragraph()
         red_run = new_para.add_run("[生成文本]")

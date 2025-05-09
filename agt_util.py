@@ -70,18 +70,14 @@ def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str:
     """
     classify txt, multi-label can be obtained
     """
-
     label_str = ';\n'.join(map(str, labels))
     logger.info(f"classify_txt: {txt}")
-    template = f'''
-          对以下文本进行分类\n{label_str}\n
-          文本：{txt}\n分类结果输出为单一分类标签文本，不要输出任何额外信息
-          '''
+    template = f'''对以下文本进行分类\n{label_str}\n文本：{txt}\n分类结果输出为单一分类标签文本，不要输出任何额外信息'''
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit msg[{txt}] to llm {cfg['ai']['api_uri']}, {cfg['ai']['model_name']}")
+    logger.info(f"submit_msg_to_llm, txt[{txt}], llm[{cfg['ai']['api_uri']}, {cfg['ai']['model_name']}]")
     response = chain.invoke({
         "txt": txt
     })
@@ -140,7 +136,6 @@ def gen_txt(context: str, instruction: str, cfg: dict, is_remote=True) -> str:
     chain = prompt | model
     logger.info(f"submit_instruction_and_context_to_llm, [{instruction}],[{context}], "
                 f"{cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
-
     del model
     torch.cuda.empty_cache()
     output_txt = context
