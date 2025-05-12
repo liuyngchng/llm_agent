@@ -39,9 +39,9 @@ class SQLGenerator:
         self.cfg = cfg
         self.db = SQLDatabase.from_uri(get_db_uri(cfg))
         self.db_type = cfg['db']['type'].lower()
-        self.api_uri = cfg['ai']['api_uri']
-        self.api_key = SecretStr(cfg['ai']['api_key'])
-        self.model_name = cfg['ai']['model_name']
+        self.api_uri = cfg['api']['llm_api_uri']
+        self.api_key = SecretStr(cfg['api']['llm_api_uri'])
+        self.model_name = cfg['api']['llm_model_name']
         self.is_remote_model = is_remote_model
         self.llm = self.get_llm()
 

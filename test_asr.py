@@ -24,9 +24,9 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 my_cfg = init_yml_cfg()
-API_KEY = SecretStr(my_cfg['ai']['asr_api_key'])
-ASR_ENDPOINT = f"{my_cfg['ai']['asr_api_uri']}/audio/transcriptions"
-MODEL_NAME = my_cfg['ai']['asr_model_name']
+API_KEY = SecretStr(my_cfg['api']['asr_api_key'])
+ASR_ENDPOINT = f"{my_cfg['api']['asr_api_uri']}/audio/transcriptions"
+MODEL_NAME = my_cfg['api']['asr_model_name']
 
 def record_realtime(duration=10, fs=16000) -> bytes:
     """

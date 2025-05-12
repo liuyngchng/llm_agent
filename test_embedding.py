@@ -14,12 +14,12 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    my_cfg = init_yml_cfg()['ai']
-    scheme = urlparse(my_cfg.get("api_uri", "")).scheme
+    my_cfg = init_yml_cfg()['api']
+    scheme = urlparse(my_cfg.get("llm_api_uri", "")).scheme
     http_client = httpx.Client(verify=False) if scheme == "https" else None
     client = OpenAI(
-        base_url=my_cfg['api_uri'],
-        api_key=my_cfg['api_key'],
+        base_url=my_cfg['llm_api_uri'],
+        api_key=my_cfg['llm_api_key'],
         http_client=http_client
     )
     response = client.embeddings.create(

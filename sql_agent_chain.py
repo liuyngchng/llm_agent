@@ -41,9 +41,9 @@ logger = logging.getLogger(__name__)
 
 my_cfg = init_yml_cfg()
 
-model_name = my_cfg['ai']['model_name']
-api_url = my_cfg['ai']['api_uri']
-api_key = SecretStr(my_cfg['ai']['api_key'])
+model_name = my_cfg['api']['llm_model_name']
+api_url = my_cfg['api']['llm_api_uri']
+api_key = SecretStr(my_cfg['api']['llm_api_key'])
 db_file = my_cfg['db']['name']
 db_uri = db_util.get_db_uri(my_cfg)
 question = "查询山东天然气销售分公司2025年的订单详细信息"

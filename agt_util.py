@@ -16,13 +16,13 @@ logger = logging.getLogger(__name__)
 
 def get_model(cfg, is_remote):
     if is_remote:
-        model = ChatOpenAI(api_key=cfg['ai']['api_key'],
-                           base_url=cfg['ai']['api_uri'],
+        model = ChatOpenAI(api_key=cfg['api']['llm_api_key'],
+                           base_url=cfg['api']['llm_api_uri'],
                            http_client=httpx.Client(verify=False, proxy=None),
-                           model=cfg['ai']['model_name']
+                           model=cfg['api']['llm_model_name']
                            )
     else:
-        model = ChatOllama(model=cfg['ai']['model_name'], base_url=cfg['ai']['api_uri'])
+        model = ChatOllama(model=cfg['api']['llm_model_name'], base_url=cfg['api']['llm_api_uri'])
     return model
 
 def classify_msg(labels: list, msg: str, cfg: dict, is_remote=True) -> dict:
@@ -53,7 +53,7 @@ def classify_msg(labels: list, msg: str, cfg: dict, is_remote=True) -> dict:
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit msg[{msg}] to llm {cfg['ai']['api_uri']}, {cfg['ai']['model_name']}")
+    logger.info(f"submit msg[{msg}] to llm {cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}")
     response = chain.invoke({
         "msg": msg
     })
@@ -77,7 +77,7 @@ def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str:
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit_msg_to_llm, txt[{txt}], llm[{cfg['ai']['api_uri']}, {cfg['ai']['model_name']}]")
+    logger.info(f"submit_msg_to_llm, txt[{txt}], llm[{cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}]")
     output_txt = ""
     try:
         response = chain.invoke({
@@ -90,7 +90,7 @@ def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str:
             "json"
         )
     except Exception as ex:
-        logger.error(f"invoke_remote_llm_error_in_classify_txt_for {labels}, {txt}, {cfg['ai']}")
+        logger.error(f"invoke_remote_llm_error_in_classify_txt_for {labels}, {txt}, {cfg['api']}")
         raise ex
     return output_txt
 def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dict:
@@ -111,7 +111,7 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit user_info[{user_info}] to llm {cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
+    logger.info(f"submit user_info[{user_info}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     response = chain.invoke({
         "context": user_info,
         "user_dict": user_dict,
@@ -137,7 +137,7 @@ def gen_txt(context: str, instruction: str, cfg: dict, is_remote=True) -> str:
     model = get_model(cfg, is_remote)
     chain = prompt | model
     logger.info(f"submit_instruction_and_context_to_llm, instruction[{instruction}],ctx[{context}], "
-                f"{cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
+                f"{cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     del model
     torch.cuda.empty_cache()
     output_txt = context
@@ -148,7 +148,7 @@ def gen_txt(context: str, instruction: str, cfg: dict, is_remote=True) -> str:
         })
         output_txt = rmv_think_block(response.content)
     except Exception as ex:
-        logger.error(f"invoke_remote_llm_gen_txt_error_for {instruction}, {context}, {cfg['ai']}")
+        logger.error(f"invoke_remote_llm_gen_txt_error_for {instruction}, {context}, {cfg['api']}")
         raise ex
     return output_txt
 
@@ -167,7 +167,8 @@ def update_session_info(user_info: str, append_info: str, cfg: dict, is_remote=T
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit user_info[{user_info}], append_info[{append_info}] to llm {cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
+    logger.info(f"submit user_info[{user_info}], append_info[{append_info}] "
+                f"to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     response = chain.invoke({
         "context": user_info,
         "append_info": append_info,
@@ -197,7 +198,7 @@ def extract_session_info(chat_log: str, cfg: dict, is_remote=True) -> str:
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit chat_log[{chat_log}] to llm {cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
+    logger.info(f"submit chat_log[{chat_log}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     response = chain.invoke({
         "context": chat_log
     })
@@ -224,7 +225,7 @@ def get_abs_of_chat(txt: list, cfg: dict, is_remote=True) -> str:
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit user_info[{txt}] to llm {cfg['ai']['api_uri'],}, {cfg['ai']['model_name']}")
+    logger.info(f"submit user_info[{txt}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     response = chain.invoke({
         "context": txt,
     })

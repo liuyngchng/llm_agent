@@ -244,9 +244,7 @@ def get_user_sample_data_rd_cfg_dict(cfg_dict: dict) -> dict:
     user_sample_data_rd_dict = {}
     user_sample_data_rd_dict["db"]["type"] = "sqlite"
     user_sample_data_rd_dict["db"]["name"] = user_sample_data_db
-    user_sample_data_rd_dict["ai"] = cfg_dict["ai"]
-    user_sample_data_rd_dict["ai"]["prompts"] = None
-    user_sample_data_rd_dict["ai"]["prompts"]["add_desc_to_dt"] = False
+    user_sample_data_rd_dict["api"] = cfg_dict["api"]
     return user_sample_data_rd_dict
 
 

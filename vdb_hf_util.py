@@ -205,14 +205,14 @@ if __name__ == "__main__":
     # a = os.environ.get("CUDA_VISIBLE_DEVICES")
     # print(a)
     # os.environ["CUDA_VISIBLE_DEVICES"] = 0
-    # vector_txt("./1.txt", my_cfg['ai'])
+    # vector_txt("./1.txt", my_cfg['api'])
     # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base")
     # vector_pdf("/home/rd/doc/文档生成/knowledge_base/1.pdf")
 
-    vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg["ai"])
+    vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg["api"])
     # q = "分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等"
     # doc_num = 4
-    # result = search(q, "faiss_index", my_cfg['ai'], doc_num)
+    # result = search(q, "faiss_index", my_cfg['api'], doc_num)
     # logger.info(f"score:{result[0][1]}, \n"
     #             f"source_file:{result[0][0].metadata["source"]}, \n"
     #             f"content: {result[0][0].page_content}")

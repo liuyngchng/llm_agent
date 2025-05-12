@@ -115,7 +115,7 @@ def fill_doc_with_pdf(source_dir: str, target_doc: str, sys_cfg: dict) -> Docume
             if not is_prompt:
                 continue
             logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
-            search_result = process_paragraph(my_para, sys_cfg['ai'])
+            search_result = process_paragraph(my_para, sys_cfg['api'])
             source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
             llm_ctx_txt = f"{source_para_txt}\n{search_result}"
             llm_txt = gen_txt(llm_ctx_txt, my_para.text, sys_cfg)

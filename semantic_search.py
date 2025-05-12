@@ -99,7 +99,7 @@ def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[st
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit msg[{question}] to llm {cfg['ai']['api_uri']}, {cfg['ai']['model_name']}")
+    logger.info(f"submit msg[{question}] to llm {cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}")
     response = chain.invoke({
         "context": "\n\n".join([doc.page_content for doc, score in docs_with_scores]),
         "msg": question
@@ -111,13 +111,13 @@ def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[st
 
 def get_model(cfg, is_remote):
     if is_remote:
-        model = ChatOpenAI(api_key=cfg['ai']['api_key'],
-                           base_url=cfg['ai']['api_uri'],
+        model = ChatOpenAI(api_key=cfg['api']['llm_api_key'],
+                           base_url=cfg['api']['llm_api_uri'],
                            http_client=httpx.Client(verify=False, proxy=None),
-                           model=cfg['ai']['model_name']
+                           model=cfg['api']['model_name']
                            )
     else:
-        model = ChatOllama(model=cfg['ai']['model_name'], base_url=cfg['ai']['api_uri'])
+        model = ChatOllama(model=cfg['api']['llm_model_name'], base_url=cfg['api']['llm_api_uri'])
     return model
 
 

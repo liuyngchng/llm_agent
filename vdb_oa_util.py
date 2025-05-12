@@ -60,8 +60,8 @@ def process_doc(documents: list[Document], vector_db: str, sys_cfg:dict,
 
 def build_client(sys_cfg: dict):
     return OpenAI(
-        base_url= sys_cfg['api_uri'],   # "https://myhost/v1",
-        api_key= sys_cfg['api_key'],    # "sk-xxxxx",
+        base_url= sys_cfg['llm_api_uri'],   # "https://myhost/v1",
+        api_key= sys_cfg['llm_api_key'],    # "sk-xxxxx",
         http_client=httpx.Client(verify=False),
     )
 
@@ -132,11 +132,11 @@ def search_txt(txt: str, score_threshold: float, sys_cfg: dict, txt_num: int) ->
 if __name__ == "__main__":
     os.environ["NO_PROXY"] = "*"  # 禁用代理
     my_cfg = init_yml_cfg()
-    # vector_txt_file("/home/rd/doc/文档生成/knowledge_base/1.txt", my_cfg['ai'])
-    # vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg['ai'])
-    # vector_pdf_file("/home/rd/doc/文档生成/knowledge_base/1.pdf", my_cfg['ai'])
-    # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg['ai'])
+    # vector_txt_file("/home/rd/doc/文档生成/knowledge_base/1.txt", my_cfg['api'])
+    # vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg['api'])
+    # vector_pdf_file("/home/rd/doc/文档生成/knowledge_base/1.pdf", my_cfg['api'])
+    # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg['api'])
     # q = "分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等"
     # logger.info(f"start_search: {q}")
-    # results = search_txt(q, 0.5, my_cfg['ai'], 3)
+    # results = search_txt(q, 0.5, my_cfg['api'], 3)
     # logger.info(f"result: {results}")
