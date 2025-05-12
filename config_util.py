@@ -13,7 +13,7 @@ import base64
 
 from sqlalchemy import false
 
-from db_util import sqlite_query_tool, sqlite_insert_tool
+from db_util import sqlite_query_tool, sqlite_insert_delete_tool
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -135,13 +135,34 @@ def save_data_source_config(data_source_cfg: dict, cfg: dict) -> bool:
                     ''')
     with sqlite3.connect(config_db) as my_conn:
         try:
-            result = sqlite_insert_tool(my_conn, exec_sql)
+            result = sqlite_insert_delete_tool(my_conn, exec_sql)
             logger.info(f"exec_sql_success {exec_sql}")
             if result.get('result'):
                 save_result = True
         except Exception as e:
             logger.exception(f"err_in_exec_sql, {exec_sql}")
     return save_result
+
+def delete_data_source_config(uid: str, cfg: dict) -> bool:
+    delete_result = False
+    if not uid:
+        logger.error("uid_null_err")
+        return delete_result
+    current_config = get_data_source_config_by_uid(uid, cfg)
+    if current_config:
+        delete_sql = f"delete from db_config where uid = '{uid}'"
+    else:
+        logger.error(f"no_db_source_cfg_found_for_uid_{uid}")
+        return False
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            result = sqlite_insert_delete_tool(my_conn, delete_sql)
+            logger.info(f"exec_sql_success {delete_sql}")
+            if result.get('result'):
+                delete_result = True
+        except Exception as e:
+            logger.exception(f"err_in_exec_sql, {delete_sql}")
+    return delete_result
 
 def build_data_source_cfg_with_uid(uid: str, sys_cfg:dict)->dict:
 

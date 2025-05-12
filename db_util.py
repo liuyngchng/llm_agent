@@ -43,7 +43,7 @@ def sqlite_query_tool(db_con, query: str) -> str:
         logger.exception(f"sqlite_query_err")
         return json.dumps({"error": str(e)})
 
-def sqlite_insert_tool(db_con, query: str) -> dict:
+def sqlite_insert_delete_tool(db_con, query: str) -> dict:
     # ///TODO 防止sql注入
     try:
         cursor = db_con.cursor()
