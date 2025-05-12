@@ -47,7 +47,7 @@ class SQLGenerator:
 
         # 带数据库结构的提示模板
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        sql_gen_sys_msg = f"""{cfg['ai']['prompts']['sql_gen_sys_msg']}\n当前时间是{current_time}"""
+        sql_gen_sys_msg = f"""{cfg['prompts']['sql_gen_sys_msg']}\n当前时间是{current_time}"""
         # try:
         #     sql_gen_sys_msg = sql_gen_sys_msg.replace("{sql_dialect}", cfg['db']['type'])
         # except Exception as e:
@@ -57,7 +57,7 @@ class SQLGenerator:
             ("system", f"{sql_gen_sys_msg}, {prompt_padding}"),
             ("human", "用户问题：{msg}")
         ])
-        nl_gen_sys_msg = f"""{cfg['ai']['prompts']['nl_gen_sys_msg']}"""
+        nl_gen_sys_msg = f"""{cfg['prompts']['nl_gen_sys_msg']}"""
         logger.debug(f"nl_gen_sys_msg {nl_gen_sys_msg}")
         self.nl_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", nl_gen_sys_msg),
@@ -182,7 +182,7 @@ def desc_usr_dt(q: str, cfg: dict, is_remote_model: bool, usr_dt: dict) -> str:
     return agent.desc_usr_dt(q, usr_dt)
 
 
-def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: bool, prompt_padding: "") -> str:
+def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: bool, prompt_padding="") -> str:
     """
     通过自然语言查询数据库中的数据
     """
@@ -223,7 +223,7 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
     if not dt:
         return json.dumps(nl_dt_dict, ensure_ascii=False)
 
-    if not cfg['ai']['prompts']['add_chart_to_dt']:
+    if not cfg['prompts']['add_chart_to_dt']:
         logger.info(f"nl_raw_dt:\n{dt}\n")
         return json.dumps(nl_dt_dict, ensure_ascii=False)
     return add_chart_to_raw_dt(agent, dt, nl_dt_dict)

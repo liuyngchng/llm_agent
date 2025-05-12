@@ -120,7 +120,7 @@ def save_data_source_config(data_source_cfg: dict, cfg: dict) -> bool:
                     db_name='{data_source_cfg["db_name"]}', 
                     db_usr='{data_source_cfg["db_usr_cypher"]}', 
                     db_psw='{data_source_cfg["db_psw_cypher"]}'
-                    where uid = '{data_source_cfg["uid"]}
+                    where uid = '{data_source_cfg["uid"]}'
                     ''')
     else:
         exec_sql = (f'''

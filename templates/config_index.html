@@ -74,7 +74,7 @@
                 <button type="submit" content="" id="delete_button">&nbsp;删&nbsp;&nbsp;除&nbsp;</button>
             </div>
             <input type="hidden" id="uid" name="uid" value="{{uid}}">
-            <div align="center"><span style="color: red">{{waring_info}}</span></div>
+            <div align="center"><span id="waring_info" style="color: red">{{waring_info}}</span></div>
         </form>
     </div>
     <script>
@@ -109,6 +109,7 @@
         document.getElementById("delete_button").addEventListener("click", async function(e) {
             e.preventDefault(); // 阻止表单默认提交
             const uid = document.getElementById("uid").value;
+            document.getElementById("waring_info").textContent = ""
             try {
                 const response = await fetch('/cfg/delete', {
                     method: 'POST',
@@ -121,7 +122,8 @@
                 const result = await response.json();
                 if (result.success) {
                     alert('删除成功');
-                    window.location.reload(); // 成功后刷新页面
+<!--                    window.location.reload(); // 成功后刷新页面-->
+                    document.getElementById("waring_info").textContent = ""
                 } else {
                     alert('删除失败: ' + (result.message || ''));
                 }

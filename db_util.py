@@ -43,16 +43,16 @@ def sqlite_query_tool(db_con, query: str) -> str:
         logger.exception(f"sqlite_query_err")
         return json.dumps({"error": str(e)})
 
-def sqlite_insert_delete_tool(db_con, query: str) -> dict:
+def sqlite_insert_delete_tool(db_con, sql: str) -> dict:
     # ///TODO 防止sql注入
     try:
         cursor = db_con.cursor()
-        cursor.execute(query)
+        cursor.execute(sql)
         db_con.commit()
         return {"result":True, "affected_rows": cursor.rowcount}
     except Exception as e:
         db_con.rollback()
-        logger.error(f"save_data_err: {e}")
+        logger.error(f"save_data_err: {e}, sql {sql}")
         return {"result":False, "error": "save data failed"}
 
 def output_data(db_con, sql:str, data_format:str) -> str:
