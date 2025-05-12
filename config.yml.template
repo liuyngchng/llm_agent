@@ -1,38 +1,38 @@
 # config.yaml，文件格式必须严格遵循 yaml配置文件格式
 db:
-#  数据库类型, mysql sqlite oracle，最好使用MySQL
-  type: mysql
-#  数据库（实例）名称，如果是sqlite，直接写文件名称，本地需存在相应的文件名
-  name: your_db_name
-#  数据库连接的IP地址或者域名
-  host: your_db_host_IP_or_domain
-#  数据库连接的端口
-  port: your_db_instance_port
-#  连接数据库的用户名
-  user: your_db_user_name
-#  读取数据库的用户密码
-  password: 12345
+    #  数据库类型, mysql sqlite oracle，最好使用MySQL
+    type: mysql
+    #  数据库（实例）名称，如果是sqlite，直接写文件名称，本地需存在相应的文件名
+    name: your_db_name
+    #  数据库连接的IP地址或者域名
+    host: your_db_host_IP_or_domain
+    #  数据库连接的端口
+    port: your_db_instance_port
+    #  连接数据库的用户名
+    user: your_db_user_name
+    #  读取数据库的用户密码
+    password: 12345
 
-# 限制使用的表的数量，最佳实践是1表， 随着表的数量的增加，大模型输出的SQL质量会有一定程度的下降
-  restrict_table_number: 1
+    # 限制使用的表的数量，最佳实践是1表， 随着表的数量的增加，大模型输出的SQL质量会有一定程度的下降
+    restrict_table_number: 1
 sys:
-#  系统名称(title) 配置
-  name: 巴拉巴拉小魔仙
-#  是否启用认证， true， 登录后才能使用系统;false 无需登录
-  auth: true
-#  自定义数据库配置时的权限认证 token
-  cfg_tkn: foobar
-# 配置可访问的域， 防止跨域攻击
-  allowed_origin: http://192,168.1.122
-# 对配置信息进行加密的密钥，长度必须为16/32
-  cypher_key: abaababa
+    #  系统名称(title) 配置
+    name: 巴拉巴拉小魔仙
+    #  是否启用认证， true， 登录后才能使用系统;false 无需登录
+    auth: true
+    #  自定义数据库配置时的权限认证 token
+    cfg_tkn: foobar
+    # 配置可访问的域， 防止跨域攻击
+    allowed_origin: http://192,168.1.122
+    # 对配置信息进行加密的密钥，长度必须为16/32
+    cypher_key: abaababa
 api:
-# 大语言模型 API 基地址
-  llm_api_uri: https://api.deepseek.com/v1
-  #  大语言模型 API key
-  llm_api_key: 45678
-  #  大语言模型 模型名称
-  llm_model_name: deepseek-chat
+    # 大语言模型 API 基地址
+    llm_api_uri: https://api.deepseek.com/v1
+    #  大语言模型 API key
+    llm_api_key: 45678
+    #  大语言模型 模型名称
+    llm_model_name: deepseek-chat
 
   # 语音识别 API 基地址，需要部署为兼容 OpenAI-API-Compatible
   asr_api_uri: https://api.your_audio_service_provider.com/v1/
