@@ -40,7 +40,7 @@ class SQLGenerator:
         self.db = SQLDatabase.from_uri(get_db_uri(cfg))
         self.db_type = cfg['db']['type'].lower()
         self.api_uri = cfg['api']['llm_api_uri']
-        self.api_key = SecretStr(cfg['api']['llm_api_uri'])
+        self.api_key = SecretStr(cfg['api']['llm_api_key'])
         self.model_name = cfg['api']['llm_model_name']
         self.is_remote_model = is_remote_model
         self.llm = self.get_llm()
@@ -161,12 +161,13 @@ class SQLGenerator:
     def get_llm(self):
         if self.is_remote_model:
             if "https" in self.api_uri:
-                model = ChatOpenAI(api_key=self.api_key,
-                                   base_url=self.api_uri,
-                                   http_client=httpx.Client(verify=False, proxy=None),
-                                   model=self.model_name,
-                                   temperature=0
-                                   )
+                model = ChatOpenAI(
+                    api_key=self.api_key,
+                    base_url=self.api_uri,
+                    http_client=httpx.Client(verify=False, proxy=None),
+                    model=self.model_name,
+                    temperature=0
+                )
             else:
                 model = ChatOllama(model=self.model_name, base_url=self.api_uri, temperature=0)
         else:
