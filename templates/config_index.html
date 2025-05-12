@@ -39,7 +39,7 @@
 <body>
     <div style="text-align: center;margin-top: 10%;" >
         <p style="font:20px Verdana; font-weight:bold;">{{sys_name}}_数据源配置</p>
-        <form style="margin-top: 2%" action="/cfg/idx" method="post">
+        <form style="margin-top: 2%" action="/cfg/dt" method="post">
             <div style="display: flex; align-items: center; gap: 8px; margin: 0 auto; width: fit-content">
                 <span>数据库类型:</span>
                 <select id="db_type" name="db_type" required>
@@ -70,7 +70,8 @@
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%">
-                <button type="submit" content="" id="button">&nbsp;保&nbsp;&nbsp;存&nbsp;</button>
+                <button type="submit" content="" id="button">&nbsp;保&nbsp;&nbsp;存&nbsp;</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <button type="submit" content="" id="delete_button">&nbsp;删&nbsp;&nbsp;除&nbsp;</button>
             </div>
             <input type="hidden" id="uid" name="uid" value="{{uid}}">
             <div align="center"><span style="color: red">{{waring_info}}</span></div>
@@ -104,6 +105,31 @@
             }
             document.getElementById("my_form").submit();
         }
+
+        document.getElementById("delete_button").addEventListener("click", async function(e) {
+            e.preventDefault(); // 阻止表单默认提交
+            const uid = document.getElementById("uid").value;
+            try {
+                const response = await fetch('/cfg/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ uid })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('删除成功');
+                    window.location.reload(); // 成功后刷新页面
+                } else {
+                    alert('删除失败: ' + (result.message || ''));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('请求失败');
+            }
+        });
     </script>
 </body>
 </html>

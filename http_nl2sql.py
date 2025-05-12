@@ -64,7 +64,7 @@ def config_index():
     logger.info(f"return page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
 
-@app.route('/cfg/idx', methods=['POST'])
+@app.route('/cfg/dt', methods=['POST'])
 def save_config():
     logger.info(f"save config info {request.form}")
     dt_idx = "config_index.html"
@@ -97,6 +97,39 @@ def save_config():
         data_source_cfg['waring_info'] = '保存失败'
     return render_template(dt_idx, **data_source_cfg)
 
+
+@app.route('/cfg/delete', methods=['POST'])
+def delete_config():
+    logger.info(f"delete_config_info {request.form}")
+    dt_idx = "config_index.html"
+    uid = request.form.get('msg_from_uid').strip()
+    db_type = request.form.get('db_type').strip()
+    db_host = request.form.get('db_host').strip()
+    db_port = request.form.get('db_port').strip()
+    db_name = request.form.get('db_name').strip()
+    db_usr  = request.form.get('db_usr').strip()
+    db_psw  = request.form.get('db_psw').strip()
+    data_source_cfg = {
+        "sys_name": my_cfg['sys']['name'],
+        "waring_info": "",
+        "msg_from_uid": uid,
+        "db_type": db_type,
+        "db_name": db_name,
+        "db_host": db_host,
+        "db_port": db_port,
+        "db_usr": db_usr,
+        "db_psw": db_psw,
+    }
+    usr = cfg_utl.get_user_name_by_uid(uid)
+    if not usr:
+        data_source_cfg['waring_info'] = '非法访问，请您先登录系统'
+        return render_template(dt_idx, **data_source_cfg)
+    save_cfg_result = cfg_utl.save_data_source_config(data_source_cfg, my_cfg)
+    if save_cfg_result:
+        data_source_cfg['waring_info'] = '保存成功'
+    else:
+        data_source_cfg['waring_info'] = '保存失败'
+    return render_template(dt_idx, **data_source_cfg)
 
 @app.route('/status', methods=['GET'])
 def get_status():
