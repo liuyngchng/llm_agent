@@ -7,7 +7,7 @@ import json
 import pandas as pd
 import logging.config
 from my_enums import DataType, DBType
-from urllib.parse import urlparse, unquote, urlencode
+from urllib.parse import urlparse, unquote, urlencode, quote
 from sys_init import init_yml_cfg
 """
 mysql+pymysql://root:123456@localhost:3306/test
@@ -205,10 +205,14 @@ def get_db_uri(cfg: dict) -> str:
     if all(key in db_cfg for key in ['type', 'name', 'host', 'user', 'password']):
         db_type_cfg = db_cfg['type'].lower()
         if DBType.MYSQL.value in db_type_cfg:
-            my_db_uri = (f"mysql+pymysql://{db_cfg['user']}:{db_cfg['password']}"
+            usr = quote(db_cfg['user'])
+            pwd = quote(db_cfg['password'], safe='')
+            my_db_uri = (f"mysql+pymysql://{usr}:{pwd}"
                          f"@{db_cfg['host']}:{db_cfg.get('port', 3306)}/{db_cfg['name']}")
         elif DBType.ORACLE.value in db_type_cfg:
-            my_db_uri = (f"oracle+cx_oracle://{db_cfg['user']}:{db_cfg['password']}"
+            usr = quote(db_cfg['user'])
+            pwd = quote(db_cfg['password'])
+            my_db_uri = (f"oracle+cx_oracle://{usr}:{pwd}"
                          f"@{db_cfg['host']}:{db_cfg.get('port', 1521)}/?service_name={db_cfg['name']}")
         else:
             raise "unknown db type in config txt_file"

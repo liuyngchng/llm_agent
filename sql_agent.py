@@ -22,7 +22,8 @@ from db_util import sqlite_output, mysql_output, get_db_uri, oracle_output, get_
 from sys_init import init_yml_cfg
 
 """
-pip install langchain_openai langchain_ollama langchain_core langchain_community pandas tabulate pymysql
+pip install langchain_openai langchain_ollama \
+    langchain_core langchain_community pandas tabulate pymysql
 """
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -37,7 +38,8 @@ class SQLGenerator:
 
     def __init__(self, cfg:dict , is_remote_model:bool, prompt_padding=""):
         self.cfg = cfg
-        self.db = SQLDatabase.from_uri(get_db_uri(cfg))
+        db_uri = get_db_uri(cfg)
+        self.db = SQLDatabase.from_uri(db_uri)
         self.db_type = cfg['db']['type'].lower()
         self.api_uri = cfg['api']['llm_api_uri']
         self.api_key = SecretStr(cfg['api']['llm_api_key'])
