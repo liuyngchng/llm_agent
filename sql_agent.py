@@ -71,6 +71,11 @@ class SQLGenerator:
             ("human", "用户问题：{msg}")
         ])
 
+        self.intercept_usr_question_template = ChatPromptTemplate.from_messages([
+            ("system", "根据已知的数据库表结构信息\n{schema}\n检查用户提出的问题是否含有相应的查询条件\n(1)若查询条件不清晰，引导用户提供查询条件，禁止返回表名、SQL\n(2)若查询条件不清晰，直接输出文本\n查询条件清晰"),
+            ("human", "用户问题：{msg}")
+        ])
+
     def generate_sql(self, question: str) -> str:
         """
         generate sql
@@ -110,6 +115,14 @@ class SQLGenerator:
         chain = self.nl_gen_prompt_template | self.llm
         response = chain.invoke({
             "msg": markdown_dt
+        })
+        return response.content
+
+    def intercept_usr_question(self, q: str):
+        chain = self.intercept_usr_question_template | self.llm
+        response = chain.invoke({
+            "msg": q,
+            "schema": self.get_schema_info(),
         })
         return response.content
 
@@ -200,9 +213,17 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
                 f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
                 f" cfg['db']={cfg['db']}")
         raise Exception(info)
+
+
+    logger.info(f"check_user_question_with_llm：{q}")
+    intercept = agent.intercept_usr_question(q)
+    if "查询条件清晰" not in intercept:
+        nl_dt_dict["raw_dt"] = intercept
+        logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
+        return json.dumps(nl_dt_dict, ensure_ascii=False)
+    # 生成SQL
+    logger.info(f"summit_question_to_llm：{q}")
     try:
-        # 生成SQL
-        logger.info(f"summit_question_to_llm：{q}")
         sql = agent.generate_sql(q)
         logger.debug(f"llm_output_sql\n{sql}")
         sql = extract_md_content(sql, "sql")
