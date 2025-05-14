@@ -206,16 +206,16 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
         sql = agent.generate_sql(q)
         logger.debug(f"llm_output_sql\n{sql}")
         sql = extract_md_content(sql, "sql")
-        logger.debug(f"extract_sql\n\n{sql}\n")
+        logger.info(f"llm_gen_sql_for_q {q}\n----------\n{sql}\n----------\n")
         db_uri = get_db_uri(cfg)
         if DBType.SQLITE.value in db_uri:
-            logger.debug(f"connect to sqlite db {db_uri}")
+            logger.debug(f"connect_to_sqlite_db {db_uri}")
             dt = sqlite_output(db_uri, sql, output_data_format)
         elif DBType.MYSQL.value in db_uri:
-            logger.debug(f"connect to mysql db {db_uri}")
+            logger.debug(f"connect_to_mysql_db {db_uri}")
             dt = mysql_output(cfg, sql, output_data_format)
         elif DBType.ORACLE.value in db_uri:
-            logger.debug(f"connect to oracle db {db_uri}")
+            logger.debug(f"connect_to_oracle_db {db_uri}")
             dt = oracle_output(cfg, sql, output_data_format)
         else:
             raise "other data type need to be done"

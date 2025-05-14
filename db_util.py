@@ -190,7 +190,7 @@ def sqlite_output(db_uri: str, sql:str, data_format:str):
 
     db_file = db_uri.split('/')[-1]
     with sqlite3.connect(db_file) as my_conn:
-        logger.debug(f"connect to db {db_file}")
+        logger.debug(f"connect_to_db_file {db_file}")
         my_dt = output_data(my_conn, sql, data_format)
     if DataType.JSON.value ==  data_format:
         my_dt = json.loads(my_dt)
