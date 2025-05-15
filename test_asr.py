@@ -116,9 +116,9 @@ if __name__ == "__main__":
     """
     https://www.modelscope.cn/models/iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch
     
-    curl -ks --noproxy '*' -w'\n' --tlsv1 -X POST  '{api_uri}/audio/transcriptions' \
+    curl -ks --noproxy '*' -w'\n' --tlsv1 -X POST  '{llm_api_uri}/audio/transcriptions' \
         -H "Content-Type: multipart/form-data" \
-        -H 'Authorization: Bearer {api_key}' \
+        -H 'Authorization: Bearer {llm_api_key}' \
         -F "txt_file=@static/asr_example_zh.wav" \
         -F "model={asr_model_name}" | jq
     """

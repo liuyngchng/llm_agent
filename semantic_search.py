@@ -114,7 +114,7 @@ def get_model(cfg, is_remote):
         model = ChatOpenAI(api_key=cfg['api']['llm_api_key'],
                            base_url=cfg['api']['llm_api_uri'],
                            http_client=httpx.Client(verify=False, proxy=None),
-                           model=cfg['api']['model_name']
+                           model=cfg['api']['llm_model_name']
                            )
     else:
         model = ChatOllama(model=cfg['api']['llm_model_name'], base_url=cfg['api']['llm_api_uri'])

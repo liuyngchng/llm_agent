@@ -21,7 +21,7 @@ def req_ollama(question):
     :param question:
     :return:
     """
-    # model_name = "llama3.2:3b"
+    # llm_model_name = "llama3.2:3b"
     # llm_url = "http://127.0.0.1:11434"
 
     model_name = "deepseek-r1"

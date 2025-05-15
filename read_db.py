@@ -130,7 +130,7 @@ if __name__ == "__main__":
     api_uri_str = "http://127.0.0.1:11434"
     sql_str = "SELECT * FROM a LIMIT 10;"
     # get_data(db_uri)
-    # get_schema(db_uri, llm_name_str, api_uri)
+    # get_schema(db_uri, llm_name_str, llm_api_uri)
 
     # test db_query_tool
     a = db_query_tool.invoke(sql_str, db_uri)

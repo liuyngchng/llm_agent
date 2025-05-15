@@ -37,7 +37,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 # 支持 tools 调用
-#model_name="llama3.1:8b"
+#llm_model_name="llama3.1:8b"
 
 my_cfg = init_yml_cfg()
 
