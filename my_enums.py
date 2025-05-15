@@ -7,6 +7,7 @@ class DBType(Enum):
     SQLITE = "sqlite"
     MYSQL = "mysql"
     ORACLE = "oracle"
+    DORIS = "doris"
 
 class DataType(Enum):
     HTML = "html"

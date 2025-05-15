@@ -13,7 +13,7 @@ import base64
 
 from sqlalchemy import false
 
-from db_util import sqlite_query_tool, sqlite_insert_delete_tool
+from db_util import DbUtl
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def auth_user(user:str, t: str, cfg: dict) -> dict:
     auth_result ={"pass": False, "uid": ""}
     with sqlite3.connect(config_db) as my_conn:
         sql = f"select id, role from user where name='{user}' and t = '{t}' limit 1"
-        check_info = sqlite_query_tool(my_conn, sql)
+        check_info = DbUtl.sqlite_query_tool(my_conn, sql)
         user_dt = json.loads(check_info)['data']
 
     if user_dt:
@@ -39,7 +39,7 @@ def get_uid_by_user(usr:str) ->str:
     check_sql = f"select id from user where name='{usr}' limit 1"
     uid = ''
     with sqlite3.connect(config_db) as my_conn:
-        check_info = sqlite_query_tool(my_conn, check_sql)
+        check_info = DbUtl.sqlite_query_tool(my_conn, check_sql)
         logger.debug(f"check_info {check_info}")
         check_data = json.loads(check_info)['data']
         try:
@@ -53,7 +53,7 @@ def get_user_name_by_uid(uid:str)-> str | None:
     with sqlite3.connect(config_db) as my_conn:
         try:
             sql = f"select name from user where id='{uid}' limit 1"
-            check_info = sqlite_query_tool(my_conn, sql)
+            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
             user_dt = json.loads(check_info)['data']
             user = user_dt[0][0]
             logger.info(f"get_user {user} with uid {uid}")
@@ -66,7 +66,7 @@ def get_user_role_by_uid(uid:str)-> str | None:
     with sqlite3.connect(config_db) as my_conn:
         try:
             sql = f"select role from user where id='{uid}' limit 1"
-            check_info = sqlite_query_tool(my_conn, sql)
+            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
             user_dt = json.loads(check_info)['data']
             role = user_dt[0][0]
             logger.info(f"role {role}, uid {uid}")
@@ -79,7 +79,7 @@ def get_data_source_config_by_uid(uid:str, cfg: dict) -> dict:
     with sqlite3.connect(config_db) as my_conn:
         check_sql = (f"select uid, db_type, db_name, db_host, db_port,"
                      f" db_usr, db_psw from db_config where uid='{uid}' limit 1")
-        db_config_info = sqlite_query_tool(my_conn, check_sql)
+        db_config_info = DbUtl.sqlite_query_tool(my_conn, check_sql)
         logger.debug(f"check_sql {check_sql}")
         check_info = json.loads(db_config_info)['data']
         if not check_info:
@@ -135,7 +135,7 @@ def save_data_source_config(data_source_cfg: dict, cfg: dict) -> bool:
                     ''')
     with sqlite3.connect(config_db) as my_conn:
         try:
-            result = sqlite_insert_delete_tool(my_conn, exec_sql)
+            result = DbUtl.sqlite_insert_delete_tool(my_conn, exec_sql)
             logger.info(f"exec_sql_success {exec_sql}")
             if result.get('result'):
                 save_result = True
@@ -156,7 +156,7 @@ def delete_data_source_config(uid: str, cfg: dict) -> bool:
         return False
     with sqlite3.connect(config_db) as my_conn:
         try:
-            result = sqlite_insert_delete_tool(my_conn, delete_sql)
+            result = DbUtl.sqlite_insert_delete_tool(my_conn, delete_sql)
             logger.info(f"exec_sql_success {delete_sql}")
             if result.get('result'):
                 delete_result = True
@@ -165,7 +165,6 @@ def delete_data_source_config(uid: str, cfg: dict) -> bool:
     return delete_result
 
 def build_data_source_cfg_with_uid(uid: str, sys_cfg:dict)->dict:
-
     source_cfg = get_data_source_config_by_uid(uid, sys_cfg)
     if not source_cfg:
         return  sys_cfg
@@ -203,7 +202,7 @@ def get_const(key:str)->str | None:
     with sqlite3.connect(config_db) as my_conn:
         try:
             sql = f"select value from const where key='{key}' limit 1"
-            check_info = sqlite_query_tool(my_conn, sql)
+            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
             value_dt = json.loads(check_info)['data']
             value = value_dt[0][0]
             logger.info(f"get_const {value} with uid {value}")
@@ -216,7 +215,7 @@ def get_consts()-> dict:
     with sqlite3.connect(config_db) as my_conn:
         sql = f"select key, value from const limit 100"
         try:
-            check_info = sqlite_query_tool(my_conn, sql)
+            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
             value_dt = json.loads(check_info)['data']
             for key, value in value_dt:
                 const[key] = value
@@ -231,7 +230,7 @@ def get_user_sample_data(sql: str)-> dict:
     const = {}
     with sqlite3.connect(user_sample_data_db) as my_conn:
         try:
-            check_info = sqlite_query_tool(my_conn, sql)
+            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
             value_dt = json.loads(check_info)['data']
             for key, value in value_dt:
                 const[key] = value

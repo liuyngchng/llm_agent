@@ -18,7 +18,7 @@ import httpx
 from pydantic import SecretStr
 from my_enums import DBType, DataType
 
-from db_util import sqlite_output, mysql_output, get_db_uri, oracle_output, get_orc_db_info
+from db_util import DbUtl
 from sys_init import init_yml_cfg
 
 """
@@ -30,7 +30,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 
-class SQLGenerator:
+class SQLGenerator(DbUtl):
     """
     for mysql
     # db_uri = "mysql+pymysql://db_user:db_password@db_host/db_name"
@@ -38,7 +38,7 @@ class SQLGenerator:
 
     def __init__(self, cfg:dict , is_remote_model:bool, prompt_padding=""):
         self.cfg = cfg
-        db_uri = get_db_uri(cfg)
+        db_uri = DbUtl.get_db_uri(cfg)
         self.db = SQLDatabase.from_uri(db_uri)
         self.db_type = cfg['db']['type'].lower()
         self.api_uri = cfg['api']['llm_api_uri']
@@ -136,8 +136,10 @@ class SQLGenerator:
             return {"success": False, "error": str(e)}
 
     def get_table_list(self)-> list:
-        if "oracle" in self.db_type:
-            table_list = get_orc_db_info(self.cfg)
+        if DBType.ORACLE.value in self.db_type:
+            table_list = DbUtl.get_orc_db_info(self.cfg)
+        elif DBType.DORIS.value in self.db_type:
+            raise "you_need_to_process_doris_database"
         else:
             table_list = self.db.get_usable_table_names()
         return table_list
@@ -228,16 +230,19 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
         logger.debug(f"llm_output_sql\n{sql}")
         sql = extract_md_content(sql, "sql")
         logger.info(f"llm_gen_sql_for_q {q}\n----------\n{sql}\n----------\n")
-        db_uri = get_db_uri(cfg)
+        db_uri = DbUtl.get_db_uri(cfg)
         if DBType.SQLITE.value in db_uri:
             logger.debug(f"connect_to_sqlite_db {db_uri}")
-            dt = sqlite_output(db_uri, sql, output_data_format)
+            dt = DbUtl.sqlite_output(db_uri, sql, output_data_format)
         elif DBType.MYSQL.value in db_uri:
             logger.debug(f"connect_to_mysql_db {db_uri}")
-            dt = mysql_output(cfg, sql, output_data_format)
+            dt = DbUtl.mysql_output(cfg, sql, output_data_format)
         elif DBType.ORACLE.value in db_uri:
             logger.debug(f"connect_to_oracle_db {db_uri}")
-            dt = oracle_output(cfg, sql, output_data_format)
+            dt = DbUtl.oracle_output(cfg, sql, output_data_format)
+        elif DBType.DORIS.value in db_uri:
+            logger.debug(f"connect_to_doris_db {db_uri}")
+            dt = DbUtl.doris_output(cfg, sql, output_data_format)
         else:
             raise "other data type need to be done"
     except Exception as e:
