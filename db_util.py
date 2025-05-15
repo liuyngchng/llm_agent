@@ -246,7 +246,7 @@ class DbUtl:
                 raise "one of the following key ['type', 'name'] missed in config txt_file"
         else:
             raise "one of the following key ['type', 'name', 'host', 'user', 'password'] missed in config txt_file"
-        logger.info(f"db_uri {my_db_uri}")
+        logger.info(f"db_uri_for_{db_type_cfg}, {my_db_uri}")
         return my_db_uri
 
 
