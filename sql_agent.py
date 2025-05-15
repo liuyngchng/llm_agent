@@ -6,6 +6,7 @@ import os
 from typing import Dict
 from datetime import datetime
 
+from doris_util import Doris
 from utils import extract_md_content, rmv_think_block, extract_json
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -39,8 +40,11 @@ class SQLGenerator(DbUtl):
     def __init__(self, cfg:dict , is_remote_model:bool, prompt_padding=""):
         self.cfg = cfg
         db_uri = DbUtl.get_db_uri(cfg)
-        self.db = SQLDatabase.from_uri(db_uri)
+        self.db_dt_source = SQLDatabase.from_uri(db_uri)
         self.db_type = cfg['db']['type'].lower()
+        if DBType.DORIS.value == self.db_type:
+            self.doris_dt_source_cfg = cfg['doris']
+            self.doris_dt_source = Doris(self.doris_dt_source_cfg)
         self.llm_api_uri = cfg['api']['llm_api_uri']
         self.llm_api_key = SecretStr(cfg['api']['llm_api_key'])
         self.llm_model_name = cfg['api']['llm_model_name']
@@ -129,7 +133,7 @@ class SQLGenerator(DbUtl):
     def execute_query(self, sql: str) -> Dict:
         """执行SQL查询"""
         try:
-            result = self.db.run(sql)
+            result = self.db_dt_source.run(sql)
             return {"success": True, "data": result}
         except Exception as e:
             logger.error(f"SQL执行失败：{e}")
@@ -139,17 +143,21 @@ class SQLGenerator(DbUtl):
         if DBType.ORACLE.value in self.db_type:
             table_list = DbUtl.get_orc_db_info(self.cfg)
         elif DBType.DORIS.value in self.db_type:
-            raise "you_need_to_process_doris_database"
+            table_list = self.doris_dt_source.get_table_list()
         else:
-            table_list = self.db.get_usable_table_names()
+            table_list = self.db_dt_source.get_usable_table_names()
         return table_list
 
     def get_schema_info(self) -> str:
+        if DBType.DORIS.value == self.db_type:
+            doris_schema = self.doris_dt_source.get_schema_for_llm()
+            logger.info(f"doris_schema {doris_schema}")
+            return doris_schema
         schema_entries = []
         for table in self.get_table_list():
-            if DBType.ORACLE.value in self.db_type:
+            if DBType.ORACLE.value == self.db_type:
                 table = table.upper()
-            columns = self.db._inspector.get_columns(table)
+            columns = self.db_dt_source._inspector.get_columns(table)
             table_header = "| 字段名 | 字段类型 | 字段注释 |\n|--------|----------|----------|"
             table_rows = []
             for col in columns:
@@ -167,7 +175,7 @@ class SQLGenerator(DbUtl):
             schema_entries.extend([
                 f"表名：{table}",
                 f"字段信息：\n{column_table}",
-                f"示例数据：\n{self.db.run(sample_dt_sql)}",
+                f"示例数据：\n{self.db_dt_source.run(sample_dt_sql)}",
                 "-----------------"
             ])
         schema_info = "\n".join(schema_entries)
@@ -244,7 +252,7 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
             logger.debug(f"connect_to_doris_db {db_uri}")
             dt = DbUtl.doris_output(cfg, sql, output_data_format)
         else:
-            raise "other data type need to be done"
+            raise "other_data_type_need_to_be_done"
     except Exception as e:
         logger.error(f"error, {e}，sql: {sql}", exc_info=True)
     nl_dt_dict["raw_dt"] = dt

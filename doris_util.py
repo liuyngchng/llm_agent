@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import json
+import re
+
 import requests
 import logging.config
 from sys_init import init_yml_cfg
@@ -48,23 +50,72 @@ class Doris:
         logger.info(f"exec_sql [{sql}]")
         body = self.build_json(sql)
         response = requests.post(self.url, json=body, headers=self.headers, proxies={'http': None, 'https': None})
-        return response.json()
+        exec_json = response.json()
+        if exec_json['code'] == 200:
+            return exec_json['data']
+        else:
+            raise f"exec_sql_exception_{sql}"
 
-    def get_table_list(self):
+    def get_table_list(self) -> list:
         get_table_list_sql = "show tables"
         my_json = self.exec_sql(get_table_list_sql)
         logger.info(f"response {my_json}")
-        return my_json["data"][0][f"Tables_in_{self.data_source}"]
+        table_list = [my_json[0][f"Tables_in_{self.data_source}"]]
+        return table_list
 
-    def get_schema(self):
+    def get_schema_info(self) -> list:
         """
         get schema
         """
-        get_schema_sql = f"show create table {self.data_source}.{self.get_table_list()}"
-        logger.info(f"get_schema_sql {get_schema_sql}")
-        my_json = self.exec_sql(get_schema_sql)
-        logger.info(f"response {my_json}")
-        return my_json["data"][0].get('Create Table').split('ENGINE')[0]
+        schema_table = []
+        for table in self.get_table_list():
+            get_schema_sql = f"show create table {self.data_source}.{table}"
+            logger.info(f"get_schema_sql {get_schema_sql}")
+            my_json = self.exec_sql(get_schema_sql)
+            table_schema_json = {"name": table, "schema_md_table": my_json[0].get('Create Table').split('ENGINE')[0]}
+            schema_table.append(
+                table_schema_json
+            )
+            logger.info(f"response {my_json}")
+        return schema_table
+
+    @staticmethod
+    def parse_ddl_to_md_table(ddl_sql: str) -> str:
+        pattern = r'`(\w+)`\s+([^\s]+)\s+.*?COMMENT\s+\'(.*?)\''
+        columns = []
+        for line in ddl_sql.split('\n'):
+            match = re.search(pattern, line.strip())
+            if match:
+                name = match.group(1)
+                col_type = match.group(2)
+                comment = match.group(3)
+                columns.append({"name": name, "type": col_type, "comment": comment})
+
+        # 生成Markdown表格
+        header = "| 字段名 | 字段类型 | 字段注释 |\n|--------|----------|----------|"
+        rows = [f"| {col['name']} | {col['type']} | {col['comment']} |" for col in columns]
+        return '\n'.join([header] + rows)
+
+    def get_schema_for_llm(self):
+        """
+        get schema from llm
+        """
+        schema_entries = []
+        tb_schema_list = self.get_schema_info()
+        logger.info(f"my_dt {tb_schema_list}")
+        for tb_schema_json in tb_schema_list:
+            md_tbl_schema = my_doris.parse_ddl_to_md_table(tb_schema_json['schema_md_table'])
+            logger.info(f"md_tbl\n{md_tbl_schema}")
+            sample_dt_sql = f'SELECT * FROM {tb_schema_json['name']} LIMIT 3'
+            schema_entries.extend([
+                f"表名：{tb_schema_json['name']}",
+                f"字段信息：\n{md_tbl_schema}",
+                f"示例数据：\n{self.exec_sql(sample_dt_sql)}",
+                "-----------------"
+            ])
+        schema_info = "\n".join(schema_entries)
+        logger.debug(f"schema_info:\n{schema_info}")
+        return schema_info
 
     def count_dt(self):
         count_sql = "select count(1) from dws_dw_ycb_day"
@@ -80,7 +131,9 @@ if __name__ == "__main__":
     my_doris = Doris(my_cfg)
     tables = my_doris.get_table_list()
     logger.info(f"my_tables {tables}")
-    dt = my_doris.get_schema()
-    logger.info(f"my_dt {dt}")
+    my_tb_schema_list = my_doris.get_schema_info()
+    logger.info(f"my_dt {my_tb_schema_list}")
+    llm_schema_info = my_doris.get_schema_for_llm()
+    logger.info(f"schema_for_llm {llm_schema_info}")
     count = my_doris.count_dt()
     logger.info(f"my_count {count}")
