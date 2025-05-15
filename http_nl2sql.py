@@ -61,7 +61,7 @@ def config_index():
     ctx['sys_name']=my_cfg['sys']['name']
     ctx["waring_info"]=""
     dt_idx = "config_index.html"
-    logger.info(f"return page {dt_idx}, ctx {ctx}")
+    logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
 
 @app.route('/cfg/dt', methods=['POST'])
@@ -203,10 +203,11 @@ def query_data(catch=None):
     logger.info(f"ask_question({msg}, my_cfg, html, True)")
     if uid and uid != 'foo':
         logger.info(f"build_data_source_cfg_with_uid_{uid}")
-        db_source_cfg = cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg)
+        dt_source_cfg = cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg)
+        logger.info(f"data_source_cfg_for_uid_{uid}, {dt_source_cfg}")
     else:
-        db_source_cfg = my_cfg
-    answer = get_dt_with_nl(msg, db_source_cfg, DataType.MARKDOWN.value, True)
+        dt_source_cfg = my_cfg
+    answer = get_dt_with_nl(msg, dt_source_cfg, DataType.MARKDOWN.value, True)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
