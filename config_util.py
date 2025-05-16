@@ -11,8 +11,6 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 import base64
 
-from sqlalchemy import false
-
 from db_util import DbUtl
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
