@@ -2,9 +2,13 @@
 # -*- coding: utf-8 -*-
 import json
 import re
+from typing import LiteralString
 
+import pandas as pd
 import requests
 import logging.config
+
+from my_enums import DataType
 from sys_init import init_yml_cfg
 
 
@@ -16,6 +20,8 @@ class Doris:
     A doris data source class
     """
     def __init__(self, cfg: dict):
+        if not 'url' in cfg:
+            cfg = self.build_cfg(cfg)
         self.url = cfg['url']
         self.token = cfg['token']
         self.data_source = cfg['data_source']
@@ -30,7 +36,7 @@ class Doris:
             "name": self.data_source,
             "total": False,
             "script": "",
-            "tenantName": cfg['tenantName'],
+            "tenantName": cfg.get('tenantName', 'trqgd'),
             "uid": self.uid,
         }
 
@@ -125,6 +131,47 @@ class Doris:
         logger.info(f"response {my_json}")
         return my_json
 
+    @staticmethod
+    def build_cfg(cfg) -> dict:
+        """
+        build http cfg from database cfg
+        """
+        cfg['url'] = f"http://{cfg['host']}:{cfg['port']}/api/db/execute"
+        cfg['token'] = cfg['password']
+        cfg['data_source'] = cfg['name']
+        cfg['uid'] = cfg['user']
+        cfg.pop('host')
+        cfg.pop('port')
+        cfg.pop('password')
+        cfg.pop('name')
+        cfg.pop('user')
+        logger.info(f"build_doris_cfg {cfg}")
+        return cfg
+
+    def output_data(self, sql: str, data_format: str) -> str | LiteralString | None:
+        try:
+            data = self.exec_sql(sql)
+            if not data:
+                return json.dumps({"columns": [], "data": []})
+
+            columns = list(data[0].keys()) if data else []
+            rows = [list(row.values()) for row in data]
+            df = pd.DataFrame(rows, columns=columns)
+            dt_fmt = data_format.lower()
+            if DataType.HTML.value in dt_fmt:
+                dt = df.to_html(index=False, border=0).replace(...)
+            elif DataType.MARKDOWN.value in dt_fmt:
+                dt = df.to_markdown(index=False) if not df.empty else ''
+            elif DataType.JSON.value in dt_fmt:
+                dt = df.to_json(force_ascii=False, orient='records')
+            else:
+                raise ValueError(f"unsupported_format: {data_format}")
+            return dt
+        except Exception as e:
+            logger.error(f"doris_output_error: {str(e)}")
+            return json.dumps({"error": str(e)})
+
+
 if __name__ == "__main__":
     my_cfg = init_yml_cfg()['doris']
     logger.info(f"my_cfg: {my_cfg}")
@@ -137,3 +184,5 @@ if __name__ == "__main__":
     logger.info(f"schema_for_llm {llm_schema_info}")
     count = my_doris.count_dt()
     logger.info(f"my_count {count}")
+    sample_dt = my_doris.exec_sql("select * from dws_dw_ycb_day limit 1")
+    logger.info(f"sample_dt {sample_dt}")

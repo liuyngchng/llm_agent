@@ -8,6 +8,7 @@ import pandas as pd
 import logging.config
 import oracledb
 
+from doris_util import Doris
 from my_enums import DataType, DBType
 from urllib.parse import urlparse, unquote, urlencode, quote
 from sys_init import init_yml_cfg
@@ -72,6 +73,7 @@ class DbUtl:
             result = DbUtl.mysql_query_tool(db_con, sql)
         elif isinstance(db_con, oracledb.Connection):
             result = DbUtl.oracle_query_tool(db_con, sql)
+
         else:
             logger.error(f"database_type_error, {__file__}")
             raise "database type error"
@@ -189,7 +191,12 @@ class DbUtl:
         """
         output data from doris data source
         """
-        return ""
+        logger.info(f"start_doris_output_dt, {cfg}")
+        dt_source_cfg = cfg.get('db', {})
+        my_doris = Doris(dt_source_cfg)
+        dt = my_doris.output_data(sql, data_format)
+        logger.info(f"doris_output_dt, {dt}")
+        return dt
 
     @staticmethod
     def get_orc_db_info(cfg: dict) -> list:
@@ -235,7 +242,7 @@ class DbUtl:
                 my_db_uri = (f"oracle+cx_oracle://{usr}:{pwd}"
                              f"@{db_cfg['host']}:{db_cfg.get('port', 1521)}/?service_name={db_cfg['name']}")
             elif DBType.DORIS.value in db_type_cfg:
-                my_db_uri = f"http://{db_cfg['host']}:{db_cfg.get('port', 31683)}/api/db/execute"
+                my_db_uri = f"{DBType.DORIS.value}_http://{db_cfg['host']}:{db_cfg.get('port', 31683)}/api/db/execute"
             else:
                 raise "unknown db type in config txt_file"
         elif all(key in db_cfg for key in ['type', 'name']):

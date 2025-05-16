@@ -211,7 +211,6 @@ def query_data(catch=None):
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
-
     return answer
 
 

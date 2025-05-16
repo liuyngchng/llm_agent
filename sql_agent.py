@@ -226,13 +226,13 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
                 f" cfg['db']={cfg['db']}")
         raise Exception(info)
 
-
-    logger.info(f"check_user_question_with_llm：{q}")
-    intercept = agent.intercept_usr_question(q)
-    if "查询条件清晰" not in intercept:
-        nl_dt_dict["raw_dt"] = intercept
-        logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
-        return json.dumps(nl_dt_dict, ensure_ascii=False)
+    if cfg['db']['strict_search']:
+        logger.info(f"check_user_question_with_llm_in_strict_search：{q}")
+        intercept = agent.intercept_usr_question(q)
+        if "查询条件清晰" not in intercept:
+            nl_dt_dict["raw_dt"] = intercept
+            logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
+            return json.dumps(nl_dt_dict, ensure_ascii=False)
     # 生成SQL
     logger.info(f"summit_question_to_llm：{q}")
     try:
@@ -241,6 +241,7 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
         sql = extract_md_content(sql, "sql")
         logger.info(f"llm_gen_sql_for_q {q}\n----------\n{sql}\n----------\n")
         db_uri = DbUtl.get_db_uri(cfg)
+        logger.info(f"db_uri, {db_uri}")
         if DBType.SQLITE.value in db_uri:
             logger.debug(f"connect_to_sqlite_db {db_uri}")
             dt = DbUtl.sqlite_output(db_uri, sql, output_data_format)
