@@ -112,7 +112,7 @@ class Doris:
         for tb_schema_json in tb_schema_list:
             md_tbl_schema = self.parse_ddl_to_md_table(tb_schema_json['schema_md_table'])
             logger.info(f"md_tbl\n{md_tbl_schema}")
-            sample_dt_sql = f'SELECT * FROM {tb_schema_json['name']} LIMIT 3'
+            sample_dt_sql = f"SELECT * FROM {tb_schema_json['name']} LIMIT 3"
             schema_entries.extend([
                 f"表名：{tb_schema_json['name']}",
                 f"字段信息：\n{md_tbl_schema}",
