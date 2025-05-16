@@ -5,7 +5,7 @@ ARG PROXY=""
 # ARG PROXY=" -i http://devpi.11.11.77.81.nip.io/root/pypi/+simple --trusted-host devpi.11.11.77.81.nip.io"
 #ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple"
 # 确保 当前目录下的 ./llm_py_env_whl.Python.3.12.3 存在，且whl离线包与当前python的版本完全一致, 离线安装时使用
-COPY ./llm_py_env_whl.Python.3.12.3 /tmp/whl
+COPY ./llm_py_env /tmp/whl
 RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn \
     langgraph langchain_ollama langchain_openai langchain_community \
     langchain langchain_huggingface langchain_text_splitters langchain_huggingface langchain_unstructured unstructured \
