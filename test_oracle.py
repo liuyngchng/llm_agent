@@ -1,4 +1,7 @@
-import cx_Oracle
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import oracledb
 from sys_init import init_yml_cfg
 import logging.config
 
@@ -10,8 +13,8 @@ if __name__ == "__main__":
     my_cfg = init_yml_cfg()
 
     # 连接数据库
-    dsn = cx_Oracle.makedsn(my_cfg['db']['host'], my_cfg['db']['port'], service_name=my_cfg['db']['name'])
-    conn = cx_Oracle.connect(user=my_cfg['db']['user'], password=my_cfg['db']['password'], dsn=dsn)
+    dsn = oracledb.makedsn(my_cfg['db']['host'], my_cfg['db']['port'], service_name=my_cfg['db']['name'])
+    conn = oracledb.connect(user=my_cfg['db']['user'], password=my_cfg['db']['password'], dsn=dsn)
     cursor = conn.cursor()
 
     # 查询表名

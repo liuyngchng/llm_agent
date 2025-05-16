@@ -286,5 +286,11 @@ def test_url():
     decode_params = unquote(url_params)
     logger.info(f"url_decode test:\n {decode_params}\n")
 
+def test_sqlite():
+    db_uri = "sqlite:///config.db"
+    my_db_utl = DbUtl()
+    my_dt = my_db_utl.sqlite_output(db_uri, "select * from user", DataType.MARKDOWN.value)
+    logger.info(f"my_dt {my_dt}")
 if __name__ == "__main__":
-    test_db()
+    # test_db()
+    test_sqlite()
