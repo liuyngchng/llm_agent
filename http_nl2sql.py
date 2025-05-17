@@ -204,7 +204,7 @@ def query_data(catch=None):
     if uid and uid != 'foo':
         logger.info(f"build_data_source_cfg_with_uid_{uid}")
         dt_source_cfg = cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg)
-        logger.info(f"data_source_cfg_for_uid_{uid}, {dt_source_cfg}")
+        logger.info(f"data_source_cfg_for_uid_{uid}, {dt_source_cfg.get('db', '')}")
     else:
         dt_source_cfg = my_cfg
     answer = get_dt_with_nl(msg, dt_source_cfg, DataType.MARKDOWN.value, True)

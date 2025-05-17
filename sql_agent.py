@@ -78,7 +78,12 @@ class SQLGenerator(DbUtl):
         ])
 
         self.intercept_usr_question_template = ChatPromptTemplate.from_messages([
-            ("system", "根据已知的数据库表结构信息\n{schema}\n检查用户提出的问题是否含有相应的查询条件\n(1)若查询条件不清晰，引导用户提供查询条件，禁止返回表名、SQL\n(2)若查询条件不清晰，直接输出文本\n查询条件清晰"),
+            ("system", "根据已知的数据库表结构信息\n"
+                       "{schema}\n"
+                       "检查用户提出的问题是否含有相应的查询条件\n"
+                       "(1)若查询条件不清晰，引导用户提供查询条件，禁止返回表名、SQL\n"
+                       "(2)若查询条件清晰，直接输出文本\n"
+                       "查询条件清晰"),
             ("human", "用户问题：{msg}")
         ])
 
