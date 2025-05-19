@@ -238,7 +238,6 @@ def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: 
             nl_dt_dict["raw_dt"] = intercept
             logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
             return json.dumps(nl_dt_dict, ensure_ascii=False)
-    # 生成SQL
     logger.info(f"summit_question_to_llm：{q}")
     try:
         sql = agent.generate_sql(q)

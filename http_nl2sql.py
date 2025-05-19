@@ -210,7 +210,7 @@ def query_data(catch=None):
     answer = get_dt_with_nl(msg, dt_source_cfg, DataType.MARKDOWN.value, True)
     # logger.debug(f"answer is：{answer}")
     if not answer:
-        answer="没有查询到相关数据，请您尝试换个问题提问"
+        answer="没有查询到相关数据，请您尝试换个问题试试"
     return answer
 
 

@@ -153,7 +153,8 @@ class Doris:
         try:
             data = self.exec_sql(sql)
             if not data:
-                return json.dumps({"columns": [], "data": []})
+                # return json.dumps({"columns": [], "data": []})
+                return "目前没有符合您提问的数据，您可以换个问题或扩大查询范围再试试"
 
             columns = list(data[0].keys()) if data else []
             rows = [list(row.values()) for row in data]
