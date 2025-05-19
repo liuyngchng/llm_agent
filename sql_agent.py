@@ -208,51 +208,48 @@ class SqlAgent(DbUtl):
         return model
 
 
-    @staticmethod
-    def get_dt_with_nl(q: str, cfg: dict, output_data_format: str,
-                       is_remote_model: bool, prompt_padding="") -> str:
+    def get_dt_with_nl(self, q: str, output_data_format: str) -> str:
         """
         通过自然语言查询数据库中的数据
         """
         sql =""
         dt = ""
         nl_dt_dict={"chart":{}, "raw_dt": {}}
-        agent = SqlAgent(cfg, is_remote_model, prompt_padding)
-        adt = agent.get_table_list()
-        logger.info(f"agent_detected_tables:{adt} for db_type {cfg['db']['type']}")
-        if not adt or len(adt)> cfg['db']['max_table_num']:
+        adt = self.get_table_list()
+        logger.info(f"agent_detected_tables:{adt} for db_type {self.cfg['db']['type']}")
+        if not adt or len(adt)> self.cfg['db']['max_table_num']:
             info = (f"please_check_your_data_source_user_privilege_or_db_schema, "
                     f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
-                    f" cfg['db']={cfg['db']}")
+                    f" cfg['db']={self.cfg['db']}")
             raise Exception(info)
 
-        if cfg['db']['strict_search']:
+        if self.cfg['db']['strict_search']:
             logger.info(f"check_user_question_with_llm_in_strict_search：{q}")
-            intercept = agent.intercept_usr_question(q)
+            intercept = self.intercept_usr_question(q)
             if "查询条件清晰" not in intercept:
                 nl_dt_dict["raw_dt"] = intercept
                 logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
                 return json.dumps(nl_dt_dict, ensure_ascii=False)
         logger.info(f"summit_question_to_llm：{q}")
         try:
-            sql = agent.generate_sql(q)
+            sql = self.generate_sql(q)
             logger.debug(f"llm_output_sql\n{sql}")
             sql = extract_md_content(sql, "sql")
             logger.info(f"llm_gen_sql_for_q {q}\n----------\n{sql}\n----------\n")
-            db_uri = DbUtl.get_db_uri(cfg)
+            db_uri = DbUtl.get_db_uri(self.cfg)
             logger.info(f"db_uri, {db_uri}")
             if DBType.SQLITE.value in db_uri:
                 logger.debug(f"connect_to_sqlite_db {db_uri}")
                 dt = DbUtl.sqlite_output(db_uri, sql, output_data_format)
             elif DBType.MYSQL.value in db_uri:
                 logger.debug(f"connect_to_mysql_db {db_uri}")
-                dt = DbUtl.mysql_output(cfg, sql, output_data_format)
+                dt = DbUtl.mysql_output(self.cfg, sql, output_data_format)
             elif DBType.ORACLE.value in db_uri:
                 logger.debug(f"connect_to_oracle_db {db_uri}")
-                dt = DbUtl.oracle_output(cfg, sql, output_data_format)
+                dt = DbUtl.oracle_output(self.cfg, sql, output_data_format)
             elif DBType.DORIS.value in db_uri:
                 logger.debug(f"connect_to_doris_db {db_uri}")
-                dt = DbUtl.doris_output(cfg, sql, output_data_format)
+                dt = DbUtl.doris_output(self.cfg, sql, output_data_format)
             else:
                 raise "other_data_type_need_to_be_done"
         except Exception as e:
@@ -262,10 +259,10 @@ class SqlAgent(DbUtl):
         if not dt:
             return json.dumps(nl_dt_dict, ensure_ascii=False)
 
-        if not cfg['prompts']['add_chart_to_dt']:
+        if not self.cfg['prompts']['add_chart_to_dt']:
             logger.info(f"nl_raw_dt:\n{dt}\n")
             return json.dumps(nl_dt_dict, ensure_ascii=False)
-        return SqlAgent.add_chart_to_raw_dt(agent, dt, nl_dt_dict)
+        return self.add_chart_to_raw_dt(dt, nl_dt_dict)
 
     def add_chart_to_raw_dt(self, dt:str, nl_dt_dict:dict)-> str:
         """

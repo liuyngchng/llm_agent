@@ -15,6 +15,8 @@ from sys_init import init_yml_cfg
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+
+
 class Doris:
     """
     A doris data source class
@@ -39,6 +41,16 @@ class Doris:
             "tenantName": cfg.get('tenantName', 'trqgd'),
             "uid": self.uid,
         }
+        # {
+        #     "db1_name": {},
+        #     "db2_name": {
+        #         "table1_name": {
+        #             "column1_name": "column1_comment",
+        #             "column2_name": "column2_comment",
+        #         }
+        #     }
+        # }
+        self.comment_map = self.init_comment_map()
 
     def build_json(self, sql: str):
         """
@@ -60,7 +72,19 @@ class Doris:
         if exec_json['code'] == 200:
             return exec_json['data']
         else:
-            raise f"exec_sql_exception_{sql}"
+            raise RuntimeError(f"exec_sql_exception_{sql}")
+
+    def get_table_col_comment(self, schema_name: str, table_name: str) -> list:
+        """
+        [{'COLUMN_NAME': 'a', 'COLUMN_COMMENT': 'comment_a'}, {'COLUMN_NAME': 'b', 'COLUMN_COMMENT': 'comment_b'}]
+        """
+        # sql = (f"SELECT COLUMN_NAME, COLUMN_COMMENT "
+        #        f"FROM INFORMATION_SCHEMA.COLUMNS "
+        #        f"WHERE TABLE_SCHEMA='{schema_name}' AND TABLE_NAME='{table_name}'")
+        sql = f"SHOW CREATE TABLE {schema_name}.{table_name}"
+        logger.info(f"get_col_comment_sql {sql}")
+        exe_result = self.exec_sql(sql)
+        return Doris.parse_ddl_to_list(exe_result[0].get('Create Table').split('ENGINE')[0])
 
     def get_table_list(self) -> list:
         get_table_list_sql = "show tables"
@@ -103,6 +127,20 @@ class Doris:
         rows = [f"| {col['name']} | {col['type']} | {col['comment']} |" for col in columns]
         return '\n'.join([header] + rows)
 
+    @staticmethod
+    def parse_ddl_to_list(ddl_sql: str) -> list:
+        pattern = r'`(\w+)`\s+([^\s]+)\s+.*?COMMENT\s+\'(.*?)\''
+        columns = []
+        for line in ddl_sql.split('\n'):
+            match = re.search(pattern, line.strip())
+            if match:
+                name = match.group(1)
+                # col_type = match.group(2)
+                comment = match.group(3)
+                columns.append({"COLUMN_NAME": name, "COLUMN_COMMENT": comment})
+                # columns.append({"COLUMN_NAME": name, "COLUMN_TYPE": col_type, "COLUMN_COMMENT": comment})
+        return columns
+
     def get_schema_for_llm(self):
         """
         get schema from llm
@@ -127,7 +165,8 @@ class Doris:
     def count_dt(self):
         count_sql = "select count(1) from dws_dw_ycb_day"
         count_body = self.build_json(count_sql)
-        response = requests.post(self.url, json=count_body, headers=self.headers, proxies={'http': None, 'https': None})
+        response = requests.post(self.url, json=count_body,
+             headers=self.headers, proxies={'http': None, 'https': None})
         my_json = response.json()['data'][0]['count(1)']
         logger.info(f"response {my_json}")
         return my_json
@@ -155,8 +194,7 @@ class Doris:
             if not data:
                 # return json.dumps({"columns": [], "data": []})
                 return "目前没有符合您提问的数据，您可以换个问题或扩大查询范围再试试"
-
-            columns = list(data[0].keys()) if data else []
+            columns = self.get_col_name_from_sql(data, sql)
             rows = [list(row.values()) for row in data]
             df = pd.DataFrame(rows, columns=columns)
             dt_fmt = data_format.lower()
@@ -173,11 +211,61 @@ class Doris:
             logger.error(f"doris_output_error: {str(e)}")
             return json.dumps({"error": str(e)})
 
+    def get_col_name_from_sql(self, data, sql):
+        table_match = re.search(r'(?i)FROM\s+([\w.]+)', sql)
+        table_name = table_match.group(1) if table_match else 'unknown_table_name'
+        raw_columns = list(data[0].keys()) if data else []
+        if 'unknown_table_name' == table_name:
+            logger.error(f"get_table_name_err_for_sql {sql}")
+            columns = raw_columns
+        else:
+            columns = [self.get_comment(self.data_source, table_name, col) or col
+                for col in raw_columns]
+        return columns
+
+    @staticmethod
+    def get_col_comment_by_col_name(db_schema, db_name, table_name, column_name):
+        for db in db_schema:
+            if db["db"] != db_name: continue
+            for table in db["table"]:
+                if table["name"] != table_name: continue
+                for col in table["column"]:
+                    if col["name"] == column_name:
+                        comment = col.get("comment", "").strip()
+                        if not comment: return column_name
+                        comment = ''.join(filter(str.isalnum, comment))
+                        return comment[:10] if len(comment) > 10 else comment
+        return column_name
+
+    def get_comment(self, db, table, col):
+        if (db_map := self.comment_map.get(db)) \
+                and (table_map := db_map.get(table)) \
+                and (comment := table_map.get(col)):
+            return comment
+        return None
+
+    def init_comment_map(self):
+        my_comment_map = {}
+        table_list = self.get_table_list()
+        for table in table_list:
+            cmt_list = self.get_table_col_comment(self.data_source, table)
+            logger.info(f"get_comment_list {cmt_list}")
+            for item in cmt_list:
+                col_name = item['COLUMN_NAME']
+                raw_comment = item['COLUMN_COMMENT'].strip()
+                processed = ''.join(filter(lambda c: c.isalnum(), raw_comment))
+                processed = processed[:10] if processed else col_name
+                my_comment_map.setdefault(self.data_source, {}).setdefault(table, {})[col_name] = processed
+        logger.info(f"my_comment_map {my_comment_map}")
+        return my_comment_map
+
 
 if __name__ == "__main__":
     my_cfg = init_yml_cfg()['doris']
     logger.info(f"my_cfg: {my_cfg}")
     my_doris = Doris(my_cfg)
+    my_comment_list = my_doris.get_table_col_comment("a10analysis", "dws_dw_ycb_day")
+    logger.info(f"my_comment_list {my_comment_list}")
     tables = my_doris.get_table_list()
     logger.info(f"my_tables {tables}")
     my_tb_schema_list = my_doris.get_schema_info()

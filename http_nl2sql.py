@@ -207,7 +207,8 @@ def query_data(catch=None):
         logger.info(f"data_source_cfg_for_uid_{uid}, {dt_source_cfg.get('db', '')}")
     else:
         dt_source_cfg = my_cfg
-    answer = SqlAgent.get_dt_with_nl(msg, dt_source_cfg, DataType.MARKDOWN.value, True)
+    sql_agent = SqlAgent(dt_source_cfg, True, "")
+    answer = sql_agent.get_dt_with_nl(msg, DataType.MARKDOWN.value)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题试试"
