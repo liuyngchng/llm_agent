@@ -13,7 +13,7 @@ from config_util import get_consts
 from datetime import datetime
 
 from my_enums import AI_SERVICE_STATUS, DataType
-from sql_agent import get_dt_with_nl, desc_usr_dt
+from sql_agent import SqlAgent
 from utils import convert_list_to_html_table
 
 # {"uid_12345":["msg1", "msg2"], "uid_2345":["msg1", "msg2"],}
@@ -28,7 +28,7 @@ from utils import convert_list_to_html_table
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-
+MAX_HISTORY_SIZE = 20
 
 class CsmService:
     """
@@ -45,6 +45,7 @@ class CsmService:
         self.ai_service_status = {}
 
         # TODO: to limit the size of history to the maximum token size of LLM
+        # limit msg_history size to MAX_HISTORY_SIZE
         self.msg_history = []
         self.const_dict = get_consts()
         logger.info(f"const: {self.const_dict}")
@@ -106,6 +107,8 @@ class CsmService:
         :param msg_type: which kind msg it is , like user's msg(inbound), AI generated msg(outbound)
         """
         now = datetime.now()
+        if len(self.get_msg_history_list()) > MAX_HISTORY_SIZE:
+            self.get_msg_history_list().pop(0)
         self.get_msg_history_list().append(
             {
                 "编号": len(self.get_msg_history_list()),
@@ -205,15 +208,13 @@ class CsmService:
         :param uid: the user which msg send from
         :param sys_cfg: the system config information
         """
-        dt = get_dt_with_nl(
+        sql_agent = SqlAgent(sys_cfg, True, f"{self.get_const_dict().get('str1')} {uid}")
+        dt = sql_agent.get_dt_with_nl(
             msg,
-            sys_cfg,
             DataType.JSON.value,
-            True,
-            f"{self.get_const_dict().get('str1')} {uid}"
         )
         usr_dt_dict = json.loads(dt)
-        usr_dt_desc = desc_usr_dt(msg, sys_cfg, True, usr_dt_dict["raw_dt"][0])
+        usr_dt_desc = sql_agent.desc_usr_dt(msg, usr_dt_dict["raw_dt"][0])
         answer += usr_dt_desc
         # answer += const_dict.get("label3")
         logger.info(f"answer_for_classify {label}:\n{answer}")
