@@ -8,7 +8,7 @@ import pandas as pd
 import logging.config
 import oracledb
 
-from doris_util import Doris
+from doris import Doris
 from my_enums import DataType, DBType
 from urllib.parse import urlparse, unquote, urlencode, quote
 from sys_init import init_yml_cfg

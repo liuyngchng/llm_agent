@@ -12,7 +12,7 @@ from flask import Flask, request, jsonify, render_template, Response
 
 import config_util as cfg_utl
 from my_enums import DataType
-from sql_agent import get_dt_with_nl
+from sql_agent import SqlAgent
 from sys_init import init_yml_cfg
 from audio import transcribe_webm_audio_bytes
 
@@ -106,7 +106,7 @@ def delete_config():
     usr = cfg_utl.get_user_name_by_uid(uid)
     waring_info = {"success": False, "msg": ""}
     if not usr:
-        waring_info['msg'] = '非法访问，请您先登录系统'
+        waring_info['msg'] = '非法访问，请先登录系统'
         return waring_info
     delete_cfg_result = cfg_utl.delete_data_source_config(uid, my_cfg)
     if delete_cfg_result:
@@ -207,7 +207,7 @@ def query_data(catch=None):
         logger.info(f"data_source_cfg_for_uid_{uid}, {dt_source_cfg.get('db', '')}")
     else:
         dt_source_cfg = my_cfg
-    answer = get_dt_with_nl(msg, dt_source_cfg, DataType.MARKDOWN.value, True)
+    answer = SqlAgent.get_dt_with_nl(msg, dt_source_cfg, DataType.MARKDOWN.value, True)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题试试"
@@ -242,7 +242,7 @@ def get_db_dt():
     msg = request.get_json().get('msg').strip()
     logger.info(f"rcv_msg: {msg}")
     logger.info(f"ask_question({msg}, {my_cfg}, 'json')")
-    answer = get_dt_with_nl(msg, my_cfg, DataType.JSON.value, True)
+    answer = SqlAgent.get_dt_with_nl(msg, my_cfg, DataType.JSON.value, True)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer='{"msg":"没有查询到相关数据，请您尝试换个问题进行提问", "code":404}'
@@ -293,7 +293,7 @@ def test_query_data():
     """
     msg = "查询2025年的数据"
     logger.info(f"ask_question({msg}, {my_cfg}, markdown, True)")
-    answer = get_dt_with_nl(msg, my_cfg, DataType.MARKDOWN.value, True)
+    answer = SqlAgent.get_dt_with_nl(msg, my_cfg, DataType.MARKDOWN.value, True)
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
     logger.info(f"answer is：\n{answer}")

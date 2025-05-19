@@ -6,7 +6,7 @@ import os
 from typing import Dict
 from datetime import datetime
 
-from doris_util import Doris
+from doris import Doris
 from utils import extract_md_content, rmv_think_block, extract_json
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -31,7 +31,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 
-class SQLGenerator(DbUtl):
+class SqlAgent(DbUtl):
     """
     for mysql
     # db_uri = "mysql+pymysql://db_user:db_password@db_host/db_name"
@@ -207,95 +207,89 @@ class SQLGenerator(DbUtl):
         logger.debug(f"modeltype {type(model)}, model: {model}")
         return model
 
-def desc_usr_dt(q: str, cfg: dict, is_remote_model: bool, usr_dt: dict) -> str:
-    """
-    通过自然语言查询数据库中的数据
-    """
-    agent = SQLGenerator(cfg, is_remote_model)
-    return agent.desc_usr_dt(q, usr_dt)
 
+    @staticmethod
+    def get_dt_with_nl(q: str, cfg: dict, output_data_format: str,
+                       is_remote_model: bool, prompt_padding="") -> str:
+        """
+        通过自然语言查询数据库中的数据
+        """
+        sql =""
+        dt = ""
+        nl_dt_dict={"chart":{}, "raw_dt": {}}
+        agent = SqlAgent(cfg, is_remote_model, prompt_padding)
+        adt = agent.get_table_list()
+        logger.info(f"agent_detected_tables:{adt} for db_type {cfg['db']['type']}")
+        if not adt or len(adt)> cfg['db']['max_table_num']:
+            info = (f"please_check_your_data_source_user_privilege_or_db_schema, "
+                    f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
+                    f" cfg['db']={cfg['db']}")
+            raise Exception(info)
 
-def get_dt_with_nl(q: str, cfg: dict, output_data_format: str, is_remote_model: bool, prompt_padding="") -> str:
-    """
-    通过自然语言查询数据库中的数据
-    """
-    sql =""
-    dt = ""
-    nl_dt_dict={"chart":{}, "raw_dt": {}}
-    agent = SQLGenerator(cfg, is_remote_model, prompt_padding)
-    adt = agent.get_table_list()
-    logger.info(f"agent_detected_tables:{adt} for db_type {cfg['db']['type']}")
-    if not adt or len(adt)> cfg['db']['max_table_num']:
-        info = (f"please_check_your_data_source_user_privilege_or_db_schema, "
-                f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
-                f" cfg['db']={cfg['db']}")
-        raise Exception(info)
-
-    if cfg['db']['strict_search']:
-        logger.info(f"check_user_question_with_llm_in_strict_search：{q}")
-        intercept = agent.intercept_usr_question(q)
-        if "查询条件清晰" not in intercept:
-            nl_dt_dict["raw_dt"] = intercept
-            logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
+        if cfg['db']['strict_search']:
+            logger.info(f"check_user_question_with_llm_in_strict_search：{q}")
+            intercept = agent.intercept_usr_question(q)
+            if "查询条件清晰" not in intercept:
+                nl_dt_dict["raw_dt"] = intercept
+                logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
+                return json.dumps(nl_dt_dict, ensure_ascii=False)
+        logger.info(f"summit_question_to_llm：{q}")
+        try:
+            sql = agent.generate_sql(q)
+            logger.debug(f"llm_output_sql\n{sql}")
+            sql = extract_md_content(sql, "sql")
+            logger.info(f"llm_gen_sql_for_q {q}\n----------\n{sql}\n----------\n")
+            db_uri = DbUtl.get_db_uri(cfg)
+            logger.info(f"db_uri, {db_uri}")
+            if DBType.SQLITE.value in db_uri:
+                logger.debug(f"connect_to_sqlite_db {db_uri}")
+                dt = DbUtl.sqlite_output(db_uri, sql, output_data_format)
+            elif DBType.MYSQL.value in db_uri:
+                logger.debug(f"connect_to_mysql_db {db_uri}")
+                dt = DbUtl.mysql_output(cfg, sql, output_data_format)
+            elif DBType.ORACLE.value in db_uri:
+                logger.debug(f"connect_to_oracle_db {db_uri}")
+                dt = DbUtl.oracle_output(cfg, sql, output_data_format)
+            elif DBType.DORIS.value in db_uri:
+                logger.debug(f"connect_to_doris_db {db_uri}")
+                dt = DbUtl.doris_output(cfg, sql, output_data_format)
+            else:
+                raise "other_data_type_need_to_be_done"
+        except Exception as e:
+            logger.error(f"error, {e}，sql: {sql}", exc_info=True)
+        nl_dt_dict["raw_dt"] = dt
+        logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
+        if not dt:
             return json.dumps(nl_dt_dict, ensure_ascii=False)
-    logger.info(f"summit_question_to_llm：{q}")
-    try:
-        sql = agent.generate_sql(q)
-        logger.debug(f"llm_output_sql\n{sql}")
-        sql = extract_md_content(sql, "sql")
-        logger.info(f"llm_gen_sql_for_q {q}\n----------\n{sql}\n----------\n")
-        db_uri = DbUtl.get_db_uri(cfg)
-        logger.info(f"db_uri, {db_uri}")
-        if DBType.SQLITE.value in db_uri:
-            logger.debug(f"connect_to_sqlite_db {db_uri}")
-            dt = DbUtl.sqlite_output(db_uri, sql, output_data_format)
-        elif DBType.MYSQL.value in db_uri:
-            logger.debug(f"connect_to_mysql_db {db_uri}")
-            dt = DbUtl.mysql_output(cfg, sql, output_data_format)
-        elif DBType.ORACLE.value in db_uri:
-            logger.debug(f"connect_to_oracle_db {db_uri}")
-            dt = DbUtl.oracle_output(cfg, sql, output_data_format)
-        elif DBType.DORIS.value in db_uri:
-            logger.debug(f"connect_to_doris_db {db_uri}")
-            dt = DbUtl.doris_output(cfg, sql, output_data_format)
+
+        if not cfg['prompts']['add_chart_to_dt']:
+            logger.info(f"nl_raw_dt:\n{dt}\n")
+            return json.dumps(nl_dt_dict, ensure_ascii=False)
+        return SqlAgent.add_chart_to_raw_dt(agent, dt, nl_dt_dict)
+
+    def add_chart_to_raw_dt(self, dt:str, nl_dt_dict:dict)-> str:
+        """
+        add chart data to raw dt
+        """
+        logger.info("start_add_chart_to_raw_dt")
+        chart_dt = {}
+        try:
+            nl_dt = self.get_nl_with_dt(dt)
+            logger.debug(f"nl_dt_from_agent\n{nl_dt}\n")
+            nl_dt = rmv_think_block(nl_dt)
+            logger.debug(f"nl_dt_without_think\n{nl_dt}\n")
+            nl_dt = extract_json(nl_dt)
+            logger.debug(f"nl_dt_only_json_str\n{nl_dt}\n")
+            chart_dt = json.loads(nl_dt)
+        except Exception as e:
+            logger.exception("err_to_add_description_to_data", dt)
+        if chart_dt['chart']:
+            nl_dt_dict['chart'] = chart_dt['chart']
         else:
-            raise "other_data_type_need_to_be_done"
-    except Exception as e:
-        logger.error(f"error, {e}，sql: {sql}", exc_info=True)
-    nl_dt_dict["raw_dt"] = dt
-    logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
-    if not dt:
-        return json.dumps(nl_dt_dict, ensure_ascii=False)
-
-    if not cfg['prompts']['add_chart_to_dt']:
-        logger.info(f"nl_raw_dt:\n{dt}\n")
-        return json.dumps(nl_dt_dict, ensure_ascii=False)
-    return add_chart_to_raw_dt(agent, dt, nl_dt_dict)
-
-
-def add_chart_to_raw_dt(agent: SQLGenerator, dt:str, nl_dt_dict:dict)-> str:
-    """
-    add chart data to raw dt
-    """
-    logger.info("start_add_chart_to_raw_dt")
-    chart_dt = {}
-    try:
-        nl_dt = agent.get_nl_with_dt(dt)
-        logger.debug(f"nl_dt_from_agent\n{nl_dt}\n")
-        nl_dt = rmv_think_block(nl_dt)
-        logger.debug(f"nl_dt_without_think\n{nl_dt}\n")
-        nl_dt = extract_json(nl_dt)
-        logger.debug(f"nl_dt_only_json_str\n{nl_dt}\n")
-        chart_dt = json.loads(nl_dt)
-    except Exception as e:
-        logger.exception("err_to_add_description_to_data", dt)
-    if chart_dt['chart']:
-        nl_dt_dict['chart'] = chart_dt['chart']
-    else:
-        logger.error(f"chart_dt['chart'] is null, chart_dt {chart_dt}")
-    nl_dt_dict_str = json.dumps(nl_dt_dict, ensure_ascii=False)
-    logger.info(f"nl_chart_dt_with_raw_dt:\n{nl_dt_dict_str}\n")
-    return nl_dt_dict_str
+            logger.error(f"chart_dt['chart'] is null, chart_dt {chart_dt}")
+        nl_dt_dict_str = json.dumps(nl_dt_dict, ensure_ascii=False)
+        logger.info(f"nl_chart_dt_with_raw_dt:\n{nl_dt_dict_str}\n")
+        return nl_dt_dict_str
 
 
 
@@ -307,4 +301,4 @@ if __name__ == "__main__":
     #     if input_q == "q":
     #         exit(0)
     input_q = "查询2024年的数据明细"
-    get_dt_with_nl(input_q, my_cfg, DataType.JSON.value, True)
+    SqlAgent.get_dt_with_nl(input_q, my_cfg, DataType.JSON.value, True)
