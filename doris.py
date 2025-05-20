@@ -72,6 +72,7 @@ class Doris:
         if exec_json['code'] == 200:
             return exec_json['data']
         else:
+            logger.error(f"exec_sql_exception_[{sql}],return_from_uri {self.url}, {exec_json}")
             raise RuntimeError(f"exec_sql_exception_{sql}")
 
     def get_table_col_comment(self, schema_name: str, table_name: str) -> list:
