@@ -16,15 +16,6 @@ from my_enums import AI_SERVICE_STATUS, DataType
 from sql_agent import SqlAgent
 from utils import convert_list_to_html_table
 
-# {"uid_12345":["msg1", "msg2"], "uid_2345":["msg1", "msg2"],}
-# msg_from_uid id is the msg receiver
-
-
-# mail_outbox_list = {
-#     human_customer_service_target_uid:["这是一条人工客服发送的测试消息,需要发送给 332987916"],
-#     human_being_uid:["这是一条用户需要转人工客服的测试消息，需要发送给人工客服"]
-# }
-
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 

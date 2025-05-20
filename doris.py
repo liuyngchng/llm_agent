@@ -91,8 +91,8 @@ class Doris:
         get_table_list_sql = "show tables"
         my_json = self.exec_sql(get_table_list_sql)
         logger.info(f"response {my_json}")
-        table_list = ['dws_dw_ycb_day']
-        # table_list = [item[f"Tables_in_{self.data_source}"] for item in my_json]
+        # table_list = ['dws_dw_ycb_day']
+        table_list = [item[f"Tables_in_{self.data_source}"] for item in my_json]
         return table_list
 
     def get_schema_info(self) -> list:
@@ -163,8 +163,7 @@ class Doris:
         logger.debug(f"schema_info:\n{schema_info}")
         return schema_info
 
-    def count_dt(self):
-        count_sql = "select count(1) from dws_dw_ycb_day"
+    def count_dt(self, count_sql: str):
         count_body = self.build_json(count_sql)
         response = requests.post(self.url, json=count_body,
              headers=self.headers, proxies={'http': None, 'https': None})
@@ -265,15 +264,15 @@ if __name__ == "__main__":
     my_cfg = init_yml_cfg()['doris']
     logger.info(f"my_cfg: {my_cfg}")
     my_doris = Doris(my_cfg)
-    my_comment_list = my_doris.get_table_col_comment("a10analysis", "dws_dw_ycb_day")
-    logger.info(f"my_comment_list {my_comment_list}")
-    tables = my_doris.get_table_list()
-    logger.info(f"my_tables {tables}")
-    my_tb_schema_list = my_doris.get_schema_info()
-    logger.info(f"my_dt {my_tb_schema_list}")
+    # my_comment_list = my_doris.get_table_col_comment("a10analysis", "dws_dw_ycb_day")
+    # logger.info(f"my_comment_list {my_comment_list}")
+    # tables = my_doris.get_table_list()
+    # logger.info(f"my_tables {tables}")
+    # my_tb_schema_list = my_doris.get_schema_info()
+    # logger.info(f"my_dt {my_tb_schema_list}")
     llm_schema_info = my_doris.get_schema_for_llm()
     logger.info(f"schema_for_llm {llm_schema_info}")
-    count = my_doris.count_dt()
-    logger.info(f"my_count {count}")
-    sample_dt = my_doris.exec_sql("select * from dws_dw_ycb_day limit 1")
-    logger.info(f"sample_dt {sample_dt}")
+    # count = my_doris.count_dt()
+    # logger.info(f"my_count {count}")
+    # sample_dt = my_doris.exec_sql("select * from dws_dw_ycb_day limit 1")
+    # logger.info(f"sample_dt {sample_dt}")
