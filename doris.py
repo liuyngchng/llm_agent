@@ -10,6 +10,7 @@ import logging.config
 
 from my_enums import DataType
 from sys_init import init_yml_cfg
+from tabulate import tabulate
 
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -260,18 +261,173 @@ class Doris:
         return my_comment_map
 
 
+def get_sql_from_terminal() -> str:
+    """
+    接收 console 中的 输入的 sql, 可以多行，以；结尾
+    接收完一个sql后，继续等待控制台输入其他sql
+    Returns:
+        str: 完整的SQL语句（包含结尾的分号）
+    """
+    sql_lines = []
+    print("\nEnter your SQL (end with ';'):")
+    print("(Type 'exit;' or 'quit;' to end the session)")
+
+    while True:
+        try:
+            line = input().strip()
+            if not line:  # Skip empty lines
+                continue
+            sql_lines.append(line)
+            if line.endswith(';'):
+                break
+        except EOFError as ex:  # Handle Ctrl+D
+            logger.error("err_to_get_input", ex)
+            return ""
+
+    sql = ' '.join(sql_lines)
+    # Clean up multiple spaces while preserving SQL string content
+    sql = ' '.join(sql.split())
+    return sql
+
+
+def console_simulator():
+    """
+    控制台模拟器，得到一个sql后，执行，显示执行结果，等待其他sql的输入
+    """
+    console_cfg = init_yml_cfg()['doris']
+    logger.info(f"my_cfg: {console_cfg}")
+    console_doris = Doris(console_cfg)
+
+    print("Doris SQL Console (Enter SQL statements ending with ';')")
+    print("Type 'exit;' or 'quit;' to end the session\n")
+
+    while True:
+        try:
+            console_sql = get_sql_from_terminal()
+            if not console_sql:  # Handle EOF (Ctrl+D)
+                break
+            # Check for exit commands (case insensitive)
+            sql_lower = console_sql.lower()
+            if sql_lower in ('exit;', 'quit;'):
+                print("Exiting Doris SQL Console...")
+                break
+            if not console_sql.strip():
+                continue
+
+            # Execute the SQL
+            try:
+                result = console_doris.exec_sql(console_sql)
+                # Assuming exec_sql returns something displayable
+                print("Execution result:")
+                if (isinstance(result, list) and len(result) > 0 and
+                        isinstance(result[0], dict) and
+                        'Table' in result[0] and 'Create Table' in result[0]):
+                    print_show_create_table(result)
+                elif isinstance(result, dict) and 'data' in result:
+                    print_data_table(result)
+                else:
+                    # 非 CREATE TABLE 的输出
+                    print(result)
+            except Exception as e:
+                logger.error(f"SQL execution error: {e}")
+                print(f"Error executing SQL: {e}")
+
+        except KeyboardInterrupt:
+            print("\nTo exit, please type 'exit;' or 'quit;'")
+            continue
+
+
+def print_data_table(result):
+    data = result['data']
+    if isinstance(data, list) and len(data) > 0:
+        print("\n查询结果:")
+        # 转换数据为表格格式
+        headers = data[0].keys()
+        rows = [list(item.values()) for item in data]
+        # 处理None值为空字符串
+        rows = [[str(v) if v is not None else "" for v in row] for row in rows]
+        # 打印表格
+        print(tabulate(rows, headers=headers, tablefmt="grid"))
+        # 显示记录数
+        print(f"\n共 {len(data)} 条记录")
+    else:
+        print("\n查询结果为空")
+    # 如果有异常信息则显示
+    if result.get('exception'):
+        print(f"\n警告: {result['exception']}")
+
+
+def print_show_create_table(result):
+    table_info = result[0]
+    table_name = table_info['Table']
+    create_table = table_info['Create Table']
+    # 提取表注释（如果有）
+    table_comment = ""
+    comment_match = re.search(r"COMMENT\s*=\s*'([^']*)'", create_table, re.IGNORECASE)
+    if comment_match:
+        table_comment = comment_match.group(1)
+    # 打印表信息
+    print(f"\n表名: {table_name}")
+    if table_comment:
+        print(f"表注释: {table_comment}")
+    print("-" * 50)
+    # 格式化并打印字段信息
+    print("\n字段结构:")
+    # 提取字段定义部分
+    fields_section = re.search(r'\(([\s\S]*?)\)\s*ENGINE', create_table)
+    if fields_section:
+        field_defs = fields_section.group(1).split('\n')
+        for field in field_defs:
+            field = field.strip()
+            if not field or field.startswith('PRIMARY KEY') or field.startswith('DUPLICATE KEY'):
+                continue
+
+            # 提取字段名、类型和注释
+            field_parts = re.split(r'\s+(?=(?:[^\']*\'[^\']*\')*[^\']*$)', field)
+            field_name = field_parts[0].strip('`')
+            field_type = field_parts[1] if len(field_parts) > 1 else ''
+            field_comment = ""
+
+            # 查找注释
+            comment_match = re.search(r"COMMENT\s*'([^']*)'", field, re.IGNORECASE)
+            if comment_match:
+                field_comment = comment_match.group(1)
+
+            # 打印字段信息
+            print(f"{field_name:<20} {field_type:<15} {field_comment}")
+    # 打印分区信息
+    # partition_match = re.search(r'PARTITION BY [^\n]+\n\(([\s\S]*?)\)\n', create_table)
+    # if partition_match:
+    #     print("\n分区信息:")
+    #     partitions = partition_match.group(1).split('\n')
+    #     for part in partitions:
+    #         part = part.strip()
+    #         if part:
+    #             print(f"  {part}")
+    # 打印属性信息
+    props_match = re.search(r'PROPERTIES\s*\(([\s\S]*?)\);', create_table)
+    if props_match:
+        print("\n表属性:")
+        props = props_match.group(1).split('\n')
+        for prop in props:
+            prop = prop.strip(' ,"')
+            if prop:
+                print(f"  {prop}")
+
+
 if __name__ == "__main__":
-    my_cfg = init_yml_cfg()['doris']
-    logger.info(f"my_cfg: {my_cfg}")
-    my_doris = Doris(my_cfg)
+    console_simulator()
+    # my_cfg = init_yml_cfg()['doris']
+    # logger.info(f"my_cfg: {my_cfg}")
+    # my_doris = Doris(my_cfg)
     # my_comment_list = my_doris.get_table_col_comment("a10analysis", "dws_dw_ycb_day")
     # logger.info(f"my_comment_list {my_comment_list}")
     # tables = my_doris.get_table_list()
     # logger.info(f"my_tables {tables}")
     # my_tb_schema_list = my_doris.get_schema_info()
     # logger.info(f"my_dt {my_tb_schema_list}")
-    llm_schema_info = my_doris.get_schema_for_llm()
-    logger.info(f"schema_for_llm {llm_schema_info}")
+    # llm_schema_info = my_doris.get_schema_for_llm()
+    # logger.info(f"schema_for_llm {llm_schema_info}")
     # count = my_doris.count_dt()
     # logger.info(f"my_count {count}")
     # sample_dt = my_doris.exec_sql("select * from dws_dw_ycb_day limit 1")
