@@ -28,7 +28,7 @@ from utils import convert_list_to_html_table
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-MAX_HISTORY_SIZE = 20
+MAX_HISTORY_SIZE = 19
 
 class CsmService:
     """
@@ -107,11 +107,13 @@ class CsmService:
         :param msg_type: which kind msg it is , like user's msg(inbound), AI generated msg(outbound)
         """
         now = datetime.now()
-        if len(self.get_msg_history_list()) > MAX_HISTORY_SIZE:
-            self.get_msg_history_list().pop(0)
+        no =len(self.get_msg_history_list())
+        if no > MAX_HISTORY_SIZE:
+            first_msg = self.get_msg_history_list().pop(0)
+            no += first_msg.get("编号")
         self.get_msg_history_list().append(
             {
-                "编号": len(self.get_msg_history_list()),
+                "编号": no,
                 "消息": msg,
                 "发送者": msg_type,
                 "时间": now.strftime('%Y-%m-%d %H:%M:%S')
