@@ -188,7 +188,8 @@ def query_data(catch=None):
         -d '{"msg":"who are you?"}'
     :return:
     """
-    msg = request.form.get('msg').strip().replace("截至", "").replace("截止", "")
+    msg = request.form.get('msg').strip()\
+        # .replace("截至", "").replace("截止", "")
     uid = request.form.get('uid').strip()
     auth_result = authenticate(request)
     if not auth_result:
