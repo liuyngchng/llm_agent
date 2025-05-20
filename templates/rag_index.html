@@ -11,7 +11,7 @@
         {% if role == 1 %}
             人工客服座席
         {% else %}
-            {{ sys_name }}
+            智能客服
         {% endif %}
     </title>
 </head>
@@ -21,9 +21,9 @@
             {% if role == 1 %}
                 <h1>人工客服座席[编号{{uid}}]</h1>
             {% else %}
-                <h1>{{ sys_name }}</h1>
+                <h1>智能客服</h1>
             {% endif %}
-<!--            <h1>智能客服</h1>-->
+<!--                <h1>{{ sys_name }}</h1>-->
         </div>
         
         <div class="chat-container" id="chat-container">
