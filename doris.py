@@ -46,7 +46,6 @@ class Doris:
 
         self.gt_all_dt_json_template = {
             "currentPage": 0,
-            "pageSize": 10,
             "name": self.data_source,
             "total": False,
             "script": "",

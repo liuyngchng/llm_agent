@@ -306,6 +306,6 @@ if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
-    logger.info(f"my_cfg {my_cfg}")
+    logger.info(f"my_cfg {my_cfg.get('db')},\n{my_cfg.get('api')}")
     # test_query_data()
     app.run(host='0.0.0.0', port=19000)
