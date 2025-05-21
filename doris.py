@@ -165,7 +165,7 @@ class Doris:
             sample_dt_sql = f"SELECT * FROM {tb_schema_json['name']} LIMIT 3"
             schema_entries.extend([
                 f"表名：{tb_schema_json['name']}",
-                f"字段信息：\n{md_tbl_schema}",
+                f"表结构信息：\n{md_tbl_schema}",
                 f"示例数据：\n{self.exec_sql(sample_dt_sql)}",
                 "-----------------"
             ])
@@ -203,7 +203,7 @@ class Doris:
             data = self.exec_sql(sql)
             if not data:
                 # return json.dumps({"columns": [], "data": []})
-                return "目前没有符合您提问的数据，您可以换个问题或扩大查询范围再试试"
+                return "目前没有符合条件的数据，您可以换个问题或扩大查询范围再试试"
             columns = self.get_col_name_from_sql(data, sql)
             rows = [list(row.values()) for row in data]
             df = pd.DataFrame(rows, columns=columns)
