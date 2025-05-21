@@ -139,8 +139,8 @@ class Doris:
         get_table_list_sql = "show tables"
         my_json = self.exec_gt_all_dt_sql(get_table_list_sql)
         logger.info(f"response {my_json}")
-        # table_list = ['dws_dw_ycb_day']
-        table_list = [item[f"Tables_in_{self.data_source}"] for item in my_json]
+        table_list = ['dws_dw_ycb_day']
+        # table_list = [item[f"Tables_in_{self.data_source}"] for item in my_json]
         return table_list
 
     def get_schema_info(self) -> list:
