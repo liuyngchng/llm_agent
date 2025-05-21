@@ -108,7 +108,7 @@ class Doris:
             get_schema_sql = f"show create table {self.data_source}.{table}"
             logger.info(f"get_schema_sql {get_schema_sql}")
             my_json = self.exec_sql(get_schema_sql)
-            table_schema_json = {"name": table, "schema_md_table": my_json[0].get('Create Table').split('ENGINE')[0]}
+            table_schema_json = {"name": table, "schema": my_json[0].get('Create Table').split('ENGINE')[0]}
             schema_table.append(table_schema_json)
             logger.info(f"response {my_json}")
         return schema_table
@@ -158,13 +158,13 @@ class Doris:
         schema_entries = []
         tb_schema_list = self.get_schema_info()
         logger.info(f"my_dt {tb_schema_list}")
-        for tb_schema_json in tb_schema_list:
-            # md_tbl_schema = self.parse_ddl_to_md_table(tb_schema_json['schema_md_table'])
-            md_tbl_schema = self.get_table_schema(self.data_source, tb_schema_json['name'])
+        for tb_schema in tb_schema_list:
+            # md_tbl_schema = self.parse_ddl_to_md_table(tb_schema['schema'])
+            md_tbl_schema = self.get_table_schema(self.data_source, tb_schema['name'])
             logger.info(f"md_tbl\n{md_tbl_schema}")
-            sample_dt_sql = f"SELECT * FROM {tb_schema_json['name']} LIMIT 3"
+            sample_dt_sql = f"SELECT * FROM {tb_schema['name']} LIMIT 3"
             schema_entries.extend([
-                f"表名：{tb_schema_json['name']}",
+                f"表名：{tb_schema['name']}",
                 f"表结构信息：\n{md_tbl_schema}",
                 f"示例数据：\n{self.exec_sql(sample_dt_sql)}",
                 "-----------------"
