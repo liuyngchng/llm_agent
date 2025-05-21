@@ -34,8 +34,18 @@ class Doris:
             "Content-Type": "application/json",
             "token": self.token,
         }
-        self.json_template = {
+        self.gt_part_dt_json_template = {
             "currentPage": 1,
+            "pageSize": 20,
+            "name": self.data_source,
+            "total": False,
+            "script": "",
+            "tenantName": cfg.get('tenantName', 'trqgd'),
+            "uid": self.uid,
+        }
+
+        self.gt_all_dt_json_template = {
+            "currentPage": 0,
             "pageSize": 10,
             "name": self.data_source,
             "total": False,
@@ -52,23 +62,47 @@ class Doris:
         #         }
         #     }
         # }
-        self.comment_map = self.init_comment_map()
+        self.table_list = self.get_table_list()
+        self.comment_map = self.get_comment_map()
 
-    def build_json(self, sql: str):
+    def build_gt_part_dt_json(self, sql: str):
         """
         build json body from sql
         """
         return {
-            **self.json_template,
+            **self.gt_part_dt_json_template,
             "script": sql
         }
 
-    def exec_sql(self, sql: str) -> json:
+    def build_gt_all_dt_json(self, sql: str):
+        """
+        build json body from sql
+        """
+        return {
+            **self.gt_all_dt_json_template,
+            "script": sql
+        }
+
+    def exec_gt_part_dt_sql(self, sql: str) -> json:
         """
         exec sql in doris
         """
-        logger.info(f"exec_sql\n{sql}\n")
-        body = self.build_json(sql)
+        logger.info(f"exec_gt_part_dt_sql\n{sql}\n")
+        body = self.build_gt_part_dt_json(sql)
+        response = requests.post(self.url, json=body, headers=self.headers, proxies={'http': None, 'https': None})
+        exec_json = response.json()
+        if exec_json['code'] == 200:
+            return exec_json['data']
+        else:
+            logger.error(f"exec_sql_exception_[{sql}],return_from_uri {self.url}, {exec_json}")
+            raise RuntimeError(f"exec_sql_exception_{sql}")
+
+    def exec_gt_all_dt_sql(self, sql: str) -> json:
+        """
+        exec sql in doris
+        """
+        logger.info(f"exec_gt_all_dt_sql\n{sql}\n")
+        body = self.build_gt_all_dt_json(sql)
         response = requests.post(self.url, json=body, headers=self.headers, proxies={'http': None, 'https': None})
         exec_json = response.json()
         if exec_json['code'] == 200:
@@ -99,15 +133,15 @@ class Doris:
         """
         sql = f"SHOW CREATE TABLE {schema_name}.{table_name}"
         logger.info(f"get_col_comment_sql {sql}")
-        exe_result = self.exec_sql(sql)
+        exe_result = self.exec_gt_part_dt_sql(sql)
         return exe_result[0].get('Create Table').split('ENGINE')[0]
 
     def get_table_list(self) -> list:
         get_table_list_sql = "show tables"
-        my_json = self.exec_sql(get_table_list_sql)
+        my_json = self.exec_gt_all_dt_sql(get_table_list_sql)
         logger.info(f"response {my_json}")
-        table_list = ['dws_dw_ycb_day']
-        # table_list = [item[f"Tables_in_{self.data_source}"] for item in my_json]
+        # table_list = ['dws_dw_ycb_day']
+        table_list = [item[f"Tables_in_{self.data_source}"] for item in my_json]
         return table_list
 
     def get_schema_info(self) -> list:
@@ -118,7 +152,7 @@ class Doris:
         for table in self.get_table_list():
             get_schema_sql = f"show create table {self.data_source}.{table}"
             logger.info(f"get_schema_sql {get_schema_sql}")
-            my_json = self.exec_sql(get_schema_sql)
+            my_json = self.exec_gt_part_dt_sql(get_schema_sql)
             table_schema_json = {"name": table, "schema": my_json[0].get('Create Table').split('ENGINE')[0]}
             schema_table.append(table_schema_json)
             logger.info(f"response {my_json}")
@@ -185,7 +219,7 @@ class Doris:
                 f"表名：{tb_schema['name']}\n",
                 f"表功能描述:{function_value}\n\n"
                 f"表结构信息：\n{md_tbl_schema}\n",
-                f"示例数据：\n{self.exec_sql(sample_dt_sql)}",
+                f"示例数据：\n{self.exec_gt_part_dt_sql(sample_dt_sql)}",
                 "-----------------"
             ])
         schema_info = "\n".join(schema_entries)
@@ -193,7 +227,7 @@ class Doris:
         return schema_info
 
     def count_dt(self, count_sql: str):
-        count_body = self.build_json(count_sql)
+        count_body = self.build_gt_part_dt_json(count_sql)
         response = requests.post(self.url, json=count_body,
              headers=self.headers, proxies={'http': None, 'https': None})
         my_json = response.json()['data'][0]['count(1)']
@@ -219,7 +253,7 @@ class Doris:
 
     def output_data(self, sql: str, data_format: str) -> str | LiteralString | None:
         try:
-            data = self.exec_sql(sql)
+            data = self.exec_gt_part_dt_sql(sql)
             if not data:
                 # return json.dumps({"columns": [], "data": []})
                 return "目前没有符合条件的数据，您可以换个问题或扩大查询范围再试试"
@@ -294,10 +328,9 @@ class Doris:
             return comment
         return None
 
-    def init_comment_map(self):
+    def get_comment_map(self):
         my_comment_map = {}
-        table_list = self.get_table_list()
-        for table in table_list:
+        for table in self.table_list:
             cmt_list = self.get_table_col_comment(self.data_source, table)
             logger.info(f"get_comment_list {cmt_list}")
             for item in cmt_list:
@@ -365,7 +398,7 @@ def console_simulator():
 
             # Execute the SQL
             try:
-                result = console_doris.exec_sql(console_sql)
+                result = console_doris.exec_gt_part_dt_sql(console_sql)
                 # Assuming exec_sql returns something displayable
                 print("Execution result:")
                 if (isinstance(result, list) and len(result) > 0 and
@@ -465,13 +498,16 @@ def print_show_create_table(result):
 
 
 if __name__ == "__main__":
-    console_simulator()
-    # my_cfg = init_yml_cfg()['doris']
-    # logger.info(f"my_cfg: {my_cfg}")
-    # my_doris = Doris(my_cfg)
+    # console_simulator()
+    my_cfg = init_yml_cfg()['doris']
+    logger.info(f"my_cfg: {my_cfg}")
+    my_doris = Doris(my_cfg)
     # my_comment_list = my_doris.get_table_col_comment("a10analysis", "dws_dw_ycb_day")
     # logger.info(f"my_comment_list {my_comment_list}")
-    # tables = my_doris.get_table_list()
+    tables = my_doris.get_table_list()
+    for table in tables:
+        count = my_doris.count_dt(f"select count(1) from {table}")
+        logger.info(f"{table}_dt_count\t\t{count}")
     # logger.info(f"my_tables {tables}")
     # my_tb_schema_list = my_doris.get_schema_info()
     # logger.info(f"my_dt {my_tb_schema_list}")
