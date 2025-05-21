@@ -55,21 +55,21 @@ class SqlAgent(DbUtl):
 
         # 带数据库结构的提示模板
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        sql_gen_sys_msg = f"""{cfg['prompts']['sql_gen_sys_msg']}\n当前时间是 {current_time}"""
+        sql_gen_msg = f"""{cfg['prompts']['sql_gen_msg']}\n当前时间是 {current_time}"""
         intercept_q_msg = f"""{cfg['prompts']['intercept_q_msg']}\n当前时间是 {current_time}"""
         # try:
-        #     sql_gen_sys_msg = sql_gen_sys_msg.replace("{sql_dialect}", cfg['db']['type'])
+        #     sql_gen_msg = sql_gen_msg.replace("{sql_dialect}", cfg['db']['type'])
         # except Exception as e:
         #     logger.error("set_sql_dialect_err", e)
-        logger.debug(f"sql_gen_sys_msg {sql_gen_sys_msg}")
+        logger.debug(f"sql_gen_msg {sql_gen_msg}")
         self.sql_gen_prompt_template = ChatPromptTemplate.from_messages([
-            ("system", f"{sql_gen_sys_msg}, {prompt_padding}"),
+            ("system", f"{sql_gen_msg}, {prompt_padding}"),
             ("human", "用户问题：{msg}")
         ])
-        nl_gen_sys_msg = f"""{cfg['prompts']['nl_gen_sys_msg']}"""
-        logger.debug(f"nl_gen_sys_msg {nl_gen_sys_msg}")
-        self.nl_gen_prompt_template = ChatPromptTemplate.from_messages([
-            ("system", nl_gen_sys_msg),
+        chart_dt_gen_msg = f"""{cfg['prompts']['chart_dt_gen_msg']}"""
+        logger.debug(f"chart_dt_gen_msg {chart_dt_gen_msg}")
+        self.chart_dt_gen_prompt_template = ChatPromptTemplate.from_messages([
+            ("system", chart_dt_gen_msg),
             ("human", "用户问题：{msg}")
         ])
 
@@ -119,7 +119,7 @@ class SqlAgent(DbUtl):
         return response.content
 
     def get_nl_with_dt(self, markdown_dt: str):
-        chain = self.nl_gen_prompt_template | self.llm
+        chain = self.chart_dt_gen_prompt_template | self.llm
         response = chain.invoke({
             "msg": markdown_dt
         })
@@ -154,7 +154,7 @@ class SqlAgent(DbUtl):
     def get_schema_info(self) -> str:
         if DBType.DORIS.value == self.db_type:
             doris_schema = self.doris_dt_source.get_schema_for_llm()
-            logger.info(f"doris_schema {doris_schema}")
+            logger.info(f"doris_schema\n {doris_schema}")
             return doris_schema
         schema_entries = []
         for table in self.get_table_list():
@@ -245,9 +245,9 @@ class SqlAgent(DbUtl):
                 dt = DbUtl.oracle_output(self.cfg, sql, output_data_format)
             elif DBType.DORIS.value in db_uri:
                 logger.debug(f"connect_to_doris_db {db_uri}")
-                dt = DbUtl.doris_output(self.cfg, sql, output_data_format)
+                dt = self.doris_dt_source.doris_output(sql, output_data_format)
             else:
-                raise "other_data_type_need_to_be_done"
+                raise RuntimeError("other_data_type_need_to_be_done")
         except Exception as e:
             logger.error(f"error, {e}，sql: {sql}", exc_info=True)
         nl_dt_dict["raw_dt"] = dt

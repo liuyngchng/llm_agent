@@ -8,7 +8,6 @@ import pandas as pd
 import logging.config
 import oracledb
 
-from doris import Doris
 from my_enums import DataType, DBType
 from urllib.parse import urlparse, unquote, urlencode, quote
 from sys_init import init_yml_cfg
@@ -175,27 +174,26 @@ class DbUtl:
         logger.info(f"db_config {db_config}")
         if all(key in db_config for key in ['name', 'host', 'user', 'password']):
             dsn = oracledb.makedsn(db_config['host'],db_config.get('port', 1521),service_name=db_config['name'])
-            conn =  oracledb.connect(user=db_config['user'],password=db_config['password'],dsn=dsn )
+            conn =  oracledb.connect(
+                user=db_config['user'],
+                password=db_config['password'],
+                dsn=dsn
+            )
         else:
             parsed_uri = urlparse(db_config['uri'])
             port = parsed_uri.port or 1521
-            dsn = oracledb.makedsn(unquote(parsed_uri.hostname),port,service_name=unquote(parsed_uri.path[1:]))
-            conn = oracledb.connect(user=unquote(parsed_uri.username), password=unquote(parsed_uri.password), dsn=dsn)
-
+            dsn = oracledb.makedsn(
+                unquote(parsed_uri.hostname),
+                port,
+                service_name=unquote(parsed_uri.path[1:])
+            )
+            conn = oracledb.connect(
+                user=unquote(parsed_uri.username),
+                password=unquote(parsed_uri.password),
+                dsn=dsn
+            )
         dt = DbUtl.output_data(conn, sql, data_format)
         conn.close()
-        return dt
-
-    @staticmethod
-    def doris_output(cfg: dict, sql: str, data_format: str):
-        """
-        output data from doris data source
-        """
-        logger.info(f"start_doris_output_dt, {cfg}")
-        dt_source_cfg = cfg.get('db', {})
-        my_doris = Doris(dt_source_cfg)
-        dt = my_doris.output_data(sql, data_format)
-        logger.info(f"doris_output_dt,\n{dt}")
         return dt
 
     @staticmethod
@@ -288,8 +286,7 @@ def test_url():
 
 def test_sqlite():
     db_uri = "sqlite:///config.db"
-    my_db_utl = DbUtl()
-    my_dt = my_db_utl.sqlite_output(db_uri, "select * from user", DataType.MARKDOWN.value)
+    my_dt = DbUtl.sqlite_output(db_uri, "select * from schema_info where entity = 'dws_dw_ycb_day'", DataType.JSON.value)
     logger.info(f"my_dt {my_dt}")
 if __name__ == "__main__":
     # test_db()

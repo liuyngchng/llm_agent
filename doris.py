@@ -11,6 +11,7 @@ import logging.config
 from my_enums import DataType
 from sys_init import init_yml_cfg
 from tabulate import tabulate
+from db_util import DbUtl
 
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -75,6 +76,16 @@ class Doris:
         else:
             logger.error(f"exec_sql_exception_[{sql}],return_from_uri {self.url}, {exec_json}")
             raise RuntimeError(f"exec_sql_exception_{sql}")
+
+    def doris_output(self, sql: str, data_format: str):
+        """
+        output data from doris data source
+        """
+        logger.info("start_doris_output_dt")
+        dt = self.output_data(sql, data_format)
+        logger.info(f"doris_output_dt,\n{dt}")
+        return dt
+
 
     def get_table_col_comment(self, schema_name: str, table_name: str) -> list:
         """
@@ -163,9 +174,17 @@ class Doris:
             md_tbl_schema = self.get_table_schema(self.data_source, tb_schema['name'])
             logger.info(f"md_tbl\n{md_tbl_schema}")
             sample_dt_sql = f"SELECT * FROM {tb_schema['name']} LIMIT 3"
+            cfg_db_uri = "sqlite:///config.db"
+            schema_desc_dt = DbUtl.sqlite_output(
+                cfg_db_uri,
+                f"select * from schema_info where entity = '{tb_schema['name']}'",
+                DataType.JSON.value
+            )
+            function_value = schema_desc_dt[0].get('function') if schema_desc_dt and schema_desc_dt else ""
             schema_entries.extend([
-                f"表名：{tb_schema['name']}",
-                f"表结构信息：\n{md_tbl_schema}",
+                f"表名：{tb_schema['name']}\n",
+                f"表功能描述:{function_value}\n\n"
+                f"表结构信息：\n{md_tbl_schema}\n",
                 f"示例数据：\n{self.exec_sql(sample_dt_sql)}",
                 "-----------------"
             ])
