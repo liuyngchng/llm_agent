@@ -195,7 +195,7 @@ class DbUtl:
         dt_source_cfg = cfg.get('db', {})
         my_doris = Doris(dt_source_cfg)
         dt = my_doris.output_data(sql, data_format)
-        logger.info(f"doris_output_dt, {dt}")
+        logger.info(f"doris_output_dt,\n{dt}")
         return dt
 
     @staticmethod

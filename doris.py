@@ -144,7 +144,7 @@ class Doris:
         for line in ddl_sql.split('\n'):
             match = re.search(pattern, line.strip())
             if match:
-                name = match.group(1)
+                name = match.group(1).upper()
                 # col_type = match.group(2)
                 comment = match.group(3)
                 columns.append({"COLUMN_NAME": name, "COLUMN_COMMENT": comment})
@@ -224,13 +224,34 @@ class Doris:
     def get_col_name_from_sql(self, data, sql):
         table_match = re.search(r'(?i)FROM\s+([\w.]+)', sql)
         table_name = table_match.group(1) if table_match else 'unknown_table_name'
-        raw_columns = list(data[0].keys()) if data else []
+        raw_columns = [key.upper() for key in data[0].keys()] if data else []
+        logger.info(f"raw_columns_for_table {table_name}, {raw_columns}")
         if 'unknown_table_name' == table_name:
             logger.error(f"get_table_name_err_for_sql {sql}")
             columns = raw_columns
         else:
-            columns = [self.get_comment(self.data_source, table_name, col) or col
-                for col in raw_columns]
+            # columns = [self.get_comment(self.data_source, table_name, col) or col
+            #     for col in raw_columns]
+            columns = []
+            for col in raw_columns:
+                comment = self.get_comment(self.data_source, table_name, col)
+                suffix = ""
+                if comment:
+                    final_name = comment
+                elif col.startswith("AVG_"):
+                    comment = self.get_comment(self.data_source, table_name, col.replace("AVG_", ""))
+                    suffix = "的平均值"
+                elif col.startswith("TOTAL_"):
+                    comment = self.get_comment(self.data_source, table_name, col.replace("TOTAL_", ""))
+                    suffix = "的总和"
+                elif col.startswith("MAX_"):
+                    comment = self.get_comment(self.data_source, table_name, col.replace("MAX_", ""))
+                    suffix = "的最大值"
+                elif col.startswith("MIN_"):
+                    comment = self.get_comment(self.data_source, table_name, col.replace("MIN_", ""))
+                    suffix = "的最小值"
+                final_name = f"{comment}{suffix}" if comment else col
+                columns.append(final_name)
         return columns
 
     @staticmethod
@@ -248,9 +269,9 @@ class Doris:
         return column_name
 
     def get_comment(self, db, table, col):
-        if (db_map := self.comment_map.get(db)) \
-                and (table_map := db_map.get(table)) \
-                and (comment := table_map.get(col)):
+        if (db_map := self.comment_map.get(db.upper())) \
+                and (table_map := db_map.get(table.upper())) \
+                and (comment := table_map.get(col.upper())):
             return comment
         return None
 
@@ -261,11 +282,11 @@ class Doris:
             cmt_list = self.get_table_col_comment(self.data_source, table)
             logger.info(f"get_comment_list {cmt_list}")
             for item in cmt_list:
-                col_name = item['COLUMN_NAME']
+                col_name = item['COLUMN_NAME'].upper()
                 raw_comment = item['COLUMN_COMMENT'].strip()
                 processed = ''.join(filter(lambda c: c.isalnum(), raw_comment))
                 processed = processed[:10] if processed else col_name
-                my_comment_map.setdefault(self.data_source, {}).setdefault(table, {})[col_name] = processed
+                my_comment_map.setdefault(self.data_source.upper(), {}).setdefault(table.upper(), {})[col_name] = processed
         logger.info(f"my_comment_map {my_comment_map}")
         return my_comment_map
 
