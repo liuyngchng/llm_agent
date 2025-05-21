@@ -38,7 +38,7 @@ def query_data_index():
     auth_result = authenticate(request)
     if not auth_result:
         page = "login.html"
-    logger.info(f"return page {page}")
+    logger.info(f"return_page {page}")
     return render_template(page, uid ="my_uid_is_123")
 
 @app.route('/cfg/idx', methods=['GET'])
@@ -298,7 +298,7 @@ def test_query_data():
     answer = SqlAgent.get_dt_with_nl(msg, my_cfg, DataType.MARKDOWN.value, True)
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
-    logger.info(f"answer is：\n{answer}")
+    logger.info(f"answer_is：\n{answer}")
     return answer
 
 
