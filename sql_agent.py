@@ -55,7 +55,8 @@ class SqlAgent(DbUtl):
 
         # 带数据库结构的提示模板
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        sql_gen_sys_msg = f"""{cfg['prompts']['sql_gen_sys_msg']}\n当前时间是{current_time}"""
+        sql_gen_sys_msg = f"""{cfg['prompts']['sql_gen_sys_msg']}\n当前时间是 {current_time}"""
+        intercept_q_msg = f"""{cfg['prompts']['intercept_q_msg']}\n当前时间是 {current_time}"""
         # try:
         #     sql_gen_sys_msg = sql_gen_sys_msg.replace("{sql_dialect}", cfg['db']['type'])
         # except Exception as e:
@@ -77,13 +78,8 @@ class SqlAgent(DbUtl):
             ("human", "用户问题：{msg}")
         ])
 
-        self.intercept_usr_question_template = ChatPromptTemplate.from_messages([
-            ("system", "根据已知的数据库表结构信息\n"
-                       "{schema}\n"
-                       "检查用户提出的问题是否含有相应的查询条件\n"
-                       "(1)若查询条件不清晰，引导用户提供查询条件，禁止返回表名、SQL\n"
-                       "(2)若查询条件清晰，直接输出文本\n"
-                       "查询条件清晰"),
+        self.intercept_q_msg_template = ChatPromptTemplate.from_messages([
+            ("system", intercept_q_msg),
             ("human", "用户问题：{msg}")
         ])
 
@@ -130,7 +126,7 @@ class SqlAgent(DbUtl):
         return response.content
 
     def intercept_usr_question(self, q: str):
-        chain = self.intercept_usr_question_template | self.llm
+        chain = self.intercept_q_msg_template | self.llm
         response = chain.invoke({
             "msg": q,
             "schema": self.get_schema_info(),
