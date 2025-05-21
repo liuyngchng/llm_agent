@@ -66,7 +66,7 @@ class Doris:
         """
         exec sql in doris
         """
-        logger.info(f"exec_sql [{sql}]")
+        logger.info(f"exec_sql\n{sql}\n")
         body = self.build_json(sql)
         response = requests.post(self.url, json=body, headers=self.headers, proxies={'http': None, 'https': None})
         exec_json = response.json()
@@ -106,27 +106,32 @@ class Doris:
             logger.info(f"get_schema_sql {get_schema_sql}")
             my_json = self.exec_sql(get_schema_sql)
             table_schema_json = {"name": table, "schema_md_table": my_json[0].get('Create Table').split('ENGINE')[0]}
-            schema_table.append(
-                table_schema_json
-            )
+            schema_table.append(table_schema_json)
             logger.info(f"response {my_json}")
         return schema_table
 
     @staticmethod
     def parse_ddl_to_md_table(ddl_sql: str) -> str:
-        pattern = r'`(\w+)`\s+([^\s]+)\s+.*?COMMENT\s+\'(.*?)\''
+        pattern = r'`(\w+)`\s+(\S+?)\s+(NULL|NOT NULL).*?COMMENT\s+\'(.*?)\''
         columns = []
         for line in ddl_sql.split('\n'):
             match = re.search(pattern, line.strip())
             if match:
                 name = match.group(1)
                 col_type = match.group(2)
-                comment = match.group(3)
-                columns.append({"name": name, "type": col_type, "comment": comment})
+                nullable = match.group(3)
+                comment = match.group(4)
+                columns.append({
+                    "name": name,
+                    "type": col_type,
+                    "nullable": nullable,
+                    "comment": comment
+                })
 
         # 生成Markdown表格
-        header = "| 字段名 | 字段类型 | 字段注释 |\n|--------|----------|----------|"
-        rows = [f"| {col['name']} | {col['type']} | {col['comment']} |" for col in columns]
+        header = "| 字段名 | 类型 | 是否可为空 | 注释 |\n|--------|----------|----------|----------|"
+        rows = [f"| {col['name']} | {col['type']} | {col['nullable']} | {col['comment']} |"
+                for col in columns]
         return '\n'.join([header] + rows)
 
     @staticmethod

@@ -20,7 +20,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.config['JSON_AS_ASCII'] = False  # 中文直接输出，而不是转义成为\u的转义字符
+app.config['JSON_AS_ASCII'] = False
 my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
