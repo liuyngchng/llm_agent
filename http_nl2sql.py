@@ -238,7 +238,7 @@ def get_db_dt():
     form submit, get data from form
     curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000//gt/db/dt' \
         -H "Content-Type: application/json" \
-        -d '{"msg":"把数据明细给我调出来"}'
+        -d '{"msg":"ababababa"}'
     :return:
     """
     msg = request.get_json().get('msg').strip()
@@ -248,7 +248,7 @@ def get_db_dt():
     answer = sql_agent.get_dt_with_nl(msg, DataType.JSON.value)
     # logger.debug(f"answer is：{answer}")
     if not answer:
-        answer='{"msg":"没有查询到相关数据，请您尝试换个问题进行提问", "code":404}'
+        answer=json.dumps({"msg":"没有查询到相关数据，请您尝试换个问题进行提问", "code":404}, ensure_ascii=False)
 
     return answer
 
