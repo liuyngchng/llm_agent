@@ -64,51 +64,39 @@ class Doris:
         self.table_list = self.get_table_list()
         self.comment_map = self.get_comment_map()
 
-    def build_gt_part_dt_json(self, sql: str):
+    def build_dml(self, sql: str) -> dict:
         """
-        build json body from sql
+        build json body from DML SQL
         """
         return {
             **self.gt_part_dt_json_template,
             "script": sql
         }
 
-    def build_gt_all_dt_json(self, sql: str):
+    def build_ddl(self, sql: str) -> dict:
         """
-        build json body from sql
+        build json body for DDL SQL
         """
         return {
             **self.gt_all_dt_json_template,
             "script": sql
         }
 
-    def exec_gt_part_dt_sql(self, sql: str) -> json:
+    def request_dt(self, body: dict) -> json:
         """
         exec sql in doris
         """
-        logger.info(f"exec_gt_part_dt_sql\n{sql}\n")
-        body = self.build_gt_part_dt_json(sql)
+        logger.info(f"\ncurl -X POST --noproxy '*' -s -w'\n' '{self.url}' \\\n"
+                    f"-H 'Content-Type:application/json' \\\n"
+                    f"-H 'token:{self.token}' \\\n-d '{json.dumps(body).replace("'", "'\\''")}'\n")
         response = requests.post(self.url, json=body, headers=self.headers, proxies={'http': None, 'https': None})
         exec_json = response.json()
+        logger.info(f"http_request_return, {exec_json}")
         if exec_json['code'] == 200:
             return exec_json['data']
         else:
-            logger.error(f"exec_sql_exception_[{sql}],return_from_uri {self.url}, {exec_json}")
-            raise RuntimeError(f"exec_sql_exception_{sql}")
-
-    def exec_gt_all_dt_sql(self, sql: str) -> json:
-        """
-        exec sql in doris
-        """
-        logger.info(f"exec_gt_all_dt_sql\n{sql}\n")
-        body = self.build_gt_all_dt_json(sql)
-        response = requests.post(self.url, json=body, headers=self.headers, proxies={'http': None, 'https': None})
-        exec_json = response.json()
-        if exec_json['code'] == 200:
-            return exec_json['data']
-        else:
-            logger.error(f"exec_sql_exception_[{sql}],return_from_uri {self.url}, {exec_json}")
-            raise RuntimeError(f"exec_sql_exception_{sql}")
+            logger.error(f"request_dt_error, body[{body}], response, {exec_json}")
+            raise RuntimeError(f"request_dt_exception_{body}")
 
     def doris_output(self, sql: str, data_format: str):
         """
@@ -132,12 +120,12 @@ class Doris:
         """
         sql = f"SHOW CREATE TABLE {schema_name}.{table_name}"
         logger.info(f"get_col_comment_sql {sql}")
-        exe_result = self.exec_gt_part_dt_sql(sql)
+        exe_result = self.request_dt(self.build_dml(sql))
         return exe_result[0].get('Create Table').split('ENGINE')[0]
 
     def get_table_list(self) -> list:
         get_table_list_sql = "show tables"
-        my_json = self.exec_gt_all_dt_sql(get_table_list_sql)
+        my_json = self.request_dt(self.build_ddl(get_table_list_sql))
         logger.info(f"response {my_json}")
         table_list = ['dws_dw_ycb_day']
         # table_list = [item[f"Tables_in_{self.data_source}"] for item in my_json]
@@ -151,7 +139,7 @@ class Doris:
         for table in self.get_table_list():
             get_schema_sql = f"show create table {self.data_source}.{table}"
             logger.info(f"get_schema_sql {get_schema_sql}")
-            my_json = self.exec_gt_part_dt_sql(get_schema_sql)
+            my_json = self.request_dt(self.build_dml(get_schema_sql))
             table_schema_json = {"name": table, "schema": my_json[0].get('Create Table').split('ENGINE')[0]}
             schema_table.append(table_schema_json)
             logger.info(f"response {my_json}")
@@ -218,7 +206,7 @@ class Doris:
                 f"表名：{tb_schema['name']}\n",
                 f"表功能描述:{function_value}\n\n"
                 f"表结构信息：\n{md_tbl_schema}\n",
-                f"示例数据：\n{self.exec_gt_part_dt_sql(sample_dt_sql)}",
+                f"示例数据：\n{self.request_dt(self.build_dml(sample_dt_sql))}",
                 "-----------------"
             ])
         schema_info = "\n".join(schema_entries)
@@ -226,7 +214,7 @@ class Doris:
         return schema_info
 
     def count_dt(self, count_sql: str):
-        count_body = self.build_gt_part_dt_json(count_sql)
+        count_body = self.build_dml(count_sql)
         response = requests.post(self.url, json=count_body,
              headers=self.headers, proxies={'http': None, 'https': None})
         my_json = response.json()['data'][0]['count(1)']
@@ -252,7 +240,7 @@ class Doris:
 
     def output_data(self, sql: str, data_format: str) -> str | LiteralString | None:
         try:
-            data = self.exec_gt_part_dt_sql(sql)
+            data = self.request_dt(self.build_dml(sql))
             if not data:
                 # return json.dumps({"columns": [], "data": []})
                 return "目前没有符合条件的数据，您可以换个问题或扩大查询范围再试试"
@@ -282,29 +270,40 @@ class Doris:
             logger.error(f"get_table_name_err_for_sql {sql}")
             columns = raw_columns
         else:
-            # columns = [self.get_comment(self.data_source, table_name, col) or col
-            #     for col in raw_columns]
             columns = []
             for col in raw_columns:
                 comment = self.get_comment(self.data_source, table_name, col)
-                suffix = ""
                 if comment:
-                    final_name = comment
-                elif col.startswith("AVG_"):
-                    comment = self.get_comment(self.data_source, table_name, col.replace("AVG_", ""))
-                    suffix = "的平均值"
-                elif col.startswith("TOTAL_"):
-                    comment = self.get_comment(self.data_source, table_name, col.replace("TOTAL_", ""))
-                    suffix = "的总和"
-                elif col.startswith("MAX_"):
-                    comment = self.get_comment(self.data_source, table_name, col.replace("MAX_", ""))
-                    suffix = "的最大值"
-                elif col.startswith("MIN_"):
-                    comment = self.get_comment(self.data_source, table_name, col.replace("MIN_", ""))
-                    suffix = "的最小值"
-                final_name = f"{comment}{suffix}" if comment else col
-                columns.append(final_name)
+                    final_name = f"{comment}" if comment else col
+                    columns.append(final_name)
+                    continue
+                columns.append(
+                    self.hack_col_name(col, table_name)
+                )
         return columns
+
+    def hack_col_name(self, col: str, table_name: str):
+        suffix = ""
+        comment = ""
+        prefix_list = [
+            {"k":"AVG_",    "v":"的平均值"  },
+            {"k": "AVG(",   "v": "的平均值" },
+            {"k": "TOTAL_", "v": "的总和"   },
+            {"k": "SUM(",   "v": "的总和"   },
+            {"k": "MAX_",   "v": "的最大值" },
+            {"k": "MAX(",   "v": "的最大值" },
+            {"k": "MIN_",   "v": "的最小值" },
+            {"k": "MIN(",   "v": "的最小值" },
+        ]
+        for item in prefix_list:
+            if col.startswith(item["k"]):
+                comment = self.get_comment(
+                    self.data_source, table_name, col.replace(item["k"], "").strip(")")
+                )
+                suffix = item["v"]
+                break
+        final_name = f"{comment}{suffix}" if comment else col
+        return final_name
 
     @staticmethod
     def get_col_comment_by_col_name(db_schema, db_name, table_name, column_name):
@@ -397,7 +396,7 @@ def console_simulator():
 
             # Execute the SQL
             try:
-                result = console_doris.exec_gt_part_dt_sql(console_sql)
+                result = console_doris.request_dt(console_doris.build_dml(console_sql))
                 # Assuming exec_sql returns something displayable
                 print("Execution result:")
                 if (isinstance(result, list) and len(result) > 0 and
