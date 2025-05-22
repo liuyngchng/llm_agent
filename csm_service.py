@@ -36,7 +36,7 @@ class CsmService:
         self.ai_service_status = {}
 
         # TODO: to limit the size of history to the maximum token size of LLM
-        # limit msg_history size to MAX_HISTORY_SIZE
+        # limit msg_history size to MAX_MSG_COUNT
         self.msg_history = []
         self.const_dict = get_consts()
         logger.info(f"const: {self.const_dict}")
@@ -98,11 +98,12 @@ class CsmService:
         :param msg_type: which kind msg it is , like user's msg(inbound), AI generated msg(outbound)
         """
         now = datetime.now()
-        no =len(self.get_msg_history_list())
+        usr_msg_list = self.get_msg_history_list()
+        no =len(usr_msg_list)
         if no > MAX_HISTORY_SIZE:
-            first_msg = self.get_msg_history_list().pop(0)
+            first_msg = usr_msg_list.pop(0)
             no += first_msg.get("编号")
-        self.get_msg_history_list().append(
+        usr_msg_list.append(
             {
                 "编号": no,
                 "消息": msg,
@@ -110,7 +111,7 @@ class CsmService:
                 "时间": now.strftime('%Y-%m-%d %H:%M:%S')
             }
         )
-        logger.debug("msg_history_refreshed:\n%s", '\n'.join(map(str, self.get_msg_history_list())))
+        logger.debug("msg_history_refreshed:\n%s", '\n'.join(map(str, usr_msg_list)))
 
 
     def process_personal_info_msg(self, answer: str, label: str, uid: str):

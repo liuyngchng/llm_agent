@@ -30,6 +30,27 @@ pip install langchain_openai langchain_ollama \
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+MAX_MSG_COUNT = 5
+
+# limit msg_history size to MAX_MSG_COUNT
+usr_msg_list = {}
+
+def get_usr_msgs(uid: str):
+    """
+    get user msg history as a context to let llm know how to function
+    usr_msg_list data structure: {"uid": ["msg1", "msg2", "msg3"]}
+    """
+    return usr_msg_list.get(uid)
+
+def save_usr_msg(uid: str, msg: str):
+    """
+    add user msg to msg list
+    """
+    msg_list = usr_msg_list.get(uid)
+    if len(msg_list) > MAX_MSG_COUNT:
+        msg_list.ppo(0)
+    msg_list.append(msg)
+    logger.debug("msg_history_refreshed:\n%s", '\n'.join(map(str, msg_list)))
 
 class SqlAgent(DbUtl):
     """

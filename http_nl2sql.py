@@ -244,7 +244,8 @@ def get_db_dt():
     msg = request.get_json().get('msg').strip()
     logger.info(f"rcv_msg: {msg}")
     logger.info(f"ask_question({msg}, {my_cfg}, 'json')")
-    answer = SqlAgent.get_dt_with_nl(msg, my_cfg, DataType.JSON.value, True)
+    sql_agent = SqlAgent(my_cfg, True, "")
+    answer = sql_agent.get_dt_with_nl(msg, DataType.JSON.value)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer='{"msg":"没有查询到相关数据，请您尝试换个问题进行提问", "code":404}'

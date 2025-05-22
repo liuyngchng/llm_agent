@@ -282,29 +282,40 @@ class Doris:
             logger.error(f"get_table_name_err_for_sql {sql}")
             columns = raw_columns
         else:
-            # columns = [self.get_comment(self.data_source, table_name, col) or col
-            #     for col in raw_columns]
             columns = []
             for col in raw_columns:
                 comment = self.get_comment(self.data_source, table_name, col)
-                suffix = ""
                 if comment:
-                    final_name = comment
-                elif col.startswith("AVG_"):
-                    comment = self.get_comment(self.data_source, table_name, col.replace("AVG_", ""))
-                    suffix = "的平均值"
-                elif col.startswith("TOTAL_"):
-                    comment = self.get_comment(self.data_source, table_name, col.replace("TOTAL_", ""))
-                    suffix = "的总和"
-                elif col.startswith("MAX_"):
-                    comment = self.get_comment(self.data_source, table_name, col.replace("MAX_", ""))
-                    suffix = "的最大值"
-                elif col.startswith("MIN_"):
-                    comment = self.get_comment(self.data_source, table_name, col.replace("MIN_", ""))
-                    suffix = "的最小值"
-                final_name = f"{comment}{suffix}" if comment else col
-                columns.append(final_name)
+                    final_name = f"{comment}" if comment else col
+                    columns.append(final_name)
+                    continue
+                columns.append(
+                    self.hack_col_name(col, table_name)
+                )
         return columns
+
+    def hack_col_name(self, col: str, table_name: str):
+        suffix = ""
+        comment = ""
+        prefix_list = [
+            {"k":"AVG_",    "v":"的平均值"  },
+            {"k": "AVG(",   "v": "的平均值" },
+            {"k": "TOTAL_", "v": "的总和"   },
+            {"k": "SUM(",   "v": "的总和"   },
+            {"k": "MAX_",   "v": "的最大值" },
+            {"k": "MAX(",   "v": "的最大值" },
+            {"k": "MIN_",   "v": "的最小值" },
+            {"k": "MIN(",   "v": "的最小值" },
+        ]
+        for item in prefix_list:
+            if col.startswith(item["k"]):
+                comment = self.get_comment(
+                    self.data_source, table_name, col.replace(item["k"], "").strip(")")
+                )
+                suffix = item["v"]
+                break
+        final_name = f"{comment}{suffix}" if comment else col
+        return final_name
 
     @staticmethod
     def get_col_comment_by_col_name(db_schema, db_name, table_name, column_name):
