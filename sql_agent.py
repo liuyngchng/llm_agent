@@ -60,13 +60,12 @@ class SqlAgent(DbUtl):
 
     def __init__(self, cfg:dict , is_remote_model:bool, prompt_padding=""):
         self.cfg = cfg
-        db_uri = DbUtl.get_db_uri(cfg)
-
         self.db_type = cfg['db']['type'].lower()
         if DBType.DORIS.value == self.db_type:
-            self.doris_dt_source_cfg = cfg['doris']
+            self.doris_dt_source_cfg = cfg['db']
             self.doris_dt_source = Doris(self.doris_dt_source_cfg)
         else:
+            db_uri = DbUtl.get_db_uri(cfg)
             self.db_dt_source = SQLDatabase.from_uri(db_uri)
         self.llm_api_uri = cfg['api']['llm_api_uri']
         self.llm_api_key = SecretStr(cfg['api']['llm_api_key'])

@@ -29,6 +29,7 @@ class Doris:
         self.url = cfg['url']
         self.token = cfg['token']
         self.data_source = cfg['data_source']
+        self.tables = cfg['tables']
         self.uid = cfg['uid']
         self.headers = {
             "Content-Type": "application/json",
@@ -124,11 +125,13 @@ class Doris:
         return exe_result[0].get('Create Table').split('ENGINE')[0]
 
     def get_table_list(self) -> list:
-        get_table_list_sql = "show tables"
-        my_json = self.request_dt(self.build_ddl(get_table_list_sql))
-        logger.info(f"response {my_json}")
-        table_list = ['dws_dw_ycb_day']
-        # table_list = [item[f"Tables_in_{self.data_source}"] for item in my_json]
+        if self.tables:
+            table_list = self.tables.split(',')
+        else:
+            get_table_list_sql = "show tables"
+            my_json = self.request_dt(self.build_ddl(get_table_list_sql))
+            logger.info(f"response {my_json}")
+            table_list = [item[f"Tables_in_{self.data_source}"] for item in my_json]
         return table_list
 
     def get_schema_info(self) -> list:
