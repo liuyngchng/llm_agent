@@ -30,15 +30,14 @@ pip install langchain_openai langchain_ollama \
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-MAX_MSG_COUNT = 5
-
+MAX_MSG_COUNT = 20
 # limit msg_history size to MAX_MSG_COUNT
 usr_msg_list = {}
 
 def get_usr_msgs(uid: str):
     """
     get user msg history as a context to let llm know how to function
-    usr_msg_list data structure: {"uid": ["msg1", "msg2", "msg3"]}
+    usr_msg_list data structure: {"uid": ["用户提问:msg1", "系统回复:msg2", "用户提问:msg3"]}
     """
     return usr_msg_list.get(uid)
 
@@ -46,11 +45,12 @@ def save_usr_msg(uid: str, msg: str):
     """
     add user msg to msg list
     """
-    msg_list = usr_msg_list.get(uid)
+    msg_list = usr_msg_list.get(uid, [])
     if len(msg_list) > MAX_MSG_COUNT:
-        msg_list.ppo(0)
+        msg_list.pop(0)
     msg_list.append(msg)
-    logger.debug("msg_history_refreshed:\n%s", '\n'.join(map(str, msg_list)))
+    usr_msg_list[uid] = msg_list
+    logger.info(f"saved_usr_msg, uid {uid}, msg_list {usr_msg_list.get(uid, [])}")
 
 class SqlAgent(DbUtl):
     """
@@ -104,16 +104,22 @@ class SqlAgent(DbUtl):
             ("human", "用户问题：{msg}")
         ])
 
-    def generate_sql(self, question: str) -> str:
+    def build_invoke_json(self, uid: str, q: str) -> dict:
+        return {
+            "msg": q,
+            "schema": self.get_schema_info(),
+            "sql_dialect": self.db_type,
+            "chat_history": get_usr_msgs(uid)
+        }
+
+    def generate_sql(self, uid: str, question: str) -> str:
         """
         generate sql
         """
         chain = self.sql_gen_prompt_template | self.llm
-        response = chain.invoke({
-            "msg": question,
-            "schema": self.get_schema_info(),
-            "sql_dialect": self.db_type,
-        })
+        gen_sql_dict = self.build_invoke_json(uid, question)
+        logger.info(f"gen_sql_dict: {gen_sql_dict}")
+        response = chain.invoke(gen_sql_dict)
         return response.content
 
     def desc_usr_dt(self, question: str, usr_dt: dict) -> str:
@@ -127,16 +133,14 @@ class SqlAgent(DbUtl):
         })
         return response.content
 
-    def gen_usr_dt_check_sql(self, question: str) -> str:
+    def gen_usr_dt_check_sql(self, uid: str, question: str) -> str:
         """
         generate sql for get user data from user account database
         """
         chain = self.sql_gen_prompt_template | self.llm
-        response = chain.invoke({
-            "msg": question,
-            "schema": self.get_schema_info(),
-            "sql_dialect": self.db_type,
-        })
+        check_sql_dict = self.build_invoke_json(uid, question)
+        logger.info(f"check_sql_dict: {check_sql_dict}")
+        response = chain.invoke(check_sql_dict)
         return response.content
 
     def get_nl_with_dt(self, markdown_dt: str):
@@ -146,12 +150,15 @@ class SqlAgent(DbUtl):
         })
         return response.content
 
-    def intercept_usr_question(self, q: str):
+    def intercept_usr_question(self, uid: str, q: str):
         chain = self.intercept_q_msg_template | self.llm
-        response = chain.invoke({
+        intercept_gen_sql_dict = {
             "msg": q,
             "schema": self.get_schema_info(),
-        })
+            "chat_history": get_usr_msgs(uid)
+        }
+        logger.info(f"intercept_gen_sql_dict {intercept_gen_sql_dict}")
+        response = chain.invoke(intercept_gen_sql_dict)
         return response.content
 
     def execute_query(self, sql: str) -> Dict:
@@ -225,7 +232,7 @@ class SqlAgent(DbUtl):
         return model
 
 
-    def get_dt_with_nl(self, q: str, output_data_format: str) -> str:
+    def get_dt_with_nl(self, uid: str, q: str, output_data_format: str) -> str:
         """
         通过自然语言查询数据库中的数据
         """
@@ -242,14 +249,16 @@ class SqlAgent(DbUtl):
 
         if self.cfg['db']['strict_search']:
             logger.info(f"check_user_question_with_llm_in_strict_search：{q}")
-            intercept = self.intercept_usr_question(q)
+            intercept = self.intercept_usr_question(uid, q)
             if "查询条件清晰" not in intercept:
                 nl_dt_dict["raw_dt"] = intercept
                 logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
+                save_usr_msg(uid, q)
                 return json.dumps(nl_dt_dict, ensure_ascii=False)
         logger.info(f"summit_question_to_llm：{q}")
         try:
-            sql = self.generate_sql(q)
+            sql = self.generate_sql(uid, q)
+            save_usr_msg(uid, q)
             logger.debug(f"llm_output_sql\n{sql}")
             sql = extract_md_content(sql, "sql")
             logger.info(f"llm_gen_sql_for_q {q}\n----------\n{sql}\n----------\n")
@@ -308,11 +317,13 @@ class SqlAgent(DbUtl):
 
 
 if __name__ == "__main__":
-    os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
-    my_cfg = init_yml_cfg()
+    save_usr_msg("123", "hello1")
+    # save_usr_msg("123", "hello2")
+    # os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
+    # my_cfg = init_yml_cfg()
     # while True:
     #     input_q = input("请输入您的问题(输入q退出)：")
     #     if input_q == "q":
     #         exit(0)
-    input_q = "查询2024年的数据明细"
-    SqlAgent.get_dt_with_nl(input_q, my_cfg, DataType.JSON.value, True)
+    # input_q = "查询2024年的数据明细"
+    # SqlAgent.get_dt_with_nl(123, input_q, DataType.JSON.value, True)

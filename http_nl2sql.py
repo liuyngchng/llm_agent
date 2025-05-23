@@ -209,7 +209,7 @@ def query_data(catch=None):
     else:
         dt_source_cfg = my_cfg
     sql_agent = SqlAgent(dt_source_cfg, True, "")
-    answer = sql_agent.get_dt_with_nl(msg, DataType.MARKDOWN.value)
+    answer = sql_agent.get_dt_with_nl(uid, msg, DataType.MARKDOWN.value)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题试试"
