@@ -75,6 +75,7 @@ def save_config():
     db_name = request.form.get('db_name').strip()
     db_usr  = request.form.get('db_usr').strip()
     db_psw  = request.form.get('db_psw').strip()
+    tables = request.form.get('tables').strip()
     data_source_cfg = {
         "sys_name": my_cfg['sys']['name'],
         "waring_info": "",
@@ -85,6 +86,7 @@ def save_config():
         "db_port": db_port,
         "db_usr": db_usr,
         "db_psw": db_psw,
+        "tables": tables,
     }
     usr = cfg_utl.get_user_name_by_uid(uid)
     if not usr:
