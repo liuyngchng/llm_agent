@@ -237,7 +237,7 @@ class SqlAgent(DbUtl):
         """
         sql =""
         dt = ""
-        nl_dt_dict={"chart":{}, "raw_dt": {}}
+        nl_dt_dict={"chart":{}, "raw_dt": {}, "sql": ""}
         adt = self.get_table_list()
         logger.info(f"agent_detected_tables:{adt} for db_type {self.cfg['db']['type']}")
         if not adt or len(adt)> self.cfg['db']['max_table_num']:
@@ -261,19 +261,20 @@ class SqlAgent(DbUtl):
             logger.debug(f"llm_output_sql\n{sql}")
             sql = extract_md_content(sql, "sql")
             logger.info(f"llm_gen_sql_for_q {q}\n----------\n{sql}\n----------\n")
-            db_uri = DbUtl.get_db_uri(self.cfg)
-            logger.info(f"db_uri, {db_uri}")
-            if DBType.SQLITE.value in db_uri:
+            nl_dt_dict["sql"] = sql
+            db_type = self.cfg.get('db', {}).get('type', "").lower()
+            if DBType.SQLITE.value in db_type:
+                db_uri = DbUtl.get_db_uri(self.cfg)
                 logger.debug(f"connect_to_sqlite_db {db_uri}")
                 dt = DbUtl.sqlite_output(db_uri, sql, output_data_format)
-            elif DBType.MYSQL.value in db_uri:
-                logger.debug(f"connect_to_mysql_db {db_uri}")
+            elif DBType.MYSQL.value in db_type:
+                logger.debug(f"connect_to_mysql_db")
                 dt = DbUtl.mysql_output(self.cfg, sql, output_data_format)
-            elif DBType.ORACLE.value in db_uri:
-                logger.debug(f"connect_to_oracle_db {db_uri}")
+            elif DBType.ORACLE.value in db_type:
+                logger.debug(f"connect_to_oracle_db")
                 dt = DbUtl.oracle_output(self.cfg, sql, output_data_format)
-            elif DBType.DORIS.value in db_uri:
-                logger.debug(f"connect_to_doris_db {db_uri}")
+            elif DBType.DORIS.value in db_type:
+                logger.debug(f"connect_to_doris_db")
                 dt = self.doris_dt_source.doris_output(sql, output_data_format)
             else:
                 raise RuntimeError("other_data_type_need_to_be_done")

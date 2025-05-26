@@ -227,8 +227,12 @@ class DbUtl:
         oracle+cx_oracle://user:password@host:port/service_name
         """
         db_cfg = cfg.get('db', {})
+        db_type_cfg = db_cfg['type'].lower()
+        if DBType.DORIS.value in db_type_cfg:
+            my_db_uri = db_cfg['url']
+            logger.info(f"db_uri_for_{db_type_cfg}, {my_db_uri}")
+            return my_db_uri
         if all(key in db_cfg for key in ['type', 'name', 'host', 'user', 'password']):
-            db_type_cfg = db_cfg['type'].lower()
             if DBType.MYSQL.value in db_type_cfg:
                 usr = quote(db_cfg['user'])
                 pwd = quote(db_cfg['password'], safe='')
@@ -239,8 +243,6 @@ class DbUtl:
                 pwd = quote(db_cfg['password'])
                 my_db_uri = (f"oracle+cx_oracle://{usr}:{pwd}"
                              f"@{db_cfg['host']}:{db_cfg.get('port', 1521)}/?service_name={db_cfg['name']}")
-            elif DBType.DORIS.value in db_type_cfg:
-                my_db_uri = f"{DBType.DORIS.value}_http://{db_cfg['host']}:{db_cfg.get('port', 31683)}/api/db/execute"
             else:
                 raise "unknown db type in config txt_file"
         elif all(key in db_cfg for key in ['type', 'name']):
