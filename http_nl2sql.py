@@ -298,7 +298,8 @@ def test_query_data():
     """
     msg = "查询2025年的数据"
     logger.info(f"ask_question({msg}, {my_cfg}, markdown, True)")
-    answer = SqlAgent.get_dt_with_nl(msg, my_cfg, DataType.MARKDOWN.value, True)
+    sql_agent = SqlAgent(my_cfg, True, "")
+    answer = sql_agent.get_dt_with_nl("123", msg, DataType.MARKDOWN.value)
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"
     logger.info(f"answer_is：\n{answer}")
