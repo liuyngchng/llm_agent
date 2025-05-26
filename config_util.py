@@ -72,11 +72,11 @@ def get_user_role_by_uid(uid:str)-> str | None:
             logger.info(f"no_user_info_found_for_uid, {uid}")
     return role
 
-def get_data_source_config_by_uid(uid:str, cfg: dict) -> dict:
+def get_ds_cfg_by_uid(uid:str, cfg: dict) -> dict:
     config = {}
     with sqlite3.connect(config_db) as my_conn:
         check_sql = (f"select uid, db_type, db_name, db_host, db_port,"
-                     f" db_usr, db_psw from db_config where uid='{uid}' limit 1")
+                     f" db_usr, db_psw, tables from db_config where uid='{uid}' limit 1")
         db_config_info = DbUtl.sqlite_query_tool(my_conn, check_sql)
         logger.debug(f"check_sql {check_sql}")
         check_info = json.loads(db_config_info)['data']
@@ -93,6 +93,7 @@ def get_data_source_config_by_uid(uid:str, cfg: dict) -> dict:
                 "db_port": check_info[0][4],
                 "db_usr":  decrypt(check_info[0][5], cfg['sys']['cypher_key']),
                 "db_psw":  decrypt(check_info[0][6], cfg['sys']['cypher_key']),
+                "tables": check_info[0][7],
             }
         except Exception as e:
             logger.exception("exception_occurred_get_data_source_config_by_uid")
@@ -100,36 +101,42 @@ def get_data_source_config_by_uid(uid:str, cfg: dict) -> dict:
     logger.info(f"db_config_info_for_uid_{uid}: {config}")
     return config
 
-def save_data_source_config(data_source_cfg: dict, cfg: dict) -> bool:
+def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
+    """
+    :param cfg: system config
+    :param ds_cfg: data source config
+    """
     save_result = False
-    if not data_source_cfg['uid']:
+    if not ds_cfg['uid']:
         logger.error("uid_in_data_source_cfg_is_null")
         return save_result
     logger.info("start_encrypt_db_source_user_and_password")
-    data_source_cfg['db_usr_cypher'] = encrypt(data_source_cfg['db_usr'], cfg['sys']['cypher_key'])
-    data_source_cfg['db_psw_cypher'] = encrypt(data_source_cfg['db_psw'], cfg['sys']['cypher_key'])
-    current_config = get_data_source_config_by_uid(data_source_cfg['uid'], cfg)
+    ds_cfg['db_usr_cypher'] = encrypt(ds_cfg['db_usr'], cfg['sys']['cypher_key'])
+    ds_cfg['db_psw_cypher'] = encrypt(ds_cfg['db_psw'], cfg['sys']['cypher_key'])
+    current_config = get_ds_cfg_by_uid(ds_cfg['uid'], cfg)
     if current_config:
         exec_sql = (f'''
                     update db_config set 
-                    db_type ='{data_source_cfg["db_type"]}', 
-                    db_host ='{data_source_cfg["db_host"]}', 
-                    db_port ='{data_source_cfg["db_port"]}',
-                    db_name='{data_source_cfg["db_name"]}', 
-                    db_usr='{data_source_cfg["db_usr_cypher"]}', 
-                    db_psw='{data_source_cfg["db_psw_cypher"]}'
-                    where uid = '{data_source_cfg["uid"]}'
+                    db_type ='{ds_cfg["db_type"]}', 
+                    db_host ='{ds_cfg["db_host"]}', 
+                    db_port ='{ds_cfg["db_port"]}',
+                    db_name='{ds_cfg["db_name"]}', 
+                    db_usr='{ds_cfg["db_usr_cypher"]}', 
+                    db_psw='{ds_cfg["db_psw_cypher"]}',
+                    tables='{ds_cfg["tables"]}'
+                    where uid = '{ds_cfg["uid"]}'
                     ''')
     else:
         exec_sql = (f'''
-                    insert into db_config (uid, db_type, db_host, db_port, db_name, db_usr, db_psw)
-                    values ('{data_source_cfg["uid"]}', 
-                    '{data_source_cfg["db_type"]}',
-                    '{data_source_cfg["db_host"]}', 
-                    '{data_source_cfg["db_port"]}', 
-                    '{data_source_cfg["db_name"]}', 
-                    '{data_source_cfg["db_usr_cypher"]}', 
-                    '{data_source_cfg["db_psw_cypher"]}')
+                    insert into db_config (uid, db_type, db_host, db_port, db_name, db_usr, db_psw, tables)
+                    values ('{ds_cfg["uid"]}', 
+                    '{ds_cfg["db_type"]}',
+                    '{ds_cfg["db_host"]}', 
+                    '{ds_cfg["db_port"]}', 
+                    '{ds_cfg["db_name"]}', 
+                    '{ds_cfg["db_usr_cypher"]}', 
+                    '{ds_cfg["db_psw_cypher"]}',
+                    '{ds_cfg["tables"]}',)
                     ''')
     with sqlite3.connect(config_db) as my_conn:
         try:
@@ -146,7 +153,7 @@ def delete_data_source_config(uid: str, cfg: dict) -> bool:
     if not uid:
         logger.error("uid_null_err")
         return delete_result
-    current_config = get_data_source_config_by_uid(uid, cfg)
+    current_config = get_ds_cfg_by_uid(uid, cfg)
     if current_config:
         delete_sql = f"delete from db_config where uid = '{uid}'"
     else:
@@ -163,7 +170,7 @@ def delete_data_source_config(uid: str, cfg: dict) -> bool:
     return delete_result
 
 def build_data_source_cfg_with_uid(uid: str, sys_cfg:dict)->dict:
-    source_cfg = get_data_source_config_by_uid(uid, sys_cfg)
+    source_cfg = get_ds_cfg_by_uid(uid, sys_cfg)
     if not source_cfg:
         return  sys_cfg
     my_new_dict = copy.deepcopy(sys_cfg)

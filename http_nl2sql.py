@@ -56,7 +56,7 @@ def config_index():
     except Exception as e:
         logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
         raise jsonify("err_in_config_index")
-    ctx = cfg_utl.get_data_source_config_by_uid(uid, my_cfg)
+    ctx = cfg_utl.get_ds_cfg_by_uid(uid, my_cfg)
     ctx["uid"] = uid
     ctx['sys_name']=my_cfg['sys']['name']
     ctx["waring_info"]=""
@@ -92,7 +92,7 @@ def save_config():
     if not usr:
         data_source_cfg['waring_info'] = '非法访问，请您先登录系统'
         return render_template(dt_idx, **data_source_cfg)
-    save_cfg_result = cfg_utl.save_data_source_config(data_source_cfg, my_cfg)
+    save_cfg_result = cfg_utl.save_ds_cfg(data_source_cfg, my_cfg)
     if save_cfg_result:
         data_source_cfg['waring_info'] = '保存成功'
     else:
