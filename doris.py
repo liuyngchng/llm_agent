@@ -248,7 +248,8 @@ class Doris:
             if not data:
                 # return json.dumps({"columns": [], "data": []})
                 return "目前没有符合条件的数据，您可以换个问题或扩大查询范围再试试"
-            columns = self.get_col_name_from_sql(data, sql)
+            raw_columns = [key.upper() for key in data[0].keys()] if data else []
+            columns = self.get_col_name_from_sql(raw_columns, sql)
             rows = [list(row.values()) for row in data]
             df = pd.DataFrame(rows, columns=columns)
             dt_fmt = data_format.lower()
@@ -266,25 +267,26 @@ class Doris:
             logger.error(f"doris_output_error: {str(e)}")
             return json.dumps({"error": str(e)})
 
-    def get_col_name_from_sql(self, data, sql):
+    def get_col_name_from_sql(self, raw_columns: list, sql):
         table_match = re.search(r'(?i)FROM\s+([\w.]+)', sql)
-        table_name = table_match.group(1) if table_match else 'unknown_table_name'
-        raw_columns = [key.upper() for key in data[0].keys()] if data else []
-        logger.info(f"raw_columns_for_table {table_name}, {raw_columns}")
-        if 'unknown_table_name' == table_name:
-            logger.error(f"get_table_name_err_for_sql {sql}")
-            columns = raw_columns
+        table_name = table_match.group(1) if table_match else None
+        if not table_name:
+            return raw_columns
+        if '.' in table_name:
+            schema_name, table_name = table_name.split('.')[:2]
+            full_table_name = f"{schema_name}.{table_name}"
         else:
-            columns = []
-            for col in raw_columns:
-                comment = self.get_comment(self.data_source, table_name, col)
-                if comment:
-                    final_name = f"{comment}" if comment else col
-                    columns.append(final_name)
-                    continue
-                columns.append(
-                    self.hack_col_name(col, table_name)
-                )
+            full_table_name = table_name
+        columns = []
+        for col in raw_columns:
+            comment = self.get_comment(self.data_source, full_table_name, col)
+            if comment:
+                final_name = f"{comment}" if comment else col
+                columns.append(final_name)
+                continue
+            columns.append(
+                self.hack_col_name(col, full_table_name)
+            )
         return columns
 
     def hack_col_name(self, col: str, table_name: str):

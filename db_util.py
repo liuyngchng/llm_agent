@@ -32,7 +32,7 @@ class DbUtl:
     @staticmethod
     def mysql_query_tool(db_con, query: str) -> dict:
         try:
-            with db_con.cursor() as cursor:  # 使用with自动管理游标
+            with db_con.cursor() as cursor:
                 cursor.execute(query)
                 columns = [desc[0] for desc in cursor.description] if cursor.description else []
                 # data = cursor.fetchall()
@@ -62,7 +62,6 @@ class DbUtl:
         try:
             table_match = re.search(r'(?i)FROM\s+([`\w.]+)', sql)
             table_name = table_match.group(1).replace('`', '') if table_match else None
-
             if not table_name:
                 return raw_columns
             if '.' in table_name:
