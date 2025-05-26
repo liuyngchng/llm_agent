@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import json
 import re
+from decimal import Decimal
 from typing import LiteralString
 
 import pandas as pd
@@ -254,7 +255,8 @@ class Doris:
             if DataType.HTML.value in dt_fmt:
                 dt = df.to_html(index=False, border=0).replace(...)
             elif DataType.MARKDOWN.value in dt_fmt:
-                dt = df.to_markdown(index=False) if not df.empty else ''
+                dt = df.map(lambda x: f"{x:.0f}" if isinstance(x, Decimal) else x,
+                    na_action='ignore').to_markdown(index=False) if not df.empty else ''
             elif DataType.JSON.value in dt_fmt:
                 dt = df.to_json(force_ascii=False, orient='records')
             else:
