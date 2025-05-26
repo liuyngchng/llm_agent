@@ -24,7 +24,7 @@ def auth_user(user:str, t: str, cfg: dict) -> dict:
     with sqlite3.connect(config_db) as my_conn:
         sql = f"select id, role from user where name='{user}' and t = '{t}' limit 1"
         check_info = DbUtl.sqlite_query_tool(my_conn, sql)
-        user_dt = json.loads(check_info)['data']
+        user_dt = check_info['data']
 
     if user_dt:
         auth_result["pass"] = True
@@ -39,7 +39,7 @@ def get_uid_by_user(usr:str) ->str:
     with sqlite3.connect(config_db) as my_conn:
         check_info = DbUtl.sqlite_query_tool(my_conn, check_sql)
         logger.debug(f"check_info {check_info}")
-        check_data = json.loads(check_info)['data']
+        check_data = check_info['data']
         try:
             uid = check_data[0][0]
         except (IndexError, TypeError) as e:
@@ -52,7 +52,7 @@ def get_user_name_by_uid(uid:str)-> str | None:
         try:
             sql = f"select name from user where id='{uid}' limit 1"
             check_info = DbUtl.sqlite_query_tool(my_conn, sql)
-            user_dt = json.loads(check_info)['data']
+            user_dt = check_info['data']
             user = user_dt[0][0]
             logger.info(f"get_user {user} with uid {uid}")
         except Exception as e:
@@ -65,7 +65,7 @@ def get_user_role_by_uid(uid:str)-> str | None:
         try:
             sql = f"select role from user where id='{uid}' limit 1"
             check_info = DbUtl.sqlite_query_tool(my_conn, sql)
-            user_dt = json.loads(check_info)['data']
+            user_dt = check_info['data']
             role = user_dt[0][0]
             logger.info(f"role {role}, uid {uid}")
         except Exception as e:
@@ -79,7 +79,7 @@ def get_ds_cfg_by_uid(uid:str, cfg: dict) -> dict:
                      f" db_usr, db_psw, tables from db_config where uid='{uid}' limit 1")
         db_config_info = DbUtl.sqlite_query_tool(my_conn, check_sql)
         logger.debug(f"check_sql {check_sql}")
-        check_info = json.loads(db_config_info)['data']
+        check_info = db_config_info['data']
         if not check_info:
             logger.info(f"no_db_config_for_uid {uid}")
             return config
@@ -208,7 +208,7 @@ def get_const(key:str)->str | None:
         try:
             sql = f"select value from const where key='{key}' limit 1"
             check_info = DbUtl.sqlite_query_tool(my_conn, sql)
-            value_dt = json.loads(check_info)['data']
+            value_dt = check_info['data']
             value = value_dt[0][0]
             logger.info(f"get_const {value} with uid {value}")
         except Exception as e:
@@ -221,7 +221,7 @@ def get_consts()-> dict:
         sql = f"select key, value from const limit 100"
         try:
             check_info = DbUtl.sqlite_query_tool(my_conn, sql)
-            value_dt = json.loads(check_info)['data']
+            value_dt = check_info['data']
             for key, value in value_dt:
                 const[key] = value
         except Exception as e:
@@ -236,7 +236,7 @@ def get_user_sample_data(sql: str)-> dict:
     with sqlite3.connect(user_sample_data_db) as my_conn:
         try:
             check_info = DbUtl.sqlite_query_tool(my_conn, sql)
-            value_dt = json.loads(check_info)['data']
+            value_dt = check_info['data']
             for key, value in value_dt:
                 const[key] = value
         except Exception as e:

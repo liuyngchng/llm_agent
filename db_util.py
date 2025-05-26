@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import datetime
+import re
+from decimal import Decimal
 
 import pymysql
 import sqlite3
@@ -28,7 +30,7 @@ class DbUtl:
     database util class, for process data output, database coneection etc.
     """
     @staticmethod
-    def mysql_query_tool(db_con, query: str) -> str:
+    def mysql_query_tool(db_con, query: str) -> dict:
         try:
             with db_con.cursor() as cursor:  # 使用with自动管理游标
                 cursor.execute(query)
@@ -41,23 +43,79 @@ class DbUtl:
                     )
                     for row in cursor.fetchall()
                 ]
-                return json.dumps({"columns": columns, "data": data}, ensure_ascii=False, default=str)
+                # return json.dumps({"columns": columns, "data": data}, ensure_ascii=False, default=str)
+                return {"columns": columns, "data": data}
         except Exception as e:
-            logger.error(f"mysql_query_tool_err: {e}")
+            logger.error(f"mysql_query_err: {e}")
             raise e
 
+
     @staticmethod
-    def sqlite_query_tool(db_con, query: str) -> str:
+    def get_col_name_from_sql_for_mysql(db_con, raw_columns: list, sql: str) -> list:
+        """
+        get column name from SQL, for MySQL DB
+        :param db_con: database connection info
+        :param raw_columns: original columns
+        :param sql: sql need to be executed next
+        :return: the column name more explainable
+        """
+        try:
+            table_match = re.search(r'(?i)FROM\s+([`\w.]+)', sql)
+            table_name = table_match.group(1).replace('`', '') if table_match else None
+
+            if not table_name:
+                return raw_columns
+            if '.' in table_name:
+                schema_name, table_name = table_name.split('.')[:2]
+                full_table_name = f"{schema_name}.{table_name}"
+            else:
+                full_table_name = table_name
+            comment_map = {}
+            with db_con.cursor() as cursor:
+                cursor.execute(f"SHOW FULL COLUMNS FROM {full_table_name}")
+                for col in cursor.fetchall():
+                    comment_map[col[0].upper()] = col[8]
+            processed_columns = []
+            for col in raw_columns:
+                col_upper = col.upper()
+                comment = comment_map.get(col_upper, "")
+                suffix, base_col = "", col
+                patterns = [
+                    (r'^(AVG|SUM|MAX|MIN|COUNT)\(([\w`]+)\)$', lambda m: (f"{m[1]}的", m[2].replace('`', ''))),
+                    (r'^(TOTAL|AVG|MAX|MIN)_([\w`]+)$', lambda m: (f"{m[1]}的", m[2].replace('`', '')))
+                ]
+
+                for pattern, handler in patterns:
+                    match = re.match(pattern, col_upper)
+                    if match:
+                        suffix_part, base_col = handler(match)
+                        suffix = {"AVG的": "平均值", "SUM的": "总和",
+                                  "MAX的": "最大值", "MIN的": "最小值",
+                                  "COUNT的": "计数", "TOTAL的": "总和"}.get(suffix_part, "")
+                        base_comment = comment_map.get(base_col.upper(), "")
+                        break
+                else:
+                    base_comment = comment
+                final_name = f"{base_comment}{suffix}" if base_comment else col
+                processed_columns.append(final_name.strip())
+            return processed_columns
+        except Exception as e:
+            logger.error(f"Error processing column names: {str(e)}")
+            return raw_columns
+
+
+    @staticmethod
+    def sqlite_query_tool(db_con, query: str) -> dict:
         try:
             cursor = db_con.cursor()
             logger.debug(f"execute_query {query}")
             cursor.execute(query)
             columns = [desc[0] for desc in cursor.description] if cursor.description else []
             data = cursor.fetchall()
-            return json.dumps({"columns": columns, "data": data}, ensure_ascii=False)
+            return {"columns": columns, "data": data}
         except Exception as e:
             logger.exception(f"sqlite_query_err")
-            return json.dumps({"error": str(e)})
+            return {"error": str(e)}
 
     @staticmethod
     def sqlite_insert_delete_tool(db_con, sql: str) -> dict:
@@ -75,42 +133,36 @@ class DbUtl:
     @staticmethod
     def output_data(db_con, sql:str, data_format:str) -> str:
         if isinstance(db_con, sqlite3.Connection):
-            result = DbUtl.sqlite_query_tool(db_con, sql)
+            data = DbUtl.sqlite_query_tool(db_con, sql)
         elif isinstance(db_con, pymysql.Connection):
-            result = DbUtl.mysql_query_tool(db_con, sql)
+            data = DbUtl.mysql_query_tool(db_con, sql)
+            try:
+                data['columns'] = DbUtl.get_col_name_from_sql_for_mysql(
+                    db_con,
+                    data['columns'],
+                    sql
+                )
+            except Exception as e:
+                logger.error(f"col_name_hack_failed, {str(e)}")
         elif isinstance(db_con, oracledb.Connection):
-            result = DbUtl.oracle_query_tool(db_con, sql)
-
+            data = DbUtl.oracle_query_tool(db_con, sql)
         else:
             logger.error(f"database_type_error, {__file__}")
             raise "database type error"
 
-        data = json.loads(result)
         logger.info(f"data {data} for {db_con}")
-        # 生成表格
         df = pd.DataFrame(data['data'], columns=data['columns'])
         dt_fmt = data_format.lower()
 
         if DataType.HTML.value in dt_fmt:
-            # dt = df.to_html()  #生成网页表格
-            dt = df.to_html(
-                index=False,
-                border=0
-            ).replace(
-                '<table',
-                '<table style="border:1px solid #ddd; border-collapse:collapse; width:100%"'
-            ).replace(
-                '<th>',
-                '<th style="background:#f8f9fa; padding:8px; border-bottom:2px solid #ddd; text-align:left">'
-            ).replace(
-                '<td>',
-                '<td style="padding:6px; border-bottom:1px solid #eee">'
-            )
+            dt = DbUtl.get_pretty_html(df)
         elif DataType.MARKDOWN.value in dt_fmt:
             if df.empty:
                 dt = ''
             else:
-                dt = df.to_markdown(index=False)  # 控制台打印美观表格
+                dt = df.map(lambda x: f"{x:.0f}" if isinstance(x, Decimal) else x,
+                    na_action='ignore').to_markdown(index=False)
+
         elif DataType.JSON.value in dt_fmt:
             dt = df.to_json(force_ascii=False, orient='records')
         else:
@@ -119,6 +171,22 @@ class DbUtl:
             raise info
         logger.info(f"output_data_dt:\n{dt}\n")
         return dt
+
+    @staticmethod
+    def get_pretty_html(df):
+        return df.to_html(
+            index=False,
+            border=0
+        ).replace(
+            '<table',
+            '<table style="border:1px solid #ddd; border-collapse:collapse; width:100%"'
+        ).replace(
+            '<th>',
+            '<th style="background:#f8f9fa; padding:8px; border-bottom:2px solid #ddd; text-align:left">'
+        ).replace(
+            '<td>',
+            '<td style="padding:6px; border-bottom:1px solid #eee">'
+        )
 
     @staticmethod
     def mysql_output(cfg: dict, sql:str, data_format:str):
@@ -158,13 +226,13 @@ class DbUtl:
 
     #################### for support oracle DB #########################
     @staticmethod
-    def oracle_query_tool(db_con, query: str) -> str:
+    def oracle_query_tool(db_con, query: str) -> dict:
         try:
             cursor = db_con.cursor()
             cursor.execute(query)
             columns = [desc[0] for desc in cursor.description] if cursor.description else []
             data = cursor.fetchall()
-            return json.dumps({"columns": columns, "data": data}, ensure_ascii=False)
+            return {"columns": columns, "data": data}
         except Exception as e:
             logger.exception("oracle_query_tool_err")
             raise e
