@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import datetime
 
 import pymysql
 import sqlite3
@@ -32,8 +33,15 @@ class DbUtl:
             with db_con.cursor() as cursor:  # 使用with自动管理游标
                 cursor.execute(query)
                 columns = [desc[0] for desc in cursor.description] if cursor.description else []
-                data = cursor.fetchall()
-                return json.dumps({"columns": columns, "data": data}, ensure_ascii=False)
+                # data = cursor.fetchall()
+                data = [
+                    tuple(
+                        item.isoformat() if isinstance(item, (datetime.date, datetime.datetime)) else item
+                        for item in row
+                    )
+                    for row in cursor.fetchall()
+                ]
+                return json.dumps({"columns": columns, "data": data}, ensure_ascii=False, default=str)
         except Exception as e:
             logger.error(f"mysql_query_tool_err: {e}")
             raise e
