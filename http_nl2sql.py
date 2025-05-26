@@ -26,6 +26,9 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 
+# user's last sql, {"my_uid": "my_sql"}
+usr_last_sql = {}
+
 
 @app.route('/gt/dt/idx', methods=['GET'])
 def query_data_index():
@@ -193,6 +196,11 @@ def query_data(catch=None):
     msg = request.form.get('msg').strip()\
         # .replace("截至", "").replace("截止", "")
     uid = request.form.get('uid').strip()
+    page =  request.form.get('page').strip()
+    current_usr_last_sql = usr_last_sql.get("uid")
+    if current_usr_last_sql and page:
+        sql = get_next_page_sql(current_usr_last_sql)
+
     auth_result = authenticate(request)
     if not auth_result:
         data = {"chart":{}, "raw_dt":{}, "msg":"illegal access"}

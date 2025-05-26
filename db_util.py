@@ -331,6 +331,24 @@ class DbUtl:
         logger.info(f"db_uri_for_{db_type_cfg}, {my_db_uri}")
         return my_db_uri
 
+    @staticmethod
+    def get_next_page_sql(current_sql: str, page_size =20):
+        """
+        : param current_sql: format as : select a, b, c from c.d where e.f limit g
+        """
+        match = re.search(r'LIMIT\s+(\d+)(?:\s+OFFSET\s+(\d+))?', current_sql, re.I)
+        if not match:
+            return current_sql
+
+        limit = int(match.group(1))
+        offset = int(match.group(2)) if match.group(2) else 0
+        new_offset = offset + limit  # 计算新offset
+
+        new_sql = re.sub(r'LIMIT\s+\d+(\s+OFFSET\s+\d+)?',
+                         f'LIMIT {page_size} OFFSET {new_offset}',
+                         current_sql, flags=re.I, count=1)
+        return new_sql
+
 
 def test_db():
     my_sql = "SELECT * from order_info"
@@ -365,6 +383,10 @@ def test_sqlite():
     db_uri = "sqlite:///config.db"
     my_dt = DbUtl.sqlite_output(db_uri, "select * from schema_info where entity = 'dws_dw_ycb_day'", DataType.JSON.value)
     logger.info(f"my_dt {my_dt}")
+
+
 if __name__ == "__main__":
     # test_db()
-    test_sqlite()
+    sql = "select a from b where c=d limit 30"
+    new_sql = DbUtl.get_next_page_sql(sql)
+    logger.info(f"new_sql {new_sql}")
