@@ -127,6 +127,7 @@
         
         // 添加消息到聊天
         function addMessage(text, sql, type, isChart = false) {
+            console.log("log_addMessage(text=" + text +", sql="+ sql + ", type="+ type +", isChart="+ isChart + ")")
             const messageContainer = document.createElement('div');
             messageContainer.classList.add('message-container');
             if (isChart) {
