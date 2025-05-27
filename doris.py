@@ -30,7 +30,7 @@ class Doris:
         self.url = cfg['url']
         self.token = cfg['token']
         self.data_source = cfg['data_source']
-        self.tables = cfg['tables']
+        self.tables = cfg.get('tables')
         self.uid = cfg['uid']
         self.headers = {
             "Content-Type": "application/json",
@@ -508,7 +508,7 @@ def print_show_create_table(result):
 
 if __name__ == "__main__":
     # console_simulator()
-    my_cfg = init_yml_cfg()['doris']
+    my_cfg = init_yml_cfg()['db']
     logger.info(f"my_cfg: {my_cfg}")
     my_doris = Doris(my_cfg)
     # my_comment_list = my_doris.get_table_col_comment("a10analysis", "dws_dw_ycb_day")
