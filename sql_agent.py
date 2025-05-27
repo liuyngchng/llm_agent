@@ -212,7 +212,6 @@ class SqlAgent(DbUtl):
         logger.debug(f"schema_info:\n{schema_info}")
         return schema_info
 
-
     def get_llm(self):
         if self.is_remote_model:
             if "https" in self.llm_api_uri:
@@ -231,30 +230,32 @@ class SqlAgent(DbUtl):
         return model
 
 
-    def get_dt_with_nl(self, uid: str, q: str, output_data_format: str) -> str:
+    def get_dt_with_nl(self, uid: str, q: str, dt_fmt: str) -> str:
         """
-        通过自然语言查询数据库中的数据
+        get data from db by natural language
+        :param uid: user id
+        :param q: the question (natural language) user submitted
+        :param dt_fmt: A DataType enum
         """
         sql =""
-        dt = ""
-        nl_dt_dict={"chart":{}, "raw_dt": {}, "sql": ""}
         adt = self.get_table_list()
-        logger.info(f"agent_detected_tables:{adt} for db_type {self.cfg['db']['type']}")
+        logger.info(f"agent_detected_tables:{adt} for_db_type {self.cfg['db']['type']}")
         if not adt or len(adt)> self.cfg['db']['max_table_num']:
             info = (f"please_check_your_data_source_user_privilege_or_db_schema, "
-                    f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
-                    f" cfg['db']={self.cfg['db']}")
+                f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
+                f" cfg['db']={self.cfg['db']}")
             raise Exception(info)
-
+        nl_dt_dict = {"chart": {}, "raw_dt": {}, "sql": "", "total_count": 0}
         if self.cfg['db']['strict_search']:
             logger.info(f"check_user_question_with_llm_in_strict_search：{q}")
             intercept = self.intercept_usr_question(uid, q)
             if "查询条件清晰" not in intercept:
                 nl_dt_dict["raw_dt"] = intercept
-                logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
+                logger.info(f"nl_dt:\n {nl_dt_dict}\n")
                 save_usr_msg(uid, q)
                 return json.dumps(nl_dt_dict, ensure_ascii=False)
         logger.info(f"summit_question_to_llm：{q}")
+        dt = ''
         try:
             sql = self.generate_sql(uid, q)
             save_usr_msg(uid, q)
@@ -262,33 +263,62 @@ class SqlAgent(DbUtl):
             sql = extract_md_content(sql, "sql")
             logger.info(f"llm_gen_sql_for_q {q}\n----------\n{sql}\n----------\n")
             nl_dt_dict["sql"] = sql
-            db_type = self.cfg.get('db', {}).get('type', "").lower()
-            if DBType.SQLITE.value in db_type:
-                db_uri = DbUtl.get_db_uri(self.cfg)
-                logger.debug(f"connect_to_sqlite_db {db_uri}")
-                dt = DbUtl.sqlite_output(db_uri, sql, output_data_format)
-            elif DBType.MYSQL.value in db_type:
-                logger.debug(f"connect_to_mysql_db")
-                dt = DbUtl.mysql_output(self.cfg, sql, output_data_format)
-            elif DBType.ORACLE.value in db_type:
-                logger.debug(f"connect_to_oracle_db")
-                dt = DbUtl.oracle_output(self.cfg, sql, output_data_format)
-            elif DBType.DORIS.value in db_type:
-                logger.debug(f"connect_to_doris_db")
-                dt = self.doris_dt_source.doris_output(sql, output_data_format)
-            else:
-                raise RuntimeError("other_data_type_need_to_be_done")
+            dt = self.get_dt_with_sql(sql, dt_fmt)
+            count_dt = self.get_dt_with_sql(
+                DbUtl.gen_count_sql(sql),
+                DataType.JSON.value
+            )
+            nl_dt_dict["total_count"] = json.loads(count_dt)[0].get("COUNT(1)")
         except Exception as e:
             logger.error(f"error, {e}，sql: {sql}", exc_info=True)
         nl_dt_dict["raw_dt"] = dt
-        logger.info(f"nl_dt_dict:\n {nl_dt_dict}\n")
-        if not dt:
-            return json.dumps(nl_dt_dict, ensure_ascii=False)
+        logger.info(f"nl_dt:\n {nl_dt_dict}\n")
+        return self.build_chart_dt(dt, nl_dt_dict)
 
+    def get_nxt_pg_dt(self, last_sql: str) -> str:
+        logger.info(f"last_sql: {last_sql}")
+        next_sql = DbUtl.get_next_page_sql(last_sql)
+        logger.info(f"next_sql: {next_sql}")
+        dt = self.get_dt_with_sql(next_sql)
+        nl_dt_dict = {"chart": {}, "raw_dt": dt, "sql": next_sql}
+        logger.info(f"nl_dt:\n {nl_dt_dict}\n")
+        return self.build_chart_dt(dt, nl_dt_dict)
+
+    def build_chart_dt(self, dt, nl_dt: dict):
+        """
+        add chart dt for db retrieve dt
+        : param dt: db retrieved dt
+        : nl_dt: final dt need to be returned
+        """
+        if not dt:
+            return json.dumps(nl_dt, ensure_ascii=False)
         if not self.cfg['prompts']['add_chart_to_dt']:
             logger.info(f"nl_raw_dt:\n{dt}\n")
-            return json.dumps(nl_dt_dict, ensure_ascii=False)
-        return self.add_chart_to_raw_dt(dt, nl_dt_dict)
+            return json.dumps(nl_dt, ensure_ascii=False)
+        return self.add_chart_to_raw_dt(dt, nl_dt)
+
+    def get_dt_with_sql(self, sql: str, dt_fmt=DataType.MARKDOWN.value) -> str:
+        """
+        :param sql: A Database SQL end with limit(for mysql)
+        :param dt_fmt: A DataType enum
+        """
+        db_type = self.cfg.get('db', {}).get('type', "").lower()
+        if DBType.SQLITE.value in db_type:
+            db_uri = DbUtl.get_db_uri(self.cfg)
+            logger.debug(f"connect_to_sqlite_db {db_uri}")
+            dt = DbUtl.sqlite_output(db_uri, sql, dt_fmt)
+        elif DBType.MYSQL.value in db_type:
+            logger.debug(f"connect_to_mysql_db")
+            dt = DbUtl.mysql_output(self.cfg, sql, dt_fmt)
+        elif DBType.ORACLE.value in db_type:
+            logger.debug(f"connect_to_oracle_db")
+            dt = DbUtl.oracle_output(self.cfg, sql, dt_fmt)
+        elif DBType.DORIS.value in db_type:
+            logger.debug(f"connect_to_doris_db")
+            dt = self.doris_dt_source.doris_output(sql, dt_fmt)
+        else:
+            raise RuntimeError("other_data_type_need_to_be_done")
+        return dt
 
     def add_chart_to_raw_dt(self, dt:str, nl_dt_dict:dict)-> str:
         """

@@ -11,6 +11,7 @@ import os
 from flask import Flask, request, jsonify, render_template, Response
 
 import config_util as cfg_utl
+from db_util import DbUtl
 from my_enums import DataType
 from sql_agent import SqlAgent
 from sys_init import init_yml_cfg
@@ -191,16 +192,13 @@ def query_data(catch=None):
     curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' \
         -H "Content-Type: application/x-www-form-urlencoded" \
         -d '{"msg":"who are you?"}'
-    :return:
+    :return a string
     """
     msg = request.form.get('msg').strip()\
         # .replace("截至", "").replace("截止", "")
     uid = request.form.get('uid').strip()
-    page =  request.form.get('page').strip()
+    page =  request.form.get('page')
     current_usr_last_sql = usr_last_sql.get("uid")
-    if current_usr_last_sql and page:
-        sql = get_next_page_sql(current_usr_last_sql)
-
     auth_result = authenticate(request)
     if not auth_result:
         data = {"chart":{}, "raw_dt":{}, "msg":"illegal access"}
@@ -219,11 +217,16 @@ def query_data(catch=None):
     else:
         dt_source_cfg = my_cfg
     sql_agent = SqlAgent(dt_source_cfg, True, "")
+    if current_usr_last_sql and page and page !='':
+        return sql_agent.get_nxt_pg_dt(current_usr_last_sql)
     answer = sql_agent.get_dt_with_nl(uid, msg, DataType.MARKDOWN.value)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题试试"
     return answer
+
+
+
 
 
 def authenticate(req)->bool:

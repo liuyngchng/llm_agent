@@ -332,7 +332,7 @@ class DbUtl:
         return my_db_uri
 
     @staticmethod
-    def get_next_page_sql(current_sql: str, page_size =20):
+    def get_next_page_sql(current_sql: str, page_size=20):
         """
         : param current_sql: format as : select a, b, c from c.d where e.f limit g
         """
@@ -343,11 +343,17 @@ class DbUtl:
         limit = int(match.group(1))
         offset = int(match.group(2)) if match.group(2) else 0
         new_offset = offset + limit  # 计算新offset
+        gen_sql = re.sub(r'LIMIT\s+\d+(\s+OFFSET\s+\d+)?',
+             f'LIMIT {page_size} OFFSET {new_offset}',
+             current_sql, flags=re.I, count=1)
+        return gen_sql
 
-        new_sql = re.sub(r'LIMIT\s+\d+(\s+OFFSET\s+\d+)?',
-                         f'LIMIT {page_size} OFFSET {new_offset}',
-                         current_sql, flags=re.I, count=1)
-        return new_sql
+    @staticmethod
+    def gen_count_sql(origin_sql: str) -> str:
+        cleaned_sql = re.sub(r'\s+ORDER\s+BY\s+.*?(?=LIMIT|\bWHERE\b|$)', '', origin_sql, flags=re.I)
+        cleaned_sql = re.sub(r'\s+LIMIT\s+\d+(\s+OFFSET\s+\d+)?', '', cleaned_sql, flags=re.I)
+        count_sql = re.sub(r'^SELECT\s.*?\sFROM', 'SELECT COUNT(1) FROM', cleaned_sql, count=1, flags=re.I)
+        return count_sql
 
 
 def test_db():
