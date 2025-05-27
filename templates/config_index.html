@@ -18,6 +18,14 @@
             padding: 5px;
             min-height: 26px;
         }
+        input[type="radio"] {
+            margin: 0 4px 0 8px;  /* 左间距8px，右间距4px */
+            vertical-align: middle;
+        }
+        label {
+            margin-right: 12px;   /* 标签右侧留白 */
+            vertical-align: middle;
+        }
     </style>
     <script>
         var CryptoJS=CryptoJS||function(s,p){var m={},l=m.lib={},n=function(){},r=l.Base={extend:function(b){n.prototype=this;var h=new n;b&&h.mixIn(b);h.hasOwnProperty("init")||(h.init=function(){h.$super.init.apply(this,arguments)});h.init.prototype=h;h.$super=this;return h},create:function(){var b=this.extend();b.init.apply(b,arguments);return b},init:function(){},mixIn:function(b){for(var h in b)b.hasOwnProperty(h)&&(this[h]=b[h]);b.hasOwnProperty("toString")&&(this.toString=b.toString)},clone:function(){return this.init.prototype.extend(this)}},
@@ -38,7 +46,7 @@
 </head>
 <body>
     <div style="text-align: center;margin-top: 10%;" >
-        <p style="font:20px Verdana; font-weight:bold;">{{sys_name}}_数据源配置</p>
+        <p style="font:20px Verdana; font-weight:bold;">{{sys_name}}_系统配置</p>
         <form style="margin-top: 2%" action="/cfg/dt" method="post">
             <div style="display: flex; align-items: center; gap: 8px; margin: 0 auto; width: fit-content">
                 <span>数据库类型:</span>
@@ -74,7 +82,16 @@
                 <input type="text" id="tables"  name="tables" value="{{tables}}">
             </div>
             <div>&nbsp;</div>
-
+            <div align="center" style="margin-bottom: 0.5%; display: flex; align-items: center; gap: 4px; justify-content: center">
+              <span>是否需要绘图:</span>
+              <div style="display: flex; align-items: center; gap: 4px">
+                <input type="radio" id="yes" name="add_chart" value="1" style="margin: 0 4px">
+                <label for="yes">是</label>
+                <input type="radio" id="no" name="add_chart" value="0" checked style="margin: 0 4px">
+                <label for="no">否</label>
+              </div>
+            </div>
+            <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%">
                 <button type="submit" content="" id="button">&nbsp;保&nbsp;&nbsp;存&nbsp;</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 <button type="submit" content="" id="delete_button">&nbsp;删&nbsp;&nbsp;除&nbsp;</button>

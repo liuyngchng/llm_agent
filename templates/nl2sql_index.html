@@ -17,7 +17,7 @@
 <!--            <h1>{{ sys_name | default('智能问答系统') }}</h1>-->
             <h1>智能问答系统</h1>
         </div>
-        <a href="/cfg/idx?uid={{uid}}" class="system-settings-link" target="_blank">数据源配置</a>
+        <a href="/cfg/idx?uid={{uid}}" class="system-settings-link" target="_blank">系统配置</a>
         <div class="chat-container" id="chat-container">
             <!-- 聊天内容将在这里动态生成 -->
         </div>
@@ -131,6 +131,7 @@
             const messageContainer = document.createElement('div');
             messageContainer.classList.add('message-container');
             if (isChart) {
+                console.log('in_chart')
                 messageContainer.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <img width="24" height="24" src="/static/bot.png">
@@ -169,6 +170,26 @@
                 messageContainer.classList.add('user-message-container');
                 messageContainer.innerHTML = `
                     <div class="message-bubble bot-message-bubble">${sanitizedContent}</div>
+                `;
+            } else if (!!sql && sql !== "") {
+                console.log('in_sql_and_raw_dt')
+                messageContainer.classList.add('bot-message-container');
+                messageContainer.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img width="24" height="24" src="/static/bot.png">
+                        <div class="chart-container">
+                            <div class="tab-bar">
+                                <button class="tab-btn active" onclick="toggleTab(this, 'data')">数据</button>
+                                <button class="tab-btn" onclick="toggleTab(this, 'sql')">SQL</button>
+                            </div>
+                            <div class="tab-content data-tab" style="display: block;">
+                                <pre class="raw-data">${DOMPurify.sanitize(marked.parse(text))}</pre>
+                            </div>
+                            <div class="tab-content sql-tab" style="display: none;">
+                                <pre class="sql-code">${DOMPurify.sanitize(marked.parse('```sql\n' + sql + '\n```'))}</pre>
+                            </div>
+                        </div>
+                    </div>
                 `;
             } else {
                 messageContainer.classList.add('bot-message-container');

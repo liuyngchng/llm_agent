@@ -89,6 +89,7 @@ def save_config():
     db_usr  = request.form.get('db_usr').strip()
     db_psw  = request.form.get('db_psw').strip()
     tables = request.form.get('tables').strip()
+    add_chart = request.form.get('add_chart').strip()
     data_source_cfg = {
         "sys_name": my_cfg['sys']['name'],
         "waring_info": "",
@@ -100,6 +101,7 @@ def save_config():
         "db_usr": db_usr,
         "db_psw": db_psw,
         "tables": tables,
+        "add_chart": add_chart,
     }
     usr = cfg_utl.get_user_name_by_uid(uid)
     if not usr:
