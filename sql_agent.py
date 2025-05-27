@@ -230,7 +230,7 @@ class SqlAgent(DbUtl):
         return model
 
 
-    def get_dt_with_nl(self, uid: str, q: str, dt_fmt: str) -> str:
+    def get_dt_with_nl(self, uid: str, q: str, dt_fmt: str) -> dict:
         """
         get data from db by natural language
         :param uid: user id
@@ -253,7 +253,7 @@ class SqlAgent(DbUtl):
                 nl_dt_dict["raw_dt"] = intercept
                 logger.info(f"nl_dt:\n {nl_dt_dict}\n")
                 save_usr_msg(uid, q)
-                return json.dumps(nl_dt_dict, ensure_ascii=False)
+                return nl_dt_dict
         logger.info(f"summit_question_to_llm：{q}")
         dt = ''
         try:
@@ -273,29 +273,26 @@ class SqlAgent(DbUtl):
             logger.error(f"error, {e}，sql: {sql}", exc_info=True)
         nl_dt_dict["raw_dt"] = dt
         logger.info(f"nl_dt:\n {nl_dt_dict}\n")
-        return self.build_chart_dt(dt, nl_dt_dict)
+        return self.build_chart_dt(nl_dt_dict)
 
-    def get_nxt_pg_dt(self, last_sql: str) -> str:
+    def get_pg_dt(self, last_sql: str, page_no: int, page_size: int) -> dict:
         logger.info(f"last_sql: {last_sql}")
-        next_sql = DbUtl.get_next_page_sql(last_sql)
-        logger.info(f"next_sql: {next_sql}")
-        dt = self.get_dt_with_sql(next_sql)
-        nl_dt_dict = {"chart": {}, "raw_dt": dt, "sql": next_sql}
+        page_sql = DbUtl.get_page_sql(last_sql, page_no, page_size)
+        logger.info(f"next_sql: {page_sql}")
+        dt = self.get_dt_with_sql(page_sql)
+        nl_dt_dict = {"chart": {}, "raw_dt": dt, "sql": page_sql}
         logger.info(f"nl_dt:\n {nl_dt_dict}\n")
-        return self.build_chart_dt(dt, nl_dt_dict)
+        return self.build_chart_dt(nl_dt_dict)
 
-    def build_chart_dt(self, dt, nl_dt: dict):
+    def build_chart_dt(self, nl_dt: dict) -> dict:
         """
         add chart dt for db retrieve dt
         : param dt: db retrieved dt
         : nl_dt: final dt need to be returned
         """
-        if not dt:
-            return json.dumps(nl_dt, ensure_ascii=False)
         if not self.cfg['prompts']['add_chart_to_dt']:
-            logger.info(f"nl_raw_dt:\n{dt}\n")
-            return json.dumps(nl_dt, ensure_ascii=False)
-        return self.add_chart_to_raw_dt(dt, nl_dt)
+            return nl_dt
+        return self.add_chart_to_raw_dt(nl_dt)
 
     def get_dt_with_sql(self, sql: str, dt_fmt=DataType.MARKDOWN.value) -> str:
         """
@@ -320,14 +317,14 @@ class SqlAgent(DbUtl):
             raise RuntimeError("other_data_type_need_to_be_done")
         return dt
 
-    def add_chart_to_raw_dt(self, dt:str, nl_dt_dict:dict)-> str:
+    def add_chart_to_raw_dt(self, nl_dt_dict:dict)-> dict:
         """
         add chart data to raw dt
         """
         logger.info("start_add_chart_to_raw_dt")
         chart_dt = {}
         try:
-            nl_dt = self.get_nl_with_dt(dt)
+            nl_dt = self.get_nl_with_dt(nl_dt_dict["raw_dt"])
             logger.debug(f"nl_dt_from_agent\n{nl_dt}\n")
             nl_dt = rmv_think_block(nl_dt)
             logger.debug(f"nl_dt_without_think\n{nl_dt}\n")
@@ -335,14 +332,13 @@ class SqlAgent(DbUtl):
             logger.debug(f"nl_dt_only_json_str\n{nl_dt}\n")
             chart_dt = json.loads(nl_dt)
         except Exception as e:
-            logger.exception("err_to_add_description_to_data", dt)
+            logger.exception("err_to_add_description_to_data", nl_dt_dict["raw_dt"])
         if chart_dt['chart']:
             nl_dt_dict['chart'] = chart_dt['chart']
         else:
             logger.error(f"chart_dt['chart'] is null, chart_dt {chart_dt}")
-        nl_dt_dict_str = json.dumps(nl_dt_dict, ensure_ascii=False)
-        logger.info(f"nl_chart_dt_with_raw_dt:\n{nl_dt_dict_str}\n")
-        return nl_dt_dict_str
+        logger.info(f"nl_chart_dt_with_raw_dt:\n{nl_dt_dict}\n")
+        return nl_dt_dict
 
 
 

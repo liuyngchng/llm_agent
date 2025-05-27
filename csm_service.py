@@ -207,7 +207,7 @@ class CsmService:
             msg,
             DataType.JSON.value,
         )
-        usr_dt_dict = json.loads(dt)
+        usr_dt_dict = dt
         usr_dt_desc = sql_agent.desc_usr_dt(msg, usr_dt_dict["raw_dt"][0])
         answer += usr_dt_desc
         # answer += const_dict.get("label3")

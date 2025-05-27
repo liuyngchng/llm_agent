@@ -502,6 +502,10 @@ def print_show_create_table(result):
                 print(f"  {prop}")
 
 
+    def get_ou_list():
+        sql = "select distinct "
+
+
 if __name__ == "__main__":
     # console_simulator()
     my_cfg = init_yml_cfg()['doris']

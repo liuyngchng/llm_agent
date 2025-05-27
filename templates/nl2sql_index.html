@@ -55,7 +55,7 @@
 
         window.onload = function() {
             const greeting = `Hi，我是问数小助手～ 很高兴遇见你！你可以随时问我天然气销售数据的问题，我来帮你查查`;
-            addMessage(greeting, 'bot');
+            addMessage(greeting, '', 'bot');
         };
         // 表单提交
         queryForm.addEventListener('submit', function(e) {
@@ -64,12 +64,12 @@
             const query = queryInput.value.trim();
             
             if (!query) {
-                addMessage("请填写问题", 'bot');
+                addMessage("请填写问题", '', 'bot');
                 return;
             }
             
             // 添加用户消息到聊天
-            addMessage(query, 'user');
+            addMessage(query, '', 'user');
             
             // 清空输入框
             queryInput.value = '';            
@@ -77,16 +77,16 @@
             // 返回的 data 数据格式如下 {"chart":{}, "raw_dt":"markdown格式数据表格", "unit":"数据物理量的量纲"}
             fetchQueryData(query).then(data => {
                     if (data.chart && data.chart.labels?.length && data.chart.values?.length) {
-                        const msgElement = addMessage(' ', 'bot', true);
+                        const msgElement = addMessage(' ', '', 'bot', true);
                         const chartType = detectChartType(query); // 新增类型判断
-                        renderChart(msgElement.querySelector('canvas'), data.chart, data.raw_dt, chartType, data.chart.unit);
+                        renderChart(msgElement.querySelector('canvas'), data.chart, data.raw_dt, data.sql, chartType, data.chart.unit);
                     } else {
-                        addMessage(data.raw_dt || '暂无符合条件的数据，您可以扩大查询范围试试', 'bot');
+                        addMessage(data.raw_dt || '暂无符合条件的数据，您可以扩大查询范围试试', data.sql, 'bot');
                     }
                 })
                 .catch(error => {
                     console.log("error_occurred", error.message)
-                    addMessage(`查询失败，网路请求超时，请您稍后再试`, 'bot');
+                    addMessage(`查询失败，网路请求超时，请您稍后再试`, '', 'bot');
                 });
         });
 
@@ -98,7 +98,7 @@
             try {
                 sendButton.disabled = true;
                 isFetching = true;      // 表示正在请求数据
-                loadingMsg = addMessage('<div class="loading-dots">处理中</div>', 'bot');
+                loadingMsg = addMessage('<div class="loading-dots">处理中</div>', '', 'bot');
                 const controller = new AbortController();
                 setTimeout(() => controller.abort(), 300000);
                 const response = await fetch('/query/data', {
@@ -126,7 +126,7 @@
         }
         
         // 添加消息到聊天
-        function addMessage(text, type, isChart = false) {
+        function addMessage(text, sql, type, isChart = false) {
             const messageContainer = document.createElement('div');
             messageContainer.classList.add('message-container');
             if (isChart) {
@@ -137,12 +137,16 @@
                             <div class="tab-bar">
                                 <button class="tab-btn active" onclick="toggleTab(this, 'chart')">图表</button>
                                 <button class="tab-btn" onclick="toggleTab(this, 'data')">数据</button>
+                                <button class="tab-btn" onclick="toggleTab(this, 'sql')">SQL</button>
                             </div>
                             <div class="tab-content chart-tab" style="display: block;">
                                 <canvas></canvas>
                             </div>
                             <div class="tab-content data-tab" style="display: none;">
                                 <pre class="raw-data"></pre>
+                            </div>
+                            <div class="tab-content sql-tab" style="display: none;">
+                                <pre class="sql-code"></pre>
                             </div>
                         </div>
                     </div>
@@ -189,7 +193,7 @@
         function detectChartType(query) {
             return chartRules.find(rule => rule.pattern.test(query))?.type || 'pie';
         }
-        function renderChart(canvasElement, chartData, rawData, chartType, unit) {
+        function renderChart(canvasElement, chartData, rawData, sqlData, chartType, unit) {
             const colors = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEEAD','#D4A5A5','#99B898','#FECEA8'];
             const config = {
                 type: chartType,
@@ -231,6 +235,8 @@
             const tableHtml = DOMPurify.sanitize(marked.parse(rawData.replace(/\\n/g, '\n')));
             container = canvasElement.closest('.chart-container');
             container.querySelector(`.data-tab pre`).innerHTML = tableHtml;
+            const formattedSql = DOMPurify.sanitize(marked.parse('```sql\n' + sqlData + '\n```'));
+            container.querySelector(`.sql-tab pre`).innerHTML = formattedSql;
         }
         function toggleTab(btn, tabName) {
             const container = btn.closest('.chart-container');

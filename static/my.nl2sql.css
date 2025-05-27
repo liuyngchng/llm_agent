@@ -85,6 +85,16 @@ button:disabled {
     margin-right: 8px;
     border-radius: 4px;
 }
+
+.sql-tab pre {
+    background: #f8f8f8;
+    padding: 12px;
+    border-radius: 4px;
+    font-family: Monaco, Consolas, Courier New, monospace;
+    font-size: 0.9em;
+    line-height: 1.5;
+    overflow-x: auto;
+}
 .input-container {
     gap: 10px;
     display: flex;

@@ -332,21 +332,18 @@ class DbUtl:
         return my_db_uri
 
     @staticmethod
-    def get_next_page_sql(current_sql: str, page_size=20):
+    def get_page_sql(origin_sql: str, page_no=1, page_size=20):
         """
-        : param current_sql: format as : select a, b, c from c.d where e.f limit g
+        : param sql: format as : select a, b, c from c.d where e.f limit g
         """
-        match = re.search(r'LIMIT\s+(\d+)(?:\s+OFFSET\s+(\d+))?', current_sql, re.I)
-        if not match:
-            return current_sql
+        offset = (page_no - 1) * page_size
+        # 替换或添加 LIMIT + OFFSET
+        return re.sub(r'LIMIT\s+\d+(?:\s+OFFSET\s+\d+)?',
+                      f'LIMIT {page_size} OFFSET {offset}',
+                      origin_sql, flags=re.I, count=1)
 
-        limit = int(match.group(1))
-        offset = int(match.group(2)) if match.group(2) else 0
-        new_offset = offset + limit  # 计算新offset
-        gen_sql = re.sub(r'LIMIT\s+\d+(\s+OFFSET\s+\d+)?',
-             f'LIMIT {page_size} OFFSET {new_offset}',
-             current_sql, flags=re.I, count=1)
-        return gen_sql
+
+
 
     @staticmethod
     def gen_count_sql(origin_sql: str) -> str:
@@ -394,5 +391,5 @@ def test_sqlite():
 if __name__ == "__main__":
     # test_db()
     sql = "select a from b where c=d limit 30"
-    new_sql = DbUtl.get_next_page_sql(sql)
-    logger.info(f"new_sql {new_sql}")
+    new_sql = DbUtl.get_page_sql(sql, 5)
+    logger.info(f"new_sql, {new_sql}")

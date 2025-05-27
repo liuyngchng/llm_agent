@@ -6,6 +6,7 @@ pip install gunicorn flask concurrent-log-handler langchain_openai langchain_oll
 """
 import json
 import logging.config
+import math
 import os
 
 from flask import Flask, request, jsonify, render_template, Response
@@ -27,8 +28,9 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 
-# user's last sql, {"my_uid": "my_sql"}
-usr_last_sql = {}
+# user's last sql, {"my_uid": {"sql":"my_sql", "curr_page":1, "total_page":1}}
+# last search sql, current page and total page for the SQL
+usr_page_dt = {}
 
 
 @app.route('/gt/dt/idx', methods=['GET'])
@@ -198,7 +200,7 @@ def query_data(catch=None):
         # .replace("截至", "").replace("截止", "")
     uid = request.form.get('uid').strip()
     page =  request.form.get('page')
-    current_usr_last_sql = usr_last_sql.get("uid")
+
     auth_result = authenticate(request)
     if not auth_result:
         data = {"chart":{}, "raw_dt":{}, "msg":"illegal access"}
@@ -217,13 +219,24 @@ def query_data(catch=None):
     else:
         dt_source_cfg = my_cfg
     sql_agent = SqlAgent(dt_source_cfg, True, "")
-    if current_usr_last_sql and page and page !='':
-        return sql_agent.get_nxt_pg_dt(current_usr_last_sql)
+    current_usr_sql = usr_page_dt.get(uid, {}).get("sql")
+    if current_usr_sql and page and page != '':
+        usr_page_dt[uid]["cur_page"] += 1
+        logger.info(f"usr_page_dt_for_{uid}: {usr_page_dt[uid]}")
+        return sql_agent.get_pg_dt(current_usr_sql,1, 20)
     answer = sql_agent.get_dt_with_nl(uid, msg, DataType.MARKDOWN.value)
+    total_page = math.ceil(answer["total_count"]/20)
+    if not usr_page_dt.get(uid):
+        usr_page_dt[uid] = {"sql": answer["sql"], "cur_page":1, "total_page": total_page}
+    else:
+        usr_page_dt[uid]["sql"] = answer["sql"]
+        usr_page_dt[uid]["total_page"] = total_page
+    logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid])}")
+
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题试试"
-    return answer
+    return json.dumps(answer, ensure_ascii=False)
 
 
 
@@ -255,10 +268,11 @@ def get_db_dt():
     :return:
     """
     msg = request.get_json().get('msg').strip()
-    logger.info(f"rcv_msg: {msg}")
+    uid = request.get_json().get('uid').strip()
+    logger.info(f"rcv_msg: {msg}, uid {uid}")
     logger.info(f"ask_question({msg}, {my_cfg}, 'json')")
     sql_agent = SqlAgent(my_cfg, True, "")
-    answer = sql_agent.get_dt_with_nl(msg, DataType.JSON.value)
+    answer = sql_agent.get_dt_with_nl(uid, msg, DataType.JSON.value)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer=json.dumps({"msg":"没有查询到相关数据，请您尝试换个问题进行提问", "code":404}, ensure_ascii=False)
