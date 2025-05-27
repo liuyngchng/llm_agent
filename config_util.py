@@ -180,6 +180,7 @@ def build_data_source_cfg_with_uid(uid: str, sys_cfg:dict)->dict:
     my_new_dict['db']['port'] = source_cfg["db_port"]
     my_new_dict['db']['user'] = source_cfg["db_usr"]
     my_new_dict['db']['password'] = source_cfg["db_psw"]
+    my_new_dict['db']['tables'] = source_cfg["tables"]
     return my_new_dict
 
 

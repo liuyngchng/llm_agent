@@ -169,13 +169,21 @@ class SqlAgent(DbUtl):
             logger.error(f"SQL执行失败：{e}")
             return {"success": False, "error": str(e)}
 
-    def get_table_list(self)-> list:
+    def get_all_tables(self)-> list:
         if DBType.ORACLE.value in self.db_type:
             table_list = DbUtl.get_orc_db_info(self.cfg)
         elif DBType.DORIS.value in self.db_type:
             table_list = self.doris_dt_source.get_table_list()
         else:
             table_list = self.db_dt_source.get_usable_table_names()
+        return table_list
+
+    def get_table_list(self)-> list:
+        if self.cfg['db']['tables']:
+            table_list = self.cfg['db']['tables'].split(',')
+            logger.info(f"cfg_db_tables {table_list}")
+        else:
+            table_list = self.get_all_tables()
         return table_list
 
     def get_schema_info(self) -> str:

@@ -74,12 +74,17 @@
                 <input type="text" id="tables"  name="tables" value="{{tables}}">
             </div>
             <div>&nbsp;</div>
+
             <div align="center" style="margin-bottom: 0.5%">
                 <button type="submit" content="" id="button">&nbsp;保&nbsp;&nbsp;存&nbsp;</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 <button type="submit" content="" id="delete_button">&nbsp;删&nbsp;&nbsp;除&nbsp;</button>
             </div>
             <input type="hidden" id="uid" name="uid" value="{{uid}}">
             <div align="center"><span id="waring_info" style="color: red">{{waring_info}}</span></div>
+            <div>数据源信息:</div>
+            <div align="center" style="margin-bottom: 0.5%">
+                <textarea id="schema" name = "schema" cols="100" rows="20" readonly="readonly">{{schema}}</textarea>
+            </div>
         </form>
     </div>
     <script>

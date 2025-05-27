@@ -62,10 +62,17 @@ def config_index():
     except Exception as e:
         logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
         raise jsonify("err_in_config_index")
+
     ctx = cfg_utl.get_ds_cfg_by_uid(uid, my_cfg)
     ctx["uid"] = uid
     ctx['sys_name']=my_cfg['sys']['name']
     ctx["waring_info"]=""
+
+    sql_agent = SqlAgent(
+        cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg),
+        True
+    )
+    ctx["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
     dt_idx = "config_index.html"
     logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
@@ -103,6 +110,11 @@ def save_config():
         data_source_cfg['waring_info'] = '保存成功'
     else:
         data_source_cfg['waring_info'] = '保存失败'
+    sql_agent = SqlAgent(
+        cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg),
+        True
+    )
+    data_source_cfg["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
     return render_template(dt_idx, **data_source_cfg)
 
 
