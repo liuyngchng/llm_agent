@@ -238,7 +238,8 @@ def query_data(catch=None):
     if usr_page_dt.get(uid, None) and page and page != '':
         usr_page_dt[uid]["cur_page"] += 1
         logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")
-        return sql_agent.get_pg_dt(uid, usr_page_dt[uid]["sql"],usr_page_dt[uid]["cur_page"])
+        pg_dt = sql_agent.get_pg_dt(uid, usr_page_dt[uid])
+        return json.dumps(pg_dt, ensure_ascii=False)
     answer = sql_agent.get_dt_with_nl(uid, msg, DataType.MARKDOWN.value)
     usr_page_dt[uid] = answer.copy()
     usr_page_dt[uid].pop("chart", None)

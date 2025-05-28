@@ -298,12 +298,17 @@ class SqlAgent(DbUtl):
         logger.info(f"nl_dt:\n {nl_dt_dict}\n")
         return self.build_chart_dt(uid, nl_dt_dict)
 
-    def get_pg_dt(self, uid: str, last_sql: str, page_no: int, page_size=PAGE_SIZE) -> dict:
-        logger.info(f"last_sql: {last_sql}")
-        page_sql = DbUtl.get_page_sql(last_sql, page_no, page_size)
+    def get_pg_dt(self, uid: str, usr_page_dt: dict, page_size=PAGE_SIZE) -> dict:
+        logger.info(f"last_sql_for_{uid}: {usr_page_dt['sql']}")
+        page_sql = DbUtl.get_page_sql(usr_page_dt['sql'], usr_page_dt['cur_page'], page_size)
         logger.info(f"next_sql: {page_sql}")
         dt = self.get_dt_with_sql(page_sql)
-        nl_dt_dict = {"chart": {}, "raw_dt": dt, "sql": page_sql}
+        nl_dt_dict = {
+            "chart": {}, "raw_dt": dt, "sql": page_sql,
+            "cur_page": usr_page_dt['cur_page'],
+            "total_count":usr_page_dt['total_count'],
+            "total_page": usr_page_dt['total_page'],
+        }
         logger.info(f"nl_dt:\n {nl_dt_dict}\n")
         return self.build_chart_dt(uid, nl_dt_dict)
 
