@@ -279,8 +279,8 @@ class SqlAgent(DbUtl):
             nl_dt_dict["sql"] = sql
         except Exception as e:
             logger.error(f"gen_sql_err, {e}，sql: {sql}, txt: {q}", exc_info=True)
-            nl_dt_dict["raw_dt"] = "转换为数据查询条件时发生异常"
-            nl_dt_dict["sql"] = "SQL 输出发生错误"
+            nl_dt_dict["raw_dt"] = "用户问题转换为数据查询条件时发生异常"
+            nl_dt_dict["sql"] = "暂无 SQL"
             return nl_dt_dict
         try:
             dt = self.get_dt_with_sql(sql, dt_fmt)

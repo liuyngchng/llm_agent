@@ -140,7 +140,7 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
                         '{ds_cfg["db_usr_cypher"]}', 
                         '{ds_cfg["db_psw_cypher"]}',
                         '{ds_cfg["tables"]}',
-                        '{ds_cfg["add_chart"]}',
+                        '{ds_cfg["add_chart"]}'
                     )
                     ''')
     with sqlite3.connect(config_db) as my_conn:
