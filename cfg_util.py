@@ -117,20 +117,24 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
     current_config = get_ds_cfg_by_uid(ds_cfg['uid'], cfg)
     if current_config:
         exec_sql = (f'''
-                    update db_config set 
-                    db_type ='{ds_cfg["db_type"]}', 
-                    db_host ='{ds_cfg["db_host"]}', 
-                    db_port ='{ds_cfg["db_port"]}',
-                    db_name='{ds_cfg["db_name"]}', 
-                    db_usr='{ds_cfg["db_usr_cypher"]}', 
-                    db_psw='{ds_cfg["db_psw_cypher"]}',
-                    tables='{ds_cfg["tables"]}',
-                    add_chart = '{ds_cfg["add_chart"]}'
-                    where uid = '{ds_cfg["uid"]}'
+                    UPDATE 
+                        db_config 
+                    SET 
+                        db_type ='{ds_cfg["db_type"]}', 
+                        db_host ='{ds_cfg["db_host"]}', 
+                        db_port ='{ds_cfg["db_port"]}',
+                        db_name='{ds_cfg["db_name"]}', 
+                        db_usr='{ds_cfg["db_usr_cypher"]}', 
+                        db_psw='{ds_cfg["db_psw_cypher"]}',
+                        tables='{ds_cfg["tables"]}',
+                        add_chart = '{ds_cfg["add_chart"]}'
+                    WHERE 
+                        uid = '{ds_cfg["uid"]}'
                     ''')
     else:
         exec_sql = (f'''
-                    insert into db_config (uid, db_type, db_host, db_port, db_name, db_usr, db_psw, tables, add_chart)
+                    INSERT INTO db_config 
+                        (uid, db_type, db_host, db_port, db_name, db_usr, db_psw, tables, add_chart)
                     values (
                         '{ds_cfg["uid"]}', 
                         '{ds_cfg["db_type"]}',
