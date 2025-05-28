@@ -35,6 +35,9 @@
             </div>
             <input type="hidden" id ="uid" name="uid" value="{{uid}}">
             <input type="hidden" id ="t" name="t" value="{{t}}">
+            <input type="hidden" id ="cur_page" name="cur_page" value="{{cur_page}}">
+            <input type="hidden" id ="next_page" name="next_page" value="">
+            <input type="hidden" id ="total_page" name="total_page" value="{{total_page}}">
         </form>
     </div>
     <div class="status-indicator" id="status-indicator"></div>
@@ -60,28 +63,45 @@
         // 表单提交
         queryForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            
             const query = queryInput.value.trim();
-            
-            if (!query) {
-                addMessage("请填写问题", '', 'bot');
+            const nextPage = queryForm.elements.next_page.value
+            if (!query && !nextPage) {
+                console.log('query=' + query + ',nextPage=' + nextPage)
+                addMessage("请填写您想问的问题", '', 'bot');
                 return;
             }
-            
             // 添加用户消息到聊天
             addMessage(query, '', 'user');
             
             // 清空输入框
             queryInput.value = '';            
             // 发送API请求
-            // 返回的 data 数据格式如下 {"chart":{}, "raw_dt":"markdown格式数据表格", "unit":"数据物理量的量纲"}
+            // 返回的 data 数据格式如下 {"chart":{}, "raw_dt":"markdown格式数据表格", "unit":"数据物理量的量纲", "sql":"my_sql", "cur_page":1, "total_page":2}
             fetchQueryData(query).then(data => {
+                    document.getElementById('cur_page').value = data.cur_page;
+                    document.getElementById('total_page').value = data.total_page;
                     if (data.chart && data.chart.labels?.length && data.chart.values?.length) {
                         const msgElement = addMessage(' ', '', 'bot', true);
                         const chartType = detectChartType(query); // 新增类型判断
-                        renderChart(msgElement.querySelector('canvas'), data.chart, data.raw_dt, data.sql, chartType, data.chart.unit);
+                        renderChart(
+                            msgElement.querySelector('canvas'),
+                            data,
+                            chartType);
                     } else {
-                        addMessage(data.raw_dt || '暂无符合条件的数据，您可以扩大查询范围试试', data.sql, 'bot');
+                        const msgElement =addMessage(
+                            data.raw_dt || '暂无符合条件的数据，您可以扩大查询范围试试',
+                            data.sql,
+                            'bot'
+                        );
+                        const container = msgElement.querySelector('.chart-container');
+                        if (data.total_page > 1) {
+                            const pagination = document.createElement('div');
+                            pagination.className = 'pagination';
+                            if(data.cur_page < data.total_page) {
+                                pagination.innerHTML = `<a href="#" onclick="loadNextPage(event)">下一页</a>`;
+                            }
+                            container.appendChild(pagination);
+                        }
                     }
                 })
                 .catch(error => {
@@ -104,7 +124,7 @@
                 const response = await fetch('/query/data', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(document.getElementById('uid').value)}`,
+                    body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(document.getElementById('uid').value)}&page=${document.getElementById('next_page').value}`,
                     signal: controller.signal
                 });
 
@@ -124,11 +144,21 @@
                 throw error;
             }
         }
+
+        window.loadNextPage = function(e) {
+            e.preventDefault();
+            const curPage = parseInt(document.getElementById('cur_page').value);
+            const totalPage = parseInt(document.getElementById('total_page').value);
+            if(curPage >= totalPage) return;
+            document.getElementById('next_page').value = curPage + 1;
+            queryForm.dispatchEvent(new Event('submit'));
+        }
         
         // 添加消息到聊天
         function addMessage(text, sql, type, isChart = false) {
             console.log("log_addMessage(text=" + text +", sql="+ sql + ", type="+ type +", isChart="+ isChart + ")")
             const messageContainer = document.createElement('div');
+            messageContainer.querySelector('.pagination')?.remove();
             messageContainer.classList.add('message-container');
             if (isChart) {
                 console.log('in_chart')
@@ -215,8 +245,12 @@
         function detectChartType(query) {
             return chartRules.find(rule => rule.pattern.test(query))?.type || 'pie';
         }
-        function renderChart(canvasElement, chartData, rawData, sqlData, chartType, unit) {
+        function renderChart(canvasElement,data,chartType) {
             const colors = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEEAD','#D4A5A5','#99B898','#FECEA8'];
+            chartData = data.chart
+            rawData = data.raw_dt
+            sqlData = data.sql
+            unit = data.chart.unit
             const config = {
                 type: chartType,
                 data: {
@@ -259,6 +293,14 @@
             container.querySelector(`.data-tab pre`).innerHTML = tableHtml;
             const formattedSql = DOMPurify.sanitize(marked.parse('```sql\n' + sqlData + '\n```'));
             container.querySelector(`.sql-tab pre`).innerHTML = formattedSql;
+            if (data.total_page > 1) {
+                const pagination = document.createElement('div');
+                pagination.className = 'pagination';
+                if(data.cur_page < data.total_page) {
+                    pagination.innerHTML = `<a href="#" onclick="loadNextPage(event)">下一页</a>`;
+                }
+                container.parentNode.insertBefore(pagination, container.nextSibling);
+            }
         }
         function toggleTab(btn, tabName) {
             const container = btn.closest('.chart-container');

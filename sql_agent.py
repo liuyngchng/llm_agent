@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import json
+import math
 import os
 
 from typing import Dict
@@ -34,6 +35,8 @@ logger = logging.getLogger(__name__)
 MAX_MSG_COUNT = 20
 # limit msg_history size to MAX_MSG_COUNT
 usr_msg_list = {}
+
+PAGE_SIZE = 10
 
 def get_usr_msgs(uid: str):
     """
@@ -258,7 +261,7 @@ class SqlAgent(DbUtl):
                 f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
                 f" cfg['db']={self.cfg['db']}")
             raise Exception(info)
-        nl_dt_dict = {"chart": {}, "raw_dt": {}, "sql": "", "total_count": 0}
+        nl_dt_dict = {"chart": {}, "raw_dt": {}, "sql": "", "total_count": 0, "cur_page": 1, "total_page":2}
         if self.cfg['db']['strict_search']:
             logger.info(f"check_user_question_with_llm_in_strict_search：{q}")
             intercept = self.intercept_usr_question(uid, q)
@@ -267,29 +270,27 @@ class SqlAgent(DbUtl):
                 logger.info(f"nl_dt:\n {nl_dt_dict}\n")
                 save_usr_msg(uid, q)
                 return nl_dt_dict
-        dt = ''
-        sql = ''
         try:
             logger.info(f"start_gen_sql_from_txt：{q}")
             sql = self.generate_sql(uid, q)
             save_usr_msg(uid, q)
             logger.debug(f"gen_sql\n{sql}")
-            sql = extract_md_content(sql, "sql")
+            nl_dt_dict["sql"] = extract_md_content(sql, "sql")
             logger.info(f"gen_sql_from_txt {q}\n----------\n{sql}\n----------\n")
-            nl_dt_dict["sql"] = sql
         except Exception as e:
-            logger.error(f"gen_sql_err, {e}，sql: {sql}, txt: {q}", exc_info=True)
+            logger.error(f"gen_sql_err, {e}, txt: {q}", exc_info=True)
             nl_dt_dict["raw_dt"] = "用户问题转换为数据查询条件时发生异常"
             nl_dt_dict["sql"] = "暂无 SQL"
             return nl_dt_dict
         try:
-            dt = self.get_dt_with_sql(sql, dt_fmt)
+            nl_dt_dict["raw_dt"] = self.get_dt_with_sql(nl_dt_dict["sql"], dt_fmt)
             count_dt = self.get_dt_with_sql(
-                DbUtl.gen_count_sql(sql),
+                DbUtl.gen_count_sql(nl_dt_dict["sql"]),
                 DataType.JSON.value
             )
-            nl_dt_dict["total_count"] = json.loads(count_dt)[0].get("COUNT(1)")
-            nl_dt_dict["raw_dt"] = dt
+            total_count = json.loads(count_dt)[0].get("COUNT(1)")
+            nl_dt_dict["total_count"] = total_count
+            nl_dt_dict["total_page"] = math.ceil(total_count / PAGE_SIZE)
         except Exception as e:
             logger.error(f"get_dt_with_sql_err, {e}, sql: {sql}", exc_info=True)
             nl_dt_dict["raw_dt"] = "使用SQL从数据源查询数据时发生异常"
@@ -297,7 +298,7 @@ class SqlAgent(DbUtl):
         logger.info(f"nl_dt:\n {nl_dt_dict}\n")
         return self.build_chart_dt(uid, nl_dt_dict)
 
-    def get_pg_dt(self, uid: str, last_sql: str, page_no: int, page_size: int) -> dict:
+    def get_pg_dt(self, uid: str, last_sql: str, page_no: int, page_size=PAGE_SIZE) -> dict:
         logger.info(f"last_sql: {last_sql}")
         page_sql = DbUtl.get_page_sql(last_sql, page_no, page_size)
         logger.info(f"next_sql: {page_sql}")

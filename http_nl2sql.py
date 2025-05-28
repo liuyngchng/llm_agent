@@ -12,7 +12,7 @@ import os
 from flask import Flask, request, jsonify, render_template, Response
 
 import cfg_util as cfg_utl
-from my_enums import DataType
+from my_enums import DataType, DBType
 from sql_agent import SqlAgent
 from sys_init import init_yml_cfg
 from audio import transcribe_webm_audio_bytes
@@ -103,6 +103,9 @@ def save_config():
         "add_chart": add_chart,
     }
     usr = cfg_utl.get_user_name_by_uid(uid)
+    if data_source_cfg["db_type"] == DBType.SQLITE.value:
+        data_source_cfg['waring_info'] = '数据库类型有误'
+        return render_template(dt_idx, **data_source_cfg)
     if not usr:
         data_source_cfg['waring_info'] = '非法访问，请您先登录系统'
         return render_template(dt_idx, **data_source_cfg)
@@ -209,11 +212,11 @@ def query_data(catch=None):
         -d '{"msg":"who are you?"}'
     :return a string
     """
-    msg = request.form.get('msg').strip()\
+    msg = request.form.get('msg', "").strip()\
         # .replace("截至", "").replace("截止", "")
     uid = request.form.get('uid').strip()
-    page =  request.form.get('page')
-
+    page = request.form.get('page')
+    logger.info(f"rcv_msg: {msg}, uid {uid}, page {page}")
     auth_result = authenticate(request)
     if not auth_result:
         data = {"chart":{}, "raw_dt":{}, "msg":"illegal access"}
@@ -223,7 +226,7 @@ def query_data(catch=None):
             content_type="application/json; charset=utf-8",
             status=200
         )
-    logger.info(f"rcv_msg: {msg}")
+
     logger.info(f"ask_question({msg}, my_cfg, html, True)")
     if uid and uid != 'foo':
         logger.info(f"build_data_source_cfg_with_uid_{uid}")
@@ -232,19 +235,15 @@ def query_data(catch=None):
     else:
         dt_source_cfg = my_cfg
     sql_agent = SqlAgent(dt_source_cfg, True, "")
-    current_usr_sql = usr_page_dt.get(uid, {}).get("sql")
-    if current_usr_sql and page and page != '':
+    if usr_page_dt.get(uid, None) and page and page != '':
         usr_page_dt[uid]["cur_page"] += 1
-        logger.info(f"usr_page_dt_for_{uid}: {usr_page_dt[uid]}")
-        return sql_agent.get_pg_dt(uid, current_usr_sql,1, 20)
+        logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")
+        return sql_agent.get_pg_dt(uid, usr_page_dt[uid]["sql"],usr_page_dt[uid]["cur_page"])
     answer = sql_agent.get_dt_with_nl(uid, msg, DataType.MARKDOWN.value)
-    total_page = math.ceil(answer["total_count"]/20)
-    if not usr_page_dt.get(uid):
-        usr_page_dt[uid] = {"sql": answer["sql"], "cur_page":1, "total_page": total_page}
-    else:
-        usr_page_dt[uid]["sql"] = answer["sql"]
-        usr_page_dt[uid]["total_page"] = total_page
-    logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid])}")
+    usr_page_dt[uid] = answer.copy()
+    usr_page_dt[uid].pop("chart", None)
+    usr_page_dt[uid].pop("raw_dt", None)
+    logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")
 
     # logger.debug(f"answer is：{answer}")
     if not answer:
