@@ -11,8 +11,7 @@ import os
 
 from flask import Flask, request, jsonify, render_template, Response
 
-import config_util as cfg_utl
-from db_util import DbUtl
+import cfg_util as cfg_utl
 from my_enums import DataType
 from sql_agent import SqlAgent
 from sys_init import init_yml_cfg
@@ -79,7 +78,7 @@ def config_index():
 
 @app.route('/cfg/dt', methods=['POST'])
 def save_config():
-    logger.info(f"save config info {request.form}")
+    logger.info(f"save_config_info {request.form}")
     dt_idx = "config_index.html"
     uid = request.form.get('uid').strip()
     db_type = request.form.get('db_type').strip()
@@ -237,7 +236,7 @@ def query_data(catch=None):
     if current_usr_sql and page and page != '':
         usr_page_dt[uid]["cur_page"] += 1
         logger.info(f"usr_page_dt_for_{uid}: {usr_page_dt[uid]}")
-        return sql_agent.get_pg_dt(current_usr_sql,1, 20)
+        return sql_agent.get_pg_dt(uid, current_usr_sql,1, 20)
     answer = sql_agent.get_dt_with_nl(uid, msg, DataType.MARKDOWN.value)
     total_page = math.ceil(answer["total_count"]/20)
     if not usr_page_dt.get(uid):
@@ -251,9 +250,6 @@ def query_data(catch=None):
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题试试"
     return json.dumps(answer, ensure_ascii=False)
-
-
-
 
 
 def authenticate(req)->bool:

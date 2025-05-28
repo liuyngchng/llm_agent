@@ -383,7 +383,7 @@ def test_url():
     logger.info(f"url_decode test:\n {decode_params}\n")
 
 def test_sqlite():
-    db_uri = "sqlite:///config.db"
+    db_uri = "sqlite:///cfg.db"
     my_dt = DbUtl.sqlite_output(db_uri, "select * from schema_info where entity = 'dws_dw_ycb_day'", DataType.JSON.value)
     logger.info(f"my_dt {my_dt}")
 

@@ -9,7 +9,7 @@ import logging.config
 from flask import render_template
 
 from agt_util import fill_dict, extract_session_info, update_session_info, get_abs_of_chat
-from config_util import get_consts
+from cfg_util import get_consts
 from datetime import datetime
 
 from my_enums import AI_SERVICE_STATUS, DataType

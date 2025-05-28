@@ -4,8 +4,8 @@ import json
 import sqlite3
 
 if __name__ == "__main__":
-    db_uri = "sqlite:///config.db"
-    db_file = "config.db"
+    db_uri = "sqlite:///cfg.db"
+    db_file = "cfg.db"
     query = "select * from user"
     with sqlite3.connect(db_file) as db_con:
         cursor = db_con.cursor()

@@ -83,13 +83,16 @@
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%; display: flex; align-items: center; gap: 4px; justify-content: center">
-              <span>是否需要绘图:</span>
-              <div style="display: flex; align-items: center; gap: 4px">
-                <input type="radio" id="yes" name="add_chart" value="1" style="margin: 0 4px">
-                <label for="yes">是</label>
-                <input type="radio" id="no" name="add_chart" value="0" checked style="margin: 0 4px">
-                <label for="no">否</label>
-              </div>
+                <span>是否需要绘图:</span>
+                <div style="display: flex; align-items: center; gap: 4px">
+                    <input type="radio" id="yes" name="add_chart" value="1"
+                         {{ 'checked' if add_chart == 1 else '' }}>
+                    <label for="yes">是</label>
+
+                    <input type="radio" id="no" name="add_chart" value="0"
+                         {{ 'checked' if add_chart != 1 else '' }}>
+                    <label for="no">否</label>
+            </div>
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%">

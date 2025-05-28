@@ -6,6 +6,7 @@ import os
 from typing import Dict
 from datetime import datetime
 
+import cfg_util
 from doris import Doris
 from utils import extract_md_content, rmv_think_block, extract_json
 
@@ -142,10 +143,14 @@ class SqlAgent(DbUtl):
         response = chain.invoke(check_sql_dict)
         return response.content
 
-    def get_nl_with_dt(self, markdown_dt: str):
+    def get_chart_dt(self, md_dt: str):
+        """
+        build chart.js data from source data
+        :param md_dt： data table in markdown format
+        """
         chain = self.chart_dt_gen_prompt_template | self.llm
         response = chain.invoke({
-            "msg": markdown_dt
+            "msg": md_dt
         })
         return response.content
 
@@ -262,42 +267,58 @@ class SqlAgent(DbUtl):
                 logger.info(f"nl_dt:\n {nl_dt_dict}\n")
                 save_usr_msg(uid, q)
                 return nl_dt_dict
-        logger.info(f"summit_question_to_llm：{q}")
         dt = ''
+        sql = ''
         try:
+            logger.info(f"start_gen_sql_from_txt：{q}")
             sql = self.generate_sql(uid, q)
             save_usr_msg(uid, q)
-            logger.debug(f"llm_output_sql\n{sql}")
+            logger.debug(f"gen_sql\n{sql}")
             sql = extract_md_content(sql, "sql")
-            logger.info(f"llm_gen_sql_for_q {q}\n----------\n{sql}\n----------\n")
+            logger.info(f"gen_sql_from_txt {q}\n----------\n{sql}\n----------\n")
             nl_dt_dict["sql"] = sql
+        except Exception as e:
+            logger.error(f"gen_sql_err, {e}，sql: {sql}, txt: {q}", exc_info=True)
+            nl_dt_dict["raw_dt"] = "转换为数据查询条件时发生异常"
+            nl_dt_dict["sql"] = "SQL 输出发生错误"
+            return nl_dt_dict
+        try:
             dt = self.get_dt_with_sql(sql, dt_fmt)
             count_dt = self.get_dt_with_sql(
                 DbUtl.gen_count_sql(sql),
                 DataType.JSON.value
             )
             nl_dt_dict["total_count"] = json.loads(count_dt)[0].get("COUNT(1)")
+            nl_dt_dict["raw_dt"] = dt
         except Exception as e:
-            logger.error(f"error, {e}，sql: {sql}", exc_info=True)
-        nl_dt_dict["raw_dt"] = dt
+            logger.error(f"get_dt_with_sql_err, {e}, sql: {sql}", exc_info=True)
+            nl_dt_dict["raw_dt"] = "使用SQL从数据源查询数据时发生异常"
+            return nl_dt_dict
         logger.info(f"nl_dt:\n {nl_dt_dict}\n")
-        return self.build_chart_dt(nl_dt_dict)
+        return self.build_chart_dt(uid, nl_dt_dict)
 
-    def get_pg_dt(self, last_sql: str, page_no: int, page_size: int) -> dict:
+    def get_pg_dt(self, uid: str, last_sql: str, page_no: int, page_size: int) -> dict:
         logger.info(f"last_sql: {last_sql}")
         page_sql = DbUtl.get_page_sql(last_sql, page_no, page_size)
         logger.info(f"next_sql: {page_sql}")
         dt = self.get_dt_with_sql(page_sql)
         nl_dt_dict = {"chart": {}, "raw_dt": dt, "sql": page_sql}
         logger.info(f"nl_dt:\n {nl_dt_dict}\n")
-        return self.build_chart_dt(nl_dt_dict)
+        return self.build_chart_dt(uid, nl_dt_dict)
 
-    def build_chart_dt(self, nl_dt: dict) -> dict:
+    def build_chart_dt(self, uid: str, nl_dt: dict) -> dict:
         """
         add chart dt for db retrieve dt
         : param dt: db retrieved dt
         : nl_dt: final dt need to be returned
         """
+        cfg = cfg_util.get_ds_cfg_by_uid(uid, self.cfg)
+        logger.info(f"cfg_for_uid {uid}, {cfg}")
+        if cfg:
+            if cfg.get("add_chart") == 1:
+                return self.add_chart_to_raw_dt(nl_dt)
+            else:
+                return nl_dt
         if not self.cfg['prompts']['add_chart_to_dt']:
             return nl_dt
         return self.add_chart_to_raw_dt(nl_dt)
@@ -332,7 +353,7 @@ class SqlAgent(DbUtl):
         logger.info("start_add_chart_to_raw_dt")
         chart_dt = {}
         try:
-            nl_dt = self.get_nl_with_dt(nl_dt_dict["raw_dt"])
+            nl_dt = self.get_chart_dt(nl_dt_dict["raw_dt"])
             logger.debug(f"nl_dt_from_agent\n{nl_dt}\n")
             nl_dt = rmv_think_block(nl_dt)
             logger.debug(f"nl_dt_without_think\n{nl_dt}\n")

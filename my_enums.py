@@ -24,7 +24,7 @@ class MsgType(Enum):
 class ActorRole(Enum):
     """
     the role of actor engaged in system
-    for database config.db.user.role
+    for database cfg.db.user.role
     """
     HUMAN_CUSTOMER          = 0      # human being customer of the system
     HUMAN_SERVICE_PROVIDER  = 1      # human being who provide customer service to consumer

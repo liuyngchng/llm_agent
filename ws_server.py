@@ -12,7 +12,7 @@ from my_enums import MsgType
 from websockets import serve, ConnectionClosed
 import asyncio
 import logging.config
-from config_util import get_user_name_by_uid
+from cfg_util import get_user_name_by_uid
 
 from websockets.legacy.server import WebSocketServerProtocol
 

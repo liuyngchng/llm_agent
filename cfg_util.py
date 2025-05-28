@@ -15,7 +15,7 @@ from db_util import DbUtl
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-config_db = "config.db"
+config_db = "cfg.db"
 user_sample_data_db = "user_info.db"
 
 

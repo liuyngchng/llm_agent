@@ -199,7 +199,7 @@ class Doris:
             md_tbl_schema = self.get_table_schema(self.data_source, tb_schema['name'])
             logger.info(f"md_tbl\n{md_tbl_schema}")
             sample_dt_sql = f"SELECT * FROM {tb_schema['name']} LIMIT 3"
-            cfg_db_uri = "sqlite:///config.db"
+            cfg_db_uri = "sqlite:///cfg.db"
             schema_desc_dt = DbUtl.sqlite_output(
                 cfg_db_uri,
                 f"select * from schema_info where entity = '{tb_schema['name']}'",

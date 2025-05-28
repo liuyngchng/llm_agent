@@ -10,7 +10,7 @@ import re
 
 from flask import (Flask, request, jsonify, render_template, Response,
                    send_from_directory, abort, make_response)
-from config_util import auth_user, get_user_role_by_uid
+from cfg_util import auth_user, get_user_role_by_uid
 from csm_service import CsmService
 from my_enums import ActorRole, AI_SERVICE_STATUS
 from agt_util import classify_msg
