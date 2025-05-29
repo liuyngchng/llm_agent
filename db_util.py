@@ -353,9 +353,9 @@ class DbUtl:
         if not origin_sql:
             raise RuntimeError("origin_sql_null_err")
         origin_sql = origin_sql.replace("\n", " ")
-        cleaned_sql = re.sub(r'\s+ORDER\s+BY\s+.*?(?=LIMIT|\bWHERE\b|$)', '', origin_sql, flags=re.I)
-        cleaned_sql = re.sub(r'\s+LIMIT\s+\d+(\s+OFFSET\s+\d+)?', '', cleaned_sql, flags=re.I)
-        count_sql = re.sub(r'^SELECT\s.*?\sFROM', 'SELECT COUNT(1) FROM', cleaned_sql, count=1, flags=re.I)
+        cleaned_sql = re.sub(r'\s+ORDER\s+BY\s+.*?(?=LIMIT|\bWHERE\b|$)', ' ', origin_sql, flags=re.I)
+        cleaned_sql = re.sub(r'\s+LIMIT\s+\d+.*?(?=\s|;|$)', ' ', cleaned_sql, flags=re.I)
+        count_sql = re.sub(r'^SELECT\s.*?\sFROM', 'SELECT COUNT(1) FROM ', cleaned_sql, count=1, flags=re.I)
         return count_sql
 
 
@@ -399,6 +399,7 @@ if __name__ == "__main__":
     # sql1 = "select a from b where c=d limit 30"
     # new_sql1 = DbUtl.get_page_sql(sql1, 5)
     # logger.info(f"page_sql1, {new_sql1}")
+
     sql2 = 'SELECT \n  OU_ID, \n  COMPANY_NAME, \n  OU_CODE, \n  CALC_DT, \n  METER_NUM, \n  METER_R_NUM, \n  EXCEPTION_NUM, \n  CUSTOMER_NUM, \n  CUSTOMER_NEW_NUM, \n  CALC_VOLUME, \n  CALC_AMOUNT, \n  PAY_AMOUNT, \n  METER_R_RATE, \n  ACC_TYPE_NAME, \n  METER_MNFT_NAME, \n  METER_MODEL_NAME, \n  COMMUNITY, \n  METER_NUM_SUM, \n  METER_MODEL_CODE, \n  COUNTY, \n  RG_METER_CATEGORY, \n  RATE_NAME \nFROM \n  dws_dw_ycb_day \nORDER BY \n  CALC_DT DESC\n LIMIT 10;'
     new_sql2 = DbUtl.get_page_sql(sql2, 5)
     logger.info(f"page_sql2, {new_sql2}")
