@@ -80,6 +80,7 @@ class SqlAgent(DbUtl):
         # 带数据库结构的提示模板
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         sql_gen_msg = f"""{cfg['prompts']['sql_gen_msg']}\n当前时间是 {current_time}"""
+        count_sql_gen_msg = cfg['prompts']['count_sql_gen_msg']
         intercept_q_msg = f"""{cfg['prompts']['intercept_q_msg']}\n当前时间是 {current_time}"""
         # try:
         #     sql_gen_msg = sql_gen_msg.replace("{sql_dialect}", cfg['db']['type'])
@@ -89,6 +90,11 @@ class SqlAgent(DbUtl):
         self.sql_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", f"{sql_gen_msg}, {prompt_padding}"),
             ("human", "用户问题：{msg}")
+        ])
+
+        self.count_sql_gen_prompt_template = ChatPromptTemplate.from_messages([
+            ("system", f"{count_sql_gen_msg}, {prompt_padding}"),
+            ("human", "查询数据的SQL：{msg}")
         ])
         chart_dt_gen_msg = f"""{cfg['prompts']['chart_dt_gen_msg']}"""
         # logger.debug(f"chart_dt_gen_msg {chart_dt_gen_msg}")
@@ -115,13 +121,23 @@ class SqlAgent(DbUtl):
             "chat_history": get_usr_msgs(uid)
         }
 
-    def generate_sql(self, uid: str, question: str) -> str:
+    def gen_sql_by_txt(self, uid: str, question: str) -> str:
         """
         generate sql
         """
         chain = self.sql_gen_prompt_template | self.llm
         gen_sql_dict = self.build_invoke_json(uid, question)
-        logger.info(f"gen_sql_dict: {gen_sql_dict}")
+        logger.info(f"gen_sql_by_txt: {gen_sql_dict}")
+        response = chain.invoke(gen_sql_dict)
+        return response.content
+
+    def gen_count_sql_by_sql(self, uid: str, sql: str) -> str:
+        """
+        generate count sql by data retrieval sql
+        """
+        chain = self.count_sql_gen_prompt_template | self.llm
+        gen_sql_dict = self.build_invoke_json(uid, sql)
+        logger.info(f"gen_count_sql_by_sql: {gen_sql_dict}")
         response = chain.invoke(gen_sql_dict)
         return response.content
 
@@ -253,7 +269,6 @@ class SqlAgent(DbUtl):
         :param q: the question (natural language) user submitted
         :param dt_fmt: A DataType enum
         """
-        sql =""
         adt = self.get_table_list()
         logger.info(f"agent_detected_tables:{adt} for_db_type {self.cfg['db']['type']}")
         if not adt or len(adt)> self.cfg['db']['max_table_num']:
@@ -272,7 +287,7 @@ class SqlAgent(DbUtl):
                 return nl_dt_dict
         try:
             logger.info(f"start_gen_sql_from_txt：{q}")
-            sql = self.generate_sql(uid, q)
+            sql = self.gen_sql_by_txt(uid, q)
             save_usr_msg(uid, q)
             # logger.debug(f"gen_sql\n{sql}")
             nl_dt_dict["sql"] = extract_md_content(sql, "sql")
@@ -284,7 +299,10 @@ class SqlAgent(DbUtl):
             return nl_dt_dict
         try:
             nl_dt_dict["raw_dt"] = self.get_dt_with_sql(nl_dt_dict["sql"], dt_fmt)
-            count_sql = DbUtl.gen_count_sql(nl_dt_dict["sql"])
+            # count_sql = DbUtl.gen_count_sql(nl_dt_dict["sql"])
+            count_sql_txt = self.gen_count_sql_by_sql(uid, nl_dt_dict["sql"])
+            count_sql = extract_md_content(count_sql_txt, "sql")
+            logger.info(f"gen_count_sql_by_sql, result {count_sql.replace('\n', ' ')}")
             count_dt = self.get_dt_with_sql(count_sql, DataType.JSON.value)
             total_count = json.loads(count_dt)[0].get("COUNT(1)")
             nl_dt_dict["total_count"] = total_count

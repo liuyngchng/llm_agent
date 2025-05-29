@@ -204,6 +204,7 @@ class CsmService:
         """
         sql_agent = SqlAgent(sys_cfg, True, f"{self.get_const_dict().get('str1')} {uid}")
         dt = sql_agent.get_dt_with_nl(
+            uid,
             msg,
             DataType.JSON.value,
         )

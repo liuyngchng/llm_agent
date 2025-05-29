@@ -224,12 +224,12 @@ def query_data(catch=None):
 
     logger.info(f"ask_question({msg}, my_cfg, html, True)")
     if uid and uid != 'foo':
-        logger.info(f"build_data_source_cfg_with_uid_{uid}")
-        dt_source_cfg = cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg)
-        logger.info(f"data_source_cfg_for_uid_{uid}, {dt_source_cfg.get('db', '')}")
+        logger.info(f"build_ds_cfg_with_uid_{uid}")
+        ds_cfg = cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg)
+        logger.info(f"ds_cfg_for_uid_{uid}, {ds_cfg.get('db', '')}")
     else:
-        dt_source_cfg = my_cfg
-    sql_agent = SqlAgent(dt_source_cfg)
+        ds_cfg = my_cfg
+    sql_agent = SqlAgent(ds_cfg)
     if not msg and usr_page_dt.get(uid, None) and page and page != '':
         usr_page_dt[uid]["cur_page"] += 1
         logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")

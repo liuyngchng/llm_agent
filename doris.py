@@ -71,9 +71,13 @@ class Doris:
         """
         build json body from DML SQL
         """
+        total = False
+        # if "SELECT COUNT(1)" in sql.upper():
+        #     total = True
         return {
             **self.gt_part_dt_json_template,
-            "script": sql
+            "script": sql,
+            "total": total
         }
 
     def build_ddl(self, sql: str) -> dict:
@@ -251,13 +255,25 @@ class Doris:
 
     def output_data(self, sql: str, data_format: str) -> str | LiteralString | None:
         try:
+            """
+            data 数据格式
+            [{"key1":"value11', "key2":"value12"}, {"key1":"value21', "key2":"value22"}]
+            """
             data = self.request_dt(self.build_dml(sql))
+
             if not data:
                 # return json.dumps({"columns": [], "data": []})
                 return "目前没有符合条件的数据，您可以换个问题或扩大查询范围再试试"
-            raw_columns = [key.upper() for key in data[0].keys()] if data else []
-            columns = self.get_col_name_from_sql(raw_columns, sql)
-            rows = [list(row.values()) for row in data]
+
+            if type(data) is int:
+                columns = ['COUNT(1)']
+                rows = [data]
+            else:
+                # raw_columns = ["key1", "key2"]
+                raw_columns = [key.upper() for key in data[0].keys()] if data and type(data) is list else []
+                # columns = ["key1_comment", "key2_comment"]
+                columns = self.get_col_name_from_sql(raw_columns, sql)
+                rows = [list(row.values()) for row in data]
             df = pd.DataFrame(rows, columns=columns)
             dt_fmt = data_format.lower()
             if DataType.HTML.value in dt_fmt:
@@ -275,6 +291,8 @@ class Doris:
             return json.dumps({"error": str(e)})
 
     def get_col_name_from_sql(self, raw_columns: list, sql):
+        if not raw_columns:
+            return raw_columns
         table_match = re.search(r'(?i)FROM\s+([\w.]+)', sql)
         table_name = table_match.group(1) if table_match else None
         if not table_name:
