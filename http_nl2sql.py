@@ -211,7 +211,7 @@ def query_data(catch=None):
         # .replace("截至", "").replace("截止", "")
     uid = request.form.get('uid').strip()
     page = request.form.get('page')
-    logger.info(f"rcv_msg: {msg}, uid {uid}, page {page}")
+    logger.info(f"rcv_msg, {msg}, uid {uid}, page {page}")
     auth_result = authenticate(request)
     if not auth_result:
         data = {"chart":{}, "raw_dt":{}, "msg":"illegal access"}
@@ -222,7 +222,7 @@ def query_data(catch=None):
             status=200
         )
 
-    logger.info(f"ask_question({msg}, my_cfg, html, True)")
+
     if uid and uid != 'foo':
         logger.info(f"build_ds_cfg_with_uid_{uid}")
         ds_cfg = cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg)
@@ -235,6 +235,7 @@ def query_data(catch=None):
         logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")
         answer = sql_agent.get_pg_dt(uid, usr_page_dt[uid])
     else:
+        logger.info(f"get_dt_with_nl({uid}, {msg}, {DataType.MARKDOWN.value})")
         answer = sql_agent.get_dt_with_nl(uid, msg, DataType.MARKDOWN.value)
         usr_page_dt[uid] = answer.copy()
         usr_page_dt[uid].pop("chart", None)

@@ -110,7 +110,7 @@ class DbUtl:
     def sqlite_query_tool(db_con, query: str) -> dict:
         try:
             cursor = db_con.cursor()
-            logger.debug(f"execute_query {query}")
+            logger.debug(f"execute_query, {query}")
             cursor.execute(query)
             columns = [desc[0] for desc in cursor.description] if cursor.description else []
             data = cursor.fetchall()
@@ -171,7 +171,7 @@ class DbUtl:
             info = f"error data format {data_format}"
             logger.error(info)
             raise info
-        logger.info(f"output_data_dt:\n{dt}\n")
+        logger.info(f"output_data_dt:{dt.replace('\n', ' ')}")
         return dt
 
     @staticmethod

@@ -193,9 +193,19 @@ button:disabled {
     animation: dotFlashing 1.5s infinite step-start;
 }
 
-.pagination {
-    margin: 12px 0;
+.page-info {
+    display: flex;
+    width: 100%;
     text-align: right;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee;  /* 可选分隔线 */
+}
+
+.pagination {
+    width: 100%;      /* 占据整行宽度 */
+    clear: both;      /* 清除浮动 */
+    margin: 20px 0 10px;  /* 增加上下边距 */
+    page-break-inside: avoid;
 }
 .pagination a {
     display: inline-block;

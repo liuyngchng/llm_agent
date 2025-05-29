@@ -270,7 +270,7 @@ class SqlAgent(DbUtl):
         :param dt_fmt: A DataType enum
         """
         adt = self.get_table_list()
-        logger.info(f"agent_detected_tables:{adt} for_db_type {self.cfg['db']['type']}")
+        logger.info(f"agent_detected_tables, {adt}, db_type, {self.cfg['db']['type']}")
         if not adt or len(adt)> self.cfg['db']['max_table_num']:
             info = (f"please_check_your_data_source_user_privilege_or_db_schema, "
                 f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
@@ -278,7 +278,7 @@ class SqlAgent(DbUtl):
             raise Exception(info)
         nl_dt_dict = {"chart": {}, "raw_dt": {}, "sql": "", "total_count": 0, "cur_page": 1, "total_page":2}
         if self.cfg['db']['strict_search']:
-            logger.info(f"check_user_question_with_llm_in_strict_search：{q}")
+            logger.info(f"check_user_question_with_llm_in_strict_search, {q}")
             intercept = self.intercept_usr_question(uid, q)
             if "查询条件清晰" not in intercept:
                 nl_dt_dict["raw_dt"] = intercept
@@ -311,7 +311,7 @@ class SqlAgent(DbUtl):
             logger.error(f"get_dt_with_sql_err, {e}, sql: {sql}", exc_info=True)
             nl_dt_dict["raw_dt"] = "使用SQL从数据源查询数据时发生异常"
             return nl_dt_dict
-        logger.info(f"nl_dt:\n {nl_dt_dict}\n")
+        logger.info(f"nl_dt:{nl_dt_dict}")
         return self.build_chart_dt(uid, nl_dt_dict)
 
     def get_pg_dt(self, uid: str, usr_page_dt: dict, page_size=PAGE_SIZE) -> dict:
@@ -376,11 +376,11 @@ class SqlAgent(DbUtl):
         chart_dt = {}
         try:
             nl_dt = self.get_chart_dt(nl_dt_dict["raw_dt"])
-            logger.debug(f"nl_dt_from_agent\n{nl_dt}\n")
+            logger.debug(f"nl_dt_from_agent, {nl_dt.replace('\n', ' ')}")
             nl_dt = rmv_think_block(nl_dt)
-            logger.debug(f"nl_dt_without_think\n{nl_dt}\n")
+            logger.debug(f"nl_dt_without_think, {nl_dt.replace('\n', ' ')}")
             nl_dt = extract_json(nl_dt)
-            logger.debug(f"nl_dt_only_json_str\n{nl_dt}\n")
+            logger.debug(f"nl_dt_only_json_str, {nl_dt.replace('\n', ' ')}")
             chart_dt = json.loads(nl_dt)
         except Exception as e:
             logger.exception("err_to_add_description_to_data", nl_dt_dict["raw_dt"])
@@ -388,7 +388,7 @@ class SqlAgent(DbUtl):
             nl_dt_dict['chart'] = chart_dt['chart']
         else:
             logger.error(f"chart_dt['chart'] is null, chart_dt {chart_dt}")
-        logger.info(f"nl_chart_dt_with_raw_dt:\n{nl_dt_dict}\n")
+        logger.info(f"nl_chart_dt_with_raw_dt, {nl_dt_dict}")
         return nl_dt_dict
 
 

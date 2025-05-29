@@ -54,7 +54,7 @@ def get_user_name_by_uid(uid:str)-> str | None:
             check_info = DbUtl.sqlite_query_tool(my_conn, sql)
             user_dt = check_info['data']
             user = user_dt[0][0]
-            logger.info(f"get_user {user} with uid {uid}")
+            logger.info(f"get_user_with_uid, {user}, {uid}")
         except Exception as e:
             logger.info(f"no_user_info_found_for_uid, {uid}")
     return user
@@ -78,7 +78,7 @@ def get_ds_cfg_by_uid(uid:str, cfg: dict) -> dict:
         check_sql = (f"select uid, db_type, db_name, db_host, db_port,"
                      f" db_usr, db_psw, tables, add_chart from db_config where uid='{uid}' limit 1")
         db_config_info = DbUtl.sqlite_query_tool(my_conn, check_sql)
-        logger.debug(f"check_sql {check_sql}")
+        logger.debug(f"check_sql, {check_sql}")
         check_info = db_config_info['data']
         if not check_info:
             logger.info(f"no_db_config_for_uid {uid}")
@@ -99,7 +99,7 @@ def get_ds_cfg_by_uid(uid:str, cfg: dict) -> dict:
         except Exception as e:
             logger.exception("exception_occurred_get_data_source_config_by_uid")
             logger.info(f"no_db_config_for_uid {uid}")
-    logger.info(f"db_config_info_for_uid_{uid}: {config}")
+    logger.info(f"db_config_info_for_uid, {uid}, {config}")
     return config
 
 def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
@@ -208,9 +208,9 @@ def decrypt(dt: str, key: str) -> str:
     cipher = AES.new(key.encode(), AES.MODE_ECB)
     encrypted_data = base64.b64decode(dt)
     decrypted = cipher.decrypt(encrypted_data)
-    dt_rt = unpad(decrypted, AES.block_size).decode()
-    logger.info(f"return {dt_rt} for cypher_txt {dt}")
-    return dt_rt
+    pln_txt = unpad(decrypted, AES.block_size).decode()
+    logger.info(f"get_pln_txt_for_cypher_txt, {pln_txt}, {dt}")
+    return pln_txt
 
 def get_const(key:str)->str | None:
     value = None

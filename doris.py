@@ -97,7 +97,7 @@ class Doris:
         body_md5 = hashlib.md5(json.dumps(body).encode()).hexdigest()
         if body_md5 in cache_dict:
             exec_json = cache_dict.get(body_md5)
-            logger.info(f"return_from_cache_for {body}, cache_dt={exec_json}")
+            logger.info(f"return_from_cache_for, {body}, cache_dt={exec_json}")
         else:
             logger.info(f"curl -X POST --noproxy '*' -s -w'\\n' '{self.url}' -H 'Content-Type:application/json' -H 'token:{self.token}' -d '{json.dumps(body, ensure_ascii=False).replace("'", "'\\''")}'")
             response = requests.post(
@@ -106,7 +106,7 @@ class Doris:
                 timeout=(DB_CONN_TIMEOUT, DB_RW_TIMEOUT)             #（连接5秒，读取10秒）
             )
             exec_json = response.json()
-            logger.info(f"http_request_return, {exec_json}")
+            logger.info(f"http_req_return, {exec_json}")
             cache_dict[body_md5] = exec_json
 
         if exec_json['code'] == 200:
@@ -121,7 +121,7 @@ class Doris:
         """
         logger.info("start_doris_output_dt")
         dt = self.output_data(sql, data_format)
-        logger.info(f"doris_output_dt,\n{dt}")
+        logger.info(f"doris_output_dt, {dt.replace('\n', ' ')}")
         return dt
 
 
@@ -136,7 +136,7 @@ class Doris:
         [{'COLUMN_NAME': 'a', 'COLUMN_COMMENT': 'comment_a'}, {'COLUMN_NAME': 'b', 'COLUMN_COMMENT': 'comment_b'}]
         """
         sql = f"SHOW CREATE TABLE {schema_name}.{table_name}"
-        logger.info(f"get_col_comment_sql {sql}")
+        logger.info(f"get_col_comment_sql, {sql}")
         exe_result = self.request_dt(self.build_dml(sql))
         return exe_result[0].get('Create Table').split('ENGINE')[0]
 
@@ -146,7 +146,7 @@ class Doris:
         else:
             get_table_list_sql = "show tables"
             my_json = self.request_dt(self.build_ddl(get_table_list_sql))
-            logger.info(f"response {my_json}")
+            logger.info(f"response, {my_json}")
             table_list = [item[f"Tables_in_{self.data_source}"] for item in my_json]
         return table_list
 
@@ -157,7 +157,7 @@ class Doris:
         schema_table = []
         for table in self.get_table_list():
             get_schema_sql = f"show create table {self.data_source}.{table}"
-            logger.info(f"get_schema_sql {get_schema_sql}")
+            logger.info(f"get_schema_sql, {get_schema_sql}")
             my_json = self.request_dt(self.build_dml(get_schema_sql))
             table_schema_json = {"name": table, "schema": my_json[0].get('Create Table').split('ENGINE')[0]}
             schema_table.append(table_schema_json)
@@ -212,7 +212,7 @@ class Doris:
         for tb_schema in tb_schema_list:
             # md_tbl_schema = self.parse_ddl_to_md_table(tb_schema['schema'])
             md_tbl_schema = self.get_table_schema(self.data_source, tb_schema['name'])
-            logger.info(f"md_tbl\n{md_tbl_schema}")
+            logger.info(f"md_tbl{md_tbl_schema.replace('\n', ' ')}")
             sample_dt_sql = f"SELECT * FROM {tb_schema['name']} LIMIT 3"
             cfg_db_uri = "sqlite:///cfg.db"
             schema_desc_dt = DbUtl.sqlite_output(
@@ -234,10 +234,13 @@ class Doris:
 
     def count_dt(self, count_sql: str):
         count_body = self.build_dml(count_sql)
-        response = requests.post(self.url, json=count_body,
-             headers=self.headers, proxies={'http': None, 'https': None})
+        response = requests.post(
+            self.url, json=count_body,
+            headers=self.headers, proxies={'http': None, 'https': None},
+            timeout= DB_RW_TIMEOUT
+        )
         my_json = response.json()['data'][0]['count(1)']
-        logger.info(f"response {my_json}")
+        logger.info(f"count_dt_response, {my_json}")
         return my_json
 
     @staticmethod
@@ -254,7 +257,7 @@ class Doris:
         cfg.pop('password')
         cfg.pop('name')
         cfg.pop('user')
-        logger.info(f"build_doris_cfg {cfg}")
+        logger.info(f"build_doris_cfg, {cfg}")
         return cfg
 
     def output_data(self, sql: str, data_format: str) -> str | LiteralString | None:
@@ -366,14 +369,14 @@ class Doris:
         my_comment_map = {}
         for table in self.table_list:
             cmt_list = self.get_table_col_comment(self.data_source, table)
-            logger.info(f"get_comment_list {cmt_list}")
+            logger.info(f"get_comment_list, {cmt_list}")
             for item in cmt_list:
                 col_name = item['COLUMN_NAME'].upper()
                 raw_comment = item['COLUMN_COMMENT'].strip()
                 processed = ''.join(filter(lambda c: c.isalnum(), raw_comment))
                 processed = processed[:10] if processed else col_name
                 my_comment_map.setdefault(self.data_source.upper(), {}).setdefault(table.upper(), {})[col_name] = processed
-        logger.info(f"my_comment_map {my_comment_map}")
+        logger.info(f"my_comment_map, {my_comment_map}")
         return my_comment_map
 
 
