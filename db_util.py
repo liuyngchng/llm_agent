@@ -159,11 +159,7 @@ class DbUtl:
         if DataType.HTML.value in dt_fmt:
             dt = DbUtl.get_pretty_html(df)
         elif DataType.MARKDOWN.value in dt_fmt:
-            if df.empty:
-                dt = ''
-            else:
-                dt = df.map(lambda x: f"{x:.0f}" if isinstance(x, Decimal) else x,
-                    na_action='ignore').to_markdown(index=False)
+            dt = DbUtl.get_md_dt_from_data_frame(df)
 
         elif DataType.JSON.value in dt_fmt:
             dt = df.to_json(force_ascii=False, orient='records')
@@ -172,6 +168,15 @@ class DbUtl:
             logger.error(info)
             raise info
         logger.info(f"output_data_dt:{dt.replace('\n', ' ')}")
+        return dt
+
+    @staticmethod
+    def get_md_dt_from_data_frame(df):
+        if df.empty:
+            dt = ''
+        else:
+            dt = df.map(lambda x: f"{x:.0f}" if isinstance(x, (Decimal, float)) else x,
+                        na_action='ignore').to_markdown(index=False)
         return dt
 
     @staticmethod

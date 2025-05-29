@@ -286,12 +286,12 @@ class Doris:
             if DataType.HTML.value in dt_fmt:
                 dt = df.to_html(index=False, border=0).replace(...)
             elif DataType.MARKDOWN.value in dt_fmt:
-                dt = df.map(lambda x: f"{x:.0f}" if isinstance(x, Decimal) else x,
-                    na_action='ignore').to_markdown(index=False) if not df.empty else ''
+                dt = DbUtl.get_md_dt_from_data_frame(df)
             elif DataType.JSON.value in dt_fmt:
                 dt = df.to_json(force_ascii=False, orient='records')
             else:
                 raise ValueError(f"unsupported_format: {data_format}")
+            logger.info(f"output_dt_doris, {dt}")
             return dt
         except Exception as e:
             logger.error(f"doris_output_error: {str(e)}")
