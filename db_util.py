@@ -342,9 +342,10 @@ class DbUtl:
         offset = (page_no - 1) * page_size
         # 替换或添加 LIMIT + OFFSET
         sql1 = re.sub(r'LIMIT\s+\d+(?:\s+OFFSET\s+\d+)?',
-                      f'LIMIT {page_size} OFFSET {offset}',
-                      origin_sql, flags=re.I, count=1)
-        return re.sub(r' +', ' ',sql1)
+            f'LIMIT {page_size} OFFSET {offset}',
+            origin_sql, flags=re.I, count=1
+        )
+        return re.sub(r' +', ' ', sql1)
 
     @staticmethod
     def gen_count_sql(origin_sql: str) -> str:
@@ -357,7 +358,7 @@ class DbUtl:
         cleaned_sql = re.sub(r'\s+ORDER\s+BY\s+.*?(?=LIMIT|\bWHERE\b|$)', ' ', origin_sql, flags=re.I)
         cleaned_sql = re.sub(r'\s+LIMIT\s+\d+.*?(?=\s|;|$)', ' ', cleaned_sql, flags=re.I)
         count_sql = re.sub(r'^SELECT\s.*?\sFROM', 'SELECT COUNT(1) FROM ', cleaned_sql, count=1, flags=re.I)
-        return count_sql
+        return re.sub(r' +', ' ', count_sql)
 
 
 def test_db():

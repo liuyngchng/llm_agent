@@ -36,7 +36,7 @@ MAX_MSG_COUNT = 20
 # limit msg_history size to MAX_MSG_COUNT
 usr_msg_list = {}
 
-PAGE_SIZE = 10
+PAGE_SIZE = 20
 
 def get_usr_msgs(uid: str):
     """

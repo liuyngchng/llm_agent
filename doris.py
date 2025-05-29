@@ -18,7 +18,7 @@ from db_util import DbUtl
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-
+PAGE_SIZE = 20
 cache_dict = {}
 
 class Doris:
@@ -39,7 +39,7 @@ class Doris:
         }
         self.gt_part_dt_json_template = {
             "currentPage": 1,
-            "pageSize": 20,
+            "pageSize": PAGE_SIZE,
             "name": self.data_source,
             "total": False,
             "script": "",
@@ -95,9 +95,7 @@ class Doris:
             exec_json = cache_dict.get(body_md5)
             logger.info(f"return_from_cache_for {body}, cache_dt={exec_json}")
         else:
-            logger.info(f"\ncurl -X POST --noproxy '*' -s -w'\n' '{self.url}' \\\n"
-                f"-H 'Content-Type:application/json' \\\n"
-                f"-H 'token:{self.token}' \\\n-d '{json.dumps(body).replace("'", "'\\''")}'\n")
+            logger.info(f"curl -X POST --noproxy '*' -s -w'\\n' '{self.url}' -H 'Content-Type:application/json' -H 'token:{self.token}' -d '{json.dumps(body, ensure_ascii=False).replace("'", "'\\''")}'")
             response = requests.post(self.url, json=body, headers=self.headers, proxies={'http': None, 'https': None})
             exec_json = response.json()
             logger.info(f"http_request_return, {exec_json}")
@@ -223,7 +221,7 @@ class Doris:
                 "-----------------"
             ])
         schema_info = "\n".join(schema_entries)
-        logger.debug(f"schema_info:\n{schema_info}")
+        # logger.debug(f"schema_info:\n{schema_info}")
         return schema_info
 
     def count_dt(self, count_sql: str):
