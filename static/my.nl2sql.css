@@ -265,7 +265,7 @@ button:disabled {
 .raw-data {
     background: #f5f5f5;
     padding: 10px;
-    max-height: 300px;
+    max-height: 80vh;
     overflow: auto;
 }
 .status-indicator {
