@@ -212,6 +212,12 @@ button:disabled {
     box-shadow: 0 2px 8px rgba(69,183,209,0.3);
 }
 
+.page-info {
+    margin-right: 15px;
+    color: #666;
+    font-size: 0.9em;
+}
+
 @keyframes dotFlashing {
     0% { content: ". "; }
     25% { content: ".."; }

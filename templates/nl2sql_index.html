@@ -76,7 +76,7 @@
             // 清空输入框
             queryInput.value = '';            
             // 发送API请求
-            // 返回的 data 数据格式如下 {"chart":{}, "raw_dt":"markdown格式数据表格", "unit":"数据物理量的量纲", "sql":"my_sql", "cur_page":1, "total_page":2}
+            // 返回的 data 数据格式 {"chart": {}, "raw_dt": "markdown格式数据表格", "unit": "数据物理量的量纲", "sql": "my_sql", "cur_page": 1, "total_page": 2, "total_count": 0}
             fetchQueryData(query).then(data => {
                     document.getElementById('cur_page').value = data.cur_page;
                     document.getElementById('total_page').value = data.total_page;
@@ -97,8 +97,8 @@
                         if (data.total_page > 1) {
                             const pagination = document.createElement('div');
                             pagination.className = 'pagination';
-                            if(data.cur_page < data.total_page) {
-                                pagination.innerHTML = `<a href="#" onclick="loadNextPage(event)">下一页</a>`;
+                            if (data.cur_page < data.total_page) {
+                                pagination.innerHTML = `<span class="page-info">当前页:${data.cur_page}, 总页数:${data.total_page}</span>${data.cur_page < data.total_page ? `<a href="#" onclick="loadNextPage(event)">下一页</a>` : ''}`;
                             }
                             container.appendChild(pagination);
                         }
@@ -296,8 +296,8 @@
             if (data.total_page > 1) {
                 const pagination = document.createElement('div');
                 pagination.className = 'pagination';
-                if(data.cur_page < data.total_page) {
-                    pagination.innerHTML = `<a href="#" onclick="loadNextPage(event)">下一页</a>`;
+                if (data.cur_page < data.total_page) {
+                    pagination.innerHTML = `<span class="page-info">当前页:${data.cur_page}, 总页数:${data.total_page}</span>${data.cur_page < data.total_page ? `<a href="#" onclick="loadNextPage(event)">下一页</a>` : ''}`;
                 }
                 container.parentNode.insertBefore(pagination, container.nextSibling);
             }

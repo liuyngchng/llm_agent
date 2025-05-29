@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import json
 import re
+import hashlib
 from decimal import Decimal
 from typing import LiteralString
 
@@ -18,7 +19,7 @@ from db_util import DbUtl
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-
+cache_dict = {}
 
 class Doris:
     """
@@ -88,12 +89,20 @@ class Doris:
         """
         exec sql in doris
         """
-        logger.info(f"\ncurl -X POST --noproxy '*' -s -w'\n' '{self.url}' \\\n"
-                    f"-H 'Content-Type:application/json' \\\n"
-                    f"-H 'token:{self.token}' \\\n-d '{json.dumps(body).replace("'", "'\\''")}'\n")
-        response = requests.post(self.url, json=body, headers=self.headers, proxies={'http': None, 'https': None})
-        exec_json = response.json()
-        logger.info(f"http_request_return, {exec_json}")
+
+        body_md5 = hashlib.md5(json.dumps(body).encode()).hexdigest()
+        if body_md5 in cache_dict:
+            exec_json = cache_dict.get(body_md5)
+            logger.info(f"return_from_cache_for {body}, cache_dt={exec_json}")
+        else:
+            logger.info(f"\ncurl -X POST --noproxy '*' -s -w'\n' '{self.url}' \\\n"
+                f"-H 'Content-Type:application/json' \\\n"
+                f"-H 'token:{self.token}' \\\n-d '{json.dumps(body).replace("'", "'\\''")}'\n")
+            response = requests.post(self.url, json=body, headers=self.headers, proxies={'http': None, 'https': None})
+            exec_json = response.json()
+            logger.info(f"http_request_return, {exec_json}")
+            cache_dict[body_md5] = exec_json
+
         if exec_json['code'] == 200:
             return exec_json['data']
         else:

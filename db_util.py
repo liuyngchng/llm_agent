@@ -341,9 +341,10 @@ class DbUtl:
         origin_sql = origin_sql.replace("\n", " ")
         offset = (page_no - 1) * page_size
         # 替换或添加 LIMIT + OFFSET
-        return re.sub(r'LIMIT\s+\d+(?:\s+OFFSET\s+\d+)?',
+        sql1 = re.sub(r'LIMIT\s+\d+(?:\s+OFFSET\s+\d+)?',
                       f'LIMIT {page_size} OFFSET {offset}',
                       origin_sql, flags=re.I, count=1)
+        return re.sub(r' +', ' ',sql1)
 
     @staticmethod
     def gen_count_sql(origin_sql: str) -> str:

@@ -230,20 +230,18 @@ def query_data(catch=None):
     else:
         dt_source_cfg = my_cfg
     sql_agent = SqlAgent(dt_source_cfg)
-    if usr_page_dt.get(uid, None) and page and page != '':
+    if not msg and usr_page_dt.get(uid, None) and page and page != '':
         usr_page_dt[uid]["cur_page"] += 1
         logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")
-        pg_dt = sql_agent.get_pg_dt(uid, usr_page_dt[uid])
-        return json.dumps(pg_dt, ensure_ascii=False)
-    answer = sql_agent.get_dt_with_nl(uid, msg, DataType.MARKDOWN.value)
-    usr_page_dt[uid] = answer.copy()
-    usr_page_dt[uid].pop("chart", None)
-    usr_page_dt[uid].pop("raw_dt", None)
-    logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")
-
-    # logger.debug(f"answer is：{answer}")
-    if not answer:
-        answer="没有查询到相关数据，请您尝试换个问题试试"
+        answer = sql_agent.get_pg_dt(uid, usr_page_dt[uid])
+    else:
+        answer = sql_agent.get_dt_with_nl(uid, msg, DataType.MARKDOWN.value)
+        usr_page_dt[uid] = answer.copy()
+        usr_page_dt[uid].pop("chart", None)
+        usr_page_dt[uid].pop("raw_dt", None)
+        logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")
+        if not answer:
+            answer="没有查询到相关数据，请您尝试换个问题试试"
     return json.dumps(answer, ensure_ascii=False)
 
 

@@ -85,13 +85,13 @@ class SqlAgent(DbUtl):
         #     sql_gen_msg = sql_gen_msg.replace("{sql_dialect}", cfg['db']['type'])
         # except Exception as e:
         #     logger.error("set_sql_dialect_err", e)
-        logger.debug(f"sql_gen_msg {sql_gen_msg}")
+        # logger.debug(f"sql_gen_msg {sql_gen_msg}")
         self.sql_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", f"{sql_gen_msg}, {prompt_padding}"),
             ("human", "用户问题：{msg}")
         ])
         chart_dt_gen_msg = f"""{cfg['prompts']['chart_dt_gen_msg']}"""
-        logger.debug(f"chart_dt_gen_msg {chart_dt_gen_msg}")
+        # logger.debug(f"chart_dt_gen_msg {chart_dt_gen_msg}")
         self.chart_dt_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", chart_dt_gen_msg),
             ("human", "用户问题：{msg}")
@@ -197,7 +197,7 @@ class SqlAgent(DbUtl):
     def get_schema_info(self) -> str:
         if DBType.DORIS.value == self.db_type:
             doris_schema = self.doris_dt_source.get_schema_for_llm()
-            logger.info(f"doris_schema\n {doris_schema}")
+            # logger.info(f"doris_schema\n {doris_schema}")
             return doris_schema
         schema_entries = []
         for table in self.get_table_list():
@@ -225,7 +225,7 @@ class SqlAgent(DbUtl):
                 "-----------------"
             ])
         schema_info = "\n".join(schema_entries)
-        logger.debug(f"schema_info:\n{schema_info}")
+        # logger.debug(f"schema_info:\n{schema_info}")
         return schema_info
 
     def get_llm(self):
@@ -274,9 +274,9 @@ class SqlAgent(DbUtl):
             logger.info(f"start_gen_sql_from_txt：{q}")
             sql = self.generate_sql(uid, q)
             save_usr_msg(uid, q)
-            logger.debug(f"gen_sql\n{sql}")
+            # logger.debug(f"gen_sql\n{sql}")
             nl_dt_dict["sql"] = extract_md_content(sql, "sql")
-            logger.info(f"gen_sql_from_txt {q}\n----------\n{sql}\n----------\n")
+            logger.info(f"gen_sql_from_txt {q}, {nl_dt_dict.get('sql', '').replace('\n', ' ')}")
         except Exception as e:
             logger.error(f"gen_sql_err, {e}, txt: {q}", exc_info=True)
             nl_dt_dict["raw_dt"] = "用户问题转换为数据查询条件时发生异常"
@@ -297,7 +297,7 @@ class SqlAgent(DbUtl):
         return self.build_chart_dt(uid, nl_dt_dict)
 
     def get_pg_dt(self, uid: str, usr_page_dt: dict, page_size=PAGE_SIZE) -> dict:
-        logger.info(f"last_sql_for_{uid}: {usr_page_dt['sql']}")
+        logger.info(f"last_sql_for_{uid}: {usr_page_dt.get('sql', '').replace('\n', '')}")
         page_sql = DbUtl.get_page_sql(usr_page_dt['sql'], usr_page_dt['cur_page'], page_size)
         logger.info(f"next_sql: {page_sql}")
         dt = self.get_dt_with_sql(page_sql)
