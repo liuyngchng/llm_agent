@@ -173,11 +173,9 @@ class DbUtl:
     @staticmethod
     def get_md_dt_from_data_frame(df):
         if df.empty:
-            dt = ''
-        else:
-            dt = df.map(lambda x: f"{x:.0f}" if isinstance(x, (Decimal, float)) else x,
-                        na_action='ignore').to_markdown(index=False)
-        return dt
+            return ''
+        return df.map(lambda x: f"{x:.0f}" if isinstance(x, (Decimal, float)) else x,
+            na_action='ignore').to_markdown(index=False)
 
     @staticmethod
     def get_pretty_html(df):
