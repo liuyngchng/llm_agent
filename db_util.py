@@ -336,17 +336,23 @@ class DbUtl:
         """
         : param sql: format as : select a, b, c from c.d where e.f limit g
         """
+        if not origin_sql:
+            raise RuntimeError("origin_sql_null_err")
+        origin_sql = origin_sql.replace("\n", " ")
         offset = (page_no - 1) * page_size
         # 替换或添加 LIMIT + OFFSET
         return re.sub(r'LIMIT\s+\d+(?:\s+OFFSET\s+\d+)?',
                       f'LIMIT {page_size} OFFSET {offset}',
                       origin_sql, flags=re.I, count=1)
 
-
-
-
     @staticmethod
     def gen_count_sql(origin_sql: str) -> str:
+        """
+        :param origin_sql: select a, b from c where a='foo' and b ='bar' limit xxx
+        """
+        if not origin_sql:
+            raise RuntimeError("origin_sql_null_err")
+        origin_sql = origin_sql.replace("\n", " ")
         cleaned_sql = re.sub(r'\s+ORDER\s+BY\s+.*?(?=LIMIT|\bWHERE\b|$)', '', origin_sql, flags=re.I)
         cleaned_sql = re.sub(r'\s+LIMIT\s+\d+(\s+OFFSET\s+\d+)?', '', cleaned_sql, flags=re.I)
         count_sql = re.sub(r'^SELECT\s.*?\sFROM', 'SELECT COUNT(1) FROM', cleaned_sql, count=1, flags=re.I)
@@ -390,6 +396,11 @@ def test_sqlite():
 
 if __name__ == "__main__":
     # test_db()
-    sql = "select a from b where c=d limit 30"
-    new_sql = DbUtl.get_page_sql(sql, 5)
-    logger.info(f"new_sql, {new_sql}")
+    # sql1 = "select a from b where c=d limit 30"
+    # new_sql1 = DbUtl.get_page_sql(sql1, 5)
+    # logger.info(f"page_sql1, {new_sql1}")
+    sql2 = 'SELECT \n  OU_ID, \n  COMPANY_NAME, \n  OU_CODE, \n  CALC_DT, \n  METER_NUM, \n  METER_R_NUM, \n  EXCEPTION_NUM, \n  CUSTOMER_NUM, \n  CUSTOMER_NEW_NUM, \n  CALC_VOLUME, \n  CALC_AMOUNT, \n  PAY_AMOUNT, \n  METER_R_RATE, \n  ACC_TYPE_NAME, \n  METER_MNFT_NAME, \n  METER_MODEL_NAME, \n  COMMUNITY, \n  METER_NUM_SUM, \n  METER_MODEL_CODE, \n  COUNTY, \n  RG_METER_CATEGORY, \n  RATE_NAME \nFROM \n  dws_dw_ycb_day \nORDER BY \n  CALC_DT DESC\n LIMIT 10;'
+    new_sql2 = DbUtl.get_page_sql(sql2, 5)
+    logger.info(f"page_sql2, {new_sql2}")
+    count_sql2 = DbUtl.gen_count_sql(sql2)
+    logger.info(f"count_sql2, {count_sql2}")

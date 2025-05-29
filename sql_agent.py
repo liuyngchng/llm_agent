@@ -284,10 +284,8 @@ class SqlAgent(DbUtl):
             return nl_dt_dict
         try:
             nl_dt_dict["raw_dt"] = self.get_dt_with_sql(nl_dt_dict["sql"], dt_fmt)
-            count_dt = self.get_dt_with_sql(
-                DbUtl.gen_count_sql(nl_dt_dict["sql"]),
-                DataType.JSON.value
-            )
+            count_sql = DbUtl.gen_count_sql(nl_dt_dict["sql"])
+            count_dt = self.get_dt_with_sql(count_sql, DataType.JSON.value)
             total_count = json.loads(count_dt)[0].get("COUNT(1)")
             nl_dt_dict["total_count"] = total_count
             nl_dt_dict["total_page"] = math.ceil(total_count / PAGE_SIZE)
