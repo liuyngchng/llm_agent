@@ -62,7 +62,7 @@ class SqlAgent(DbUtl):
     # db_uri = "mysql+pymysql://db_user:db_password@db_host/db_name"
     """
 
-    def __init__(self, cfg:dict , is_remote_model:bool, prompt_padding=""):
+    def __init__(self, cfg:dict , is_remote_model=True, prompt_padding=""):
         self.cfg = cfg
         self.db_type = cfg['db']['type'].lower()
         if DBType.DORIS.value == self.db_type:
@@ -187,7 +187,7 @@ class SqlAgent(DbUtl):
         return table_list
 
     def get_table_list(self)-> list:
-        if self.cfg['db']['tables']:
+        if self.cfg['db'].get('tables'):
             table_list = self.cfg['db']['tables'].split(',')
             logger.info(f"cfg_db_tables {table_list}")
         else:

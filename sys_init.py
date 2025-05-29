@@ -8,7 +8,7 @@ import logging.config
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-def init_yml_cfg(cfg_file="config.yml")-> dict[str, any]:
+def init_yml_cfg(cfg_file="cfg.yml")-> dict[str, any]:
     """
     yaml config.yml, you can copy config.yml.template and rewrite to your own config.yml
     """

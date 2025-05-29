@@ -61,17 +61,15 @@ def config_index():
     except Exception as e:
         logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
         raise jsonify("err_in_config_index")
-
     ctx = cfg_utl.get_ds_cfg_by_uid(uid, my_cfg)
     ctx["uid"] = uid
-    ctx['sys_name']=my_cfg['sys']['name']
-    ctx["waring_info"]=""
-
-    sql_agent = SqlAgent(
-        cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg),
-        True
-    )
-    ctx["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
+    ctx['sys_name'] = my_cfg['sys']['name']
+    ctx["waring_info"] = ""
+    try:
+        sql_agent = SqlAgent(cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg))
+        ctx["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
+    except Exception as e:
+        logger.error("error_to_get_schema", e)
     dt_idx = "config_index.html"
     logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
@@ -114,10 +112,7 @@ def save_config():
         data_source_cfg['waring_info'] = '保存成功'
     else:
         data_source_cfg['waring_info'] = '保存失败'
-    sql_agent = SqlAgent(
-        cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg),
-        True
-    )
+    sql_agent = SqlAgent(cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg))
     data_source_cfg["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
     return render_template(dt_idx, **data_source_cfg)
 
@@ -234,7 +229,7 @@ def query_data(catch=None):
         logger.info(f"data_source_cfg_for_uid_{uid}, {dt_source_cfg.get('db', '')}")
     else:
         dt_source_cfg = my_cfg
-    sql_agent = SqlAgent(dt_source_cfg, True, "")
+    sql_agent = SqlAgent(dt_source_cfg)
     if usr_page_dt.get(uid, None) and page and page != '':
         usr_page_dt[uid]["cur_page"] += 1
         logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")
@@ -281,7 +276,7 @@ def get_db_dt():
     uid = request.get_json().get('uid').strip()
     logger.info(f"rcv_msg: {msg}, uid {uid}")
     logger.info(f"ask_question({msg}, {my_cfg}, 'json')")
-    sql_agent = SqlAgent(my_cfg, True, "")
+    sql_agent = SqlAgent(my_cfg)
     answer = sql_agent.get_dt_with_nl(uid, msg, DataType.JSON.value)
     # logger.debug(f"answer is：{answer}")
     if not answer:
@@ -333,7 +328,7 @@ def test_query_data():
     """
     msg = "查询2025年的数据"
     logger.info(f"ask_question({msg}, {my_cfg}, markdown, True)")
-    sql_agent = SqlAgent(my_cfg, True, "")
+    sql_agent = SqlAgent(my_cfg)
     answer = sql_agent.get_dt_with_nl("123", msg, DataType.MARKDOWN.value)
     if not answer:
         answer="没有查询到相关数据，请您尝试换个问题提问"

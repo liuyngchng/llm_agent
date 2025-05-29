@@ -32,7 +32,7 @@ sqlite_vss
 **/*.yml
 **/*.yaml
 **/*.wav
-config.yml
+cfg.yml
 cert/*
 **/*.cer
 **/*.faiss
