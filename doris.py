@@ -13,7 +13,7 @@ import logging.config
 from my_enums import DataType
 from sys_init import init_yml_cfg
 from tabulate import tabulate
-from db_util import DbUtl
+from db_util import DbUtl,DB_RW_TIMEOUT, DB_CONN_TIMEOUT
 
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -100,7 +100,11 @@ class Doris:
             logger.info(f"return_from_cache_for {body}, cache_dt={exec_json}")
         else:
             logger.info(f"curl -X POST --noproxy '*' -s -w'\\n' '{self.url}' -H 'Content-Type:application/json' -H 'token:{self.token}' -d '{json.dumps(body, ensure_ascii=False).replace("'", "'\\''")}'")
-            response = requests.post(self.url, json=body, headers=self.headers, proxies={'http': None, 'https': None})
+            response = requests.post(
+                self.url, json=body, headers=self.headers,
+                proxies={'http': None, 'https': None},
+                timeout=(DB_CONN_TIMEOUT, DB_RW_TIMEOUT)             #（连接5秒，读取10秒）
+            )
             exec_json = response.json()
             logger.info(f"http_request_return, {exec_json}")
             cache_dict[body_md5] = exec_json

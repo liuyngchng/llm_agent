@@ -25,6 +25,9 @@ oracle+oracledb://user:pass@hostname:port[/dbname][?service_name=<service>[&key=
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+DB_CONN_TIMEOUT=5      # 连接超时(秒)
+DB_RW_TIMEOUT=10       # 数据读写超时(秒)
+
 class DbUtl:
     """
     database util class, for process data output, database coneection etc.
@@ -195,8 +198,14 @@ class DbUtl:
         db_config = cfg.get('db', {})
 
         cif = DbUtl.build_mysql_con_dict_from_cfg(db_config)
-        with pymysql.connect(host=cif['host'],port=cif['port'],user=cif['user'],password=cif['password'],
-                             database=cif['database'],charset=cif['charset']) as my_conn:
+        with pymysql.connect(
+            host=cif['host'], port=cif['port'],
+            user=cif['user'],password=cif['password'],
+            database=cif['database'], charset=cif['charset'],
+            connect_timeout=DB_CONN_TIMEOUT,
+            read_timeout=DB_RW_TIMEOUT,
+            write_timeout=DB_RW_TIMEOUT
+        ) as my_conn:
             logger.info(f"output_data({my_conn}, \n{sql}\n, {data_format})")
             dt = DbUtl.output_data(my_conn, sql, data_format)
         return dt
@@ -252,8 +261,10 @@ class DbUtl:
             conn =  oracledb.connect(
                 user=db_config['user'],
                 password=db_config['password'],
-                dsn=dsn
+                dsn=dsn,
+                connect_timeout=DB_CONN_TIMEOUT,          # 连接超时5秒
             )
+            conn.call_timeout = DB_RW_TIMEOUT * 1000       # 调用超时10秒
         else:
             parsed_uri = urlparse(db_config['uri'])
             port = parsed_uri.port or 1521
