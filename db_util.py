@@ -26,7 +26,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 DB_CONN_TIMEOUT=5      # 连接超时(秒)
-DB_RW_TIMEOUT=10       # 数据读写超时(秒)
+DB_RW_TIMEOUT=20       # 数据读写超时(秒)
 
 class DbUtl:
     """
