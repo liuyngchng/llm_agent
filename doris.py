@@ -362,7 +362,7 @@ class Doris:
         if (db_map := self.comment_map.get(db.upper())) \
                 and (table_map := db_map.get(table.upper())) \
                 and (comment := table_map.get(col.upper())):
-            return comment
+            return comment[:8]
         return None
 
     def get_comment_map(self):

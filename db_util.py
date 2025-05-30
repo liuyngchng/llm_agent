@@ -97,7 +97,7 @@ class DbUtl:
                         base_comment = comment_map.get(base_col.upper(), "")
                         break
                 else:
-                    base_comment = comment
+                    base_comment = comment[:8]
                 final_name = f"{base_comment}{suffix}" if base_comment else col
                 processed_columns.append(final_name.strip())
             return processed_columns
