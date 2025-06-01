@@ -51,40 +51,7 @@ def generate_data(db_cfg: dict, total=100000, batch_size=1000,):
         for _ in range(total // batch_size):
             batch = []
             for _ in range(batch_size):
-                date = fake.date_between(start_date, end_date)
-                province = fake.province()[:3]
-
-                record = (
-                    f"{date:%Y%m%d}-{random.randint(10000, 99999)}-{province}-{random.choice(ACCOUNT_TYPES)}",
-                    # data_id
-                    province,  # 省
-                    fake.city(),  # 市
-                    fake.district(),  # 区县
-                    f"{fake.company_prefix()}燃气公司",  # 公司名称
-                    random.choice(ACCOUNT_TYPES),  # 账户类型
-                    date.year, date.month, date.day,  # 年月日
-                    float(Decimal(random.uniform(100, 100000)).quantize(Decimal('0.00'))),  # 支付金额
-                    '元',  # 支付单位
-                    float(Decimal(random.uniform(10, 1000)).quantize(Decimal('0.000'))),  # 用气量
-                    random.choice(['方', '立方米']),  # 用气单位
-                    random.randint(0, 50), '户',  # 新增用户
-                    random.randint(0, 50), '个',  # 新增账户
-                    random.randint(0, 50), '个',  # 新增表具
-                    float(Decimal(random.uniform(0, 1000000)).quantize(Decimal('0.00'))),  # 当前余额
-                    '元',  # 余额单位
-                    random.choice(ID_TYPES),  # 证件类型
-                    random.choice(CUSTOMER_TYPES),  # 客户类型
-                    random.choice(['基表/流量计', 'IC卡表/流量计', '远传表/流量计']),  # 表具类型
-                    random.randint(0, 100),  # 低保户
-                    random.randint(0, 100),  # 优惠户
-                    f"价格{random.choice([2.5, 3.0, 3.5, 4.0])}元/方",  # 费率
-                    random.choice(['楼房', '平房', '别墅', '工厂', '其它']),  # 地点类型
-                    random.randint(0, 50),  # 黑名单
-                    random.randint(0, 20), '个',  # 销户
-                    random.randint(0, 200),  # 保险用户
-                    random.choice(['自住', '租赁', '群租', '其它']),  # 住宿类型
-                    random.choice(['正常', '学校', '医院', '大排档', '政府机关'])  # 特殊用户
-                )
+                record = get_fake_record()
                 batch.append(record)
 
             cursor.executemany(SQL, batch)
@@ -94,6 +61,43 @@ def generate_data(db_cfg: dict, total=100000, batch_size=1000,):
     finally:
         cursor.close()
         conn.close()
+
+
+def get_fake_record() -> tuple:
+    date = fake.date_between(start_date, end_date)
+    province = fake.province()[:3]
+    record = (
+        f"{date:%Y%m%d}-{random.randint(10000, 99999)}-{province}-{random.choice(ACCOUNT_TYPES)}",
+        # data_id
+        province,  # 省
+        fake.city(),  # 市
+        fake.district(),  # 区县
+        f"{fake.company_prefix()}燃气公司",  # 公司名称
+        random.choice(ACCOUNT_TYPES),  # 账户类型
+        date.year, date.month, date.day,  # 年月日
+        float(Decimal(random.uniform(100, 100000)).quantize(Decimal('0.00'))),  # 支付金额
+        '元',  # 支付单位
+        float(Decimal(random.uniform(10, 1000)).quantize(Decimal('0.000'))),  # 用气量
+        random.choice(['方', '立方米']),  # 用气单位
+        random.randint(0, 50), '户',  # 新增用户
+        random.randint(0, 50), '个',  # 新增账户
+        random.randint(0, 50), '个',  # 新增表具
+        float(Decimal(random.uniform(0, 1000000)).quantize(Decimal('0.00'))),  # 当前余额
+        '元',  # 余额单位
+        random.choice(ID_TYPES),  # 证件类型
+        random.choice(CUSTOMER_TYPES),  # 客户类型
+        random.choice(['基表/流量计', 'IC卡表/流量计', '远传表/流量计']),  # 表具类型
+        random.randint(0, 100),  # 低保户
+        random.randint(0, 100),  # 优惠户
+        f"价格{random.choice([2.5, 3.0, 3.5, 4.0])}元/方",  # 费率
+        random.choice(['楼房', '平房', '别墅', '工厂', '其它']),  # 地点类型
+        random.randint(0, 50),  # 黑名单
+        random.randint(0, 20), '个',  # 销户
+        random.randint(0, 200),  # 保险用户
+        random.choice(['自住', '租赁', '群租', '其它']),  # 住宿类型
+        random.choice(['正常', '学校', '医院', '大排档', '政府机关'])  # 特殊用户
+    )
+    return record
 
 
 if __name__ == '__main__':
