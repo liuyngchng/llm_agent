@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 pip install faker pymysql
+pip install china-region
 """
 
 import random
@@ -10,6 +11,8 @@ from decimal import Decimal
 from faker import Faker
 from datetime import datetime, timedelta
 from sys_init import init_yml_cfg
+from cpca import CPCA
+import random
 
 # MySQL配置
 # DB_CONFIG = {
@@ -19,7 +22,15 @@ from sys_init import init_yml_cfg
 #     'db': 'gas_data',
 #     'charset': 'utf8mb4'
 # }
-
+# 预加载数据
+Region.init_data()
+provinces = Region.get_provinces()
+cities_dict = {p.code: Region.get_cities(p.code) for p in provinces}
+counties_dict = {
+    c.code: Region.get_counties(c.code)
+    for p in provinces
+    for c in cities_dict[p.code]
+}
 DB_CONFIG = {}
 
 fake = Faker('zh_CN')
@@ -31,6 +42,11 @@ ACCOUNT_TYPES = ['居民天然气', '非居民天然气']
 CUSTOMER_TYPES = ['居民', '非居民']
 ID_TYPES = ['身份证', '护照', '台湾通行证', '港澳通行证', '军官证', '营业执照', '无证件', '租房合同']
 
+def get_random_region():
+    province = random.choice(provinces)
+    city = random.choice(cities_dict[province.code])
+    county = random.choice(counties_dict[city.code])
+    return province.name, city.name, county.name
 
 def generate_data(db_cfg: dict, total=100000, batch_size=1000,):
     conn = pymysql.connect(**db_cfg)
@@ -52,14 +68,14 @@ def generate_data(db_cfg: dict, total=100000, batch_size=1000,):
             batch = []
             for _ in range(batch_size):
                 date = fake.date_between(start_date, end_date)
-                province = fake.province()[:3]
+                [province, city, county] = get_random_region()
 
                 record = (
                     f"{date:%Y%m%d}-{random.randint(10000, 99999)}-{province}-{random.choice(ACCOUNT_TYPES)}",
                     # data_id
                     province,  # 省
-                    fake.city(),  # 市
-                    fake.district(),  # 区县
+                    city,  # 市
+                    county,  # 区县
                     f"{fake.company_prefix()}燃气公司",  # 公司名称
                     random.choice(ACCOUNT_TYPES),  # 账户类型
                     date.year, date.month, date.day,  # 年月日
