@@ -384,6 +384,7 @@ class SqlAgent(DbUtl):
             chart_dt = json.loads(nl_dt)
         except Exception as e:
             logger.exception("err_to_add_description_to_data", nl_dt_dict["raw_dt"])
+            return nl_dt_dict
         if chart_dt['chart']:
             nl_dt_dict['chart'] = chart_dt['chart']
         else:
