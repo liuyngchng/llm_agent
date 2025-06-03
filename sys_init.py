@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def init_yml_cfg(cfg_file="cfg.yml")-> dict[str, any]:
     """
-    yaml config.yml, you can copy config.yml.template and rewrite to your own config.yml
+    yaml cfg.yml, you can copy cfg.yml.template and rewrite to your own cfg.yml
     """
     if not os.path.exists(cfg_file):
         raise FileNotFoundError(f"配置文件不存在: {cfg_file}")
