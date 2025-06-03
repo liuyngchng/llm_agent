@@ -3,13 +3,14 @@
 """
 pip install faker pymysql
 """
-
+import hashlib
 import random
 import pymysql
 from decimal import Decimal
 from faker import Faker
-from datetime import datetime, timedelta
+from datetime import datetime
 from sys_init import init_yml_cfg
+from cn_areas import get_random_region
 
 # MySQL配置
 # DB_CONFIG = {
@@ -30,6 +31,10 @@ end_date = datetime(2025, 5, 1)
 ACCOUNT_TYPES = ['居民天然气', '非居民天然气']
 CUSTOMER_TYPES = ['居民', '非居民']
 ID_TYPES = ['身份证', '护照', '台湾通行证', '港澳通行证', '军官证', '营业执照', '无证件', '租房合同']
+
+# company name list
+with open('/home/rd/doc/A10_BI/company_name_list.txt', 'r') as f:
+    companies = [line.strip() for line in f]
 
 
 def generate_data(db_cfg: dict, total=100000, batch_size=1000,):
@@ -65,15 +70,17 @@ def generate_data(db_cfg: dict, total=100000, batch_size=1000,):
 
 def get_fake_record() -> tuple:
     date = fake.date_between(start_date, end_date)
-    province = fake.province()[:3]
+    db_file = "../Administrative-divisions-of-China-2.7.0/dist/data.sqlite"
+    province, city, district = get_random_region(db_file)
+    account_type = random.choice(ACCOUNT_TYPES)
     record = (
-        f"{date:%Y%m%d}-{random.randint(10000, 99999)}-{province}-{random.choice(ACCOUNT_TYPES)}",
+        hashlib.md5(f"{date:%Y%m%d}{province}{city}{district}{account_type}".encode()).hexdigest(),
         # data_id
-        province,  # 省
-        fake.city(),  # 市
-        fake.district(),  # 区县
-        f"{fake.company_prefix()}燃气公司",  # 公司名称
-        random.choice(ACCOUNT_TYPES),  # 账户类型
+        province,   # 省
+        city,       # 市
+        district,   # 区县
+        f"{province}{city}燃气有限公司",  # 公司名称
+        account_type,  # 账户类型
         date.year, date.month, date.day,  # 年月日
         float(Decimal(random.uniform(100, 100000)).quantize(Decimal('0.00'))),  # 支付金额
         '元',  # 支付单位
