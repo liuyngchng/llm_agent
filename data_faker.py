@@ -9,9 +9,8 @@ import random
 import pymysql
 from decimal import Decimal
 from faker import Faker
-from datetime import datetime, timedelta
+from datetime import datetime
 from sys_init import init_yml_cfg
-from cpca import CPCA
 import random
 
 # MySQL配置
@@ -22,15 +21,6 @@ import random
 #     'db': 'gas_data',
 #     'charset': 'utf8mb4'
 # }
-# 预加载数据
-Region.init_data()
-provinces = Region.get_provinces()
-cities_dict = {p.code: Region.get_cities(p.code) for p in provinces}
-counties_dict = {
-    c.code: Region.get_counties(c.code)
-    for p in provinces
-    for c in cities_dict[p.code]
-}
 DB_CONFIG = {}
 
 fake = Faker('zh_CN')
