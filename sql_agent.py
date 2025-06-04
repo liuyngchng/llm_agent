@@ -258,7 +258,7 @@ class SqlAgent(DbUtl):
                 model = ChatOllama(model=self.llm_model_name, base_url=self.llm_api_uri, temperature=0)
         else:
             model = ChatOllama(model=self.llm_model_name, base_url=self.llm_api_uri, temperature=0)
-        logger.debug(f"modeltype {type(model)}, model: {model}")
+        logger.debug(f"model_type, {type(model)}, model, {model}")
         return model
 
 
@@ -321,7 +321,7 @@ class SqlAgent(DbUtl):
             return next(iter(json.loads(count_dt)[0].values()))
         except Exception as e:
             logger.error(f"get_count_num_err, {count_dt}")
-            return "0"
+            return 0
 
     def get_pg_dt(self, uid: str, usr_page_dt: dict, page_size=PAGE_SIZE) -> dict:
         logger.info(f"last_sql_for_{uid}: {usr_page_dt.get('sql', '').replace('\n', '')}")

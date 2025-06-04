@@ -72,11 +72,11 @@ class DbUtl:
                 full_table_name = f"{schema_name}.{table_name}"
             else:
                 full_table_name = table_name
-            comment_map = {}
+            comment_map = {"YEAR":"年", "MONTH": "月"}
             with db_con.cursor() as cursor:
                 cursor.execute(f"SHOW FULL COLUMNS FROM {full_table_name}")
                 for col in cursor.fetchall():
-                    comment_map[col[0].upper()] = col[8]
+                    comment_map[col[0].upper()] = DbUtl.get_punctuation_seg(col[8])
             processed_columns = []
             for col in raw_columns:
                 col_upper = col.upper()
@@ -84,7 +84,7 @@ class DbUtl:
                 suffix, base_col = "", col
                 patterns = [
                     (r'^(AVG|SUM|MAX|MIN|COUNT)\(([\w`]+)\)$', lambda m: (f"{m[1]}的", m[2].replace('`', ''))),
-                    (r'^(TOTAL|AVG|MAX|MIN)_([\w`]+)$', lambda m: (f"{m[1]}的", m[2].replace('`', '')))
+                    (r'^(TOTAL|AVG|SUM|MAX|MIN)_([\w`]+)$', lambda m: (f"{m[1]}的", m[2].replace('`', '')))
                 ]
 
                 for pattern, handler in patterns:
@@ -98,7 +98,7 @@ class DbUtl:
                         break
                 else:
                     base_comment = DbUtl.get_punctuation_seg(comment)
-                    base_comment = base_comment[:8]
+                    base_comment = base_comment[:16]
                 final_name = f"{base_comment}{suffix}" if base_comment else col
                 processed_columns.append(final_name.strip())
             return processed_columns
@@ -217,7 +217,7 @@ class DbUtl:
             read_timeout=DB_RW_TIMEOUT,
             write_timeout=DB_RW_TIMEOUT
         ) as my_conn:
-            logger.info(f"output_data({my_conn}, \n{sql}\n, {data_format})")
+            logger.info(f"mysql_output_data, {sql.replace("\n", " ")}, {data_format})")
             dt = DbUtl.output_data(my_conn, sql, data_format)
         return dt
 
@@ -424,8 +424,10 @@ if __name__ == "__main__":
     # new_sql1 = DbUtl.get_page_sql(sql1, 5)
     # logger.info(f"page_sql1, {new_sql1}")
 
-    sql2 = 'SELECT \n  OU_ID, \n  COMPANY_NAME, \n  OU_CODE, \n  CALC_DT, \n  METER_NUM, \n  METER_R_NUM, \n  EXCEPTION_NUM, \n  CUSTOMER_NUM, \n  CUSTOMER_NEW_NUM, \n  CALC_VOLUME, \n  CALC_AMOUNT, \n  PAY_AMOUNT, \n  METER_R_RATE, \n  ACC_TYPE_NAME, \n  METER_MNFT_NAME, \n  METER_MODEL_NAME, \n  COMMUNITY, \n  METER_NUM_SUM, \n  METER_MODEL_CODE, \n  COUNTY, \n  RG_METER_CATEGORY, \n  RATE_NAME \nFROM \n  dws_dw_ycb_day \nORDER BY \n  CALC_DT DESC\n LIMIT 10;'
-    new_sql2 = DbUtl.get_page_sql(sql2, 5)
-    logger.info(f"page_sql2, {new_sql2}")
-    count_sql2 = DbUtl.gen_count_sql(sql2)
-    logger.info(f"count_sql2, {count_sql2}")
+    # sql2 = 'SELECT \n  OU_ID, \n  COMPANY_NAME, \n  OU_CODE, \n  CALC_DT, \n  METER_NUM, \n  METER_R_NUM, \n  EXCEPTION_NUM, \n  CUSTOMER_NUM, \n  CUSTOMER_NEW_NUM, \n  CALC_VOLUME, \n  CALC_AMOUNT, \n  PAY_AMOUNT, \n  METER_R_RATE, \n  ACC_TYPE_NAME, \n  METER_MNFT_NAME, \n  METER_MODEL_NAME, \n  COMMUNITY, \n  METER_NUM_SUM, \n  METER_MODEL_CODE, \n  COUNTY, \n  RG_METER_CATEGORY, \n  RATE_NAME \nFROM \n  dws_dw_ycb_day \nORDER BY \n  CALC_DT DESC\n LIMIT 10;'
+    # new_sql2 = DbUtl.get_page_sql(sql2, 5)
+    # logger.info(f"page_sql2, {new_sql2}")
+    # count_sql2 = DbUtl.gen_count_sql(sql2)
+    # logger.info(f"count_sql2, {count_sql2}")
+    txt ='用气量, 单位:立方米'
+    logger.info(DbUtl.get_punctuation_seg(txt))
