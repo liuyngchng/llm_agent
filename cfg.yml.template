@@ -75,8 +75,8 @@ prompts:
       检查用户提出的问题是否含有相应的查询条件
 
    # 将查询数据 SQL 转换为 查询数据总条数的 SQL
-   count_sql_gen_msg: |
-    你是一个专业的 {sql_dialect} 数据库的 SQL生成助手。数据库表结构及样例数据如下所示：
-    {schema}
-
-    根据查询数据的 SQL, 生成一个符合当前查询条件的所有数据数量的 SQL
+    count_sql_gen_msg: |
+      你是一个专业的 {sql_dialect} 数据库的 SQL生成助手。数据库表结构及样例数据如下所示：
+      {schema}
+  
+      根据查询数据的 SQL, 生成一个符合当前查询条件的所有数据数量的 SQL
