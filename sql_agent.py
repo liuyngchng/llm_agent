@@ -316,7 +316,7 @@ class SqlAgent(DbUtl):
         return self.build_chart_dt(uid, nl_dt_dict)
 
     @staticmethod
-    def get_count_num(count_dt:str) -> str:
+    def get_count_num(count_dt:str) -> int:
         try:
             return next(iter(json.loads(count_dt)[0].values()))
         except Exception as e:
