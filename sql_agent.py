@@ -305,12 +305,20 @@ class SqlAgent(DbUtl):
             # count_sql = DbUtl.gen_count_sql(nl_dt_dict["sql"])
             count_sql_txt = self.gen_count_sql_by_sql(uid, nl_dt_dict["sql"])
             count_sql = extract_md_content(count_sql_txt, "sql")
-            logger.info(f"gen_count_sql_by_sql, result {count_sql.replace('\n', ' ')}")
+            logger.info(f"gen_count_sql_by_sql, result "
+                f"{count_sql.replace('\n', ' ')}, "
+                f"get_dt_sql {nl_dt_dict["sql"].replace('\n', ' ')}"
+            )
             count_dt = self.get_dt_with_sql(count_sql, DataType.JSON.value)
             logger.info(f"count_result_count_dt {count_dt}")
             total_count = SqlAgent.get_count_num(count_dt)
             nl_dt_dict["total_count"] = total_count
-            nl_dt_dict["total_page"] = math.ceil(total_count / PAGE_SIZE)
+            logger.info(f"get_total_page {total_count} / {PAGE_SIZE}")
+            if isinstance(total_count, (int, float, complex)):
+                nl_dt_dict["total_page"] = math.ceil(total_count / PAGE_SIZE)
+            else:
+                logger.error(f"total_count_type_err_for {total_count}")
+                nl_dt_dict["total_page"] = 1
         except Exception as e:
             logger.error(f"get_dt_with_sql_err, {e}, sql: {sql}", exc_info=True)
             nl_dt_dict["raw_dt"] = "使用SQL从数据源查询数据时发生异常"
