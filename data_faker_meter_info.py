@@ -36,12 +36,11 @@ def generate_data(db_cfg: dict, total=500000, batch_size=5000):
     conn = pymysql.connect(**db_cfg)
     cursor = conn.cursor()
 
-    # 修改为 meter_info 表的插入语句（排除自增ID）
     SQL = """INSERT INTO meter_info (
-        meter_id, meter_type, meter_manufacture, meter_base_num, 
-        province, city, district, company, user_type, 
-        active_date, expire_date
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+            meter_id, meter_type, meter_manufacture, meter_base_num, 
+            province, city, district, company, user_id, user_type, 
+            active_date, expire_date
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""  # 12个占位符
 
     try:
         for i in range(total // batch_size):
@@ -61,9 +60,9 @@ def generate_meter_record() -> tuple:
     active_date = fake.date_between(start_date, end_date)
     expire_date = active_date + timedelta(days=365 * 10)  # 10年后过期
     province, city, district = get_random_region("../Administrative-divisions-of-China-2.7.0/dist/data.sqlite")
-
+    user_id = f"USR_{fake.unique.random_number(digits=8)}"
     return (
-        f"MT{fake.unique.random_number(digits=8)}",  # 唯一表号
+        f"MT_{fake.unique.random_number(digits=8)}",  # 唯一表号
         random.choice(list(METER_TYPE_MAP.keys())),  # 表类型
         random.choice(METER_MANUFACTURERS),  # 制造厂商
         float(Decimal(random.uniform(0, 300)).quantize(Decimal('0.000'))),  # 基底数
@@ -71,6 +70,7 @@ def generate_meter_record() -> tuple:
         city,  # 市
         district,  # 区县
         f"{province}{random.choice(['燃气', '能源', '天然气'])}有限公司",  # 公司
+        user_id,
         random.choice(list(USER_TYPE_MAP.keys())),  # 用户类型
         active_date,  # 启用日期
         expire_date  # 过期日期
