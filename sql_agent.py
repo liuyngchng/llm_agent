@@ -304,7 +304,8 @@ class SqlAgent(DbUtl):
             count_sql = extract_md_content(count_sql_txt, "sql")
             logger.info(f"gen_count_sql_by_sql, result {count_sql.replace('\n', ' ')}")
             count_dt = self.get_dt_with_sql(count_sql, DataType.JSON.value)
-            total_count = json.loads(count_dt)[0].get("COUNT(1)")
+            logger.info(f"count_result_count_dt {count_dt}")
+            total_count = SqlAgent.get_count_num(count_dt)
             nl_dt_dict["total_count"] = total_count
             nl_dt_dict["total_page"] = math.ceil(total_count / PAGE_SIZE)
         except Exception as e:
@@ -313,6 +314,14 @@ class SqlAgent(DbUtl):
             return nl_dt_dict
         logger.info(f"nl_dt:{nl_dt_dict}")
         return self.build_chart_dt(uid, nl_dt_dict)
+
+    @staticmethod
+    def get_count_num(count_dt:str) -> str:
+        try:
+            return next(iter(json.loads(count_dt)[0].values()))
+        except Exception as e:
+            logger.error(f"get_count_num_err, {count_dt}")
+            return "0"
 
     def get_pg_dt(self, uid: str, usr_page_dt: dict, page_size=PAGE_SIZE) -> dict:
         logger.info(f"last_sql_for_{uid}: {usr_page_dt.get('sql', '').replace('\n', '')}")
