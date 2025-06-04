@@ -50,14 +50,14 @@ def generate_charge_record() -> tuple:
 
     # 生成唯一充值ID（SHA256哈希简化版）
     charge_id = f"CHG_{fake.unique.random_number(digits=10)}"
-    user_id = f"USER_{random.randint(10000000, 99999999)}"
+    user_id = f"USR_{random.randint(10000000, 99999999)}"
 
     return (
         charge_id,  # 充值流水号
         user_id,  # 用户ID
         fake.name(),  # 用户姓名
         random.choice(list(CHARGE_CHANNEL_MAP.keys())),  # 充值渠道
-        float(Decimal(random.uniform(10, 5000)).quantize(Decimal('0.000'))),  # 金额
+        float(Decimal(random.uniform(10, 200)).quantize(Decimal('0.000'))),  # 金额
         province,  # 省
         city,  # 市
         district,  # 区县

@@ -58,7 +58,7 @@ def get_fake_record() -> tuple:
     province, city, district = get_random_region("../Administrative-divisions-of-China-2.7.0/dist/data.sqlite")
 
     # 随机生成关键字段
-    user_id = f"USER_{fake.unique.random_number(digits=8)}"
+    user_id = f"USR_{fake.unique.random_number(digits=8)}"
     user_name = fake.name()
     contact = fake.phone_number()
     family_members = random.randint(1, 5)
