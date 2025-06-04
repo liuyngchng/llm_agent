@@ -29,7 +29,7 @@ ARCHITECTURE_TYPE_MAP = {
 }
 
 
-def generate_data(db_cfg: dict, total=100000, batch_size=1000):
+def generate_data(db_cfg: dict, total=500000, batch_size=2000):
     conn = pymysql.connect(**db_cfg)
     cursor = conn.cursor()
 
@@ -61,10 +61,10 @@ def get_fake_record() -> tuple:
     user_id = f"USER_{fake.unique.random_number(digits=8)}"
     user_name = fake.name()
     contact = fake.phone_number()
-    family_members = random.randint(1, 10)
+    family_members = random.randint(1, 5)
 
     # 公司名称（简化处理）
-    company = f"{province}{random.choice(['燃气', '能源', '天然气'])}有限公司"
+    company = f"{province}{city}{random.choice(['燃气', '能源', '天然气'])}有限公司"
 
     # 类型字段映射
     account_type_str = random.choice(['居民天然气', '非居民天然气'])
@@ -89,7 +89,7 @@ def get_fake_record() -> tuple:
         float(Decimal(random.uniform(0, 10000)).quantize(Decimal('0.00'))),  # balance
         random.randint(0, 1),  # is_low_income
         random.randint(0, 1),  # is_discount
-        f"价格{random.choice([2.5, 3.0, 3.5])}元/方",  # rate_policy
+        f"{random.choice([2.5, 3.0, 3.5])}元/方",  # rate_policy
         random.randint(0, 1),  # is_in_blacklist
         random.randint(0, 1),  # is_closed
         random.randint(0, 1)  # is_insured
