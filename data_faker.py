@@ -1,115 +1,104 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-pip install faker pymysql
-"""
 import hashlib
 import random
 import pymysql
 from decimal import Decimal
 from faker import Faker
 from datetime import datetime
+# 注意：需确保sys_init和cn_areas模块存在
 from sys_init import init_yml_cfg
 from cn_areas import get_random_region
-
-# MySQL配置
-# DB_CONFIG = {
-#     'host': 'localhost',
-#     'user': 'root',
-#     'password': 'yourpassword',
-#     'db': 'gas_data',
-#     'charset': 'utf8mb4'
-# }
-
-DB_CONFIG = {}
 
 fake = Faker('zh_CN')
 start_date = datetime(2022, 1, 1)
 end_date = datetime(2025, 5, 1)
 
-# 预定义枚举值
-ACCOUNT_TYPES = ['居民天然气', '非居民天然气']
-CUSTOMER_TYPES = ['居民', '非居民']
-ID_TYPES = ['身份证', '护照', '台湾通行证', '港澳通行证', '军官证', '营业执照', '无证件', '租房合同']
+# 枚举值映射字典
+USER_TYPE_MAP = {'居民天然气': 0, '非居民天然气': 1}
+ID_TYPE_MAP = {
+    '身份证': 0, '护照': 1, '台湾通行证': 2, '港澳通行证': 3,
+    '军官证': 4, '营业执照': 5, '无证件': 6, '租房合同': 7
+}
+METER_TYPE_MAP = {
+    '基表/流量计': 0, 'IC卡表/流量计': 1, '远传表/流量计': 2
+}
+RESIDENCE_TYPE_MAP = {'自住': 0, '租赁': 1, '群租': 2, '其它': 3}
+ARCHITECTURE_TYPE_MAP = {
+    '楼房': 0, '平房': 1, '别墅': 2, '工厂': 3, '其它': 4
+}
 
-# company name list
-with open('/home/rd/doc/A10_BI/company_name_list.txt', 'r') as f:
-    companies = [line.strip() for line in f]
 
-
-def generate_data(db_cfg: dict, total=100000, batch_size=1000,):
+def generate_data(db_cfg: dict, total=100000, batch_size=1000):
     conn = pymysql.connect(**db_cfg)
     cursor = conn.cursor()
 
     SQL = """INSERT INTO user_info (
-        data_id,province,city,district,company,account_type,year,month,day,
-        payment,payment_unit,gas_usage,gas_unit,new_users,new_users_unit,
-        new_accounts,new_accounts_unit,new_meters,new_meters_unit,balance,
-        balance_unit,id_type,customer_type,meter_type,low_income_households,
-        discount_households,rate_policy,location_type,blacklist_users,
-        closed_accounts,closed_accounts_unit,insured_users,residence_type,
-        special_user_type
-    ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
-              %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+        user_id, user_name, contact, family_members, province, city, district, 
+        company, user_type, create_time, id_type, meter_type, residence_type, 
+        residence_tag, architecture_type, gas_usage, balance, is_low_income, 
+        is_discount, rate_policy, is_in_blacklist, is_closed, is_insured
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 
     try:
-        for _ in range(total // batch_size):
+        for i in range(total // batch_size):
             batch = []
             for _ in range(batch_size):
-                record = get_fake_record()
-                batch.append(record)
-
+                batch.append(get_fake_record())
             cursor.executemany(SQL, batch)
             conn.commit()
-            print(f'已提交 {(_ + 1) * batch_size} 条数据')
-
+            print(f'已提交 {(i + 1) * batch_size} 条数据')
     finally:
         cursor.close()
         conn.close()
 
 
 def get_fake_record() -> tuple:
-    date = fake.date_between(start_date, end_date)
-    db_file = "../Administrative-divisions-of-China-2.7.0/dist/data.sqlite"
-    province, city, district = get_random_region(db_file)
-    account_type = random.choice(ACCOUNT_TYPES)
-    record = (
-        hashlib.md5(f"{date:%Y%m%d}{province}{city}{district}{account_type}".encode()).hexdigest(),
-        # data_id
-        province,   # 省
-        city,       # 市
-        district,   # 区县
-        f"{province}{city}燃气有限公司",  # 公司名称
-        account_type,  # 账户类型
-        date.year, date.month, date.day,  # 年月日
-        float(Decimal(random.uniform(100, 100000)).quantize(Decimal('0.00'))),  # 支付金额
-        '元',  # 支付单位
-        float(Decimal(random.uniform(10, 1000)).quantize(Decimal('0.000'))),  # 用气量
-        random.choice(['方', '立方米']),  # 用气单位
-        random.randint(0, 50), '户',  # 新增用户
-        random.randint(0, 50), '个',  # 新增账户
-        random.randint(0, 50), '个',  # 新增表具
-        float(Decimal(random.uniform(0, 1000000)).quantize(Decimal('0.00'))),  # 当前余额
-        '元',  # 余额单位
-        random.choice(ID_TYPES),  # 证件类型
-        random.choice(CUSTOMER_TYPES),  # 客户类型
-        random.choice(['基表/流量计', 'IC卡表/流量计', '远传表/流量计']),  # 表具类型
-        random.randint(0, 100),  # 低保户
-        random.randint(0, 100),  # 优惠户
-        f"价格{random.choice([2.5, 3.0, 3.5, 4.0])}元/方",  # 费率
-        random.choice(['楼房', '平房', '别墅', '工厂', '其它']),  # 地点类型
-        random.randint(0, 50),  # 黑名单
-        random.randint(0, 20), '个',  # 销户
-        random.randint(0, 200),  # 保险用户
-        random.choice(['自住', '租赁', '群租', '其它']),  # 住宿类型
-        random.choice(['正常', '学校', '医院', '大排档', '政府机关'])  # 特殊用户
+    create_time = fake.date_between(start_date, end_date)
+    province, city, district = get_random_region("../Administrative-divisions-of-China-2.7.0/dist/data.sqlite")
+
+    # 随机生成关键字段
+    user_id = f"USER_{fake.unique.random_number(digits=8)}"
+    user_name = fake.name()
+    contact = fake.phone_number()
+    family_members = random.randint(1, 10)
+
+    # 公司名称（简化处理）
+    company = f"{province}{random.choice(['燃气', '能源', '天然气'])}有限公司"
+
+    # 类型字段映射
+    account_type_str = random.choice(['居民天然气', '非居民天然气'])
+    user_type = USER_TYPE_MAP[account_type_str]
+    id_type = ID_TYPE_MAP[random.choice(list(ID_TYPE_MAP.keys()))]
+    meter_type = METER_TYPE_MAP[random.choice(list(METER_TYPE_MAP.keys()))]
+    residence_type = RESIDENCE_TYPE_MAP[random.choice(list(RESIDENCE_TYPE_MAP.keys()))]
+    architecture_type = ARCHITECTURE_TYPE_MAP[random.choice(list(ARCHITECTURE_TYPE_MAP.keys()))]
+
+    # 特殊字段处理
+    residence_tag = random.choice([
+        None,  # 允许NULL
+        *list(range(0, 22))  # 0-21的整数
+    ])
+
+    return (
+        user_id, user_name, contact, family_members,
+        province, city, district, company, user_type,
+        create_time, id_type, meter_type, residence_type,
+        residence_tag, architecture_type,
+        float(Decimal(random.uniform(10, 1000)).quantize(Decimal('0.000'))),  # gas_usage
+        float(Decimal(random.uniform(0, 10000)).quantize(Decimal('0.00'))),  # balance
+        random.randint(0, 1),  # is_low_income
+        random.randint(0, 1),  # is_discount
+        f"价格{random.choice([2.5, 3.0, 3.5])}元/方",  # rate_policy
+        random.randint(0, 1),  # is_in_blacklist
+        random.randint(0, 1),  # is_closed
+        random.randint(0, 1)  # is_insured
     )
-    return record
 
 
 if __name__ == '__main__':
     my_cfg = init_yml_cfg()['db']
-    my_db_cfg = {
+    db_cfg = {
         'host': my_cfg['host'],
         'port': my_cfg['port'],
         'user': my_cfg['user'],
@@ -117,5 +106,4 @@ if __name__ == '__main__':
         'db': my_cfg['name'],
         'charset': 'utf8mb4'
     }
-    print(f"my_db_cfg {my_db_cfg}")
-    generate_data(my_db_cfg)
+    generate_data(db_cfg)

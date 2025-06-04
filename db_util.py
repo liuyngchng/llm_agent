@@ -97,7 +97,8 @@ class DbUtl:
                         base_comment = comment_map.get(base_col.upper(), "")
                         break
                 else:
-                    base_comment = comment[:8]
+                    base_comment = DbUtl.get_punctuation_seg(comment)
+                    base_comment = base_comment[:8]
                 final_name = f"{base_comment}{suffix}" if base_comment else col
                 processed_columns.append(final_name.strip())
             return processed_columns
@@ -105,6 +106,13 @@ class DbUtl:
             logger.error(f"Error processing column names: {str(e)}")
             return raw_columns
 
+    @staticmethod
+    def get_punctuation_seg(text):
+        punctuations = "，。！？；：“”‘’【】（）,.?!;:\"'[]{}"
+        for i, c in enumerate(text):
+            if c in punctuations:
+                return text[:i]
+        return text
 
     @staticmethod
     def sqlite_query_tool(db_con, query: str) -> dict:
