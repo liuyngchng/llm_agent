@@ -164,28 +164,18 @@
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%"><span>表清单:</span>
-                <input type="text" id="tables"  name="tables" value="{{tables}}">
+                <input type="text" id="tables"  name="tables" value="{{tables}}" placeholder="不填则默认使用所有表">
             </div>
             <div>&nbsp;</div>
-            <div align="center" style="margin-bottom: 0.5%; display: flex; align-items: center; gap: 4px; justify-content: center">
-                <span>是否开启精确查询:</span>
-                <div style="display: flex; align-items: center; gap: 4px">
-                    <label for="is_strict_yes">是</label>
-                    <input type="radio" id="is_strict_yes" name="is_strict" value="1" {{ 'checked' if is_strict == '1' else '' }}>
-                    <label for="is_strict_no">否</label>
-                    <input type="radio" id="is_strict_no" name="is_strict" value="0" {{ 'checked' if is_strict != '1' else '' }}>
-                </div>
-            </div>
-            <div align="center" style="margin-bottom: 0.5%; display: flex; align-items: center; gap: 4px; justify-content: center">
-                <span>是否需要绘图:</span>
-                <div style="display: flex; align-items: center; gap: 4px">
-                    <label for="add_chart_yes">是</label>
-                    <input type="radio" id="add_chart_yes" name="add_chart" value="1" {{ 'checked' if add_chart == '1' else '' }} >
-                    <label for="add_chart_no">否</label>
-                    <input type="radio" id="add_chart_no" name="add_chart" value="0" {{ 'checked' if add_chart != '1' else '' }} >
-                </div>
+            <div align="center" style="margin-bottom: 0.5%"><span>是否开启精确查询:</span>
+                <input type="number" max="1" min="0" id="is_strict"  name="is_strict" value="{{is_strict}}" placeholder="开启会引导用户提供详细查询条件">
+                <div>(0: 不开启[尽最大努力理解查询意图]; 1:开启[需提供详细查询条件])</div>
             </div>
             <div>&nbsp;</div>
+            <div align="center" style="margin-bottom: 0.5%"><span>是否绘图:</span>
+                <input type="number" max="1" min="0" id="add_chart"  name="add_chart" value="{{add_chart}}" placeholder="开启后会通过chart.js绘图">
+                <div>(0: 不输出chart.js的图;1:输出chart.js的图)</div>
+            </div>
 
             <div class="input-container" style="justify-content:center;gap:20px">
                 <button type="submit" class="send-button" id="save_button">保存配置</button>

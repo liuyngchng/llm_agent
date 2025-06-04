@@ -109,6 +109,9 @@ button:disabled {
     font-size: 16px;
     outline: none;
 }
+ input[type="number"] {
+    width: 200px;
+ }
 .send-button {
     background: linear-gradient(135deg, #4ECDC4, #45B7D1);
     padding: 12px 20px;
@@ -369,6 +372,9 @@ button:disabled {
         padding-right: 45px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         transition: all 0.2s;
+    }
+    input[type="number"] {
+        width: 200px;
     }
     .send-button {
         background: linear-gradient(135deg, #4ECDC4, #45B7D1);
