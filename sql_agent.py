@@ -277,7 +277,10 @@ class SqlAgent(DbUtl):
                 f" cfg['db']={self.cfg['db']}")
             raise Exception(info)
         nl_dt_dict = {"chart": {}, "raw_dt": {}, "sql": "", "total_count": 0, "cur_page": 1, "total_page":2}
-        if self.cfg['db']['strict_search']:
+        cfg = cfg_util.get_ds_cfg_by_uid(uid, self.cfg)
+        logger.info(f"cfg_for_uid {uid}, {cfg}")
+        if cfg.get("is_strict") == 1:
+        # if self.cfg['db']['strict_search']:
             logger.info(f"check_user_question_with_llm_in_strict_search, {q}")
             intercept = self.intercept_usr_question(uid, q)
             if "查询条件清晰" not in intercept:
