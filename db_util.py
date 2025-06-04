@@ -118,7 +118,7 @@ class DbUtl:
     def sqlite_query_tool(db_con, query: str) -> dict:
         try:
             cursor = db_con.cursor()
-            logger.debug(f"execute_query, {query}")
+            logger.debug(f"execute_query, {query.replace('\n', ' ')}")
             cursor.execute(query)
             columns = [desc[0] for desc in cursor.description] if cursor.description else []
             data = cursor.fetchall()

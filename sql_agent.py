@@ -79,6 +79,7 @@ class SqlAgent(DbUtl):
 
         # 带数据库结构的提示模板
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        refine_q_msg = f"""{cfg['prompts']['refine_q_msg']}\n当前时间是 {current_time}"""
         sql_gen_msg = f"""{cfg['prompts']['sql_gen_msg']}\n当前时间是 {current_time}"""
         count_sql_gen_msg = cfg['prompts']['count_sql_gen_msg']
         intercept_q_msg = f"""{cfg['prompts']['intercept_q_msg']}\n当前时间是 {current_time}"""
@@ -87,6 +88,12 @@ class SqlAgent(DbUtl):
         # except Exception as e:
         #     logger.error("set_sql_dialect_err", e)
         # logger.debug(f"sql_gen_msg {sql_gen_msg}")
+
+        self.refine_q_prompt_template = ChatPromptTemplate.from_messages([
+            ("system", f"{refine_q_msg}, {prompt_padding}"),
+            ("human", "用户问题：{msg}")
+        ])
+
         self.sql_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", f"{sql_gen_msg}, {prompt_padding}"),
             ("human", "用户问题：{msg}")
@@ -120,6 +127,16 @@ class SqlAgent(DbUtl):
             "sql_dialect": self.db_type,
             "chat_history": get_usr_msgs(uid)
         }
+
+    def refine_q(self, uid: str, question: str) -> str:
+        """
+        generate sql
+        """
+        chain = self.refine_q_prompt_template | self.llm
+        gen_sql_dict = self.build_invoke_json(uid, question)
+        logger.info(f"refine_q, {gen_sql_dict}")
+        response = chain.invoke(gen_sql_dict)
+        return response.content
 
     def gen_sql_by_txt(self, uid: str, question: str) -> str:
         """
@@ -279,6 +296,12 @@ class SqlAgent(DbUtl):
         nl_dt_dict = {"chart": {}, "raw_dt": {}, "sql": "", "total_count": 0, "cur_page": 1, "total_page":2}
         cfg = cfg_util.get_ds_cfg_by_uid(uid, self.cfg)
         logger.info(f"cfg_for_uid {uid}, {cfg}")
+
+        refined_q = self.refine_q(uid, q)
+        logger.info(f"refined_q, {refined_q}, original_q, {q}")
+        refined_q = extract_md_content(refined_q, "sql")
+        logger.info(f"refined_q_extract_md, {refined_q}, original_q, {q}")
+        q = refined_q
         if cfg.get("is_strict") == 1:
         # if self.cfg['db']['strict_search']:
             logger.info(f"check_user_question_with_llm_in_strict_search, {q}")
