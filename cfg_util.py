@@ -76,7 +76,7 @@ def get_ds_cfg_by_uid(uid:str, cfg: dict) -> dict:
     config = {}
     with sqlite3.connect(config_db) as my_conn:
         check_sql = (f"select uid, db_type, db_name, db_host, db_port,"
-                     f" db_usr, db_psw, tables, add_chart from db_config where uid='{uid}' limit 1")
+                     f" db_usr, db_psw, tables, add_chart, is_strict from db_config where uid='{uid}' limit 1")
         db_config_info = DbUtl.sqlite_query_tool(my_conn, check_sql)
         logger.debug(f"check_sql, {check_sql}")
         check_info = db_config_info['data']
@@ -86,15 +86,16 @@ def get_ds_cfg_by_uid(uid:str, cfg: dict) -> dict:
         try:
             check_uid = check_info[0][0]
             config = {
-                "uid": check_uid,
-                "db_type": check_info[0][1],
-                "db_name": check_info[0][2],
-                "db_host": check_info[0][3],
-                "db_port": check_info[0][4],
-                "db_usr":  decrypt(check_info[0][5], cfg['sys']['cypher_key']),
-                "db_psw":  decrypt(check_info[0][6], cfg['sys']['cypher_key']),
-                "tables": check_info[0][7],
-                "add_chart": check_info[0][8],
+                "uid":          check_uid,
+                "db_type":      check_info[0][1],
+                "db_name":      check_info[0][2],
+                "db_host":      check_info[0][3],
+                "db_port":      check_info[0][4],
+                "db_usr":       decrypt(check_info[0][5], cfg['sys']['cypher_key']),
+                "db_psw":       decrypt(check_info[0][6], cfg['sys']['cypher_key']),
+                "tables":       check_info[0][7],
+                "add_chart":    check_info[0][8],
+                "is_strict":    check_info[0][9]
             }
         except Exception as e:
             logger.exception("exception_occurred_get_data_source_config_by_uid")
@@ -127,14 +128,15 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
                         db_usr='{ds_cfg["db_usr_cypher"]}', 
                         db_psw='{ds_cfg["db_psw_cypher"]}',
                         tables='{ds_cfg["tables"]}',
-                        add_chart = '{ds_cfg["add_chart"]}'
+                        add_chart = '{ds_cfg["add_chart"]}',
+                        is_strict = '{ds_cfg["is_strict"]}'
                     WHERE 
                         uid = '{ds_cfg["uid"]}'
                     ''')
     else:
         exec_sql = (f'''
                     INSERT INTO db_config 
-                        (uid, db_type, db_host, db_port, db_name, db_usr, db_psw, tables, add_chart)
+                        (uid, db_type, db_host, db_port, db_name, db_usr, db_psw, tables, add_chart, is_strict)
                     values (
                         '{ds_cfg["uid"]}', 
                         '{ds_cfg["db_type"]}',
@@ -144,7 +146,8 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
                         '{ds_cfg["db_usr_cypher"]}', 
                         '{ds_cfg["db_psw_cypher"]}',
                         '{ds_cfg["tables"]}',
-                        '{ds_cfg["add_chart"]}'
+                        '{ds_cfg["add_chart"]}',
+                        '{ds_cfg["is_strict"]}'
                     )
                     ''')
     with sqlite3.connect(config_db) as my_conn:

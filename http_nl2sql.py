@@ -6,7 +6,6 @@ pip install gunicorn flask concurrent-log-handler langchain_openai langchain_oll
 """
 import json
 import logging.config
-import math
 import os
 
 from flask import Flask, request, jsonify, render_template, Response
@@ -87,18 +86,20 @@ def save_config():
     db_psw  = request.form.get('db_psw').strip()
     tables = request.form.get('tables').strip()
     add_chart = request.form.get('add_chart').strip()
+    is_strict = request.form.get('is_strict').strip()
     data_source_cfg = {
-        "sys_name": my_cfg['sys']['name'],
-        "waring_info": "",
-        "uid": uid,
-        "db_type": db_type,
-        "db_name": db_name,
-        "db_host": db_host,
-        "db_port": db_port,
-        "db_usr": db_usr,
-        "db_psw": db_psw,
-        "tables": tables,
-        "add_chart": add_chart,
+        "sys_name":     my_cfg['sys']['name'],
+        "waring_info":  "",
+        "uid":          uid,
+        "db_type":      db_type,
+        "db_name":      db_name,
+        "db_host":      db_host,
+        "db_port":      db_port,
+        "db_usr":       db_usr,
+        "db_psw":       db_psw,
+        "tables":       tables,
+        "add_chart":    add_chart,
+        "is_strict":    is_strict,
     }
     usr = cfg_utl.get_user_name_by_uid(uid)
     if data_source_cfg["db_type"] == DBType.SQLITE.value:

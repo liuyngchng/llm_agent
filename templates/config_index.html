@@ -168,19 +168,25 @@
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%; display: flex; align-items: center; gap: 4px; justify-content: center">
+                <span>是否开启精确查询:</span>
+                <div style="display: flex; align-items: center; gap: 4px">
+                    <label for="is_strict_yes">是</label>
+                    <input type="radio" id="is_strict_yes" name="is_strict" value="1" {{ 'checked' if is_strict == '1' else '' }}>
+                    <label for="is_strict_no">否</label>
+                    <input type="radio" id="is_strict_no" name="is_strict" value="0" {{ 'checked' if is_strict != '1' else '' }}>
+                </div>
+            </div>
+            <div align="center" style="margin-bottom: 0.5%; display: flex; align-items: center; gap: 4px; justify-content: center">
                 <span>是否需要绘图:</span>
                 <div style="display: flex; align-items: center; gap: 4px">
-                    <label for="yes">是</label>
-                    <input type="radio" id="yes" name="add_chart" value="1"
-                         {{ 'checked' if add_chart == '1' else '' }}>
-
-                    <label for="no">否</label>
-                    <input type="radio" id="no" name="add_chart" value="0"
-                         {{ 'checked' if add_chart != '1' else '' }}>
-
-            </div>
+                    <label for="add_chart_yes">是</label>
+                    <input type="radio" id="add_chart_yes" name="add_chart" value="1" {{ 'checked' if add_chart == '1' else '' }} >
+                    <label for="add_chart_no">否</label>
+                    <input type="radio" id="add_chart_no" name="add_chart" value="0" {{ 'checked' if add_chart != '1' else '' }} >
+                </div>
             </div>
             <div>&nbsp;</div>
+
             <div class="input-container" style="justify-content:center;gap:20px">
                 <button type="submit" class="send-button" id="save_button">保存配置</button>
                 <button type="button" class="send-button delete-btn" id="delete_button">删除配置</button>
