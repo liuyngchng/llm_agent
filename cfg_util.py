@@ -3,6 +3,7 @@
 
 import json
 import copy
+import re
 import sqlite3
 import logging.config
 import time
@@ -118,7 +119,7 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
     ds_cfg['db_usr_cypher'] = encrypt(ds_cfg['db_usr'], cfg['sys']['cypher_key'])
     ds_cfg['db_psw_cypher'] = encrypt(ds_cfg['db_psw'], cfg['sys']['cypher_key'])
     if ds_cfg["llm_ctx"]:
-        llm_ctx = ds_cfg["llm_ctx"].replace('\'', "\"")
+        llm_ctx = ds_cfg["llm_ctx"].replace("'", '"')
     else:
         llm_ctx = ''
     current_config = get_ds_cfg_by_uid(ds_cfg['uid'], cfg)
@@ -160,6 +161,8 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
                     ''')
     with sqlite3.connect(config_db) as my_conn:
         try:
+            exec_sql = exec_sql.replace('\n', ' ')
+            exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
             result = DbUtl.sqlite_insert_delete_tool(my_conn, exec_sql)
             logger.info(f"exec_sql_success {exec_sql}")
             if result.get('result'):
