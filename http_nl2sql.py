@@ -164,8 +164,12 @@ def login_index():
         return render_template(login_idx, waring_info="", sys_name=my_cfg['sys']['name'])
     else:
         dt_idx = "nl2sql_index.html"
+        ctx = {
+            "uid": "foo",
+            "sys_name": my_cfg['sys']['name']
+        }
         logger.info(f"return_page_with_no_auth {dt_idx}")
-        return render_template(dt_idx, uid='foo', sys_name=my_cfg['sys']['name'])
+        return render_template(dt_idx, **ctx)
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -198,6 +202,7 @@ def login():
             "uid": auth_result["uid"],
             "t": auth_result["t"],
             "sys_name": my_cfg['sys']['name'],
+            "greeting": cfg_utl.get_const("greeting")
         }
         return render_template(dt_idx, **ctx)
 

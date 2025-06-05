@@ -38,6 +38,7 @@
             <input type="hidden" id ="cur_page" name="cur_page" value="{{cur_page}}">
             <input type="hidden" id ="next_page" name="next_page" value="">
             <input type="hidden" id ="total_page" name="total_page" value="{{total_page}}">
+            <input type="hidden" id ="greeting" name="greeting" value="{{greeting}}">
         </form>
     </div>
     <div class="status-indicator" id="status-indicator"></div>
@@ -57,8 +58,10 @@
         let isFetching = false;                                     //是否正在请求数据
 
         window.onload = function() {
-            const greeting = `Hi，我是问数小助手～ 很高兴遇见你！你可以随时问我天然气销售数据的问题，我来帮你查查`;
-            addMessage(greeting, '', 'bot');
+            const greetingEl = document.getElementById('greeting');
+            if (greetingEl && greetingEl.value) {
+                addMessage(greetingEl.value, '', 'bot');
+            }
         };
         // 表单提交
         queryForm.addEventListener('submit', function(e) {
