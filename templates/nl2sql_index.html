@@ -98,7 +98,7 @@
                             const pagination = document.createElement('div');
                             pagination.className = 'pagination';
                             if (data.cur_page < data.total_page) {
-                                pagination.innerHTML = `<div><span class="page-info">当前页:${data.cur_page}, 总页数:${data.total_page}</span>${data.cur_page < data.total_page ? `<a href="#" onclick="loadNextPage(event)">下一页</a></div>` : ''}`;
+                                pagination.innerHTML = `<div><span class="page-info">当前页:${data.cur_page}, 总页数:${data.total_page}, 总记录数 ${data.total_count}</span>${data.cur_page < data.total_page ? `<a href="#" onclick="loadNextPage(event)">下一页</a></div>` : ''}`;
                             }
                             container.appendChild(pagination);
                         }
@@ -297,7 +297,7 @@
                 const pagination = document.createElement('div');
                 pagination.className = 'pagination';
                 if (data.cur_page < data.total_page) {
-                    pagination.innerHTML = `<div><span class="page-info">当前页:${data.cur_page}, 总页数:${data.total_page}</span>${data.cur_page < data.total_page ? `<a href="#" onclick="loadNextPage(event)">下一页</a></div>` : ''}`;
+                    pagination.innerHTML = `<div><span class="page-info">当前页:${data.cur_page}, 总页数:${data.total_page}, 总记录数 ${data.total_count}</span>${data.cur_page < data.total_page ? `<a href="#" onclick="loadNextPage(event)">下一页</a></div>` : ''}`;
                 }
                 container.parentNode.insertBefore(pagination, container.nextSibling);
             }
