@@ -112,6 +112,10 @@ button:disabled {
  input[type="number"] {
     width: 200px;
  }
+ select, input[type="text"], input[type="password"], input[type="number"] {
+    width: 300px; /* 统一宽度 */
+    box-sizing: border-box; /* 包含 padding 和 border */
+}
 .send-button {
     background: linear-gradient(135deg, #4ECDC4, #45B7D1);
     padding: 12px 20px;
@@ -353,7 +357,9 @@ button:disabled {
         margin: 0 -10px;
         border-radius: 0;
     }
-
+    select, input[type="text"], input[type="password"], input[type="number"] {
+        width: 100%; /* 小屏时占满宽度 */
+    }
     #query-form {
         position: sticky;
         bottom: env(keyboard-inset-height, 0);

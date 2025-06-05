@@ -117,6 +117,10 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
     logger.info("start_encrypt_db_source_user_and_password")
     ds_cfg['db_usr_cypher'] = encrypt(ds_cfg['db_usr'], cfg['sys']['cypher_key'])
     ds_cfg['db_psw_cypher'] = encrypt(ds_cfg['db_psw'], cfg['sys']['cypher_key'])
+    if ds_cfg["llm_ctx"]:
+        llm_ctx = ds_cfg["llm_ctx"].replace('\'', "\"")
+    else:
+        llm_ctx = ''
     current_config = get_ds_cfg_by_uid(ds_cfg['uid'], cfg)
     if current_config:
         exec_sql = (f'''
@@ -126,13 +130,13 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
                         db_type ='{ds_cfg["db_type"]}', 
                         db_host ='{ds_cfg["db_host"]}', 
                         db_port ='{ds_cfg["db_port"]}',
-                        db_name='{ds_cfg["db_name"]}', 
-                        db_usr='{ds_cfg["db_usr_cypher"]}', 
-                        db_psw='{ds_cfg["db_psw_cypher"]}',
-                        tables='{ds_cfg["tables"]}',
+                        db_name ='{ds_cfg["db_name"]}', 
+                        db_usr ='{ds_cfg["db_usr_cypher"]}', 
+                        db_psw ='{ds_cfg["db_psw_cypher"]}',
+                        tables ='{ds_cfg["tables"]}',
                         add_chart = '{ds_cfg["add_chart"]}',
                         is_strict = '{ds_cfg["is_strict"]}',
-                        llm_ctx = '{ds_cfg["llm_ctx"]}'
+                        llm_ctx = '{llm_ctx}'
                     WHERE 
                         uid = '{ds_cfg["uid"]}'
                     ''')
@@ -151,7 +155,7 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
                         '{ds_cfg["tables"]}',
                         '{ds_cfg["add_chart"]}',
                         '{ds_cfg["is_strict"]}',
-                        '{ds_cfg["llm_ctx"]}'
+                        '{llm_ctx}'
                     )
                     ''')
     with sqlite3.connect(config_db) as my_conn:

@@ -130,70 +130,57 @@
     </script>
 </head>
 <body>
-    <div class="chat-container" style="max-width:1024px;margin:20px auto">
-        <div class="header">{{sys_name}}_系统配置</div>
-        <form style="margin-top: 2%" action="/cfg/dt" method="post">
-            <div class="form-group" align="center" style="margin-bottom: 0.5%">
-                <span>数据库类型:</span>
-                <select id="db_type" name="db_type" required>
-                    <option value="sqlite" {% if db_type =='sqlite' %}selected{% endif %}>Sqlite数据库</option>
-                    <option value="mysql" {% if db_type =='mysql' %}selected{% endif %}>MySQL数据库</option>
-                    <option value="oracle" {% if db_type =='oracle' %}selected{% endif %}>Oracle数据库</option>
-                    <option value="doris" {% if db_type =='doris' %}selected{% endif %}>Doris数据源</option>
-                </select>
-            </div>
-            <div>&nbsp;</div>
-            <div align="center" style="margin-bottom: 0.5%"><span>数据库名称:</span>
-                <input type="text" id="db_name" name="db_name" value="{{db_name}}" placeholder="your_db_instance"  required>
-            </div>
-            <div>&nbsp;</div>
-            <div align="center" style="margin-bottom: 0.5%"><span>数据库主机:</span>
-                <input type="text" id="db_host" name="db_host" value="{{db_host}}" placeholder="192.168.1.1" >
-            </div>
-            <div>&nbsp;</div>
-            <div align="center" style="margin-bottom: 0.5%"><span>数据库端口:</span>
-                <input type="text" id="db_port" name="db_port" value="{{db_port}}" placeholder="13306" >
-            </div>
-            <div>&nbsp;</div>
-            <div align="center" style="margin-bottom: 0.5%"><span>数据库用户:</span>
-                <input type="text" id="db_usr"  name="db_usr" value="{{db_usr}}" placeholder="your_db_username" required>
-            </div>
-            <div>&nbsp;</div>
-            <div align="center" style="margin-bottom: 0.5%"><span>数据库密码:</span>
-                <input type="password" id="db_psw"  name="db_psw" value="{{db_psw}}" placeholder="your_db_password" required>
-            </div>
-            <div>&nbsp;</div>
-            <div align="center" style="margin-bottom: 0.5%"><span>表清单:</span>
-                <input type="text" id="tables"  name="tables" value="{{tables}}" placeholder="不填则默认使用所有表">
-            </div>
-            <div>&nbsp;</div>
-            <div align="center" style="margin-bottom: 0.5%"><span>是否开启精确查询:</span>
-                <input type="number" max="1" min="0" id="is_strict"  name="is_strict" value="{{is_strict}}" placeholder="开启会引导用户提供详细查询条件">
-                <div>(0: 不开启[尽最大努力理解查询意图]; 1:开启[需提供查询条件])</div>
-            </div>
-            <div>&nbsp;</div>
-            <div align="center" style="margin-bottom: 0.5%"><span>是否绘图:</span>
-                <input type="number" max="1" min="0" id="add_chart"  name="add_chart" value="{{add_chart}}" placeholder="开启后会通过chart.js绘图">
-                <div>(0: 不输出chart.js的图;1:输出chart.js的图)</div>
-            </div>
-            <div>&nbsp;</div>
-            <div align="center" style="margin-bottom: 0.5%"><span>背景知识:</span>
-                <textarea id="llm_ctx" name="llm_ctx" cols="50" rows="10"
-                    placeholder="每条独立的知识写一行，用于大语言模型理解相应的业务场景">{{llm_ctx}}</textarea>
-            </div>
+    <div class="header">{{sys_name}}_系统配置</div>
+    <form style="margin-top: 2%" action="/cfg/dt" method="post">
+        <div align="center" style="margin-bottom: 0.5%">
+            <span>数据库类型:</span>
+            <select id="db_type" name="db_type" required>
+                <option value="sqlite" {% if db_type =='sqlite' %}selected{% endif %}>Sqlite数据库</option>
+                <option value="mysql" {% if db_type =='mysql' %}selected{% endif %}>MySQL数据库</option>
+                <option value="oracle" {% if db_type =='oracle' %}selected{% endif %}>Oracle数据库</option>
+                <option value="doris" {% if db_type =='doris' %}selected{% endif %}>Doris数据源</option>
+            </select>
+        </div>
+        <div align="center" style="margin-bottom: 0.5%"><span>数据库名称:</span>
+            <input type="text" id="db_name" name="db_name" value="{{db_name}}" placeholder="your_db_instance"  required>
+        </div>
+        <div align="center" style="margin-bottom: 0.5%"><span>数据库主机:</span>
+            <input type="text" id="db_host" name="db_host" value="{{db_host}}" placeholder="192.168.1.1" >
+        </div>
+        <div align="center" style="margin-bottom: 0.5%"><span>数据库端口:</span>
+            <input type="text" id="db_port" name="db_port" value="{{db_port}}" placeholder="13306" >
+        </div>
+        <div align="center" style="margin-bottom: 0.5%"><span>数据库用户:</span>
+            <input type="text" id="db_usr"  name="db_usr" value="{{db_usr}}" placeholder="your_db_username" required>
+        </div>
+        <div align="center" style="margin-bottom: 0.5%"><span>数据库密码:</span>
+            <input type="password" id="db_psw"  name="db_psw" value="{{db_psw}}" placeholder="your_db_password" required>
+        </div>
+        <div align="center" style="margin-bottom: 0.5%"><span>数据表清单:</span>
+            <input type="text" id="tables"  name="tables" value="{{tables}}" title="填写后限定为填写的表清单，不填则默认使用当前DB下用户可见的所有表">
+        </div>
+        <div align="center" style="margin-bottom: 0.5%"><span>开启提示:</span>
+            <input type="number" max="1" min="0" id="is_strict"  name="is_strict" value="{{is_strict}}" title="0: 否[尽可能理解查询意图]; 1:是[提示用户提供查询条件]">
+        </div>
+        <div align="center" style="margin-bottom: 0.5%"><span>开启绘图:</span>
+            <input type="number" max="1" min="0" id="add_chart"  name="add_chart" value="{{add_chart}}" title="0: 否[不绘图];1:是[绘图]">
+        </div>
+        <div align="center" style="margin-bottom: 0.5%"><span>大语言模型背景知识:</span>
+            <textarea id="llm_ctx" name="llm_ctx" cols="50" rows="10"
+                title="每条独立的知识写一行，用于大语言模型理解相应的业务场景，也可以理解为对大语言模型提的要求">{{llm_ctx}}</textarea>
+        </div>
 
-            <div class="input-container" style="justify-content:center;gap:20px">
-                <button type="submit" class="send-button" id="save_button">保存配置</button>
-                <button type="button" class="send-button delete-btn" id="delete_button">删除配置</button>
-            </div>
-            <input type="hidden" id="uid" name="uid" value="{{uid}}">
-            <div align="center"><span id="waring_info" style="color: red">{{waring_info}}</span></div>
+        <div class="input-container" style="justify-content:center;gap:20px">
+            <button type="submit" class="send-button" id="save_button">保存配置</button>
+            <button type="button" class="send-button delete-btn" id="delete_button">删除配置</button>
+        </div>
+        <input type="hidden" id="uid" name="uid" value="{{uid}}">
+        <div align="center"><span id="waring_info" style="color: red">{{waring_info}}</span></div>
 <!--            <div>数据源信息:</div>-->
 <!--            <div align="center" style="margin-bottom: 0.5%">-->
 <!--                <textarea id="schema" name = "schema" cols="100" rows="20" readonly="readonly">{{schema}}</textarea>-->
 <!--            </div>-->
-        </form>
-    </div>
+    </form>
     <script>
         function validateForm() {
             const fields = [
