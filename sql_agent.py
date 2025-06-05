@@ -90,7 +90,7 @@ class SqlAgent(DbUtl):
         # logger.debug(f"sql_gen_msg {sql_gen_msg}")
 
         self.refine_q_prompt_template = ChatPromptTemplate.from_messages([
-            ("system", f"{refine_q_msg}, {prompt_padding}"),
+            ("system", f"{refine_q_msg}\n{prompt_padding}"),
             ("human", "用户问题：{msg}")
         ])
 
@@ -100,7 +100,7 @@ class SqlAgent(DbUtl):
         ])
 
         self.count_sql_gen_prompt_template = ChatPromptTemplate.from_messages([
-            ("system", f"{count_sql_gen_msg}, {prompt_padding}"),
+            ("system", f"{count_sql_gen_msg}\n{prompt_padding}"),
             ("human", "查询数据的SQL：{msg}")
         ])
         chart_dt_gen_msg = f"""{cfg['prompts']['chart_dt_gen_msg']}"""
@@ -116,7 +116,7 @@ class SqlAgent(DbUtl):
         ])
 
         self.intercept_q_msg_template = ChatPromptTemplate.from_messages([
-            ("system", intercept_q_msg),
+            ("system", f"{intercept_q_msg}\n{prompt_padding}"),
             ("human", "用户问题：{msg}")
         ])
 

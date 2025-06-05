@@ -64,11 +64,11 @@ def config_index():
     ctx["uid"] = uid
     ctx['sys_name'] = my_cfg['sys']['name']
     ctx["waring_info"] = ""
-    try:
-        sql_agent = SqlAgent(cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg))
-        ctx["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
-    except Exception as e:
-        logger.error("error_to_get_schema", e)
+    # try:
+    #     sql_agent = SqlAgent(cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg))
+    #     ctx["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
+    # except Exception as e:
+    #     logger.error("error_to_get_schema", e)
     dt_idx = "config_index.html"
     logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
@@ -87,6 +87,7 @@ def save_config():
     tables = request.form.get('tables').strip()
     add_chart = request.form.get('add_chart').strip()
     is_strict = request.form.get('is_strict').strip()
+    llm_ctx = request.form.get('llm_ctx').strip()
     data_source_cfg = {
         "sys_name":     my_cfg['sys']['name'],
         "waring_info":  "",
@@ -100,6 +101,7 @@ def save_config():
         "tables":       tables,
         "add_chart":    add_chart,
         "is_strict":    is_strict,
+        "llm_ctx":      llm_ctx
     }
     usr = cfg_utl.get_user_name_by_uid(uid)
     if data_source_cfg["db_type"] == DBType.SQLITE.value:
@@ -113,8 +115,8 @@ def save_config():
         data_source_cfg['waring_info'] = '保存成功'
     else:
         data_source_cfg['waring_info'] = '保存失败'
-    sql_agent = SqlAgent(cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg))
-    data_source_cfg["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
+    # sql_agent = SqlAgent(cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg))
+    # data_source_cfg["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
     return render_template(dt_idx, **data_source_cfg)
 
 
@@ -230,7 +232,8 @@ def query_data(catch=None):
         logger.info(f"ds_cfg_for_uid_{uid}, {ds_cfg.get('db', '')}")
     else:
         ds_cfg = my_cfg
-    sql_agent = SqlAgent(ds_cfg)
+    ds_src_cfg = cfg_utl.get_ds_cfg_by_uid(uid, my_cfg)
+    sql_agent = SqlAgent(ds_cfg, prompt_padding=ds_src_cfg['llm_ctx'])
     if not msg and usr_page_dt.get(uid, None) and page and page != '':
         usr_page_dt[uid]["cur_page"] += 1
         logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")

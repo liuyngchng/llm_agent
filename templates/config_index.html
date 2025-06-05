@@ -169,12 +169,17 @@
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%"><span>是否开启精确查询:</span>
                 <input type="number" max="1" min="0" id="is_strict"  name="is_strict" value="{{is_strict}}" placeholder="开启会引导用户提供详细查询条件">
-                <div>(0: 不开启[尽最大努力理解查询意图]; 1:开启[需提供详细查询条件])</div>
+                <div>(0: 不开启[尽最大努力理解查询意图]; 1:开启[需提供查询条件])</div>
             </div>
             <div>&nbsp;</div>
             <div align="center" style="margin-bottom: 0.5%"><span>是否绘图:</span>
                 <input type="number" max="1" min="0" id="add_chart"  name="add_chart" value="{{add_chart}}" placeholder="开启后会通过chart.js绘图">
                 <div>(0: 不输出chart.js的图;1:输出chart.js的图)</div>
+            </div>
+            <div>&nbsp;</div>
+            <div align="center" style="margin-bottom: 0.5%"><span>背景知识:</span>
+                <textarea id="llm_ctx" name="llm_ctx" cols="50" rows="10"
+                    placeholder="每条独立的知识写一行，用于大语言模型理解相应的业务场景">{{llm_ctx}}</textarea>
             </div>
 
             <div class="input-container" style="justify-content:center;gap:20px">
@@ -183,10 +188,10 @@
             </div>
             <input type="hidden" id="uid" name="uid" value="{{uid}}">
             <div align="center"><span id="waring_info" style="color: red">{{waring_info}}</span></div>
-            <div>数据源信息:</div>
-            <div align="center" style="margin-bottom: 0.5%">
-                <textarea id="schema" name = "schema" cols="100" rows="20" readonly="readonly">{{schema}}</textarea>
-            </div>
+<!--            <div>数据源信息:</div>-->
+<!--            <div align="center" style="margin-bottom: 0.5%">-->
+<!--                <textarea id="schema" name = "schema" cols="100" rows="20" readonly="readonly">{{schema}}</textarea>-->
+<!--            </div>-->
         </form>
     </div>
     <script>
