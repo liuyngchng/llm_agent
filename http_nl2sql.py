@@ -306,14 +306,17 @@ def transcribe_audio() -> tuple[Response, int] | Response:
             status=413
         )
     try:
+        logger.info("audio_stream_received")
         audio_file = request.files.get('audio')
         if not audio_file or not audio_file.filename.endswith('.webm'):
             return jsonify({"error": "invalid webm txt_file"}), 400
         audio_bytes = audio_file.read()
+        logger.info("transcribe_webm_audio_bytes_start")
         result = transcribe_webm_audio_bytes(audio_bytes, my_cfg)
+        logger.info(f"transcribe_webm_audio_bytes_return_txt, {result}")
         data = {"text": result}
     except Exception as e:
-        logger.exception("语音识别接口异常")
+        logger.exception(f"语音识别接口异常, {e}")
         data = {"text": "语音识别异常，请检查语音识别服务是否正常"}
 
     response = Response(
