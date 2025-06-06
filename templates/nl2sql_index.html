@@ -80,7 +80,30 @@
             queryInput.value = '';            
             // 发送API请求
             // 返回的 data 数据格式 {"chart": {}, "raw_dt": "markdown格式数据表格", "unit": "数据物理量的量纲", "sql": "my_sql", "cur_page": 1, "total_page": 2, "total_count": 0}
-            fetchQueryData(query).then(data => {
+            fetchQueryData(query).then(({response, data}) => {
+                if (!response.ok) {
+                    let errorMessage = '查询失败，请稍后再试';
+                    switch(response.status) {
+                        case 400:
+                            errorMessage = '请求参数错误，请检查您的输入';
+                            break;
+                        case 401:
+                            errorMessage = '未授权，请重新登录';
+                            break;
+                        case 404:
+                            errorMessage = '请求的资源不存在';
+                            break;
+                        case 500:
+                            errorMessage = '服务器内部错误，请联系管理员';
+                            break;
+                        case 503:
+                            errorMessage = '服务暂时不可用，请稍后再试';
+                            break;
+                    }
+                    addMessage(errorMessage, '', 'bot');
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                     document.getElementById('cur_page').value = data.cur_page;
                     document.getElementById('total_page').value = data.total_page;
                     if (data.chart && data.chart.labels?.length && data.chart.values?.length) {
@@ -109,7 +132,6 @@
                 })
                 .catch(error => {
                     console.log("error_occurred", error.message)
-                    addMessage(`查询失败，网路请求超时，请您稍后再试`, '', 'bot');
                 });
         });
 
@@ -137,8 +159,10 @@
                 sendButton.disabled = false;
                 isFetching = true;              // 数据请求完成
                 if (!response.ok) throw new Error('网络响应失败');
-                const data = await response.json();
-                return data;
+                return {
+                    response: response,
+                    data: await response.json().catch(() => null) // 如果json解析失败，返回null
+                };
             } catch (error) {
                 if (loadingMsg && chatContainer.contains(loadingMsg)) {
                     chatContainer.removeChild(loadingMsg);
