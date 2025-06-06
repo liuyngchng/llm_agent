@@ -132,10 +132,17 @@ class SqlAgent(DbUtl):
         """
         generate sql
         """
+        hack_q_list = cfg_util.get_hack_info(uid)
+        if hack_q_list:
+            hack_q = hack_q_list.get(question)
+            if hack_q:
+                logger.info(f"get_hack_q {hack_q} for {question}")
+                return hack_q
         chain = self.refine_q_prompt_template | self.llm
         gen_sql_dict = self.build_invoke_json(uid, question)
         logger.info(f"refine_q, {gen_sql_dict}")
         response = chain.invoke(gen_sql_dict)
+        logger.info(f"return_refine_q, {response.content}, origin_q {question}")
         return response.content
 
     def gen_sql_by_txt(self, uid: str, question: str) -> str:

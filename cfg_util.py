@@ -252,6 +252,18 @@ def get_consts()-> dict:
             logger.exception(f"err_occurred_for_db {config_db}, sql {sql}")
     return const
 
+def get_hack_info(uid: str)-> dict:
+    with sqlite3.connect(config_db) as my_conn:
+        sql = f"select hack_q_dict from hack_list where uid = '{uid}' limit 1"
+        try:
+            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
+            hack_q_list = check_info['data']
+            if hack_q_list:
+                return json.loads(hack_q_list[0][0])
+        except Exception as e:
+            logger.exception(f"err_occur_in_get_hack_q_dict_for_db {config_db}, sql {sql}")
+    return {}
+
 def get_user_sample_data(sql: str)-> dict:
     """
     get sample data for user consumption data
