@@ -82,6 +82,7 @@ class SqlAgent(DbUtl):
         refine_q_msg = f"""{cfg['prompts']['refine_q_msg']}\n当前时间是 {current_time}"""
         sql_gen_msg = f"""{cfg['prompts']['sql_gen_msg']}\n当前时间是 {current_time}"""
         count_sql_gen_msg = cfg['prompts']['count_sql_gen_msg']
+        explain_sql_msg = cfg['prompts']['explain_sql_msg']
         intercept_q_msg = f"""{cfg['prompts']['intercept_q_msg']}\n当前时间是 {current_time}"""
         # try:
         #     sql_gen_msg = sql_gen_msg.replace("{sql_dialect}", cfg['db']['type'])
@@ -101,6 +102,11 @@ class SqlAgent(DbUtl):
 
         self.count_sql_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", f"{count_sql_gen_msg}\n{prompt_padding}"),
+            ("human", "查询数据的SQL：{msg}")
+        ])
+
+        self.explain_sql_msg_template = ChatPromptTemplate.from_messages([
+            ("system", f"{explain_sql_msg}\n{prompt_padding}"),
             ("human", "查询数据的SQL：{msg}")
         ])
         chart_dt_gen_msg = f"""{cfg['prompts']['chart_dt_gen_msg']}"""
@@ -163,6 +169,16 @@ class SqlAgent(DbUtl):
         gen_sql_dict = self.build_invoke_json(uid, sql)
         logger.info(f"gen_count_sql_by_sql: {gen_sql_dict}")
         response = chain.invoke(gen_sql_dict)
+        return response.content
+
+    def get_explain_sql_txt(self, uid: str, sql: str) -> str:
+        """
+        generate count sql by data retrieval sql
+        """
+        chain = self.explain_sql_msg_template | self.llm
+        explain_sql_dict = self.build_invoke_json(uid, sql)
+        logger.info(f"get_explain_sql_txt: {explain_sql_dict}")
+        response = chain.invoke(explain_sql_dict)
         return response.content
 
     def desc_usr_dt(self, question: str, usr_dt: dict) -> str:
@@ -300,7 +316,7 @@ class SqlAgent(DbUtl):
                 f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
                 f" cfg['db']={self.cfg['db']}")
             raise Exception(info)
-        nl_dt_dict = {"chart": {}, "raw_dt": {}, "sql": "", "total_count": 0, "cur_page": 1, "total_page":2}
+        nl_dt_dict = {"chart": {}, "raw_dt": {}, "sql": "", "explain_sql": "", "total_count": 0, "cur_page": 1, "total_page":2}
         cfg = cfg_util.get_ds_cfg_by_uid(uid, self.cfg)
         logger.info(f"cfg_for_uid {uid}, {cfg}")
 
@@ -353,6 +369,15 @@ class SqlAgent(DbUtl):
             logger.error(f"get_dt_with_sql_err, {e}, sql: {sql}", exc_info=True)
             nl_dt_dict["raw_dt"] = "使用SQL从数据源查询数据时发生异常"
             return nl_dt_dict
+
+        try:
+            logger.info("get_explain_sql_txt_start")
+            explain_sql_txt = self.get_explain_sql_txt(nl_dt_dict["sql"], dt_fmt)
+            explain_sql_txt = extract_md_content(explain_sql_txt, "sql")
+            nl_dt_dict["explain_sql"] = explain_sql_txt
+            logger.info(f"get_explain_sql_txt, {explain_sql_txt}")
+        except Exception as e:
+            logger.error(f"get_explain_sql_txt_err, {e}, sql: {nl_dt_dict["sql"]}", exc_info=True)
         logger.info(f"nl_dt:{nl_dt_dict}")
         return self.build_chart_dt(uid, nl_dt_dict)
 

@@ -229,8 +229,6 @@ def query_data(catch=None):
             content_type="application/json; charset=utf-8",
             status=200
         )
-
-
     if uid and uid != 'foo':
         logger.info(f"build_ds_cfg_with_uid_{uid}")
         ds_cfg = cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg)
