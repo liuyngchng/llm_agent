@@ -234,7 +234,7 @@ def get_const(key:str)->str | None:
             check_info = DbUtl.sqlite_query_tool(my_conn, sql)
             value_dt = check_info['data']
             value = value_dt[0][0]
-            logger.info(f"get_const {value} with uid {value}")
+            logger.info(f"get_const {value} with key {key}")
         except Exception as e:
             logger.info(f"no_value_info_found_for_key, {key}")
     return value
