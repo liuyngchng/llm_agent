@@ -9,7 +9,8 @@ import logging.config
 import os
 import time
 
-from flask import Flask, request, jsonify, render_template, Response
+from werkzeug.middleware.proxy_fix import ProxyFix
+from flask import Flask, request, redirect, jsonify, render_template, Response
 
 import cfg_util as cfg_utl
 from my_enums import DataType, DBType
@@ -21,6 +22,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config['JSON_AS_ASCII'] = False
 my_cfg = init_yml_cfg()
 os.system(
@@ -35,6 +37,14 @@ usr_page_dt = {}
 auth_info = {}
 
 SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
+
+
+@app.before_request
+def before_request():
+    if not request.is_secure:
+        url = request.url.replace('http://', 'https://', 1)
+        logger.info(f"redirect_http_to_https, {url}")
+        return redirect(url, code=301)
 
 
 @app.route('/gt/dt/idx', methods=['GET'])
