@@ -33,7 +33,6 @@ sqlite_vss
 **/*.yaml
 **/*.wav
 cfg.yml
-cert/*
 **/*.cer
 **/*.faiss
 **/*.doc
