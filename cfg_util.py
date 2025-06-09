@@ -264,6 +264,17 @@ def get_hack_info(uid: str)-> dict:
             logger.exception(f"err_occur_in_get_hack_q_dict_for_db {config_db}, sql {sql}")
     return {}
 
+def get_hack_file(uid: str) -> dict:
+    file_name = f'{uid}.txt'
+    try:
+        with open(file_name) as f:
+            hack_dict = dict(line.rstrip('\n').split('\t', 1) for line in f)
+            logger.info(f"return_hack_dict_for_uid_{uid}, {json.dumps(hack_dict, ensure_ascii=False)}")
+            return hack_dict
+    except FileNotFoundError:
+        logger.error(f"file_not_found, file_name={file_name}")
+        return {}
+
 def get_user_sample_data(sql: str)-> dict:
     """
     get sample data for user consumption data

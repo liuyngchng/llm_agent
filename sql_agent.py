@@ -138,7 +138,7 @@ class SqlAgent(DbUtl):
         """
         generate sql
         """
-        hack_q_list = cfg_util.get_hack_info(uid)
+        hack_q_list = cfg_util.get_hack_file(uid)
         if hack_q_list:
             hack_q = hack_q_list.get(question)
             if hack_q:
