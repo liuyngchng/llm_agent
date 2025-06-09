@@ -287,13 +287,14 @@ def get_db_dt():
     msg = request.get_json().get('msg').strip()
     uid = request.get_json().get('uid').strip()
     logger.info(f"rcv_msg: {msg}, uid {uid}")
-    logger.info(f"ask_question({msg}, {my_cfg}, 'json')")
+    auth_result = authenticate(request)
+    if not auth_result:
+        return json.dumps({"msg":"illegal_access_users", "code":502}, ensure_ascii=False)
     sql_agent = SqlAgent(my_cfg)
     answer = sql_agent.get_dt_with_nl(uid, msg, DataType.JSON.value)
     # logger.debug(f"answer is：{answer}")
     if not answer:
         answer=json.dumps({"msg":"没有查询到相关数据，请您尝试换个问题进行提问", "code":404}, ensure_ascii=False)
-
     return answer
 
 
