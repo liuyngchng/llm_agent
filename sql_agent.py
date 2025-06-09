@@ -372,10 +372,10 @@ class SqlAgent(DbUtl):
 
         try:
             logger.info("get_explain_sql_txt_start")
-            explain_sql_txt = self.get_explain_sql_txt(nl_dt_dict["sql"], dt_fmt)
+            explain_sql_txt = self.get_explain_sql_txt(uid, nl_dt_dict["sql"])
             explain_sql_txt = extract_md_content(explain_sql_txt, "sql")
             nl_dt_dict["explain_sql"] = explain_sql_txt
-            logger.info(f"get_explain_sql_txt, {explain_sql_txt}")
+            logger.info(f"get_explain_sql_txt, {explain_sql_txt}, input_sql, {nl_dt_dict["sql"].replace('\n', ' ')}")
         except Exception as e:
             logger.error(f"get_explain_sql_txt_err, {e}, sql: {nl_dt_dict["sql"]}", exc_info=True)
         logger.info(f"nl_dt:{nl_dt_dict}")

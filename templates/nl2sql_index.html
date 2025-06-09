@@ -197,7 +197,7 @@
                             <div class="tab-bar">
                                 <button class="tab-btn active" onclick="toggleTab(this, 'chart')">图表</button>
                                 <button class="tab-btn" onclick="toggleTab(this, 'data')">数据</button>
-                                <button class="tab-btn" onclick="toggleTab(this, 'sql')">数据来源说明</button>
+                                <button class="tab-btn" onclick="toggleTab(this, 'sql')">备注</button>
                             </div>
                             <div class="tab-content chart-tab" style="display: block;">
                                 <canvas></canvas>
@@ -239,7 +239,7 @@
                         <div class="chart-container">
                             <div class="tab-bar">
                                 <button class="tab-btn active" onclick="toggleTab(this, 'data')">数据</button>
-                                <button class="tab-btn" onclick="toggleTab(this, 'sql')">数据来源说明</button>
+                                <button class="tab-btn" onclick="toggleTab(this, 'sql')">备注</button>
                             </div>
                             <div class="tab-content data-tab" style="display: block;">
                                 <pre class="raw-data">${DOMPurify.sanitize(marked.parse(text))}</pre>
