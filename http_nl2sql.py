@@ -7,6 +7,7 @@ pip install gunicorn flask concurrent-log-handler langchain_openai langchain_oll
 import json
 import logging.config
 import os
+import time
 
 from flask import Flask, request, jsonify, render_template, Response
 
@@ -29,6 +30,11 @@ os.system(
 # user's last sql, {"my_uid": {"sql":"my_sql", "curr_page":1, "total_page":1}}
 # last search sql, current page and total page for the SQL
 usr_page_dt = {}
+
+# {"uid1":17234657891, "uid2":176543980}
+auth_info = {}
+
+SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 
 
 @app.route('/gt/dt/idx', methods=['GET'])
@@ -182,12 +188,12 @@ def login():
     echo -n 'my_str' |  md5sum
     """
     dt_idx = "nl2sql_index.html"
-    logger.debug(f"request.form: {request.form}")
+    logger.debug(f"request_form: {request.form}")
     user = request.form.get('usr').strip()
     t = request.form.get('t').strip()
-    logger.info(f"user login: {user}, {t}")
+    logger.info(f"user_login: {user}, {t}")
     auth_result = cfg_utl.auth_user(user, t, my_cfg)
-    logger.info(f"user login result: {user}, {t}, {auth_result}")
+    logger.info(f"user_login_result: {user}, {t}, {auth_result}")
     if not auth_result["pass"]:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
         ctx = {
@@ -196,15 +202,18 @@ def login():
             "waring_info" : "用户名或密码输入错误",
         }
         return render_template("login.html", **ctx)
-    else:
-        logger.info(f"return_page {dt_idx}")
-        ctx = {
-            "uid": auth_result["uid"],
-            "t": auth_result["t"],
-            "sys_name": my_cfg['sys']['name'],
-            "greeting": cfg_utl.get_const("greeting")
-        }
-        return render_template(dt_idx, **ctx)
+
+    logger.info(f"return_page {dt_idx}")
+    ctx = {
+        "uid": auth_result["uid"],
+        "t": auth_result["t"],
+        "sys_name": my_cfg['sys']['name'],
+        "greeting": cfg_utl.get_const("greeting")
+    }
+    session_key = f"{auth_result["uid"]}_{get_client_ip()}"
+    auth_info[session_key] = time.time()
+    return render_template(dt_idx, **ctx)
+
 
 @app.route('/query/data', methods=['POST'])
 def query_data(catch=None):
@@ -219,16 +228,13 @@ def query_data(catch=None):
         # .replace("截至", "").replace("截止", "")
     uid = request.form.get('uid').strip()
     page = request.form.get('page')
+    session_key = f"{uid}_{get_client_ip()}"
+    if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
+        waring_info = "登录信息已失效，请输重新登录后再使用本系统"
+        logger.error(f"{waring_info}, {uid}")
+        return json.dumps(waring_info, ensure_ascii=False)
     logger.info(f"rcv_msg, {msg}, uid {uid}, page {page}")
-    auth_result = authenticate(request)
-    if not auth_result:
-        data = {"chart":{}, "raw_dt":{}, "msg":"illegal access"}
-        logger.error(f"illegal_access, {request}")
-        return Response(
-            json.dumps(data, ensure_ascii=False),
-            content_type="application/json; charset=utf-8",
-            status=200
-        )
+    auth_info[session_key] = time.time()
     if uid and uid != 'foo':
         logger.info(f"build_ds_cfg_with_uid_{uid}")
         ds_cfg = cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg)
@@ -343,6 +349,12 @@ def test_query_data():
         answer="没有查询到相关数据，请您尝试换个问题提问"
     logger.info(f"answer_is：\n{answer}")
     return answer
+
+def get_client_ip():
+    """获取客户端真实 IP"""
+    if forwarded_for := request.headers.get('X-Forwarded-For'):
+        return forwarded_for.split(',')[0]
+    return request.headers.get('X-Real-IP', request.remote_addr)
 
 
 if __name__ == '__main__':
