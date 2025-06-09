@@ -265,14 +265,14 @@ def get_hack_info(uid: str)-> dict:
     return {}
 
 def get_hack_file(uid: str) -> dict:
-    file_name = f'{uid}.txt'
+    file_full_path = f'./hack/{uid}.txt'
     try:
-        with open(file_name) as f:
+        with open(file_full_path) as f:
             hack_dict = dict(line.rstrip('\n').split('\t', 1) for line in f)
-            logger.info(f"return_hack_dict_for_uid_{uid}, {json.dumps(hack_dict, ensure_ascii=False)}")
+            logger.info(f"return_hack_dict_for_uid_{uid}, {json.dumps(hack_dict, ensure_ascii=False)}, hack_file {file_full_path}")
             return hack_dict
     except FileNotFoundError:
-        logger.error(f"file_not_found, file_name={file_name}")
+        logger.error(f"file_not_found, file_full_path={file_full_path}")
         return {}
 
 def get_user_sample_data(sql: str)-> dict:
