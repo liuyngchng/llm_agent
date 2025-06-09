@@ -1,7 +1,7 @@
 #!/bin/bash
 # for start application in local bare metal
 # default module name is http_rag, user can customized the argument
-MODULE=${1:-http_rag}
+MODULE=${1:-http_nl2sql}
 # delete de suffix '.py'
 MODULE=${MODULE%.py}
 # you can go to module dir here
