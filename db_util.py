@@ -376,11 +376,60 @@ class DbUtl:
         """
         if not origin_sql:
             raise RuntimeError("origin_sql_null_err")
-        origin_sql = origin_sql.replace("\n", " ")
-        cleaned_sql = re.sub(r'\s+ORDER\s+BY\s+.*?(?=LIMIT|\bWHERE\b|$)', ' ', origin_sql, flags=re.I)
-        cleaned_sql = re.sub(r'\s+LIMIT\s+\d+.*?(?=\s|;|$)', ' ', cleaned_sql, flags=re.I)
-        count_sql = re.sub(r'^SELECT\s.*?\sFROM', 'SELECT COUNT(1) FROM ', cleaned_sql, count=1, flags=re.I)
-        return re.sub(r' +', ' ', count_sql)
+
+            # 标准化空格处理
+        origin_sql = re.sub(r'\s+', ' ', origin_sql).strip()
+
+        # 1. 移除 ORDER BY 和 LIMIT
+        cleaned_sql = re.sub(r'\s+ORDER\s+BY\s+.*?(?=(?:LIMIT|\bWHERE\b|$))', '', origin_sql, flags=re.I)
+        cleaned_sql = re.sub(r'\s+LIMIT\s+\d+(\s*,\s*\d+)?', '', cleaned_sql, flags=re.I)  # 修正LIMIT匹配
+
+        # 2. 智能判断查询类型
+        if re.search(r'\bGROUP\s+BY\b|\bDISTINCT\b', cleaned_sql, re.I):
+            # 分组/去重查询：使用子查询统计分组数
+            return f"SELECT COUNT(1) FROM ({cleaned_sql}) AS pagination_subquery"
+        elif re.search(r'\b(COUNT|SUM|AVG|MAX|MIN)\s*\(', cleaned_sql, re.I):
+            # 聚合函数查询：强制返回1（无分组时结果只有一行）
+            return "SELECT 1"
+        else:
+            # 简单查询：直接生成高效计数
+            return re.sub(
+                r'^SELECT\s.*?\sFROM\s',
+                'SELECT COUNT(1) FROM ',
+                cleaned_sql,
+                count=1,
+                flags=re.I
+            ).strip()
+
+
+    @staticmethod
+    def add_ou_id_condition(sql: str, ou_id_list:list):
+        ou_id_str = ', '.join(map(str, ou_id_list))
+        pattern = re.compile(
+    r'(\bWHERE\b|\bGROUP\s+BY\b|\bORDER\s+BY\b|\bLIMIT\b)',
+            re.IGNORECASE | re.DOTALL
+        )
+        match = pattern.search(sql)
+        if match:
+            if match.group(1).upper().startswith('WHERE'):
+                # 在现有WHERE条件后添加AND
+                insert_pos = match.end()
+                new_sql = (
+                    sql[:insert_pos] +
+                    f" AND ou_id IN ({ou_id_str}) " +
+                    sql[insert_pos:]
+                )
+            else:
+                insert_pos = match.start()
+                new_sql = (
+                    sql[:insert_pos] +
+                    f" WHERE ou_id IN ({ou_id_str}) " +
+                    sql[insert_pos:]
+                )
+        else:
+            new_sql = sql.rstrip() + f" WHERE ou_id IN ({ou_id_str})"
+        return new_sql
+
 
 
 def test_db():
@@ -417,8 +466,42 @@ def test_sqlite():
     my_dt = DbUtl.sqlite_output(db_uri, "select * from schema_info where entity = 'dws_dw_ycb_day'", DataType.JSON.value)
     logger.info(f"my_dt {my_dt}")
 
+def test_add_ou_id_condition():
+    # sql = "select a, count(1) from b group by a order by e limit c, d"
+    sql = "select a, max(f) from b \n group by a order by e limit c, d"
+    out_sql = DbUtl.add_ou_id_condition(sql, [123, 456])
+    logger.info(f"out_sql {out_sql}")
+
+def test_get_count_sql():
+    sql = "select a, count(1) from b where c='e' and d='f' group by g order by h limit 100, 20"
+    count_sql = DbUtl.gen_count_sql(sql)
+    logger.info(f"count_sql, {count_sql}, original_sql {sql}")
+    sql = "select a, a1 from b where c='e' and d='f' order by h LIMIT 10, 20"
+    count_sql = DbUtl.gen_count_sql(sql)
+    logger.info(f"count_sql, {count_sql}, original_sql {sql}")
+    sql = "select distinct(a1) from b where c='e' and d='f' order by h LIMIT 10, 20"
+    count_sql = DbUtl.gen_count_sql(sql)
+    logger.info(f"count_sql, {count_sql}, original_sql {sql}")
+    sql = "select sum(a1) from b where c='e' and d='f' order by h LIMIT 10, 20"
+    count_sql = DbUtl.gen_count_sql(sql)
+    logger.info(f"count_sql, {count_sql}, original_sql {sql}")
+    sql = "select max(a1) from b where c='e' and d='f' order by h LIMIT 10, 20"
+    count_sql = DbUtl.gen_count_sql(sql)
+    logger.info(f"count_sql, {count_sql}, original_sql {sql}")
+    sql = "select min(a1) from b where c='e' and d='f' order by h LIMIT 10, 20"
+    count_sql = DbUtl.gen_count_sql(sql)
+    logger.info(f"count_sql, {count_sql}, original_sql {sql}")
+    sql = "select count(1) from b where c='e' and d='f' order by h LIMIT 10, 20"
+    count_sql = DbUtl.gen_count_sql(sql)
+    logger.info(f"count_sql, {count_sql}, original_sql {sql}")
+    sql = "select count(*) from b where c='e' and d='f' order by h LIMIT 10, 20"
+    count_sql = DbUtl.gen_count_sql(sql)
+    logger.info(f"count_sql, {count_sql}, original_sql {sql}")
+
 
 if __name__ == "__main__":
+    test_get_count_sql()
+    # test_add_ou_id_condition()
     # test_db()
     # sql1 = "select a from b where c=d limit 30"
     # new_sql1 = DbUtl.get_page_sql(sql1, 5)
@@ -429,5 +512,5 @@ if __name__ == "__main__":
     # logger.info(f"page_sql2, {new_sql2}")
     # count_sql2 = DbUtl.gen_count_sql(sql2)
     # logger.info(f"count_sql2, {count_sql2}")
-    txt ='用气量, 单位:立方米'
-    logger.info(DbUtl.get_punctuation_seg(txt))
+    # txt ='用气量, 单位:立方米'
+    # logger.info(DbUtl.get_punctuation_seg(txt))
