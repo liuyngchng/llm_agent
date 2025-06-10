@@ -362,7 +362,6 @@ class DbUtl:
             raise RuntimeError("origin_sql_null_err")
         origin_sql = origin_sql.replace("\n", " ")
         offset = (page_no - 1) * page_size
-        # 替换或添加 LIMIT + OFFSET
         sql1 = re.sub(r'LIMIT\s+\d+(?:\s+OFFSET\s+\d+)?',
             f'LIMIT {page_size} OFFSET {offset}',
             origin_sql, flags=re.I, count=1
@@ -377,22 +376,14 @@ class DbUtl:
         if not origin_sql:
             raise RuntimeError("origin_sql_null_err")
         origin_sql = origin_sql.replace(';', '')
-        # 标准化空格处理
         origin_sql = re.sub(r'\s+', ' ', origin_sql).strip()
-
-        # 1. 移除 ORDER BY 和 LIMIT
         cleaned_sql = re.sub(r'\s+ORDER\s+BY\s+.*?(?=(?:LIMIT|\bWHERE\b|$))', ' ', origin_sql, flags=re.I)
         cleaned_sql = re.sub(r'\s+LIMIT\s+\d+(\s*,\s*\d+)?', '', cleaned_sql, flags=re.I)  # 修正LIMIT匹配
-
-        # 2. 智能判断查询类型
         if re.search(r'\bGROUP\s+BY\b|\bDISTINCT\b', cleaned_sql, re.I):
-            # 分组/去重查询：使用子查询统计分组数
             return f"SELECT COUNT(1) FROM ({cleaned_sql}) AS pagination_subquery"
         elif re.search(r'\b(COUNT|SUM|AVG|MAX|MIN)\s*\(', cleaned_sql, re.I):
-            # 聚合函数查询：强制返回1（无分组时结果只有一行）
             return "SELECT 1"
         else:
-            # 简单查询：直接生成高效计数
             return re.sub(
                 r'^SELECT\s.*?\sFROM\s',
                 'SELECT COUNT(1) FROM ',
