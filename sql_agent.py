@@ -316,7 +316,7 @@ class SqlAgent(DbUtl):
                 f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
                 f" cfg['db']={self.cfg['db']}")
             raise Exception(info)
-        nl_dt_dict = {"chart": {}, "raw_dt": {}, "sql": "", "explain_sql": "", "total_count": 0, "cur_page": 1, "total_page":2}
+        nl_dt_dict = {"chart": {}, "raw_dt": {}, "sql": "", "explain_sql": "", "total_count": 0, "cur_page": 1, "total_page":1}
         cfg = cfg_util.get_ds_cfg_by_uid(uid, self.cfg)
         logger.info(f"cfg_for_uid {uid}, {cfg}")
 
@@ -348,15 +348,25 @@ class SqlAgent(DbUtl):
             return nl_dt_dict
         try:
             nl_dt_dict["raw_dt"] = self.get_dt_with_sql(nl_dt_dict["sql"], dt_fmt)
+        except Exception as e:
+            logger.error(f"get_dt_with_sql_err, {e}, sql: {nl_dt_dict["sql"]}", exc_info=True)
+            nl_dt_dict["raw_dt"] = "从数据源查询数据时发生异常"
+            return nl_dt_dict
+        count_sql = ''
+        try:
             # count_sql_txt = self.gen_count_sql_by_sql(uid, nl_dt_dict["sql"])
             # count_sql = extract_md_content(count_sql_txt, "sql")
             count_sql = DbUtl.gen_count_sql(nl_dt_dict["sql"])
-            logger.info(f"gen_count_sql_by_sql, result "
+            logger.info(f"gen_count_sql_by_get_dt_sql, result "
                 f"{count_sql.replace('\n', ' ')}, "
                 f"get_dt_sql {nl_dt_dict["sql"].replace('\n', ' ')}"
             )
             count_dt = self.get_dt_with_sql(count_sql, DataType.JSON.value)
-            logger.info(f"count_result_count_dt {count_dt}")
+            logger.info(f"dt_count_result, {count_dt}")
+        except Exception as e:
+            logger.error(f"get_dt_count_with_count_sql_err, {e}, count_sql: {count_sql}", exc_info=True)
+            return nl_dt_dict
+        try:
             total_count = SqlAgent.get_count_num(count_dt)
             nl_dt_dict["total_count"] = total_count
             logger.info(f"get_total_page {total_count} / {PAGE_SIZE}")
@@ -366,9 +376,7 @@ class SqlAgent(DbUtl):
                 logger.error(f"total_count_type_err_for {total_count}")
                 nl_dt_dict["total_page"] = 1
         except Exception as e:
-            logger.error(f"get_dt_with_sql_err, {e}, sql: {sql}", exc_info=True)
-            nl_dt_dict["raw_dt"] = "使用SQL从数据源查询数据时发生异常"
-            return nl_dt_dict
+            logger.error(f"get_total_count_or_total_page_err, {e}", exc_info=True)
 
         try:
             logger.info("get_explain_sql_txt_start")
@@ -378,6 +386,7 @@ class SqlAgent(DbUtl):
             logger.info(f"get_explain_sql_txt, {explain_sql_txt}, input_sql, {nl_dt_dict["sql"].replace('\n', ' ')}")
         except Exception as e:
             logger.error(f"get_explain_sql_txt_err, {e}, sql: {nl_dt_dict["sql"]}", exc_info=True)
+            nl_dt_dict["explain_sql"] = "暂时无法给您提供数据查询的相关解释"
         logger.info(f"nl_dt:{nl_dt_dict}")
         return self.build_chart_dt(uid, nl_dt_dict)
 
@@ -409,16 +418,20 @@ class SqlAgent(DbUtl):
         : param dt: db retrieved dt
         : nl_dt: final dt need to be returned
         """
-        cfg = cfg_util.get_ds_cfg_by_uid(uid, self.cfg)
-        logger.info(f"cfg_for_uid {uid}, {cfg}")
-        if cfg:
-            if cfg.get("add_chart") == 1:
-                return self.add_chart_to_raw_dt(nl_dt)
-            else:
+        try:
+            cfg = cfg_util.get_ds_cfg_by_uid(uid, self.cfg)
+            logger.info(f"cfg_for_uid {uid}, {cfg}")
+            if cfg:
+                if cfg.get("add_chart") == 1:
+                    return self.add_chart_to_raw_dt(nl_dt)
+                else:
+                    return nl_dt
+            if not self.cfg['prompts']['add_chart_to_dt']:
                 return nl_dt
-        if not self.cfg['prompts']['add_chart_to_dt']:
-            return nl_dt
-        return self.add_chart_to_raw_dt(nl_dt)
+            return self.add_chart_to_raw_dt(nl_dt)
+        except Exception as e:
+            logger.error(f"build_chart_dt_err, {e}", exc_info=True)
+        return nl_dt
 
     def get_dt_with_sql(self, sql: str, dt_fmt=DataType.MARKDOWN.value) -> str:
         """
