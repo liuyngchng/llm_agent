@@ -242,7 +242,6 @@ def query_data(catch=None):
     page = request.form.get('page')
     session_key = f"{uid}_{get_client_ip()}"
     if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
-        # waring_info = "登录信息已失效，请输重新登录后再使用本系统"
         waring_info = {"chart": {}, "raw_dt": "登录信息已失效，请输重新登录后再使用本系统", "sql": "", "explain_sql": "", "total_count": 0, "cur_page": 1,
                       "total_page": 1}
 
@@ -270,7 +269,6 @@ def query_data(catch=None):
         usr_page_dt[uid].pop("raw_dt", None)
         logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")
         if not answer:
-            answer="没有查询到相关数据，请您尝试换个问题试试"
             answer = {"chart": {}, "raw_dt": "没有查询到相关数据，请您尝试换个问题试试", "sql": "",
                            "explain_sql": "", "total_count": 0, "cur_page": 1,
                            "total_page": 1}
