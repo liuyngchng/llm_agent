@@ -348,9 +348,9 @@ class SqlAgent(DbUtl):
             return nl_dt_dict
         try:
             nl_dt_dict["raw_dt"] = self.get_dt_with_sql(nl_dt_dict["sql"], dt_fmt)
-            # count_sql = DbUtl.gen_count_sql(nl_dt_dict["sql"])
-            count_sql_txt = self.gen_count_sql_by_sql(uid, nl_dt_dict["sql"])
-            count_sql = extract_md_content(count_sql_txt, "sql")
+            # count_sql_txt = self.gen_count_sql_by_sql(uid, nl_dt_dict["sql"])
+            # count_sql = extract_md_content(count_sql_txt, "sql")
+            count_sql = DbUtl.gen_count_sql(nl_dt_dict["sql"])
             logger.info(f"gen_count_sql_by_sql, result "
                 f"{count_sql.replace('\n', ' ')}, "
                 f"get_dt_sql {nl_dt_dict["sql"].replace('\n', ' ')}"

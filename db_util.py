@@ -376,12 +376,12 @@ class DbUtl:
         """
         if not origin_sql:
             raise RuntimeError("origin_sql_null_err")
-
-            # 标准化空格处理
+        origin_sql = origin_sql.replace(';', '')
+        # 标准化空格处理
         origin_sql = re.sub(r'\s+', ' ', origin_sql).strip()
 
         # 1. 移除 ORDER BY 和 LIMIT
-        cleaned_sql = re.sub(r'\s+ORDER\s+BY\s+.*?(?=(?:LIMIT|\bWHERE\b|$))', '', origin_sql, flags=re.I)
+        cleaned_sql = re.sub(r'\s+ORDER\s+BY\s+.*?(?=(?:LIMIT|\bWHERE\b|$))', ' ', origin_sql, flags=re.I)
         cleaned_sql = re.sub(r'\s+LIMIT\s+\d+(\s*,\s*\d+)?', '', cleaned_sql, flags=re.I)  # 修正LIMIT匹配
 
         # 2. 智能判断查询类型
@@ -473,7 +473,7 @@ def test_add_ou_id_condition():
     logger.info(f"out_sql {out_sql}")
 
 def test_get_count_sql():
-    sql = "select a, count(1) from b where c='e' and d='f' group by g order by h limit 100, 20"
+    sql = "select a, count(1) from b where c='e' and d='f' group by g order by h limit 100, 20;"
     count_sql = DbUtl.gen_count_sql(sql)
     logger.info(f"count_sql, {count_sql}, original_sql {sql}")
     sql = "select a, a1 from b where c='e' and d='f' order by h LIMIT 10, 20"
