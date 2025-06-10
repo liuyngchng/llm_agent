@@ -34,6 +34,25 @@ def auth_user(user:str, t: str, cfg: dict) -> dict:
         auth_result["t"] = encrypt(str(time.time() * 1000), cfg['sys']['cypher_key'])
     return auth_result
 
+def get_user_info_by_uid(uid: str)-> dict:
+    user_info = {}
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            sql = f"select id, name, role, area from user where id='{uid}' limit 1"
+            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
+            user_dt = check_info['data']
+            if user_dt:
+                user_info['id']     = user_dt[0][0]
+                user_info['name']   = user_dt[0][1]
+                user_info['role']   = user_dt[0][2]
+                user_info['area']   = user_dt[0][3]
+                logger.info(f"get_user_info_by_uid, {json.dumps(user_info, ensure_ascii=False)}")
+                return user_info
+        except Exception as e:
+            logger.error(f"get_user_info_err_for_uid, {uid}")
+    logger.error(f"no_user_info_found_for_uid, {uid}")
+    return user_info
+
 def get_uid_by_user(usr:str) ->str:
     check_sql = f"select id from user where name='{usr}' limit 1"
     uid = ''
@@ -303,6 +322,11 @@ if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
+    a = {}
+    if a:
+        logger.info("a is OK")
+    else:
+        logger.info("a is not OK")
     # key0 = '1234567890123456'
     # dt0 = 'test'
     # dt1 =encrypt(dt0, key0)
