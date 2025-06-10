@@ -392,34 +392,35 @@ class DbUtl:
                 flags=re.I
             ).strip()
 
-
     @staticmethod
-    def add_ou_id_condition(sql: str, ou_id_list:list):
+    def add_ou_id_condition(sql: str, ou_id_list: list):
+        import re
         ou_id_str = ', '.join(map(str, ou_id_list))
         pattern = re.compile(
-    r'(\bWHERE\b|\bGROUP\s+BY\b|\bORDER\s+BY\b|\bLIMIT\b)',
+            r'(\bWHERE\b|\bGROUP\s+BY\b|\bORDER\s+BY\b|\bLIMIT\b)',
             re.IGNORECASE | re.DOTALL
         )
-        match = pattern.search(sql)
-        if match:
-            if match.group(1).upper().startswith('WHERE'):
-                # 在现有WHERE条件后添加AND
-                insert_pos = match.end()
-                new_sql = (
-                    sql[:insert_pos] +
-                    f" AND ou_id IN ({ou_id_str}) " +
-                    sql[insert_pos:]
-                )
-            else:
-                insert_pos = match.start()
-                new_sql = (
-                    sql[:insert_pos] +
-                    f" WHERE ou_id IN ({ou_id_str}) " +
-                    sql[insert_pos:]
-                )
-        else:
-            new_sql = sql.rstrip() + f" WHERE ou_id IN ({ou_id_str})"
-        return new_sql
+
+        first_match = pattern.search(sql)
+        if not first_match:
+            return sql.rstrip() + f" WHERE ou_id IN ({ou_id_str})"
+
+        if first_match.group(1).upper().startswith('WHERE'):
+            next_match = pattern.search(sql, first_match.end())
+            insert_pos = next_match.start() if next_match else len(sql)
+            return (
+                sql[:insert_pos] +
+                f" AND ou_id IN ({ou_id_str}) " +
+                sql[insert_pos:]
+            )
+
+        # 情况2：第一个关键字非 WHERE（如 GROUP BY）
+        insert_pos = first_match.start()
+        return (
+            sql[:insert_pos] +
+            f" WHERE ou_id IN ({ou_id_str}) " +
+            sql[insert_pos:]
+        )
 
 
 
@@ -458,12 +459,22 @@ def test_sqlite():
     logger.info(f"my_dt {my_dt}")
 
 def test_add_ou_id_condition():
-    # sql = "select a, count(1) from b group by a order by e limit c, d"
+    sql = f'''
+        SELECT province, COUNT(id) AS new_user_count 
+        FROM user_info 
+        WHERE create_time >= '2024-01-01' AND create_time <= '2024-12-31' 
+        GROUP BY province 
+        ORDER BY new_user_count DESC 
+        LIMIT 20;
+        '''
+    out_sql = DbUtl.add_ou_id_condition(sql, [123, 456])
+    logger.info(f"out_sql {out_sql}")
     sql = "select a, max(f) from b \n group by a order by e limit c, d"
     out_sql = DbUtl.add_ou_id_condition(sql, [123, 456])
     logger.info(f"out_sql {out_sql}")
 
 def test_get_count_sql():
+
     sql = "select a, count(1) from b where c='e' and d='f' group by g order by h limit 100, 20;"
     count_sql = DbUtl.gen_count_sql(sql)
     logger.info(f"count_sql, {count_sql}, original_sql {sql}")
@@ -491,8 +502,8 @@ def test_get_count_sql():
 
 
 if __name__ == "__main__":
-    test_get_count_sql()
-    # test_add_ou_id_condition()
+    # test_get_count_sql()
+    test_add_ou_id_condition()
     # test_db()
     # sql1 = "select a from b where c=d limit 30"
     # new_sql1 = DbUtl.get_page_sql(sql1, 5)

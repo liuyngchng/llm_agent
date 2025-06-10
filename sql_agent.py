@@ -340,6 +340,11 @@ class SqlAgent(DbUtl):
             save_usr_msg(uid, q)
             # logger.debug(f"gen_sql\n{sql}")
             nl_dt_dict["sql"] = extract_md_content(sql, "sql")
+            area = cfg_util.get_user_info_by_uid(uid)['area']
+            if area:
+                ou_id_list = area.split(',')
+                area_sql = DbUtl.add_ou_id_condition(nl_dt_dict["sql"], ou_id_list)
+                nl_dt_dict["sql"] = area_sql
             logger.info(f"gen_sql_from_txt {q}, {nl_dt_dict.get('sql', '').replace('\n', ' ')}")
         except Exception as e:
             logger.error(f"gen_sql_err, {e}, txt: {q}", exc_info=True)

@@ -335,3 +335,6 @@ if __name__ == '__main__':
     # logger.info(dt2)
     a = get_consts()
     logger.info(f"a {a}")
+    uid = '332987921'
+    user = get_user_info_by_uid(uid)
+    logger.info(f"user {user}")
