@@ -29,16 +29,16 @@ ARCHITECTURE_TYPE_MAP = {
 }
 
 
-def generate_data(db_cfg: dict, total=500000, batch_size=2000):
+def generate_data(db_cfg: dict, total=500000, batch_size=5000):
     conn = pymysql.connect(**db_cfg)
     cursor = conn.cursor()
 
     SQL = """INSERT INTO user_info (
         user_id, user_name, contact, family_members, province, city, district, 
         company, user_type, create_time, id_type, meter_type, residence_type, 
-        residence_tag, architecture_type, gas_usage, balance, is_low_income, 
+        residence_tag, architecture_type, balance, is_low_income, 
         is_discount, rate_policy, is_in_blacklist, is_closed, is_insured
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 
     try:
         for i in range(total // batch_size):
@@ -85,7 +85,7 @@ def get_fake_record() -> tuple:
         province, city, district, company, user_type,
         create_time, id_type, meter_type, residence_type,
         residence_tag, architecture_type,
-        float(Decimal(random.uniform(10, 1000)).quantize(Decimal('0.000'))),  # gas_usage
+        # float(Decimal(random.uniform(10, 1000)).quantize(Decimal('0.000'))),  # gas_usage
         float(Decimal(random.uniform(0, 10000)).quantize(Decimal('0.00'))),  # balance
         random.randint(0, 1),  # is_low_income
         random.randint(0, 1),  # is_discount

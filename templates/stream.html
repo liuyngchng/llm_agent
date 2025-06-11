@@ -2,19 +2,39 @@
 <html>
 <head>
     <title>Stream Test</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="/static/my.nl2sql.css">
 </head>
 <body>
-    <div id="output"></div>
+    <input type="text" value="test" name="dialog" id="dialog">
+    <button id="startBtn">提交文本</button>
+    <div id="output" style="margin-left:2px;"></div>
 
     <script>
         const outputEl = document.getElementById('output');
-        const eventSource = new EventSource('/stream');
+        const startBtn = document.getElementById('startBtn');
+        let eventSource = null;
 
-        // 监听流式数据
-        eventSource.onmessage = (event) => {
-            const data = event.data;
-            outputEl.innerHTML += `<p>${data}</p>`;  // 动态渲染
-        };
+        startBtn.addEventListener('click', () => {
+            // 关闭现有连接
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            // 清空显示区域
+            outputEl.innerHTML = '';
+
+            // 创建新连接（添加时间戳防缓存）
+            eventSource = new EventSource(`/stream?t=${Date.now()}&q=${encodeURIComponent(document.getElementById('dialog').value)}`);
+
+            eventSource.onmessage = (event) => {
+                outputEl.innerHTML += `<p>${event.data}</p>`;
+            };
+
+            eventSource.onerror = () => {
+                eventSource.close();
+            };
+        });
     </script>
 </body>
 </html>

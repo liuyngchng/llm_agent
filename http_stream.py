@@ -9,8 +9,7 @@ import logging.config
 import os
 import time
 
-from flask import Flask, render_template, Response
-
+from flask import Flask, render_template, Response, request
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -26,6 +25,9 @@ def stream_index():
 
 @app.route('/stream', methods=['POST', 'GET'])
 def stream():
+    t = int(request.args.get('t', 0))
+    q = request.args.get('q', '')
+    logger.info(f"rcv_req, t={t}, q={q}")
     return Response(generate_data(), mimetype='text/event-stream')
 
 def generate_data():
@@ -34,7 +36,7 @@ def generate_data():
                 "查询到的数据:****","正在绘图...","绘图结果为：\ndata_chart", "本次查询已完成"]
     for msg in messages:
         time.sleep(1)  # 模拟处理延迟
-        yield f"data: {msg}\n\n"  # SSE 格式
+        yield f"data: {msg}\n\n"
 
 
 if __name__ == '__main__':

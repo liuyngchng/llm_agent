@@ -36,7 +36,7 @@ def generate_data(db_cfg: dict, total=500000, batch_size=5000):
 
     SQL = """INSERT INTO gas_consume_info (
         gas_consume_id, user_id, user_name, meter_id, meter_manufacture, 
-        gas_meter_type, amount, province, city, district, 
+        gas_meter_type, gas_consume_amount, province, city, district, 
         company, user_type, record_time
     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 
@@ -63,7 +63,7 @@ def generate_consume_record() -> tuple:
         f"GAS_{fake.unique.random_number(digits=10)}",  # 用气流水号
         f"USR_{random.randint(10000000, 99999999)}",  # 用户ID
         fake.name(),  # 用户姓名
-        f"METER_{fake.unique.random_number(digits=8)}",  # 燃气表ID
+        f"MT_{fake.unique.random_number(digits=8)}",  # 燃气表ID
         random.choice(METER_MANUFACTURERS),  # 制造商
         random.choice(list(METER_TYPE_MAP.keys())),  # 表具类型
         float(Decimal(random.uniform(*amount_range)).quantize(Decimal('0.000'))),  # 用气量

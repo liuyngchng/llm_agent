@@ -25,7 +25,7 @@ def generate_data(db_cfg: dict, total=500000, batch_size=5000):
 
     # 修改为user_charge_info表的插入语句
     SQL = """INSERT INTO user_charge_info (
-        charge_id, user_id, user_name, charge_channel, amount, 
+        charge_id, user_id, user_name, charge_channel, charge_amount, 
         province, city, district, company, user_type, 
         charge_time, gas_meter_type
     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
