@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stream Test</title>
+</head>
+<body>
+    <div id="output"></div>
+
+    <script>
+        const outputEl = document.getElementById('output');
+        const eventSource = new EventSource('/stream');
+
+        // 监听流式数据
+        eventSource.onmessage = (event) => {
+            const data = event.data;
+            outputEl.innerHTML += `<p>${data}</p>`;  // 动态渲染
+        };
+    </script>
+</body>
+</html>
