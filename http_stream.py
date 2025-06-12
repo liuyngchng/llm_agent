@@ -11,12 +11,17 @@ import time
 
 from flask import Flask, render_template, Response, request
 
+from my_enums import DataType
+from sql_yield import SqlYield
+from sys_init import init_yml_cfg
+
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
 app.config['JSON_AS_ASCII'] = False
+my_cfg = init_yml_cfg()
 
 @app.route('/', methods=['GET'])
 def stream_index():
@@ -28,7 +33,9 @@ def stream():
     t = int(request.args.get('t', 0))
     q = request.args.get('q', '')
     logger.info(f"rcv_req, t={t}, q={q}")
-    return Response(generate_data(), mimetype='text/event-stream')
+    sql_yield = SqlYield(my_cfg)
+    return Response(sql_yield.yield_dt_with_nl("332987916", q, DataType.MARKDOWN.value), mimetype='text/event-stream')
+    # return Response(generate_data(), mimetype='text/event-stream')
 
 def generate_data():
     messages = ["大模型思考中...", "用户问题优化中...","优化后的问题是：***",

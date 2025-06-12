@@ -331,8 +331,8 @@ class SqlYield(DbUtl):
             if "查询条件清晰" not in intercept:
                 logger.info(f"intercept_txt:\n {intercept}\n")
                 save_usr_msg(uid, q)
-                yield f"需要您进一步确认，{intercept}"
-                return
+                return f"需要您进一步确认，{intercept}"
+
         try:
             logger.info(f"start_gen_sql_from_txt：{q}")
             yield f"正在生成查询语句..."
@@ -484,10 +484,11 @@ if __name__ == "__main__":
     save_usr_msg("123", "hello1")
     # save_usr_msg("123", "hello2")
     # os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
-    # my_cfg = init_yml_cfg()
+    my_cfg = init_yml_cfg()
     # while True:
     #     input_q = input("请输入您的问题(输入q退出)：")
     #     if input_q == "q":
     #         exit(0)
-    # input_q = "查询2024年的数据明细"
-    # SqlAgent.get_dt_with_nl(123, input_q, DataType.JSON.value, True)
+    input_q = "查询2024年的数据明细"
+    sql_yield = SqlYield(my_cfg, True)
+    sql_yield.yield_dt_with_nl("123", input_q, DataType.JSON.value)
