@@ -309,6 +309,7 @@ class SqlYield(DbUtl):
         :param q: the question (natural language) user submitted
         :param dt_fmt: A DataType enum
         """
+        yield f"data: {q}\n\n"
         adt = self.get_table_list()
         logger.info(f"agent_detected_tables, {adt}, db_type, {self.cfg['db']['type']}")
         if not adt or len(adt)> self.cfg['db']['max_table_num']:
@@ -325,7 +326,7 @@ class SqlYield(DbUtl):
         refined_q = extract_md_content(refined_q, "sql")
         logger.info(f"refined_q_extract_md, {refined_q}, original_q, {q}")
         q = refined_q
-        yield f"data: 查询意图： {q}\n\n"
+        yield f"data: {q}\n\n"
         if cfg.get("is_strict") == 1:
             logger.info(f"check_user_question_with_llm_in_strict_search, {q}")
             intercept = self.intercept_usr_question(uid, q)
@@ -345,10 +346,11 @@ class SqlYield(DbUtl):
             if area:
                 ou_id_list = area.split(',')
                 extract_sql = DbUtl.add_ou_id_condition(extract_sql, ou_id_list)
-            extract_sql = extract_sql.replace('\n', ' ')
-            extract_sql = re.sub(r'\s+', ' ', extract_sql).strip()
+            # extract_sql = extract_sql.replace('\n', ' ')
+            # extract_sql = re.sub(r'\s+', ' ', extract_sql).strip()
             yield f"data: 查询条件如下所示：\n\n"
-            yield f"data: {extract_sql}\n\n"
+            for line in extract_sql.split("\n"):
+                yield f"data: {line}\n\n"
             yield f"data: 开始查询数据...\n\n"
             logger.info(f"gen_sql_from_txt {q}, {extract_sql}")
         except Exception as e:
@@ -358,6 +360,9 @@ class SqlYield(DbUtl):
         try:
             raw_dt = self.get_dt_with_sql(extract_sql, dt_fmt)
             yield f"data: 查询到的数据如下：\n\n"
+            # for line in raw_dt.splitlines():
+            #     if line.strip():
+            #         yield f"data: {line}\n\n"
             yield f"data: {raw_dt.replace('\n', ' ')}\n\n"
             yield f"data: 开始查询符合条件的数据数量...\n\n"
         except Exception as e:
@@ -402,13 +407,12 @@ class SqlYield(DbUtl):
             logger.info(f"get_explain_sql_txt, {explain_sql_txt}, input_sql, {extract_sql.replace('\n', ' ')}")
             yield f"data: 查询条件说明如下：\n\n"
             yield f"data: {explain_sql_txt} \n\n"
-            yield f"data: 开始对数据绘图 \n\n"
         except Exception as e:
             logger.error(f"get_explain_sql_txt_err, {e}, sql: {extract_sql}", exc_info=True)
             yield "data: 暂时无法给您提供数据查询的相关解释\n\n"
         logger.info("start_build_chart_dt")
-        chart_dt = self.yield_chart_dt(uid, raw_dt)
-        yield f"data: {chart_dt} \n\n"
+        self.yield_chart_dt(uid, raw_dt)
+        # yield f"data: {chart_dt} \n\n"
 
     @staticmethod
     def get_count_num(count_dt:str) -> int:
@@ -418,7 +422,7 @@ class SqlYield(DbUtl):
             logger.error(f"get_count_num_err, {count_dt}")
             return 0
 
-    def get_pg_dt(self, uid: str, usr_page_dt: dict, page_size=PAGE_SIZE) -> dict:
+    def get_pg_dt(self, uid: str, usr_page_dt: dict, page_size=PAGE_SIZE):
         logger.info(f"last_sql_for_{uid}: {usr_page_dt.get('sql', '').replace('\n', '')}")
         page_sql = DbUtl.get_page_sql(usr_page_dt['sql'], usr_page_dt['cur_page'], page_size)
         logger.info(f"next_sql: {page_sql}")
@@ -430,9 +434,9 @@ class SqlYield(DbUtl):
             "total_page": usr_page_dt['total_page'],
         }
         logger.info(f"nl_dt:\n {nl_dt_dict}\n")
-        return self.yield_chart_dt(uid, nl_dt_dict)
+        self.yield_chart_dt(uid, dt)
 
-    def yield_chart_dt(self, uid: str, raw_dt: str) -> str:
+    def yield_chart_dt(self, uid: str, raw_dt: str):
         """
         add chart dt for db retrieve dt
         : param dt: db retrieved dt
@@ -441,14 +445,15 @@ class SqlYield(DbUtl):
         try:
             cfg = cfg_util.get_ds_cfg_by_uid(uid, self.cfg)
             logger.info(f"cfg_for_uid {uid}, {cfg}")
-            if cfg:
-                if cfg.get("add_chart") == 1:
-                    return self.yield_chart_to_raw_dt(raw_dt)
-                else:
-                    return ""
-            if not self.cfg['prompts']['add_chart_to_dt']:
-                return ""
-            return self.yield_chart_to_raw_dt(raw_dt)
+            if cfg and cfg.get("add_chart") == 1:
+                yield f"data: 开始绘图... \n\n"
+                chart_dt = self.yield_chart_to_raw_dt(raw_dt)
+                yield f"data: {chart_dt}"
+            elif self.cfg['prompts']['add_chart_to_dt']:
+                yield f"data: 开始绘图... \n\n"
+                chart_dt = self.yield_chart_to_raw_dt(raw_dt)
+                yield f"data: {chart_dt}"
+            yield f"data: 所有数据已输出完毕"
         except Exception as e:
             logger.error(f"build_chart_dt_err, {e}", exc_info=True)
         return ""

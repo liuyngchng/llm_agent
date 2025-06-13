@@ -187,18 +187,22 @@ class DbUtl:
 
     @staticmethod
     def get_pretty_html(df):
+        """
+        :param df: a DataFrame
+        output a pretty html content
+        """
         return df.to_html(
             index=False,
             border=0
         ).replace(
             '<table',
-            '<table style="border:1px solid #ddd; border-collapse:collapse; width:100%"'
+            '<table style="border:1px solid #ddd; border-collapse:collapse; width:auto; table-layout:auto"'
         ).replace(
             '<th>',
-            '<th style="background:#f8f9fa; padding:8px; border-bottom:2px solid #ddd; text-align:left">'
+            '<th style="background:#f8f9fa; padding:8px; border-bottom:2px solid #ddd; text-align:left; white-space:nowrap">'
         ).replace(
             '<td>',
-            '<td style="padding:6px; border-bottom:1px solid #eee">'
+            '<td style="padding:6px; border-bottom:1px solid #eee; white-space:nowrap">'
         )
 
     @staticmethod
