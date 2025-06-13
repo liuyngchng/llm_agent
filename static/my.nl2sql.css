@@ -24,6 +24,15 @@ button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+#stream_output table {
+    border-collapse: collapse;
+    width: 100%;
+}
+#stream_output td, #stream_output th {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
 .system-settings-link {
     position: absolute;
     top: 20px;

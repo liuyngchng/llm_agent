@@ -7,31 +7,45 @@
 </head>
 <body>
     <input type="text" value="test" name="dialog" id="dialog">
-    <button id="startBtn">提交文本</button>
-    <div id="output" style="margin-left:2px;"></div>
+    <button id="startBtn">查询</button>
+    <div id="stream_output" style="margin-left:2px;">test</div>
 
-    <script>
-        const outputEl = document.getElementById('output');
+   <script>
+        const outputEl = document.getElementById('stream_output');
         const startBtn = document.getElementById('startBtn');
         let eventSource = null;
 
         startBtn.addEventListener('click', () => {
-            // 关闭现有连接
-            if (eventSource) {
-                eventSource.close();
-            }
-
-            // 清空显示区域
+            if (eventSource) eventSource.close();
             outputEl.innerHTML = '';
 
-            // 创建新连接（添加时间戳防缓存）
-            eventSource = new EventSource(`/stream?t=${Date.now()}&q=${encodeURIComponent(document.getElementById('dialog').value)}`);
+            const query = encodeURIComponent(document.getElementById('dialog').value);
+            eventSource = new EventSource(`/stream?t=${Date.now()}&q=${query}`);
 
             eventSource.onmessage = (event) => {
-                outputEl.innerHTML += `<p>${event.data}</p>`;
+                const data = event.data;
+
+                // 检测是否为 HTML 内容
+                if (data.trim().startsWith('<')) {
+                    // 创建临时容器解析 HTML
+                    const container = document.createElement('div');
+                    container.innerHTML = data;
+
+                    // 安全添加所有子节点
+                    while (container.firstChild) {
+                        outputEl.appendChild(container.firstChild);
+                    }
+                } else {
+                    // 纯文本处理（保留换行）
+                    const pre = document.createElement('pre');
+                    pre.style.whiteSpace = 'pre-wrap';
+                    pre.textContent = data;
+                    outputEl.appendChild(pre);
+                }
             };
 
-            eventSource.onerror = () => {
+            eventSource.onerror = (e) => {
+                console.error("EventSource error:", e);
                 eventSource.close();
             };
         });

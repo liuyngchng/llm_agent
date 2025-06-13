@@ -34,7 +34,7 @@ def stream():
     q = request.args.get('q', '')
     logger.info(f"rcv_req, t={t}, q={q}")
     sql_yield = SqlYield(my_cfg)
-    return Response(sql_yield.yield_dt_with_nl("332987916", q, DataType.MARKDOWN.value), mimetype='text/event-stream')
+    return Response(sql_yield.yield_dt_with_nl("332987916", q, DataType.HTML.value), mimetype='text/event-stream')
     # return Response(generate_data(), mimetype='text/event-stream')
 
 def generate_data():
@@ -50,4 +50,4 @@ if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
-    app.run(host='0.0.0.0', port=19000)
+    app.run(host='0.0.0.0', port=19001)
