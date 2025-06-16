@@ -4,6 +4,7 @@
     <title>Stream Test</title>
     <meta charset="utf-8">
     <link rel="stylesheet" href="/static/my.nl2sql.css">
+    <script type="text/javascript" src="/static/chart.min.3.8.0.js"></script>
 </head>
 <body>
     <input type="text" value="查询2024年的用户数" name="dialog" id="dialog">
@@ -23,24 +24,55 @@
             eventSource = new EventSource(`/stream?t=${Date.now()}&q=${query}`);
 
             eventSource.onmessage = (event) => {
-                const data = event.data;
+                try {
+                    const { data_type, data } = JSON.parse(event.data);
 
-                // 检测是否为 HTML 内容
-                if (data.trim().startsWith('<')) {
-                    // 创建临时容器解析 HTML
-                    const container = document.createElement('div');
-                    container.innerHTML = data;
+                    switch(data_type) {
+                        case 'txt':
+                            const pre = document.createElement('pre');
+                            pre.style.whiteSpace = 'pre-wrap';
+                            pre.textContent = data;
+                            outputEl.appendChild(pre);
+                            break;
 
-                    // 安全添加所有子节点
-                    while (container.firstChild) {
-                        outputEl.appendChild(container.firstChild);
+                        case 'html':
+                            const container = document.createElement('div');
+                            container.innerHTML = data;
+                            outputEl.appendChild(container);
+                            break;
+
+                        case 'chart_js':
+                            const canvas = document.createElement('canvas');
+                            outputEl.appendChild(canvas);
+
+                            // 转换数据为 Chart.js 配置
+                            const chartConfig = {
+                                type: 'pie', // 图表类型（示例用柱状图）
+                                data: {
+                                    labels: data.chart.labels,
+                                    datasets: [{
+                                        label: `用户数 (${data.chart.unit})`, // 动态单位
+                                        data: data.chart.values,
+                                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                        borderColor: 'rgba(75, 192, 192, 1)',
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: { scales: { y: { beginAtZero: true } } }
+                            };
+
+                            new Chart(canvas, chartConfig); // 使用转换后的配置
+                            break;
+
+                        default:
+                            console.warn('未知数据类型:', data_type);
                     }
-                } else {
-                    // 纯文本处理（保留换行）
-                    const pre = document.createElement('pre');
-                    pre.style.whiteSpace = 'pre-wrap';
-                    pre.textContent = data;
-                    outputEl.appendChild(pre);
+                } catch (e) {
+                    console.error('数据解析失败', e);
+                    // 兼容旧格式的纯文本/HTML
+                    const fallback = document.createElement('div');
+                    fallback.innerHTML = event.data;
+                    outputEl.appendChild(fallback);
                 }
             };
 

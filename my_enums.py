@@ -9,6 +9,11 @@ class DBType(Enum):
     ORACLE = "oracle"
     DORIS = "doris"
 
+class YieldType(Enum):
+    TXT = "txt"
+    HTML = "html"
+    CHART_JS = "chart_js"
+
 class DataType(Enum):
     HTML = "html"
     MARKDOWN = "markdown"

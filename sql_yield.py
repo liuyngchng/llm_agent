@@ -4,6 +4,7 @@ import json
 import math
 import os
 import re
+from pickle import FALSE
 
 from typing import Dict
 from datetime import datetime
@@ -20,7 +21,7 @@ from langchain_ollama import ChatOllama
 import logging.config
 import httpx
 from pydantic import SecretStr
-from my_enums import DBType, DataType
+from my_enums import DBType, DataType, YieldType
 
 from db_util import DbUtl
 from sys_init import init_yml_cfg
@@ -38,6 +39,7 @@ MAX_MSG_COUNT = 20
 usr_msg_list = {}
 
 PAGE_SIZE = 20
+
 
 def get_usr_msgs(uid: str):
     """
@@ -309,14 +311,15 @@ class SqlYield(DbUtl):
         :param q: the question (natural language) user submitted
         :param dt_fmt: A DataType enum
         """
-        yield f"data: {q}\n\n"
+
+        yield SqlYield.build_yield_dt(q)
         adt = self.get_table_list()
         logger.info(f"agent_detected_tables, {adt}, db_type, {self.cfg['db']['type']}")
         if not adt or len(adt)> self.cfg['db']['max_table_num']:
             info = (f"please_check_your_data_source_user_privilege_or_db_schema, "
                 f"none_table_or_too_much_table_can_be_accessed_by_the_user,"
                 f" cfg['db']={self.cfg['db']}")
-            yield "data: 连接数据库发生异常\n\n"
+            yield SqlYield.build_yield_dt("连接数据源时发生异常")
             raise RuntimeError(info)
         cfg = cfg_util.get_ds_cfg_by_uid(uid, self.cfg)
         logger.info(f"cfg_for_uid {uid}, {cfg}")
@@ -326,18 +329,18 @@ class SqlYield(DbUtl):
         refined_q = extract_md_content(refined_q, "sql")
         logger.info(f"refined_q_extract_md, {refined_q}, original_q, {q}")
         q = refined_q
-        yield f"data: {q}\n\n"
+        yield SqlYield.build_yield_dt(q)
         if cfg.get("is_strict") == 1:
             logger.info(f"check_user_question_with_llm_in_strict_search, {q}")
             intercept = self.intercept_usr_question(uid, q)
             if "查询条件清晰" not in intercept:
                 logger.info(f"intercept_txt:\n {intercept}\n")
                 save_usr_msg(uid, q)
-                yield f"data: 需要您进一步确认，{intercept}\n\n"
+                yield SqlYield.build_yield_dt(f"需要您进一步确认，{intercept}")
 
         try:
             logger.info(f"start_gen_sql_from_txt：{q}")
-            yield f"data: 正在生成查询条件...\n\n"
+            yield SqlYield.build_yield_dt("正在生成查询条件...")
             sql = self.gen_sql_by_txt(uid, q)
             save_usr_msg(uid, q)
             # logger.debug(f"gen_sql\n{sql}")
@@ -348,26 +351,23 @@ class SqlYield(DbUtl):
                 extract_sql = DbUtl.add_ou_id_condition(extract_sql, ou_id_list)
             # extract_sql = extract_sql.replace('\n', ' ')
             # extract_sql = re.sub(r'\s+', ' ', extract_sql).strip()
-            yield f"data: 查询条件如下所示：\n\n"
+            yield SqlYield.build_yield_dt("查询条件如下所示:")
             for line in extract_sql.split("\n"):
-                yield f"data: {line}\n\n"
-            yield f"data: 开始查询数据...\n\n"
+                yield SqlYield.build_yield_dt(line)
+            yield SqlYield.build_yield_dt("开始查询数据...")
             logger.info(f"gen_sql_from_txt {q}, {extract_sql}")
         except Exception as e:
             logger.error(f"gen_sql_err, {e}, txt: {q}", exc_info=True)
-            yield "data: 用户问题转换为数据查询条件时发生异常\n\n"
+            yield SqlYield.build_yield_dt("用户问题转换为数据查询条件时发生异常")
             return
         try:
             raw_dt = self.get_dt_with_sql(extract_sql, dt_fmt)
-            yield f"data: 查询到的数据如下：\n\n"
-            # for line in raw_dt.splitlines():
-            #     if line.strip():
-            #         yield f"data: {line}\n\n"
-            yield f"data: {raw_dt.replace('\n', ' ')}\n\n"
-            yield f"data: 开始查询符合条件的数据数量...\n\n"
+            yield SqlYield.build_yield_dt("查询到的数据如下:")
+            yield SqlYield.build_yield_dt(f"{raw_dt.replace('\n', ' ')}", YieldType.HTML.value)
+            yield SqlYield.build_yield_dt("开始查询符合条件的数据数量...")
         except Exception as e:
             logger.error(f"get_dt_with_sql_err, {e}, sql: {extract_sql}", exc_info=True)
-            yield "data: 从数据源查询数据时发生异常\n\n"
+            yield SqlYield.build_yield_dt("从数据源查询数据时发生异常")
             return
         count_sql = ''
         count_dt = ''
@@ -382,11 +382,11 @@ class SqlYield(DbUtl):
             count_dt = self.get_dt_with_sql(count_sql, DataType.JSON.value)
             count_dt = SqlYield.get_count_num(count_dt)
             logger.info(f"dt_count_result, {count_dt}")
-            yield f"data: 符合查询条件的数据为{count_dt} 条\n\n"
-            yield f"data: 开始计算总页数...\n\n"
+            yield SqlYield.build_yield_dt(f"符合查询条件的数据为{count_dt} 条")
+            yield SqlYield.build_yield_dt("开始计算总页数...")
         except Exception as e:
             logger.error(f"get_dt_count_with_count_sql_err, {e}, count_sql: {count_sql}", exc_info=True)
-            yield f"data: 获取总数据条数发生异常\n\n"
+            yield SqlYield.build_yield_dt("获取总数据条数发生异常")
         total_page = 1
         try:
             total_count = SqlYield.get_count_num(count_dt)
@@ -395,8 +395,9 @@ class SqlYield(DbUtl):
                 total_page = math.ceil(total_count / PAGE_SIZE)
             else:
                 logger.error(f"total_count_type_err_for {total_count}")
-            yield f"data: 数据总页数为 {total_page}, 每页为 {PAGE_SIZE} 条数据， 共计 {total_count} 条数据\n\n"
-            yield f"data: 开始生成查询条件说明...\n\n"
+            dt =f"数据总页数为 {total_page}, 每页为 {PAGE_SIZE} 条数据， 共计 {total_count} 条数据"
+            yield SqlYield.build_yield_dt(dt)
+            yield SqlYield.build_yield_dt("开始生成查询条件说明...")
         except Exception as e:
             logger.error(f"get_total_count_or_total_page_err, {e}", exc_info=True)
 
@@ -405,14 +406,23 @@ class SqlYield(DbUtl):
             explain_sql_txt = self.get_explain_sql_txt(uid, extract_sql)
             explain_sql_txt = extract_md_content(explain_sql_txt, "sql")
             logger.info(f"get_explain_sql_txt, {explain_sql_txt}, input_sql, {extract_sql.replace('\n', ' ')}")
-            yield f"data: 查询条件说明如下：\n\n"
-            yield f"data: {explain_sql_txt} \n\n"
+            yield SqlYield.build_yield_dt("查询条件说明如下:")
+            yield SqlYield.build_yield_dt(explain_sql_txt)
         except Exception as e:
             logger.error(f"get_explain_sql_txt_err, {e}, sql: {extract_sql}", exc_info=True)
-            yield "data: 暂时无法给您提供数据查询的相关解释\n\n"
+            yield SqlYield.build_yield_dt("暂时无法给您提供数据查询的相关解释")
         logger.info("start_build_chart_dt")
-        self.yield_chart_dt(uid, raw_dt)
-        # yield f"data: {chart_dt} \n\n"
+        chart_dt = self.yield_chart_dt(uid, raw_dt)
+        if chart_dt:
+            yield SqlYield.build_yield_dt(chart_dt, YieldType.CHART_JS.value)
+        yield SqlYield.build_yield_dt("数据已输出完毕")
+
+
+    @staticmethod
+    def build_yield_dt(dt: str, dt_type=YieldType.TXT.value) -> str:
+        if YieldType.CHART_JS.value == dt_type:
+            return f"data: {json.dumps({"data_type": dt_type, "data": json.loads(dt)}, ensure_ascii=False)}\n\n"
+        return f"data: {json.dumps({"data_type": dt_type, "data": dt}, ensure_ascii=False)}\n\n"
 
     @staticmethod
     def get_count_num(count_dt:str) -> int:
@@ -436,7 +446,7 @@ class SqlYield(DbUtl):
         logger.info(f"nl_dt:\n {nl_dt_dict}\n")
         self.yield_chart_dt(uid, dt)
 
-    def yield_chart_dt(self, uid: str, raw_dt: str):
+    def yield_chart_dt(self, uid: str, raw_dt: str) -> str:
         """
         add chart dt for db retrieve dt
         : param dt: db retrieved dt
@@ -445,15 +455,10 @@ class SqlYield(DbUtl):
         try:
             cfg = cfg_util.get_ds_cfg_by_uid(uid, self.cfg)
             logger.info(f"cfg_for_uid {uid}, {cfg}")
-            if cfg and cfg.get("add_chart") == 1:
-                yield f"data: 开始绘图... \n\n"
-                chart_dt = self.yield_chart_to_raw_dt(raw_dt)
-                yield f"data: {chart_dt}"
-            elif self.cfg['prompts']['add_chart_to_dt']:
-                yield f"data: 开始绘图... \n\n"
-                chart_dt = self.yield_chart_to_raw_dt(raw_dt)
-                yield f"data: {chart_dt}"
-            yield f"data: 所有数据已输出完毕"
+            if cfg and cfg.get("add_chart") == 1 or self.cfg['prompts']['add_chart_to_dt']:
+                return self.get_chart_dt_from_raw_dt(raw_dt)
+            else:
+                logger.info("no_chart_dt_to_output")
         except Exception as e:
             logger.error(f"build_chart_dt_err, {e}", exc_info=True)
         return ""
@@ -482,7 +487,7 @@ class SqlYield(DbUtl):
         return dt
 
 
-    def yield_chart_to_raw_dt(self, raw_dt:str) -> str:
+    def get_chart_dt_from_raw_dt(self, raw_dt:str) -> str:
         """
         add chart data to raw dt
         """
