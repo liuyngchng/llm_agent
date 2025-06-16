@@ -400,4 +400,6 @@ if __name__ == '__main__':
     logger.info(f"my_cfg {my_cfg.get('db')},\n{my_cfg.get('api')}")
     # test_query_data()
     app.config['ENV'] = 'dev'
-    app.run(host='0.0.0.0', port=19000)
+    port = 19000
+    logger.info(f"listening port {port}")
+    app.run(host='0.0.0.0', port=port)
