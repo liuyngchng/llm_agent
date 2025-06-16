@@ -4,9 +4,7 @@
 pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama \
  langchain_core langchain_community pandas tabulate pymysql cx_Oracle pycryptodome
 """
-import json
 import logging.config
-import os
 import time
 
 from flask import Flask, render_template, Response, request

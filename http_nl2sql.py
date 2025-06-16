@@ -401,5 +401,5 @@ if __name__ == '__main__':
     # test_query_data()
     app.config['ENV'] = 'dev'
     port = 19000
-    logger.info(f"listening port {port}")
+    logger.info(f"listening_port {port}")
     app.run(host='0.0.0.0', port=port)
