@@ -36,14 +36,20 @@
                             break;
 
                         case 'html':
-                            const container = document.createElement('div');
-                            container.innerHTML = data;
-                            outputEl.appendChild(container);
+                            const html_container = document.createElement('div');
+                            html_container.innerHTML = data;
+                            outputEl.appendChild(html_container);
                             break;
 
                         case 'chart_js':
+                            const chart_container = document.createElement('div');
+                            chart_container.style.width = '30%';      // 宽度占父容器80%
+                            chart_container.style.maxWidth = '300px'; // 最大宽度限制
+                            chart_container.style.height = '300px';   // 固定高度
+                            chart_container.style.margin = '20px auto'; // 居中显示
+                            outputEl.appendChild(chart_container);
                             const canvas = document.createElement('canvas');
-                            outputEl.appendChild(canvas);
+                            chart_container.appendChild(canvas);
 
                             // 转换数据为 Chart.js 配置
                             const chartConfig = {
