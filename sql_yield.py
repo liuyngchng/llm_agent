@@ -312,7 +312,7 @@ class SqlYield(DbUtl):
         :param dt_fmt: A DataType enum
         """
 
-        yield SqlYield.build_yield_dt(q)
+        yield SqlYield.build_yield_dt(f"{q}...")
         adt = self.get_table_list()
         logger.info(f"agent_detected_tables, {adt}, db_type, {self.cfg['db']['type']}")
         if not adt or len(adt)> self.cfg['db']['max_table_num']:
@@ -354,7 +354,7 @@ class SqlYield(DbUtl):
             yield SqlYield.build_yield_dt("查询条件如下所示:")
             for line in extract_sql.split("\n"):
                 yield SqlYield.build_yield_dt(line)
-            yield SqlYield.build_yield_dt("开始查询数据...")
+            yield SqlYield.build_yield_dt("查询数据...")
             logger.info(f"gen_sql_from_txt {q}, {extract_sql}")
         except Exception as e:
             logger.error(f"gen_sql_err, {e}, txt: {q}", exc_info=True)
@@ -364,7 +364,7 @@ class SqlYield(DbUtl):
             raw_dt = self.get_dt_with_sql(extract_sql, dt_fmt)
             yield SqlYield.build_yield_dt("查询到的数据如下:")
             yield SqlYield.build_yield_dt(f"{raw_dt.replace('\n', ' ')}", YieldType.HTML.value)
-            yield SqlYield.build_yield_dt("开始查询符合条件的数据数量...")
+            yield SqlYield.build_yield_dt("查询符合条件的数据数量...")
         except Exception as e:
             logger.error(f"get_dt_with_sql_err, {e}, sql: {extract_sql}", exc_info=True)
             yield SqlYield.build_yield_dt("从数据源查询数据时发生异常")
@@ -382,7 +382,6 @@ class SqlYield(DbUtl):
             count_dt = self.get_dt_with_sql(count_sql, DataType.JSON.value)
             count_dt = SqlYield.get_count_num(count_dt)
             logger.info(f"dt_count_result, {count_dt}")
-            yield SqlYield.build_yield_dt(f"符合查询条件的数据为{count_dt} 条")
             yield SqlYield.build_yield_dt("开始计算总页数...")
         except Exception as e:
             logger.error(f"get_dt_count_with_count_sql_err, {e}, count_sql: {count_sql}", exc_info=True)
@@ -397,7 +396,7 @@ class SqlYield(DbUtl):
                 logger.error(f"total_count_type_err_for {total_count}")
             dt =f"数据总页数为 {total_page}, 每页为 {PAGE_SIZE} 条数据， 共计 {total_count} 条数据"
             yield SqlYield.build_yield_dt(dt)
-            yield SqlYield.build_yield_dt("开始生成查询条件说明...")
+            yield SqlYield.build_yield_dt("生成查询条件说明...")
         except Exception as e:
             logger.error(f"get_total_count_or_total_page_err, {e}", exc_info=True)
 
@@ -406,8 +405,7 @@ class SqlYield(DbUtl):
             explain_sql_txt = self.get_explain_sql_txt(uid, extract_sql)
             explain_sql_txt = extract_md_content(explain_sql_txt, "sql")
             logger.info(f"get_explain_sql_txt, {explain_sql_txt}, input_sql, {extract_sql.replace('\n', ' ')}")
-            yield SqlYield.build_yield_dt("查询条件说明如下:")
-            yield SqlYield.build_yield_dt(explain_sql_txt)
+            yield SqlYield.build_yield_dt(f"查询条件说明:{explain_sql_txt}")
         except Exception as e:
             logger.error(f"get_explain_sql_txt_err, {e}, sql: {extract_sql}", exc_info=True)
             yield SqlYield.build_yield_dt("暂时无法给您提供数据查询的相关解释")

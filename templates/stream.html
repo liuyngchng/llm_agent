@@ -22,6 +22,10 @@
             const query = encodeURIComponent(document.getElementById('dialog').value);
             eventSource = new EventSource(`/stream?t=${Date.now()}&q=${query}`);
             eventSource.onmessage = (event) => {
+                const lastChild = outputEl.lastElementChild;
+                if (lastChild && (lastChild.textContent || '').includes('...')) {
+                    outputEl.removeChild(lastChild);
+                }
                 try {
                     const { data_type, data } = JSON.parse(event.data);
                     switch(data_type) {
@@ -40,10 +44,10 @@
 
                         case 'chart_js':
                             const chart_container = document.createElement('div');
-                            chart_container.style.width = '30%';      // 宽度占父容器80%
-                            chart_container.style.maxWidth = '300px'; // 最大宽度限制
-                            chart_container.style.height = '300px';   // 固定高度
-                            chart_container.style.margin = '20px auto'; // 居中显示
+                            chart_container.style.width = '30%';            // 宽度占父容器80%
+                            chart_container.style.maxWidth = '300px';       // 最大宽度限制
+                            chart_container.style.height = '300px';      // 固定高度
+                            chart_container.style.margin = '20px 0 20px 10%';
                             outputEl.appendChild(chart_container);
                             const canvas = document.createElement('canvas');
                             chart_container.appendChild(canvas);
