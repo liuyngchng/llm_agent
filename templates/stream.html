@@ -19,14 +19,11 @@
         startBtn.addEventListener('click', () => {
             if (eventSource) eventSource.close();
             outputEl.innerHTML = '';
-
             const query = encodeURIComponent(document.getElementById('dialog').value);
             eventSource = new EventSource(`/stream?t=${Date.now()}&q=${query}`);
-
             eventSource.onmessage = (event) => {
                 try {
                     const { data_type, data } = JSON.parse(event.data);
-
                     switch(data_type) {
                         case 'txt':
                             const pre = document.createElement('pre');
