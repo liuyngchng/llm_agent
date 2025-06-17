@@ -301,7 +301,7 @@ class SqlYield(DbUtl):
                 model = ChatOllama(model=self.llm_model_name, base_url=self.llm_api_uri, temperature=0)
         else:
             model = ChatOllama(model=self.llm_model_name, base_url=self.llm_api_uri, temperature=0)
-        logger.debug(f"model_type, {type(model)}, model, {model}")
+        logger.debug(f"model, {model}")
         return model
 
     def yield_dt_with_nl(self, uid: str, q: str, dt_fmt: str):
@@ -311,7 +311,7 @@ class SqlYield(DbUtl):
         :param q: the question (natural language) user submitted
         :param dt_fmt: A DataType enum
         """
-
+        logger.info(f"uid:{uid}, q:{q}, dt_fmt:{dt_fmt}")
         yield SqlYield.build_yield_dt(f"{q}...")
         adt = self.get_table_list()
         logger.info(f"agent_detected_tables, {adt}, db_type, {self.cfg['db']['type']}")

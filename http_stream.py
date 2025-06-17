@@ -84,10 +84,11 @@ def stream():
     logger.info(f"request.args {request.args}")
     t = int(request.args.get('t', 0))
     q = request.args.get('q', '')
+    uid = request.args.get('uid', '')
     logger.info(f"rcv_req, t={t}, q={q}")
     sql_yield = SqlYield(my_cfg)
     return Response(
-        sql_yield.yield_dt_with_nl("332987916", q, DataType.HTML.value),
+        sql_yield.yield_dt_with_nl(uid, q, DataType.HTML.value),
         mimetype='text/event-stream; charset=utf-8'
     )
     # return Response(generate_data(), mimetype='text/event-stream')
