@@ -364,7 +364,8 @@ class SqlYield(DbUtl):
             return
         try:
             raw_dt = self.get_dt_with_sql(extract_sql, dt_fmt)
-            yield SqlYield.build_yield_dt(f"<div>查询到的数据如下:</div><br>{raw_dt.replace('\n', ' ')}", YieldType.HTML.value)
+            raw_dt1 = raw_dt.replace('\n', ' ')
+            yield SqlYield.build_yield_dt(f"<div>查询到的数据如下:</div><br>{raw_dt1}", YieldType.HTML.value)
             yield SqlYield.build_yield_dt("查询符合条件的数据数量...")
         except Exception as e:
             logger.error(f"get_dt_with_sql_err, {e}, sql: {extract_sql}", exc_info=True)
@@ -376,9 +377,11 @@ class SqlYield(DbUtl):
             # count_sql_txt = self.gen_count_sql_by_sql(uid, nl_dt_dict["sql"])
             # count_sql = extract_md_content(count_sql_txt, "sql")
             count_sql = DbUtl.gen_count_sql(extract_sql)
+            count_sql1 = count_sql.replace('\n', ' ')
+            extract_sql1 = extract_sql.replace('\n', ' ')
             logger.info(f"gen_count_sql_by_get_dt_sql, result "
-                f"{count_sql.replace('\n', ' ')}, "
-                f"get_dt_sql {extract_sql.replace('\n', ' ')}"
+                f"{count_sql1}, "
+                f"get_dt_sql {extract_sql1}"
             )
             count_dt = self.get_dt_with_sql(count_sql, DataType.JSON.value)
             count_dt = SqlYield.get_count_num(count_dt)
@@ -405,7 +408,8 @@ class SqlYield(DbUtl):
             logger.info("get_explain_sql_txt_start")
             explain_sql_txt = self.get_explain_sql_txt(uid, extract_sql)
             explain_sql_txt = extract_md_content(explain_sql_txt, "sql")
-            logger.info(f"get_explain_sql_txt, {explain_sql_txt}, input_sql, {extract_sql.replace('\n', ' ')}")
+            extract_sql1 = extract_sql.replace('\n', ' ')
+            logger.info(f"get_explain_sql_txt, {explain_sql_txt}, input_sql, {extract_sql1}")
             yield SqlYield.build_yield_dt(f"查询条件说明:{explain_sql_txt}")
         except Exception as e:
             logger.error(f"get_explain_sql_txt_err, {e}, sql: {extract_sql}", exc_info=True)
@@ -421,8 +425,10 @@ class SqlYield(DbUtl):
     @staticmethod
     def build_yield_dt(dt: str, dt_type=YieldType.TXT.value) -> str:
         if YieldType.CHART_JS.value == dt_type:
-            return f"data: {json.dumps({"data_type": dt_type, "data": json.loads(dt)}, ensure_ascii=False)}\n\n"
-        return f"data: {json.dumps({"data_type": dt_type, "data": dt}, ensure_ascii=False)}\n\n"
+            json_dt = json.dumps({"data_type": dt_type, "data": json.loads(dt)}, ensure_ascii=False)
+        else:
+            json_dt = json.dumps({"data_type": dt_type, "data": dt}, ensure_ascii=False)
+        return f"data: {json_dt}\n\n"
 
     @staticmethod
     def get_count_num(count_dt:str) -> int:
@@ -433,7 +439,8 @@ class SqlYield(DbUtl):
             return 0
 
     def get_pg_dt(self, uid: str, usr_page_dt: dict, page_size=PAGE_SIZE):
-        logger.info(f"last_sql_for_{uid}: {usr_page_dt.get('sql', '').replace('\n', '')}")
+        last_sql1 = usr_page_dt.get('sql', '').replace('\n', '')
+        logger.info(f"last_sql_for_{uid}: {last_sql1}")
         page_sql = DbUtl.get_page_sql(usr_page_dt['sql'], usr_page_dt['cur_page'], page_size)
         logger.info(f"next_sql: {page_sql}")
         dt = self.get_dt_with_sql(page_sql)
@@ -494,11 +501,14 @@ class SqlYield(DbUtl):
         logger.info("start_add_chart_to_raw_dt")
         try:
             chart_dt = self.get_chart_dt(raw_dt)
-            logger.debug(f"nl_dt_from_agent, {chart_dt.replace('\n', ' ')}")
+            chart_dt1 = chart_dt.replace('\n', ' ')
+            logger.debug(f"nl_dt_from_agent, {chart_dt1}")
             chart_dt = rmv_think_block(chart_dt)
-            logger.debug(f"nl_dt_without_think, {chart_dt.replace('\n', ' ')}")
+            chart_dt1 = chart_dt.replace('\n', ' ')
+            logger.debug(f"nl_dt_without_think, {chart_dt1}")
             chart_dt = extract_json(chart_dt)
-            logger.debug(f"nl_dt_only_json_str, {chart_dt.replace('\n', ' ')}")
+            chart_dt1 = chart_dt.replace('\n', ' ')
+            logger.debug(f"nl_dt_only_json_str, {chart_dt1}")
             return chart_dt
         except Exception as e:
             logger.exception(f"err_to_add_description_to_raw_dt, nl_dt {raw_dt}")

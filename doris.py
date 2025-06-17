@@ -99,7 +99,8 @@ class Doris:
             exec_json = cache_dict.get(body_md5)
             logger.info(f"return_from_cache_for, {body}, cache_dt={exec_json}")
         else:
-            logger.info(f"curl -X POST --noproxy '*' -s -w'\\n' '{self.url}' -H 'Content-Type:application/json' -H 'token:{self.token}' -d '{json.dumps(body, ensure_ascii=False).replace("'", "'\\''")}'")
+            escaped_body = json.dumps(body, ensure_ascii=False).replace("'", "'\"'\"'")
+            logger.info(f"curl -X POST --noproxy '*' -s -w'\\n' '{self.url}' -H 'Content-Type:application/json' -H 'token:{self.token}' -d '{escaped_body}'")
             response = requests.post(
                 self.url, json=body, headers=self.headers,
                 proxies={'http': None, 'https': None},
@@ -121,7 +122,8 @@ class Doris:
         """
         logger.info("start_doris_output_dt")
         dt = self.output_data(sql, data_format)
-        logger.info(f"doris_output_dt, {dt.replace('\n', ' ')}")
+        dt1 = dt.replace('\n', ' ')
+        logger.info(f"doris_output_dt, {dt1}")
         return dt
 
 
@@ -212,7 +214,8 @@ class Doris:
         for tb_schema in tb_schema_list:
             # md_tbl_schema = self.parse_ddl_to_md_table(tb_schema['schema'])
             md_tbl_schema = self.get_table_schema(self.data_source, tb_schema['name'])
-            logger.info(f"md_tbl{md_tbl_schema.replace('\n', ' ')}")
+            md_tbl_schema1 = md_tbl_schema.replace('\n', ' ')
+            logger.info(f"md_tbl:{md_tbl_schema1}")
             sample_dt_sql = f"SELECT * FROM {tb_schema['name']} LIMIT 3"
             cfg_db_uri = "sqlite:///cfg.db"
             schema_desc_dt = DbUtl.sqlite_output(

@@ -136,3 +136,7 @@ curl -X POST http://127.0.0.1:19000/trans/audio \
   -H "Content-Type: multipart/form-data"
 ```
 
+
+ssh -i ~/Downloads/devbox devbox@petrotech.cnpc -p 31415
+
+scp -i ~/Downloads/devbox -P 31415 ./llm_agent.tar devbox@petrotech.cnpc:/home/devbox/

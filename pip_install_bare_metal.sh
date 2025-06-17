@@ -9,4 +9,4 @@ pip install gunicorn \
     unstructured[pdf] langchain_core flask pydantic python-docx \
     nltk sentence-transformers faiss_cpu torch concurrent_log_handler \
     pymysql cx_Oracle sounddevice pydub pycryptodome wheel qrcode[pil] \
-    lxml tabulate oracledb ${PROXY}
+    lxml tabulate oracledb sympy ${PROXY}

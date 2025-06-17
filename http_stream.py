@@ -7,8 +7,6 @@ pip install gunicorn flask concurrent-log-handler langchain_openai langchain_oll
 import logging.config
 import time
 
-from sympy.unify.usympy import illegal
-
 import cfg_util as cfg_utl
 
 from flask import Flask, render_template, Response, request
@@ -78,7 +76,7 @@ def login():
         "sys_name": my_cfg['sys']['name'],
         "greeting": cfg_utl.get_const("greeting")
     }
-    session_key = f"{auth_result["uid"]}_{get_client_ip()}"
+    session_key = f"{auth_result['uid']}_{get_client_ip()}"
     auth_info[session_key] = time.time()
     return render_template(dt_idx, **ctx)
 

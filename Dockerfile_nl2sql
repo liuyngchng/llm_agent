@@ -8,7 +8,7 @@ ARG PROXY=""
 COPY ./llm_py_env /tmp/whl
 RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn flask \
     concurrent-log-handler langchain_openai langchain_ollama langchain_core langchain_community \
-    openai pandas tabulate pymysql oracledb sounddevice pydub pycryptodome wheel && \
+    openai pandas tabulate pymysql oracledb sounddevice pydub pycryptodome wheel sympy && \
     rm -rf /tmp/whl && \
     rm -rf ~/.cache/pip
 
