@@ -355,21 +355,6 @@ def transcribe_audio() -> tuple[Response, int] | Response:
     response.headers.add('Access-Control-Allow-Methods', 'POST')
     return response
 
-@app.route('/stream', methods=['GET'])
-def stream_index():
-    logger.info("render stream.html")
-    return render_template('stream.html')
-
-@app.route('/stream', methods=['POST'])
-def stream():
-    return Response(generate_data(), mimetype='text/event-stream')
-
-def generate_data():
-    messages = ["第一条消息", "第二条消息", "处理中...", "完成！"]
-    for msg in messages:
-        time.sleep(1)  # 模拟处理延迟
-        yield f"data: {msg}\n\n"  # SSE 格式
-
 
 
 def test_query_data():

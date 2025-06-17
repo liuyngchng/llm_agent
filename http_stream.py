@@ -6,6 +6,7 @@ pip install gunicorn flask concurrent-log-handler langchain_openai langchain_oll
 """
 import logging.config
 import time
+import cfg_util as cfg_utl
 
 from flask import Flask, render_template, Response, request
 
@@ -21,10 +22,62 @@ app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 my_cfg = init_yml_cfg()
 
+auth_info = {}
+
 @app.route('/', methods=['GET'])
-def stream_index():
-    logger.info("render stream.html")
-    return render_template('stream.html')
+def login_index():
+    auth_flag = my_cfg['sys']['auth']
+    if auth_flag:
+        login_idx = "login.html"
+        logger.info(f"return page {login_idx}")
+        return render_template(login_idx, waring_info="", sys_name=my_cfg['sys']['name'])
+    else:
+        dt_idx = "nl2sql_index.html"
+        ctx = {
+            "uid": "foo",
+            "sys_name": my_cfg['sys']['name']
+        }
+        logger.info(f"return_page_with_no_auth {dt_idx}")
+        return render_template(dt_idx, **ctx)
+
+@app.route('/login', methods=['POST'])
+def login():
+    """
+    form submit, get data from form
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d '{"user":"test"}'
+    :return:
+    echo -n 'my_str' |  md5sum
+    """
+    dt_idx = "stream_index.html"
+    logger.debug(f"request_form: {request.form}")
+    user = request.form.get('usr').strip()
+    t = request.form.get('t').strip()
+    logger.info(f"user_login: {user}, {t}")
+    auth_result = cfg_utl.auth_user(user, t, my_cfg)
+    logger.info(f"user_login_result: {user}, {t}, {auth_result}")
+    if not auth_result["pass"]:
+        logger.error(f"用户名或密码输入错误 {user}, {t}")
+        ctx = {
+            "user" : user,
+            "sys_name" : my_cfg['sys']['name'],
+            "waring_info" : "用户名或密码输入错误",
+        }
+        return render_template("login.html", **ctx)
+
+    logger.info(f"return_page {dt_idx}")
+    ctx = {
+        "uid": auth_result["uid"],
+        "t": auth_result["t"],
+        "sys_name": my_cfg['sys']['name'],
+        "greeting": cfg_utl.get_const("greeting")
+    }
+    session_key = f"{auth_result["uid"]}_{get_client_ip()}"
+    auth_info[session_key] = time.time()
+    return render_template(dt_idx, **ctx)
+
+
 
 @app.route('/stream', methods=['POST', 'GET'])
 def stream():
@@ -47,8 +100,14 @@ def generate_data():
         yield f"data: {msg}\n\n"
 
 
+def get_client_ip():
+    """获取客户端真实 IP"""
+    if forwarded_for := request.headers.get('X-Forwarded-For'):
+        return forwarded_for.split(',')[0]
+    return request.headers.get('X-Real-IP', request.remote_addr)
+
 if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
-    app.run(host='0.0.0.0', port=19001)
+    app.run(host='0.0.0.0', port=19000)
