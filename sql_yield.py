@@ -351,9 +351,11 @@ class SqlYield(DbUtl):
                 extract_sql = DbUtl.add_ou_id_condition(extract_sql, ou_id_list)
             # extract_sql = extract_sql.replace('\n', ' ')
             # extract_sql = re.sub(r'\s+', ' ', extract_sql).strip()
-            yield SqlYield.build_yield_dt("查询条件如下所示:")
-            for line in extract_sql.split("\n"):
-                yield SqlYield.build_yield_dt(line)
+            extract_sql = extract_sql.replace('\n', ' ').replace('\\s+', ' ')
+            sql_dt = f"查询SQL: {extract_sql}"
+            yield SqlYield.build_yield_dt(sql_dt)
+            # for line in extract_sql.split("\n"):
+            #     yield SqlYield.build_yield_dt(line)
             yield SqlYield.build_yield_dt("查询数据...")
             logger.info(f"gen_sql_from_txt {q}, {extract_sql}")
         except Exception as e:

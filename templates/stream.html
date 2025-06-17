@@ -1,17 +1,175 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Stream Test</title>
+    <title>数据查询分析</title>
     <meta charset="utf-8">
     <link rel="stylesheet" href="/static/my.nl2sql.css">
     <script type="text/javascript" src="/static/chart.min.3.8.0.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 15px;
+            max-width: 800px;
+            margin: 0 auto 40px;
+            padding: 0 20px;
+        }
+
+        #dialog {
+            flex: 1;
+            padding: 16px 20px;
+            border: 2px solid #3498db;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        #dialog:focus {
+            outline: none;
+            border-color: #2980b9;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        #startBtn {
+            background: linear-gradient(to right, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 0 35px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        #startBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(52, 152, 219, 0.5);
+        }
+
+        #startBtn:active {
+            transform: translateY(0);
+        }
+
+        #stream_output {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            min-height: 300px;
+        }
+
+        pre {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px auto;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+            width: 90%;
+            max-width: 600px;
+            height: 400px;
+        }
+
+        .response-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-top: 4px solid #3498db;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
 <body>
-    <input type="text" value="查询2024年的用户数" name="dialog" id="dialog">
-    <button id="startBtn">查询</button>
-    <div id="stream_output" style="margin-left:2px;"></div>
+    <div class="container">
+        <header>
+            <h2>智能问数</h2>
+            <p class="subtitle">自然语言生成SQL查询 · 实时数据可视化</p>
+        </header>
 
-   <script>
+        <div class="input-group">
+            <input type="text"
+                   value="查询2024年的用户数"
+                   name="dialog"
+                   id="dialog"
+                   placeholder="输入您的数据查询需求...">
+            <button id="startBtn">查询</button>
+        </div>
+
+        <div id="stream_output">
+            <div style="text-align: center; padding: 50px 20px; color: #95a5a6;">
+                <p>查询结果将在此处显示</p>
+                <p style="margin-top: 10px; font-size: 0.9rem;">输入问题后点击"分析数据"按钮开始</p>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2025 数据分析平台 | KLSZ</p>
+        </footer>
+    </div>
+
+    <script>
         const outputEl = document.getElementById('stream_output');
         const startBtn = document.getElementById('startBtn');
         let eventSource = null;
@@ -21,6 +179,7 @@
             outputEl.innerHTML = '';
             const query = encodeURIComponent(document.getElementById('dialog').value);
             eventSource = new EventSource(`/stream?t=${Date.now()}&q=${query}`);
+
             eventSource.onmessage = (event) => {
                 const lastChild = outputEl.lastElementChild;
                 if (lastChild && (lastChild.textContent || '').includes('...')) {
@@ -38,37 +197,54 @@
 
                         case 'html':
                             const html_container = document.createElement('div');
+                            html_container.className = 'response-card'; // 添加卡片样式
                             html_container.innerHTML = data;
                             outputEl.appendChild(html_container);
                             break;
 
                         case 'chart_js':
                             const chart_container = document.createElement('div');
-                            chart_container.style.width = '30%';            // 宽度占父容器80%
-                            chart_container.style.maxWidth = '300px';       // 最大宽度限制
-                            chart_container.style.height = '300px';      // 固定高度
-                            chart_container.style.margin = '20px 0 20px 10%';
+                            chart_container.className = 'chart-container'; // 使用新样式类
                             outputEl.appendChild(chart_container);
                             const canvas = document.createElement('canvas');
                             chart_container.appendChild(canvas);
 
                             // 转换数据为 Chart.js 配置
                             const chartConfig = {
-                                type: 'pie', // 图表类型（示例用柱状图）
+                                type: 'pie',
                                 data: {
                                     labels: data.chart.labels,
                                     datasets: [{
-                                        label: `用户数 (${data.chart.unit})`, // 动态单位
+                                        label: `用户数 (${data.chart.unit})`,
                                         data: data.chart.values,
-                                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                                        borderColor: 'rgba(75, 192, 192, 1)',
-                                        borderWidth: 1
+                                        backgroundColor: [
+                                            'rgba(52, 152, 219, 0.7)',
+                                            'rgba(46, 204, 113, 0.7)',
+                                            'rgba(155, 89, 182, 0.7)',
+                                            'rgba(241, 196, 15, 0.7)',
+                                            'rgba(230, 126, 34, 0.7)'
+                                        ],
+                                        borderColor: 'white',
+                                        borderWidth: 2
                                     }]
                                 },
-                                options: { scales: { y: { beginAtZero: true } } }
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'right'
+                                        },
+                                        title: {
+                                            display: true,
+                                            text: data.chart.title,
+                                            font: { size: 18 }
+                                        }
+                                    }
+                                }
                             };
 
-                            new Chart(canvas, chartConfig); // 使用转换后的配置
+                            new Chart(canvas, chartConfig);
                             break;
 
                         default:
@@ -76,8 +252,8 @@
                     }
                 } catch (e) {
                     console.error('数据解析失败', e);
-                    // 兼容旧格式的纯文本/HTML
                     const fallback = document.createElement('div');
+                    fallback.className = 'response-card'; // 错误信息卡片样式
                     fallback.innerHTML = event.data;
                     outputEl.appendChild(fallback);
                 }
