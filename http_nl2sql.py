@@ -239,7 +239,7 @@ def query_data(catch=None):
     if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
         waring_info = {
             "chart": {},
-            "raw_dt": "登录信息已失效，请输重新登录后再使用本系统", "sql": "",
+            "raw_dt": "登录信息已失效，请重新登录后再使用本系统", "sql": "",
             "explain_sql": "", "total_count": 0, "cur_page": 1,
             "total_page": 1
         }
