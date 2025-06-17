@@ -23,6 +23,9 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
 
         header {
@@ -39,7 +42,7 @@
 
         .subtitle {
             color: #7f8c8d;
-            font-size: 1.1rem;
+            font-size: 0.9rem;
         }
 
         .input-group {
@@ -54,7 +57,7 @@
             flex: 1;
             padding: 16px 20px;
             border: 2px solid #3498db;
-            border-radius: 50px;
+            border-radius: 5px;
             font-size: 1.1rem;
             box-shadow: 0 4px 10px rgba(52, 152, 219, 0.2);
             transition: all 0.3s ease;
@@ -70,7 +73,7 @@
             background: linear-gradient(to right, #3498db, #2980b9);
             color: white;
             border: none;
-            border-radius: 50px;
+            border-radius: 5px;
             padding: 0 35px;
             font-size: 1.1rem;
             font-weight: 600;
@@ -93,7 +96,8 @@
             border-radius: 16px;
             padding: 30px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-            min-height: 300px;
+            flex-grow: 1;
+            margin-bottom: 20px;
         }
 
         pre {
@@ -135,9 +139,10 @@
 
         footer {
             text-align: center;
-            margin-top: 40px;
+            margin-top: auto;
             color: #7f8c8d;
             font-size: 0.9rem;
+            padding: 20px 0;
         }
     </style>
 </head>
@@ -165,7 +170,7 @@
         </div>
 
         <footer>
-            <p>© 2025 数据分析平台 | KLSZ</p>
+            <p>© 2025 数据查询平台 | KLSZ</p>
         </footer>
     </div>
 

@@ -412,6 +412,7 @@ class SqlYield(DbUtl):
             logger.error(f"get_explain_sql_txt_err, {e}, sql: {extract_sql}", exc_info=True)
             yield SqlYield.build_yield_dt("暂时无法给您提供数据查询的相关解释")
         logger.info("start_build_chart_dt")
+        yield SqlYield.build_yield_dt("准备绘图...")
         chart_dt = self.yield_chart_dt(uid, raw_dt)
         if chart_dt:
             yield SqlYield.build_yield_dt(chart_dt, YieldType.CHART_JS.value)
