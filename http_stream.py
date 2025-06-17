@@ -100,7 +100,95 @@ def stream():
         sql_yield.yield_dt_with_nl(uid, q, DataType.HTML.value),
         mimetype='text/event-stream; charset=utf-8'
     )
-    # return Response(generate_data(), mimetype='text/event-stream')
+
+@app.route('/cfg/idx', methods=['GET'])
+def config_index():
+    """
+     A index for static
+    curl -s --noproxy '*' http://127.0.0.1:19000 | jq
+    :return:
+    """
+    logger.info(f"request_args_in_config_index {request.args}")
+    try:
+        uid = request.args.get('uid').strip()
+        if not uid:
+            return "user is null in config, please submit your username in config request"
+    except Exception as e:
+        logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
+        raise jsonify("err_in_config_index")
+    ctx = cfg_utl.get_ds_cfg_by_uid(uid, my_cfg)
+    ctx["uid"] = uid
+    ctx['sys_name'] = my_cfg['sys']['name']
+    ctx["waring_info"] = ""
+    dt_idx = "config_index.html"
+    logger.info(f"return_page {dt_idx}, ctx {ctx}")
+    return render_template(dt_idx, **ctx)
+
+@app.route('/cfg/dt', methods=['POST'])
+def save_config():
+    logger.info(f"save_config_info {request.form}")
+    dt_idx = "config_index.html"
+    uid = request.form.get('uid').strip()
+    db_type = request.form.get('db_type').strip()
+    db_host = request.form.get('db_host').strip()
+    db_port = request.form.get('db_port').strip()
+    db_name = request.form.get('db_name').strip()
+    db_usr  = request.form.get('db_usr').strip()
+    db_psw  = request.form.get('db_psw').strip()
+    tables = request.form.get('tables').strip()
+    add_chart = request.form.get('add_chart').strip()
+    is_strict = request.form.get('is_strict').strip()
+    llm_ctx = request.form.get('llm_ctx').strip()
+    data_source_cfg = {
+        "sys_name":     my_cfg['sys']['name'],
+        "waring_info":  "",
+        "uid":          uid,
+        "db_type":      db_type,
+        "db_name":      db_name,
+        "db_host":      db_host,
+        "db_port":      db_port,
+        "db_usr":       db_usr,
+        "db_psw":       db_psw,
+        "tables":       tables,
+        "add_chart":    add_chart,
+        "is_strict":    is_strict,
+        "llm_ctx":      llm_ctx
+    }
+    usr = cfg_utl.get_user_name_by_uid(uid)
+    if data_source_cfg["db_type"] == DBType.SQLITE.value:
+        data_source_cfg['waring_info'] = '数据库类型有误'
+        return render_template(dt_idx, **data_source_cfg)
+    if not usr:
+        data_source_cfg['waring_info'] = '非法访问，请您先登录系统'
+        return render_template(dt_idx, **data_source_cfg)
+    save_cfg_result = cfg_utl.save_ds_cfg(data_source_cfg, my_cfg)
+    if save_cfg_result:
+        data_source_cfg['waring_info'] = '保存成功'
+    else:
+        data_source_cfg['waring_info'] = '保存失败'
+    # sql_agent = SqlAgent(cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg))
+    # data_source_cfg["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
+    return render_template(dt_idx, **data_source_cfg)
+
+
+@app.route('/cfg/delete', methods=['POST'])
+def delete_config():
+    logger.info(f"del_cfg_info {request.data}")
+    uid = json.loads(request.data).get('uid').strip()
+    logger.info(f"del_cfg_info_for_uid_{uid}")
+    usr = cfg_utl.get_user_name_by_uid(uid)
+    waring_info = {"success": False, "msg": ""}
+    if not usr:
+        waring_info['msg'] = '非法访问，请先登录系统'
+        return waring_info
+    delete_cfg_result = cfg_utl.delete_data_source_config(uid, my_cfg)
+    if delete_cfg_result:
+        waring_info['msg'] = '删除成功'
+        waring_info['success'] = True
+    else:
+        waring_info['msg'] = '删除失败'
+    logger.info(f"del_cfg_info_for_uid_{uid}, return {waring_info}")
+    return waring_info
 
 def illegal_access(uid):
     waring_info = "登录信息已失效，请重新登录后再使用本系统"
