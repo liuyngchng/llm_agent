@@ -4,14 +4,15 @@
 pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama \
  langchain_core langchain_community pandas tabulate pymysql cx_Oracle pycryptodome
 """
+import json
 import logging.config
 import time
 
 import cfg_util as cfg_utl
 
-from flask import Flask, render_template, Response, request
+from flask import Flask, render_template, Response, request, jsonify
 
-from my_enums import DataType
+from my_enums import DataType, DBType
 from sql_yield import SqlYield
 from sys_init import init_yml_cfg
 
