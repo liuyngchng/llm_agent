@@ -6,6 +6,9 @@ pip install gunicorn flask concurrent-log-handler langchain_openai langchain_oll
 """
 import logging.config
 import time
+
+from sympy.unify.usympy import illegal
+
 import cfg_util as cfg_utl
 
 from flask import Flask, render_template, Response, request
@@ -23,6 +26,8 @@ app.config['JSON_AS_ASCII'] = False
 my_cfg = init_yml_cfg()
 
 auth_info = {}
+
+SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 
 @app.route('/', methods=['GET'])
 def login_index():
@@ -85,13 +90,24 @@ def stream():
     t = int(request.args.get('t', 0))
     q = request.args.get('q', '')
     uid = request.args.get('uid', '')
-    logger.info(f"rcv_req, t={t}, q={q}")
+    session_key = f"{uid}_{get_client_ip()}"
+    if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
+        return Response(
+            illegal_access(uid),
+            mimetype='text/event-stream; charset=utf-8'
+        )
+    logger.info(f"rcv_stream_req, t={t}, q={q}")
     sql_yield = SqlYield(my_cfg)
     return Response(
         sql_yield.yield_dt_with_nl(uid, q, DataType.HTML.value),
         mimetype='text/event-stream; charset=utf-8'
     )
     # return Response(generate_data(), mimetype='text/event-stream')
+
+def illegal_access(uid):
+    waring_info = "登录信息已失效，请重新登录后再使用本系统"
+    logger.error(f"{waring_info}, {uid}")
+    yield SqlYield.build_yield_dt(waring_info)
 
 def generate_data():
     messages = ["大模型思考中...", "用户问题优化中...","优化后的问题是：***",

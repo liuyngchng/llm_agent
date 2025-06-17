@@ -364,8 +364,7 @@ class SqlYield(DbUtl):
             return
         try:
             raw_dt = self.get_dt_with_sql(extract_sql, dt_fmt)
-            yield SqlYield.build_yield_dt("查询到的数据如下:")
-            yield SqlYield.build_yield_dt(f"{raw_dt.replace('\n', ' ')}", YieldType.HTML.value)
+            yield SqlYield.build_yield_dt(f"<div>查询到的数据如下:</div><br>{raw_dt.replace('\n', ' ')}", YieldType.HTML.value)
             yield SqlYield.build_yield_dt("查询符合条件的数据数量...")
         except Exception as e:
             logger.error(f"get_dt_with_sql_err, {e}, sql: {extract_sql}", exc_info=True)
