@@ -168,7 +168,12 @@
                 <p style="margin-top: 10px; font-size: 0.9rem;">输入问题后点击"分析数据"按钮开始</p>
             </div>
         </div>
-
+        <input type="hidden" id ="uid" name="uid" value="{{uid}}">
+        <input type="hidden" id ="t" name="t" value="{{t}}">
+        <input type="hidden" id ="cur_page" name="cur_page" value="{{cur_page}}">
+        <input type="hidden" id ="next_page" name="next_page" value="">
+        <input type="hidden" id ="total_page" name="total_page" value="{{total_page}}">
+        <input type="hidden" id ="greeting" name="greeting" value="{{greeting}}">
         <footer>
             <p>© 2025 数据查询平台 | KLSZ</p>
         </footer>
@@ -183,7 +188,9 @@
             if (eventSource) eventSource.close();
             outputEl.innerHTML = '';
             const query = encodeURIComponent(document.getElementById('dialog').value);
-            eventSource = new EventSource(`/stream?t=${Date.now()}&q=${query}`);
+            const uid = encodeURIComponent(document.getElementById('uid').value);
+
+            eventSource = new EventSource(`/stream?t=${Date.now()}&q=${query}&uid=${uid}`);
 
             eventSource.onmessage = (event) => {
                 const lastChild = outputEl.lastElementChild;

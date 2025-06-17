@@ -81,6 +81,7 @@ def login():
 
 @app.route('/stream', methods=['POST', 'GET'])
 def stream():
+    logger.info(f"request.args {request.args}")
     t = int(request.args.get('t', 0))
     q = request.args.get('q', '')
     logger.info(f"rcv_req, t={t}, q={q}")
