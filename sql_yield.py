@@ -443,15 +443,10 @@ class SqlYield(DbUtl):
         logger.info(f"last_sql_for_{uid}: {last_sql1}")
         page_sql = DbUtl.get_page_sql(usr_page_dt['sql'], usr_page_dt['cur_page'], page_size)
         logger.info(f"next_sql: {page_sql}")
-        dt = self.get_dt_with_sql(page_sql)
-        nl_dt_dict = {
-            "chart": {}, "raw_dt": dt, "sql": page_sql,
-            "cur_page": usr_page_dt['cur_page'],
-            "total_count":usr_page_dt['total_count'],
-            "total_page": usr_page_dt['total_page'],
-        }
-        logger.info(f"nl_dt:\n {nl_dt_dict}\n")
-        self.yield_chart_dt(uid, dt)
+        dt = self.get_dt_with_sql(page_sql, DataType.HTML.value)
+        yield SqlYield.build_yield_dt(dt, YieldType.HTML.value)
+        chart_dt = self.yield_chart_dt(uid, dt)
+        yield SqlYield.build_yield_dt(chart_dt, YieldType.CHART_JS.value)
 
     def yield_chart_dt(self, uid: str, raw_dt: str) -> str:
         """
@@ -525,5 +520,5 @@ if __name__ == "__main__":
     #     if input_q == "q":
     #         exit(0)
     input_q = "查询2024年的数据明细"
-    sql_yield = SqlYield(my_cfg, True)
+    sql_yield = SqlYield(my_cfg)
     sql_yield.yield_dt_with_nl("123", input_q, DataType.HTML.value)
