@@ -99,6 +99,12 @@
             flex-grow: 1;
             margin-bottom: 20px;
         }
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 10px 0 20px;
+        }
 
         pre {
             background: #f8f9fa;
@@ -152,7 +158,10 @@
             <h2>智能问数</h2>
             <p class="subtitle">自然语言生成SQL查询 · 实时数据可视化</p>
         </header>
-        <a href="/cfg/idx?uid={{uid}}" class="system-settings-link" target="_blank">系统配置</a>
+        <div class="nav-links">
+            <a href="/usr/logout?uid={{uid}}" class="system-settings-link" target="_blank">用户登出</a>
+            <a href="/cfg/idx?uid={{uid}}" class="system-settings-link" target="_blank">系统配置</a>
+        </div>
         <div class="input-group">
             <input type="text"
                    value="查询2024年的用户数"
@@ -165,7 +174,7 @@
         <div id="stream_output">
             <div style="text-align: center; padding: 50px 20px; color: #95a5a6;">
                 <p>查询结果将在此处显示</p>
-                <p style="margin-top: 10px; font-size: 0.9rem;">输入问题后点击"分析数据"按钮开始</p>
+                <p style="margin-top: 10px; font-size: 0.9rem;">输入问题后点击"查询"按钮开始</p>
             </div>
         </div>
         <input type="hidden" id ="uid" name="uid" value="{{uid}}">

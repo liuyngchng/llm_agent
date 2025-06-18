@@ -33,13 +33,26 @@ button:disabled {
     border: 1px solid #ddd;
     padding: 8px;
 }
+/* 更新链接样式 */
 .system-settings-link {
+    color: #3498db;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+.top-links-container {
     position: absolute;
     top: 20px;
     right: 30px;
-     color: #000;
-    text-decoration: none;
-    font-weight: 500;
+    display: flex;
+    gap: 15px;
+}
+
+.system-settings-link:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+    text-decoration: underline;
 }
 .chart-container canvas {
     width: 100% ;
