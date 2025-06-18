@@ -14,39 +14,43 @@
     </style>
 </head>
 <body>
-<div style="text-align: center;margin-top: 15%;" >
-    <p style="font:22px Verdana; font-weight:bold;">{{sys_name}}</p>
-    <form id = "my_form" style="margin-top: 2%" method="post" action="/login">
-        <div align="center" style="margin-bottom: 1%">
-            <span>用户名:</span>
-            <input id = "usr" name = "usr"  type="text" value="{{user}}">
+    <div style="text-align: right; margin-right: 20%;">
+        <a href="/reg/usr" class="system-settings-link" target="_blank">用户注册</a>
+    </div>
+
+    <div style="text-align: center;margin-top: 15%;" >
+        <p style="font:22px Verdana; font-weight:bold;">{{sys_name}}</p>
+        <form id = "my_form" style="margin-top: 2%" method="post" action="/login">
+            <div align="center" style="margin-bottom: 1%">
+                <span>用户名:</span>
+                <input id = "usr" name = "usr"  type="text" value="{{user}}">
+            </div>
+            <input id = "t" name = "t"  type="hidden">
+        </form>
+        <div align="center" style="margin-bottom: 1%"><span>密&nbsp;&nbsp;&nbsp;码:</span>
+            <input id = "psw" name="psw" type="password" value="{{password}}">
         </div>
-        <input id = "t" name = "t"  type="hidden">
-    </form>
-    <div align="center" style="margin-bottom: 1%"><span>密&nbsp;&nbsp;&nbsp;码:</span>
-        <input id = "psw" name="psw" type="password" value="{{password}}">
+        <div align="center" style="margin-bottom: 1%">
+            <button type="submit" content="" id="button">&nbsp;登&nbsp;&nbsp;录&nbsp;</button>
+        </div>
+        <div align="center"><span style="color: red">{{waring_info}}</span></div>
     </div>
-    <div align="center" style="margin-bottom: 1%">
-        <button type="submit" content="" id="button">&nbsp;登&nbsp;&nbsp;录&nbsp;</button>
-    </div>
-    <div align="center"><span style="color: red">{{waring_info}}</span></div>
-</div>
-<script>
-    var psw_input = document.getElementById("psw");
-    psw_input.onchange = function () {
-        document.getElementById("t").value = CryptoJS.MD5(psw_input.value).toString();
-    };
-    document.getElementById("button").onclick = function () {
-        if (document.getElementById("usr").value.trim() == '') {
-            alert("请输入用户名");
-            return;
+    <script>
+        var psw_input = document.getElementById("psw");
+        psw_input.onchange = function () {
+            document.getElementById("t").value = CryptoJS.MD5(psw_input.value).toString();
+        };
+        document.getElementById("button").onclick = function () {
+            if (document.getElementById("usr").value.trim() == '') {
+                alert("请输入用户名");
+                return;
+            }
+            if (document.getElementById("psw").value.trim() == '') {
+                alert("请输入密码");
+                return;
+            }
+            document.getElementById("my_form").submit();
         }
-        if (document.getElementById("psw").value.trim() == '') {
-            alert("请输入密码");
-            return;
-        }
-        document.getElementById("my_form").submit();
-    }
-</script>
+    </script>
 </body>
 </html>

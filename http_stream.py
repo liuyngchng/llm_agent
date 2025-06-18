@@ -191,6 +191,49 @@ def delete_config():
     logger.info(f"del_cfg_info_for_uid_{uid}, return {waring_info}")
     return waring_info
 
+@app.route('/reg/usr', methods=['GET'])
+def reg_user_index():
+    """
+     A index for reg user
+    curl -s --noproxy '*' http://127.0.0.1:19000 | jq
+    :return:
+    """
+    logger.info(f"request_args_in_reg_usr_index {request.args}")
+    ctx = {"waring_info":""}
+    dt_idx = "reg_usr_index.html"
+    logger.info(f"return_page {dt_idx}, ctx {ctx}")
+    return render_template(dt_idx, **ctx)
+
+@app.route('/reg/usr', methods=['POST'])
+def reg_user():
+    """
+     A index for reg user
+    curl -s --noproxy '*' http://127.0.0.1:19000 | jq
+    :return:
+    """
+    logger.info(f"request_args_in_config_index {request.args}")
+    ctx = {"waring_info":""}
+    try:
+        usr = request.form.get('usr').strip()
+        t = request.form.get('t').strip()
+        usr_info = cfg_utl.get_uid_by_user(usr)
+        if usr_info:
+            ctx["waring_info"] = f"用户 {usr} 已存在，请重新输入用户名"
+        else:
+            cfg_utl.save_usr(usr, t)
+            uid = cfg_utl.get_uid_by_user(usr)
+            if uid:
+                ctx["waring_info"] = f"用户 {usr} 已成功创建"
+                ctx["uid"] = uid
+            else:
+                ctx["waring_info"] = f"用户 {usr} 创建失败"
+    except Exception as e:
+        ctx["waring_info"] = "创建用户发生异常"
+        logger.error(f", {ctx["waring_info"]}, url: {request.url}", exc_info=True)
+    dt_idx = "reg_usr_index.html"
+    logger.info(f"return_page {dt_idx}, ctx {ctx}")
+    return render_template(dt_idx, **ctx)
+
 def illegal_access(uid):
     waring_info = "登录信息已失效，请重新登录后再使用本系统"
     logger.error(f"{waring_info}, {uid}")

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{sys_name}}</title>
+	<meta charset="utf-8">
+    <meta id="adm_20250516">
+    <script type="text/javascript" src="/static/crypto.js"></script>
+    <style>
+        div, span, input, button {font:18px Verdana}
+        div, button {font-weight:bold;text-align: center;}
+        span {text-align: center;}
+        input {width: 300px;}
+        select {width: 308px;}
+    </style>
+</head>
+<body>
+<div style="text-align: center;margin-top: 15%;" >
+    <p style="font:22px Verdana; font-weight:bold;">{{sys_name}}</p>
+    <form id = "my_form" style="margin-top: 2%" method="post" action="/reg/usr">
+        <div align="center" style="margin-bottom: 1%">
+            <span>用户名:</span>
+            <input id = "usr" name = "usr"  type="text" value="{{user}}" placeholder="请输入用户名">
+        </div>
+        <input id = "t" name = "t"  type="hidden">
+    </form>
+    <div align="center" style="margin-bottom: 1%"><span>密&nbsp;&nbsp;&nbsp;码:</span>
+        <input id = "psw" name="psw" type="password" value="{{password}}" placeholder="请输入密码">
+    </div>
+    <div align="center" style="margin-bottom: 1%">
+        <button type="submit" content="" id="button">&nbsp;注&nbsp;&nbsp;册&nbsp;</button>
+    </div>
+    <div align="center"><span style="color: red">{{waring_info}}</span></div>
+</div>
+<script>
+    var psw_input = document.getElementById("psw");
+    psw_input.onchange = function () {
+        document.getElementById("t").value = CryptoJS.MD5(psw_input.value).toString();
+    };
+    document.getElementById("button").onclick = function () {
+        if (document.getElementById("usr").value.trim() == '') {
+            alert("请输入用户名");
+            return;
+        }
+        if (document.getElementById("psw").value.trim() == '') {
+            alert("请输入密码");
+            return;
+        }
+        document.getElementById("my_form").submit();
+    }
+</script>
+</body>
+</html>

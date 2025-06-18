@@ -190,6 +190,25 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
             logger.exception(f"err_in_exec_sql, {exec_sql}")
     return save_result
 
+def save_usr(user_name: str, token: str) -> bool:
+    """
+    :param user_name: user's name need to be saved.
+    :param password: user's password need to be saved.
+    """
+    save_result = False
+    exec_sql = f"INSERT INTO user (name, t) values ('{user_name}','{token}' )"
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            exec_sql = exec_sql.replace('\n', ' ')
+            exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
+            result = DbUtl.sqlite_insert_delete_tool(my_conn, exec_sql)
+            logger.info(f"exec_sql_success {exec_sql}")
+            if result.get('result'):
+                save_result = True
+        except Exception as e:
+            logger.exception(f"err_in_exec_sql, {exec_sql}")
+    return save_result
+
 def delete_data_source_config(uid: str, cfg: dict) -> bool:
     delete_result = False
     if not uid:
