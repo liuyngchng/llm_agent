@@ -81,7 +81,30 @@ def login():
     auth_info[session_key] = time.time()
     return render_template(dt_idx, **ctx)
 
-
+@app.route('/logout', methods=['GET'])
+def logout():
+    """
+    form submit, get data from form
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d '{"user":"test"}'
+    :return:
+    echo -n 'my_str' |  md5sum
+    """
+    dt_idx = "login.html"
+    logger.debug(f"request_form: {request.args}")
+    uid = request.args.get('uid').strip()
+    logger.info(f"user_logout: {uid}")
+    session_key = f"{uid}_{get_client_ip()}"
+    auth_info.pop(session_key)
+    usr_info = cfg_utl.get_user_info_by_uid(uid)
+    usr_name = usr_info.get('name', '')
+    ctx = {
+        "user": usr_name,
+        "sys_name": my_cfg['sys']['name'],
+        "waring_info":f"用户 {usr_name} 已退出"
+    }
+    return render_template(dt_idx, **ctx)
 
 @app.route('/stream', methods=['POST', 'GET'])
 def stream():
