@@ -29,7 +29,7 @@
     <div align="center" style="margin-bottom: 1%">
         <button type="submit" content="" id="button">&nbsp;注&nbsp;&nbsp;册&nbsp;</button>
     </div>
-    <div align="center"><span style="color: red">{{waring_info}}</span></div>
+    <div align="center"><span id="waring_info" style="color: red">{{waring_info}}</span></div>
 </div>
 <script>
     var psw_input = document.getElementById("psw");
@@ -45,6 +45,7 @@
             alert("请输入密码");
             return;
         }
+        document.getElementById('waring_info').textContent = '';
         document.getElementById("my_form").submit();
     }
 </script>

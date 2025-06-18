@@ -222,7 +222,10 @@ def reg_user_index():
     :return:
     """
     logger.info(f"request_args_in_reg_usr_index {request.args}")
-    ctx = {"waring_info":""}
+    ctx = {
+        "sys_name": my_cfg['sys']['name'] + "_新用户注册",
+        "waring_info":""
+    }
     dt_idx = "reg_usr_index.html"
     logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
@@ -234,20 +237,25 @@ def reg_user():
     curl -s --noproxy '*' http://127.0.0.1:19000 | jq
     :return:
     """
-    logger.info(f"request_args_in_config_index {request.args}")
-    ctx = {"waring_info":""}
+    logger.info(f"request_args_in_reg_user {request.args}")
+    ctx = {
+        "sys_name": my_cfg['sys']['name']
+    }
     try:
         usr = request.form.get('usr').strip()
+        ctx["user"] = usr
         t = request.form.get('t').strip()
         usr_info = cfg_utl.get_uid_by_user(usr)
         if usr_info:
-            ctx["waring_info"] = f"用户 {usr} 已存在，请重新输入用户名"
+            ctx["waring_info"]= f"用户 {usr} 已存在，请重新输入用户名"
         else:
             cfg_utl.save_usr(usr, t)
             uid = cfg_utl.get_uid_by_user(usr)
             if uid:
-                ctx["waring_info"] = f"用户 {usr} 已成功创建"
                 ctx["uid"] = uid
+                ctx["waring_info"] = f"用户 {usr} 已成功创建，欢迎适用本系统"
+                dt_idx = "login.html"
+                return render_template(dt_idx, **ctx)
             else:
                 ctx["waring_info"] = f"用户 {usr} 创建失败"
     except Exception as e:

@@ -160,6 +160,19 @@ button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
 }
+
+/* 登录按钮容器宽度设置 */
+#login-button-container {
+    width: 300px;           /* 与输入框宽度一致 */
+    margin: 0 auto 1%;      /* 保持原有底部间距 */
+}
+
+/* 登录按钮样式 */
+#button {
+    width: 100%;            /* 充满容器宽度 */
+    box-sizing: border-box; /* 包含内边距 */
+    padding: 8px 0;         /* 垂直内边距 */
+}
 .avatar {
     width: 40px;
     height: 40px;
@@ -415,5 +428,8 @@ button:disabled {
         right: 15px;
         top: 50%;
         transform: none;
+    }
+    #login-button-container {
+        width: 100%; /* 小屏幕时占满宽度 */
     }
 }

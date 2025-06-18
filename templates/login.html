@@ -5,19 +5,17 @@
 	<meta charset="utf-8">
     <meta id="adm_20250516">
     <script type="text/javascript" src="/static/crypto.js"></script>
+<!--    <link rel="stylesheet" href="/static/my.nl2sql.css">-->
     <style>
         div, span, input, button {font:18px Verdana}
         div, button {font-weight:bold;text-align: center;}
         span {text-align: center;}
         input {width: 300px;}
+        button {width: 300px;}
         select {width: 308px;}
     </style>
 </head>
 <body>
-    <div style="text-align: right; margin-right: 20%;">
-        <a href="/reg/usr" class="system-settings-link" target="_blank">用户注册</a>
-    </div>
-
     <div style="text-align: center;margin-top: 15%;" >
         <p style="font:22px Verdana; font-weight:bold;">{{sys_name}}</p>
         <form id = "my_form" style="margin-top: 2%" method="post" action="/login">
@@ -30,8 +28,12 @@
         <div align="center" style="margin-bottom: 1%"><span>密&nbsp;&nbsp;&nbsp;码:</span>
             <input id = "psw" name="psw" type="password" value="{{password}}">
         </div>
-        <div align="center" style="margin-bottom: 1%">
+        <div id="login-button-container" style="margin-bottom: 1%">
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <button type="submit" content="" id="button">&nbsp;登&nbsp;&nbsp;录&nbsp;</button>
+        </div>
+        <div align="center" style="margin-bottom: 1%">
+            <a href="/reg/usr" class="system-settings-link" target="_blank">用户注册</a>
         </div>
         <div align="center"><span style="color: red">{{waring_info}}</span></div>
     </div>
