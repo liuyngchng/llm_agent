@@ -3,6 +3,7 @@ if [ $# -eq 0 ]; then
     echo "错误：请提供图片文件名作为参数"
     exit 1
 fi
+#your llm config file, api_uri in first line and api_token in second line
 config_file="llm.txt"
 if [ ! -f "${config_file}" ]; then
     echo "错误：LLM 配置文件 $config_file 不存在"
