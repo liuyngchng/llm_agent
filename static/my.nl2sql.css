@@ -173,6 +173,19 @@ button:disabled {
     box-sizing: border-box; /* 包含内边距 */
     padding: 8px 0;         /* 垂直内边距 */
 }
+/* 在现有CSS中添加以下内容 */
+#dialog {
+  height: 28px;
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
+#startBtn {
+  height: 36px;
+  padding: 0 20px;
+  font-size: 14px;
+  line-height: 28px;
+}
 .avatar {
     width: 40px;
     height: 40px;

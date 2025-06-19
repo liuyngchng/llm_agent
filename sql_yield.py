@@ -395,7 +395,7 @@ class SqlYield(DbUtl):
                 total_page = math.ceil(total_count / PAGE_SIZE)
             else:
                 logger.error(f"total_count_type_err_for {total_count}")
-            dt =f"共 {total_count} 条数据数据, 总页数为 {total_page}, 每页 {PAGE_SIZE} 条数据， "
+            dt =f"共 {total_count} 条数据, 总页数为 {total_page}, 每页 {PAGE_SIZE} 条数据"
             yield SqlYield.build_yield_dt(dt)
             yield SqlYield.build_yield_dt("生成查询条件说明...")
         except Exception as e:
@@ -407,7 +407,7 @@ class SqlYield(DbUtl):
             explain_sql_txt = extract_md_content(explain_sql_txt, "sql")
             extract_sql1 = extract_sql.replace('\n', ' ')
             logger.info(f"get_explain_sql_txt, {explain_sql_txt}, input_sql, {extract_sql1}")
-            yield SqlYield.build_yield_dt(f"查询条件说明:{explain_sql_txt}")
+            yield SqlYield.build_yield_dt(f"查询条件说明：{explain_sql_txt}")
         except Exception as e:
             logger.error(f"get_explain_sql_txt_err, {e}, sql: {extract_sql}", exc_info=True)
             yield SqlYield.build_yield_dt("暂时无法给您提供数据查询的相关解释")
