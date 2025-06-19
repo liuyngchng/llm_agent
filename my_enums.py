@@ -13,6 +13,8 @@ class YieldType(Enum):
     TXT = "txt"
     HTML = "html"
     CHART_JS = "chart_js"
+    # {"data_type": "msg", "data": {"cur_page":1, "total_page":1}}
+    MSG = "msg"
 
 class DataType(Enum):
     HTML = "html"
@@ -46,3 +48,6 @@ class AI_SERVICE_STATUS(Enum):
 
 if __name__ == "__main__":
     print(MsgType.ERROR.value)
+    dt_type = "chart_js"
+    if dt_type in (YieldType.CHART_JS.value, YieldType.MSG.value):
+        print("dt_type matched")

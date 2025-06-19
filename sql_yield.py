@@ -302,12 +302,13 @@ class SqlYield(DbUtl):
         logger.debug(f"model, {model}")
         return model
 
-    def yield_dt_with_nl(self, uid: str, q: str, dt_fmt: str):
+    def yield_dt_with_nl(self, uid: str, q: str, dt_fmt: str, user_page_dt: dict):
         """
         get data from db by natural language
         :param uid: user id
         :param q: the question (natural language) user submitted
         :param dt_fmt: A DataType enum
+        :param user_page_dt: for pagination
         """
         logger.info(f"uid:{uid}, q:{q}, dt_fmt:{dt_fmt}")
         yield SqlYield.build_yield_dt(f"{q}...")
@@ -350,7 +351,8 @@ class SqlYield(DbUtl):
             # extract_sql = extract_sql.replace('\n', ' ')
             # extract_sql = re.sub(r'\s+', ' ', extract_sql).strip()
             extract_sql = extract_sql.replace('\n', ' ').replace('\\s+', ' ')
-            sql_dt = f"查询SQL: {extract_sql}"
+            sql_dt = f"查询条件： {extract_sql}"
+            user_page_dt[uid] = {"sql": extract_sql, "cur_page": 1}
             yield SqlYield.build_yield_dt(sql_dt)
             # for line in extract_sql.split("\n"):
             #     yield SqlYield.build_yield_dt(line)
@@ -377,12 +379,10 @@ class SqlYield(DbUtl):
             count_sql = DbUtl.gen_count_sql(extract_sql)
             count_sql1 = count_sql.replace('\n', ' ')
             extract_sql1 = extract_sql.replace('\n', ' ')
-            logger.info(f"gen_count_sql_by_get_dt_sql, result "
-                f"{count_sql1}, "
-                f"get_dt_sql {extract_sql1}"
-            )
+            logger.info(f"gen_count_sql_by_get_dt_sql, result {count_sql1}, get_dt_sql {extract_sql1}")
             count_dt_json = self.get_dt_with_sql(count_sql, DataType.JSON.value)
             total_count = SqlYield.get_count_num_from_json(count_dt_json)
+            user_page_dt[uid]["total_count"] = total_count
             logger.info(f"dt_total_count, {total_count}")
             yield SqlYield.build_yield_dt("开始计算总页数...")
         except Exception as e:
@@ -395,8 +395,14 @@ class SqlYield(DbUtl):
                 total_page = math.ceil(total_count / PAGE_SIZE)
             else:
                 logger.error(f"total_count_type_err_for {total_count}")
-            dt =f"共 {total_count} 条数据, 总页数为 {total_page}, 每页 {PAGE_SIZE} 条数据"
-            yield SqlYield.build_yield_dt(dt)
+
+            user_page_dt[uid]["total_page"] = total_page
+
+            yield_test = SqlYield.build_yield_dt(json.dumps(user_page_dt[uid]), YieldType.MSG.value)
+            logger.info(f"yield_test {yield_test}")
+            yield yield_test
+            dt =f"<span>共 {total_count} 条数据, 总页数为 {total_page}, 每页 {PAGE_SIZE} 条数据</span>"
+            yield SqlYield.build_yield_dt(dt, YieldType.HTML.value)
             yield SqlYield.build_yield_dt("生成查询条件说明...")
         except Exception as e:
             logger.error(f"get_total_count_or_total_page_err, {e}", exc_info=True)
@@ -416,12 +422,21 @@ class SqlYield(DbUtl):
         chart_dt = self.yield_chart_dt(uid, raw_dt)
         if chart_dt:
             yield SqlYield.build_yield_dt(chart_dt, YieldType.CHART_JS.value)
-        yield SqlYield.build_yield_dt("数据已输出完毕")
+        if total_page > 1:
+            next_page_html = f"<div>数据已输出完毕， 查看&nbsp;&nbsp;<a href='#' onclick='loadNextPage(event)'>下一页</a></div>"
+            yield SqlYield.build_yield_dt(next_page_html, YieldType.HTML.value)
+        else:
+            yield SqlYield.build_yield_dt("数据已输出完毕")
 
 
     @staticmethod
     def build_yield_dt(dt: str, dt_type=YieldType.TXT.value) -> str:
-        if YieldType.CHART_JS.value == dt_type:
+        """
+        :param dt: a raw dt
+        :param dt_type: A {@link YieldType} instance
+        return a data structure: {"data_type": "msg", "data": {}}, or {"data_type": "msg", "data": "sample_data"}
+        """
+        if dt_type in (YieldType.CHART_JS.value, YieldType.MSG.value):
             json_dt = json.dumps({"data_type": dt_type, "data": json.loads(dt)}, ensure_ascii=False)
         else:
             json_dt = json.dumps({"data_type": dt_type, "data": dt}, ensure_ascii=False)
@@ -492,7 +507,7 @@ class SqlYield(DbUtl):
             dt = self.doris_dt_source.doris_output(sql, dt_fmt)
         else:
             raise RuntimeError("other_data_type_need_to_be_done")
-        logger.info(f"output_dt {dt}")
+        logger.debug(f"output_dt {dt}")
         return dt
 
 

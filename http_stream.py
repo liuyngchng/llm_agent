@@ -25,6 +25,9 @@ app.config['JSON_AS_ASCII'] = False
 my_cfg = init_yml_cfg()
 
 auth_info = {}
+# user's last sql, {"my_uid": {"sql":"my_sql", "curr_page":1, "total_page":1}}
+# last search sql, current page and total page for the SQL
+usr_page_dt = {}
 
 SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 
@@ -112,6 +115,7 @@ def stream():
     t = int(request.args.get('t', 0))
     q = request.args.get('q', '')
     uid = request.args.get('uid', '')
+    page = request.args.get('page')
     session_key = f"{uid}_{get_client_ip()}"
     if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
         return Response(
@@ -120,10 +124,13 @@ def stream():
         )
     logger.info(f"rcv_stream_req, t={t}, q={q}")
     sql_yield = SqlYield(my_cfg)
-    return Response(
-        sql_yield.yield_dt_with_nl(uid, q, DataType.HTML.value),
-        mimetype='text/event-stream; charset=utf-8'
-    )
+    if not q and usr_page_dt.get(uid, None) and page and page != '':
+        usr_page_dt[uid]["cur_page"] += 1
+        logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")
+        answer = sql_yield.get_pg_dt(uid, usr_page_dt[uid])
+    else:
+        answer = sql_yield.yield_dt_with_nl(uid, q, DataType.HTML.value, usr_page_dt)
+    return Response(answer,mimetype='text/event-stream; charset=utf-8')
 
 @app.route('/cfg/idx', methods=['GET'])
 def config_index():
