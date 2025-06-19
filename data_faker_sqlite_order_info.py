@@ -106,5 +106,5 @@ def generate_order_record() -> tuple:
 
 
 if __name__ == '__main__':
-    # 直接指定SQLite数据库文件
-    generate_data(db_file='test4.db')
+    print("test")
+    # generate_data(db_file='test4.db')

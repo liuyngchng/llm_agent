@@ -20,6 +20,7 @@ faiss_oa_vector/*
 **/*.pdf
 !requirements.txt
 test2.db
+test4.db
 **/*.csv
 sqlite_vss
 **/*.zip
