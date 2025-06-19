@@ -136,7 +136,10 @@ curl -X POST http://127.0.0.1:19000/trans/audio \
   -H "Content-Type: multipart/form-data"
 ```
 
+# 7. SSH 使用密钥登录
+```sh
+ssh -i your_private_key_file_path your_user@your_host -p ssh_port
 
-ssh -i ~/Downloads/devbox devbox@petrotech.cnpc -p 31415
+scp -i your_private_key_file_path -P ssh_port your_file_want_to_be_uploaed devbox@your_host:/your_host_dir
 
-scp -i ~/Downloads/devbox -P 31415 ./llm_agent.tar devbox@petrotech.cnpc:/home/devbox/
+```
