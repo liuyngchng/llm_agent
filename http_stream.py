@@ -239,7 +239,7 @@ def reg_user():
     """
     logger.info(f"request_args_in_reg_user {request.args}")
     ctx = {
-        "sys_name": my_cfg['sys']['name']
+        "sys_name": my_cfg['sys']['name']+ "_新用户注册"
     }
     try:
         usr = request.form.get('usr').strip()
