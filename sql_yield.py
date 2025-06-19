@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 import json
 import math
-import os
-import re
-from pickle import FALSE
+import ast
 
 from typing import Dict
 from datetime import datetime
@@ -372,7 +370,7 @@ class SqlYield(DbUtl):
             yield SqlYield.build_yield_dt("从数据源查询数据时发生异常")
             return
         count_sql = ''
-        count_dt = ''
+        total_count = 0
         try:
             # count_sql_txt = self.gen_count_sql_by_sql(uid, nl_dt_dict["sql"])
             # count_sql = extract_md_content(count_sql_txt, "sql")
@@ -383,22 +381,21 @@ class SqlYield(DbUtl):
                 f"{count_sql1}, "
                 f"get_dt_sql {extract_sql1}"
             )
-            count_dt = self.get_dt_with_sql(count_sql, DataType.JSON.value)
-            count_dt = SqlYield.get_count_num(count_dt)
-            logger.info(f"dt_count_result, {count_dt}")
+            count_dt_json = self.get_dt_with_sql(count_sql, DataType.JSON.value)
+            total_count = SqlYield.get_count_num_from_json(count_dt_json)
+            logger.info(f"dt_total_count, {total_count}")
             yield SqlYield.build_yield_dt("开始计算总页数...")
         except Exception as e:
             logger.error(f"get_dt_count_with_count_sql_err, {e}, count_sql: {count_sql}", exc_info=True)
             yield SqlYield.build_yield_dt("获取总数据条数发生异常")
         total_page = 1
         try:
-            total_count = SqlYield.get_count_num(count_dt)
             logger.info(f"get_total_page {total_count} / {PAGE_SIZE}")
             if isinstance(total_count, (int, float, complex)):
                 total_page = math.ceil(total_count / PAGE_SIZE)
             else:
                 logger.error(f"total_count_type_err_for {total_count}")
-            dt =f"数据总页数为 {total_page}, 每页为 {PAGE_SIZE} 条数据， 共计 {total_count} 条数据"
+            dt =f"共 {total_count} 条数据数据, 总页数为 {total_page}, 每页 {PAGE_SIZE} 条数据， "
             yield SqlYield.build_yield_dt(dt)
             yield SqlYield.build_yield_dt("生成查询条件说明...")
         except Exception as e:
@@ -433,7 +430,16 @@ class SqlYield(DbUtl):
     @staticmethod
     def get_count_num(count_dt:str) -> int:
         try:
-            return next(iter(json.loads(count_dt)[0].values()))
+            data = ast.literal_eval(count_dt)
+            return next(iter(json.loads(data)[0].values()))
+        except Exception as e:
+            logger.error(f"get_count_num_err, {count_dt}")
+            return 0
+
+    @staticmethod
+    def get_count_num_from_json(count_dt: json) -> int:
+        try:
+            return next(iter(count_dt[0].values()))
         except Exception as e:
             logger.error(f"get_count_num_err, {count_dt}")
             return 0
@@ -486,6 +492,7 @@ class SqlYield(DbUtl):
             dt = self.doris_dt_source.doris_output(sql, dt_fmt)
         else:
             raise RuntimeError("other_data_type_need_to_be_done")
+        logger.info(f"output_dt {dt}")
         return dt
 
 

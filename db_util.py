@@ -322,6 +322,7 @@ class DbUtl:
             my_dt = DbUtl.output_data(my_conn, sql, data_format)
         if DataType.JSON.value ==  data_format:
             my_dt = json.loads(my_dt)
+        logger.info(f"sqlite_output, {my_dt}")
         return my_dt
 
     @staticmethod
