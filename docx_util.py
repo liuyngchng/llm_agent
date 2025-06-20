@@ -18,54 +18,6 @@ from agt_util import classify_txt, gen_txt
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-# def get_numbering_text(para):
-#     num_pr = para._element.xpath(".//w:numPr")
-#     if not num_pr: return ""
-#
-#     # 提取编号层级和ID
-#     ilvl = num_pr[0].xpath(".//w:ilvl/@w:val")[0]
-#     num_id = num_pr[0].xpath(".//w:numId/@w:val")[0]
-#
-#     # 在文档的numbering.xml部分查找对应格式
-#     numbering = doc.part.numbering_part._element
-#     nums = numbering.xpath(f"//w:num[contains(@w:numId,'{num_id}')]",
-#                           namespaces={'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'})
-#     if not nums:
-#         return ""
-#     num = nums[0]
-#     abstract_id = num.xpath(".//w:abstractNumId/@w:val")[0]
-#
-#     # 根据abstractNum定义生成编号字符串
-#     abstract_num = numbering.xpath(f"//w:abstractNum[@w:abstractNumId='{abstract_id}']")[0]
-#     lvl = abstract_num.xpath(f".//w:lvl[@w:ilvl='{ilvl}']")[0]
-#     fmt = lvl.xpath(".//w:numFmt/@w:val")[0]  # 获取格式类型如decimal/roman等
-#
-#     # 此处需根据fmt和实际计数生成编号(需完整实现计数逻辑)
-#     return "[编号占位]"def get_numbering_text(para):
-#     num_pr = para._element.xpath(".//w:numPr")
-#     if not num_pr: return ""
-#
-#     # 提取编号层级和ID
-#     ilvl = num_pr[0].xpath(".//w:ilvl/@w:val")[0]
-#     num_id = num_pr[0].xpath(".//w:numId/@w:val")[0]
-#
-#     # 在文档的numbering.xml部分查找对应格式
-#     numbering = doc.part.numbering_part._element
-#     nums = numbering.xpath(f"//w:num[contains(@w:numId,'{num_id}')]",
-#                           namespaces={'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'})
-#     if not nums:
-#         return ""
-#     num = nums[0]
-#     abstract_id = num.xpath(".//w:abstractNumId/@w:val")[0]
-#
-#     # 根据abstractNum定义生成编号字符串
-#     abstract_num = numbering.xpath(f"//w:abstractNum[@w:abstractNumId='{abstract_id}']")[0]
-#     lvl = abstract_num.xpath(f".//w:lvl[@w:ilvl='{ilvl}']")[0]
-#     fmt = lvl.xpath(".//w:numFmt/@w:val")[0]  # 获取格式类型如decimal/roman等
-#
-#     # 此处需根据fmt和实际计数生成编号(需完整实现计数逻辑)
-#     return "[编号占位]"
-
 def process_paragraph(paragraph: Paragraph, sys_cfg: dict) -> str:
     prompt = paragraph.text
     gen_txt = search_txt(prompt, 0.5, sys_cfg, 1).strip()
@@ -73,6 +25,13 @@ def process_paragraph(paragraph: Paragraph, sys_cfg: dict) -> str:
     return gen_txt
 
 def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool:
+    """
+    判断写作要求文档中的每段文本，是否为用户所提的写作要求文本
+    :param para: 写作要求word文档中的一个段落
+    :param current_heading: 当前para 所在的目录
+    :param sys_cfg: 系统配置，涉及大模型的地址等
+    return False： 不是写作要求； True： 是写作要求
+    """
     headings = {1: [], 2: [], 3: [], 4: [], 5: []}  # 按需扩展层级
     pattern = r'^(图|表)\s*\d+[\.\-\s]'  # 匹配"图1."/"表2-"等开头
     labels = ["需要生成文本", "不需要生成文本"]
@@ -118,6 +77,7 @@ def fill_doc_with_pdf(source_dir: str, target_doc: str, sys_cfg: dict) -> Docume
             search_result = process_paragraph(my_para, sys_cfg['api'])
             source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
             llm_ctx_txt = f"{source_para_txt}\n{search_result}"
+            llm_ctx_txt = llm_ctx_txt.replace("\n", " ").strip()
             llm_txt = gen_txt(llm_ctx_txt, my_para.text, sys_cfg)
             logger.info(f"llm_txt_for_instruction[{my_para.text}]\n===gen_llm_txt===\n{llm_txt}")
         except Exception as ex:
@@ -133,9 +93,9 @@ def fill_doc_with_pdf(source_dir: str, target_doc: str, sys_cfg: dict) -> Docume
 
 if __name__ == "__main__":
     my_cfg = init_yml_cfg()
-    # doc = Document("/home/rd/doc/文档生成/template.docx")
     my_source_dir = "/home/rd/doc/文档生成/knowledge_base"
-    my_target_doc = "/home/rd/doc/文档生成/template.docx"
+    # my_target_doc = "/home/rd/doc/文档生成/template.docx"
+    my_target_doc = "/home/rd/doc/文档生成/2.docx"
     output_doc = fill_doc_with_pdf(my_source_dir, my_target_doc, my_cfg)
 
     # for test purpose only

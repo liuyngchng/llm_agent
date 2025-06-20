@@ -70,29 +70,44 @@ def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str:
     """
     classify txt, multi-label can be obtained
     """
-    label_str = ';\n'.join(map(str, labels))
-    logger.info(f"classify_txt: {txt}")
-    template = f'''对以下文本进行分类\n{label_str}\n文本：{txt}\n分类结果输出为单一分类标签文本，不要输出任何额外信息'''
-    prompt = ChatPromptTemplate.from_template(template)
-    logger.info(f"prompt {prompt}")
-    model = get_model(cfg, is_remote)
-    chain = prompt | model
-    logger.info(f"submit_msg_to_llm, txt[{txt}], llm[{cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}]")
-    output_txt = ""
-    try:
-        response = chain.invoke({
-            "txt": txt
-        })
-        del model
-        torch.cuda.empty_cache()
-        output_txt = extract_md_content(
-            rmv_think_block(response.content),
-            "json"
-        )
-    except Exception as ex:
-        logger.error(f"invoke_remote_llm_error_in_classify_txt_for {labels}, {txt}, {cfg['api']}")
-        raise ex
-    return output_txt
+    max_retries = 6
+    backoff_times = [5, 10, 20, 40, 80, 160]
+    last_exception = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            if attempt > 0:
+                wait_time = backoff_times[attempt - 1]
+                logger.info(f"retry #{attempt} times after {wait_time}s")
+                time.sleep(wait_time)
+
+            label_str = ';\n'.join(map(str, labels))
+            logger.info(f"classify_txt: {txt}")
+            template = f'''对以下文本进行分类\n{label_str}\n文本：{txt}\n分类结果输出为单一分类标签文本，不要输出任何额外信息'''
+            prompt = ChatPromptTemplate.from_template(template)
+            logger.info(f"prompt {prompt}")
+
+            model = get_model(cfg, is_remote)
+            chain = prompt | model
+            logger.info(f"submit_msg_to_llm, txt[{txt}], llm[{cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}]")
+
+            response = chain.invoke({"txt": txt})
+            output_txt = extract_md_content(rmv_think_block(response.content), "json")
+            del model
+            torch.cuda.empty_cache()
+            return output_txt
+
+        except Exception as ex:
+            last_exception = ex
+            logger.error(f"retry_failed_in_classify_txt, retry_time={attempt}, {str(ex)}")
+            if attempt < max_retries:
+                continue
+            if 'model' in locals():
+                del model
+                torch.cuda.empty_cache()
+            logger.error(f"all_retries_exhausted_task_classify_txt_failed, {labels}, {txt}")
+            raise last_exception
+
 def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dict:
     """
     search user questions in knowledge base,
@@ -125,32 +140,54 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
         logger.error(f"json_loads_err_for {response.content}")
     return fill_result
 
-def gen_txt(context: str, instruction: str, cfg: dict, is_remote=True) -> str:
+
+import time
+
+
+def gen_txt(context: str, instruction: str, cfg: dict, is_remote=True, max_retries=6) -> str:
     """
-    according to the user's instruction and the context, to generate text
+    根据提供的文本的写作风格，以及文本写作要求，输出文本
+    :param context: 写作风格文本
+    :param instruction: 写作要求
+    :param cfg: 系统配置
+    :param is_remote: 是否调用远端LLM
+    :param max_retries: 最大尝试次数， 需处于集合 [1, 5]
     """
     logger.info(f"user_instruction [{instruction}], context {context}")
-    template = ("基于用户提供的参考文本：\n{context}\n参考其写作风格以及用户提出的写作要求\n{instruction}\n输出相应的文本\n"
-                "(1)直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式\n(2)若用户没有提供参考文本，则根据写作要求直接输出约300字的文本")
+    template = ("根据下面文本的写作风格：\n{context}\n以及具体的文本写作要求\n{instruction}\n生成大约300字的文本\n"
+        "(1)直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式\n"
+        "(2)调整输出文本的格式，需适合添加在Word文档中\n"
+        "(3)移除多余的空行\n")
     prompt = ChatPromptTemplate.from_template(template)
     logger.debug(f"prompt {prompt}")
-    model = get_model(cfg, is_remote)
-    chain = prompt | model
-    logger.info(f"submit_instruction_and_context_to_llm, instruction[{instruction}],ctx[{context}], "
+    backoff_times = [5, 10, 20, 40, 80, 160]
+    if max_retries > len(backoff_times):
+        max_retries = len(backoff_times)
+    last_exception = None
+    for attempt in range(max_retries + 1):
+        try:
+            if attempt > 0:
+                time.sleep(backoff_times[attempt - 1])
+                logger.info(f"retry #{attempt} times after wait {backoff_times[attempt - 1]}s")
+            model = get_model(cfg, is_remote)
+            chain = prompt | model
+            logger.info(f"submit_instruction_and_context_to_llm, instruction[{instruction}],ctx[{context}], "
                 f"{cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
-    del model
-    torch.cuda.empty_cache()
-    output_txt = context
-    try:
-        response = chain.invoke({
-            "context": context,
-            "instruction": instruction,
-        })
-        output_txt = rmv_think_block(response.content)
-    except Exception as ex:
-        logger.error(f"invoke_remote_llm_gen_txt_error_for {instruction}, {context}, {cfg['api']}")
-        raise ex
-    return output_txt
+            response = chain.invoke({"context": context, "instruction": instruction})
+            output_txt = rmv_think_block(response.content)
+            del model
+            torch.cuda.empty_cache()
+            return output_txt
+        except Exception as ex:
+            last_exception = ex
+            logger.error(f"retry_failed_in_gen_txt, retry_time={attempt}, {str(ex)}")
+            if attempt < max_retries:
+                continue
+            if 'model' in locals():
+                del model
+                torch.cuda.empty_cache()
+            logger.error(f"all_retries_exhausted_task_gen_txt_failed, {instruction}")
+            raise last_exception
 
 def update_session_info(user_info: str, append_info: str, cfg: dict, is_remote=True) -> str:
     """
