@@ -130,8 +130,8 @@ def gen_txt(context: str, instruction: str, cfg: dict, is_remote=True) -> str:
     according to the user's instruction and the context, to generate text
     """
     logger.info(f"user_instruction [{instruction}], context {context}")
-    template = ("基于用户提供的文本：\n{context}\n以及用户提出的要求\n{instruction}\n输出相应的文本\n"
-                "(1) 上下文中没有的信息，请不要自行编造\n(2) 直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式")
+    template = ("基于用户提供的文本：\n{context}\n参考文本的写作风格以及用户提出的要求\n{instruction}\n输出相应的文本\n"
+                "直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式")
     prompt = ChatPromptTemplate.from_template(template)
     logger.debug(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
