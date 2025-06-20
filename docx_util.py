@@ -125,9 +125,8 @@ def fill_doc_with_pdf(source_dir: str, target_doc: str, sys_cfg: dict) -> Docume
             break
         # if len(my_txt) > 0:
         new_para = doc.add_paragraph()
-        red_run = new_para.add_run("[生成文本]")
+        red_run = new_para.add_run(llm_txt)
         red_run.font.color.rgb = RGBColor(255, 0, 0)
-        new_para.add_run(llm_txt)
         my_para._p.addnext(new_para._p)
     return doc
 
@@ -136,7 +135,7 @@ if __name__ == "__main__":
     my_cfg = init_yml_cfg()
     # doc = Document("/home/rd/doc/文档生成/template.docx")
     my_source_dir = "/home/rd/doc/文档生成/knowledge_base"
-    my_target_doc = "/home/rd/doc/文档生成/2.docx"
+    my_target_doc = "/home/rd/doc/文档生成/template.docx"
     output_doc = fill_doc_with_pdf(my_source_dir, my_target_doc, my_cfg)
 
     # for test purpose only
