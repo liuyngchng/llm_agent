@@ -14,7 +14,7 @@ import logging.config
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-def get_model(cfg, is_remote):
+def get_model(cfg, is_remote=True):
     if is_remote:
         model = ChatOpenAI(api_key=cfg['api']['llm_api_key'],
                            base_url=cfg['api']['llm_api_uri'],
@@ -144,23 +144,27 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
 import time
 
 
-def gen_txt(context: str, instruction: str, cfg: dict, is_remote=True, max_retries=6) -> str:
+def gen_txt(context: str, instruction: str, cfg: dict, catalogue: str, is_remote=True, max_retries=6) -> str:
     """
     根据提供的文本的写作风格，以及文本写作要求，输出文本
     :param context: 写作风格文本
     :param instruction: 写作要求
     :param cfg: 系统配置
+    :param catalogue: 需要写的文档的三级目录文本信息
     :param is_remote: 是否调用远端LLM
-    :param max_retries: 最大尝试次数， 需处于集合 [1, 5]
+    :param max_retries: 最大尝试次数， 需处于集合 [1, 7]
     """
     logger.info(f"user_instruction [{instruction}], context {context}")
-    template = ("根据下面文本的写作风格：\n{context}\n以及具体的文本写作要求\n{instruction}\n生成大约300字的文本\n"
+    template = ("我正在写一个文档，整个文档的三级目录如下所示:\n{catalogue}\n"
+        "参考这种文本的语言风格：\n{context}\n以及具体的文本写作要求\n{instruction}\n生成大约300字的文本\n"
         "(1)直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式\n"
         "(2)调整输出文本的格式，需适合添加在Word文档中\n"
         "(3)移除多余的空行\n")
     prompt = ChatPromptTemplate.from_template(template)
     logger.debug(f"prompt {prompt}")
     backoff_times = [5, 10, 20, 40, 80, 160]
+    if max_retries < 1:
+        max_retries = 1
     if max_retries > len(backoff_times):
         max_retries = len(backoff_times)
     last_exception = None
@@ -169,11 +173,11 @@ def gen_txt(context: str, instruction: str, cfg: dict, is_remote=True, max_retri
             if attempt > 0:
                 time.sleep(backoff_times[attempt - 1])
                 logger.info(f"retry #{attempt} times after wait {backoff_times[attempt - 1]}s")
-            model = get_model(cfg, is_remote)
+            model = get_model(cfg)
             chain = prompt | model
             logger.info(f"submit_instruction_and_context_to_llm, instruction[{instruction}],ctx[{context}], "
                 f"{cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
-            response = chain.invoke({"context": context, "instruction": instruction})
+            response = chain.invoke({"catalogue": catalogue, "context": context, "instruction": instruction})
             output_txt = rmv_think_block(response.content)
             del model
             torch.cuda.empty_cache()
