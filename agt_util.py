@@ -144,19 +144,21 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
 import time
 
 
-def gen_txt(context: str, instruction: str, cfg: dict, catalogue: str, is_remote=True, max_retries=6) -> str:
+def gen_txt(demo_txt: str, instruction: str, catalogue: str,
+        current_sub_title: str, cfg: dict, is_remote=True, max_retries=6) -> str:
     """
     根据提供的文本的写作风格，以及文本写作要求，输出文本
-    :param context: 写作风格文本
+    :param demo_txt: 写作风格样例子文本
     :param instruction: 写作要求
+    :param catalogue: 输出文档的三级目录
+    :param current_sub_title: 当前需要输出文本的目录标题
     :param cfg: 系统配置
-    :param catalogue: 需要写的文档的三级目录文本信息
     :param is_remote: 是否调用远端LLM
     :param max_retries: 最大尝试次数， 需处于集合 [1, 7]
     """
-    logger.info(f"user_instruction [{instruction}], context {context}")
-    template = ("我正在写一个文档，整个文档的三级目录如下所示:\n{catalogue}\n"
-        "参考这种文本的语言风格：\n{context}\n以及具体的文本写作要求\n{instruction}\n生成大约300字的文本\n"
+    logger.info(f"catalogue[{catalogue}], user_instruction[{instruction}], demo_txt[{demo_txt}], current_sub_title[{current_sub_title}]")
+    template = ("我正在写一个可行性研究报告，整个报告的三级目录如下所示:\n{catalogue}, 当前要写的目录标题为\n{current_sub_title}\n"
+        "参考这种文本的语言风格：\n{demo_txt}\n以及具体的文本写作要求\n{instruction}\n生成大约300字的文本\n"
         "(1)直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式\n"
         "(2)调整输出文本的格式，需适合添加在Word文档中\n"
         "(3)移除多余的空行\n")
@@ -175,9 +177,15 @@ def gen_txt(context: str, instruction: str, cfg: dict, catalogue: str, is_remote
                 logger.info(f"retry #{attempt} times after wait {backoff_times[attempt - 1]}s")
             model = get_model(cfg)
             chain = prompt | model
-            logger.info(f"submit_instruction_and_context_to_llm, instruction[{instruction}],ctx[{context}], "
+            logger.info(f"submit_instruction_and_context_to_llm, catalogue[{catalogue}], "
+                f"current_sub_title[{current_sub_title}], instruction[{instruction}], demo_txt[{demo_txt}], "
                 f"{cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
-            response = chain.invoke({"catalogue": catalogue, "context": context, "instruction": instruction})
+            response = chain.invoke({
+                "catalogue": catalogue,
+                "current_sub_title": current_sub_title,
+                "demo_txt": demo_txt,
+                "instruction": instruction,
+            })
             output_txt = rmv_think_block(response.content)
             del model
             torch.cuda.empty_cache()
