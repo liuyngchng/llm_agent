@@ -156,7 +156,12 @@ def gen_txt(demo_txt: str, instruction: str, catalogue: str,
     :param is_remote: 是否调用远端LLM
     :param max_retries: 最大尝试次数， 需处于集合 [1, 7]
     """
-    logger.info(f"catalogue[{catalogue}], user_instruction[{instruction}], demo_txt[{demo_txt}], current_sub_title[{current_sub_title}]")
+    logger.info(
+        # f"catalogue[{catalogue}], "
+        f"user_instruction[{instruction}], "
+        f"demo_txt[{demo_txt}], "
+        f"current_sub_title[{current_sub_title}]"
+    )
     template = ("我正在写一个可行性研究报告，整个报告的三级目录如下所示:\n{catalogue}, 当前要写的目录标题为\n{current_sub_title}\n"
         "参考这种文本的语言风格：\n{demo_txt}\n以及具体的文本写作要求\n{instruction}\n生成大约300字的文本\n"
         "(1)直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式\n"
@@ -177,7 +182,8 @@ def gen_txt(demo_txt: str, instruction: str, catalogue: str,
                 logger.info(f"retry #{attempt} times after wait {backoff_times[attempt - 1]}s")
             model = get_model(cfg)
             chain = prompt | model
-            logger.info(f"submit_instruction_and_context_to_llm, catalogue[{catalogue}], "
+            logger.info(f"submit_instruction_and_context_to_llm, "
+                # f"catalogue[{catalogue}], "
                 f"current_sub_title[{current_sub_title}], instruction[{instruction}], demo_txt[{demo_txt}], "
                 f"{cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
             response = chain.invoke({
