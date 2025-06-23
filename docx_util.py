@@ -198,8 +198,15 @@ from collections import defaultdict
 
 def get_comments_dict(target_doc: str) -> dict:
     """
-    获取文档中所有批注的字典
-    格式: {批注ID: {"author": 作者, "date": 日期, "initials": 缩写, "text": 内容}}
+    获取文档中所有批注及其关联的段落ID
+    返回格式: {
+        comment_id: {
+            "author": 作者,
+            "date": 日期,
+            "text": 批注内容,
+            "paragraph_id": 段落ID  # 新增
+        }
+    }
     """
     if not os.path.exists(target_doc):
         logger.error(f"文件不存在: {target_doc}")
@@ -208,45 +215,58 @@ def get_comments_dict(target_doc: str) -> dict:
     comments_dict = {}
     try:
         with zipfile.ZipFile(target_doc) as z:
-            if 'word/comments.xml' in z.namelist():
-                with z.open('word/comments.xml') as f:
-                    xml_content = f.read()
-                    root = ET.fromstring(xml_content)
+            # 1. 解析批注 (comments.xml)
+            if 'word/comments.xml' not in z.namelist():
+                logger.warning("文档中没有批注")
+                return {}
 
-                    # 定义命名空间（不需要注册）
-                    namespaces = {
-                        'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+            with z.open('word/comments.xml') as f:
+                comments_xml = ET.fromstring(f.read())
+                namespaces = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+
+                for comment in comments_xml.findall('.//w:comment', namespaces):
+                    comment_id = comment.get(f'{{{namespaces["w"]}}}id')
+                    if not comment_id:
+                        continue
+
+                    author = comment.get(f'{{{namespaces["w"]}}}author', '未知作者')
+                    date = comment.get(f'{{{namespaces["w"]}}}date', '未知日期')
+                    for t in comment.findall('.//w:t', namespaces):
+
+                        if t.text:
+                            text = ' '.join(t.text.strip())
+                        else:
+                            text = ""
+                    comments_dict[comment_id] = {
+                        "author": author,
+                        "date": date,
+                        "text": text,
+                        "paragraph_id": None  # 初始化为None，后续填充
                     }
 
-                    # 查找所有comment元素
-                    for comment in root.findall('.//w:comment', namespaces):
-                        # 获取属性
-                        comment_id = comment.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}id')
-                        author = comment.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}author',
-                                             '未知作者')
-                        date = comment.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}date',
-                                           '未知日期')
-                        initials = comment.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}initials',
-                                               '')
+                    # 2. 解析正文 (document.xml)，关联批注和段落ID
+                    if 'word/document.xml' not in z.namelist():
+                        logger.warning("无法解析正文内容")
 
-                        # 提取批注文本
-                        text_parts = []
-                        for t in comment.findall('.//w:t', namespaces):
-                            if t.text and t.text.strip():
-                                text_parts.append(t.text.strip())
+            with z.open('word/document.xml') as f:
+                doc_xml = ET.fromstring(f.read())
+                paragraphs = doc_xml.findall('.//w:p', namespaces)
 
-                        if comment_id:  # 确保有有效的ID
-                            comments_dict[comment_id] = {
-                                "author": author,
-                                "date": date,
-                                "initials": initials,
-                                "text": ' '.join(text_parts)
-                            }
-                        else:
-                            logger.warning(f"发现无ID的批注: {text_parts}")
+                # 为每个段落生成唯一ID（如果没有现成的ID，用索引代替）
+                for para_idx, paragraph in enumerate(paragraphs):
+                    # 查找当前段落中的批注引用
+                    comment_refs = paragraph.findall('.//w:commentReference', namespaces)
+                    if not comment_refs:
+                        continue
+
+                    # 关联批注ID和段落ID（这里用索引作为段落ID）
+                    for ref in comment_refs:
+                        ref_id = ref.get(f'{{{namespaces["w"]}}}id')
+                        if ref_id in comments_dict:
+                            comments_dict[ref_id]["paragraph_id"] = para_idx
 
     except Exception as e:
-        logger.error(f"解析批注时出错: {str(e)}", exc_info=True)
+        logger.error(f"解析文档时出错: {str(e)}", exc_info=True)
 
     return comments_dict
 
@@ -302,10 +322,12 @@ def test_get_comment():
     my_file = "/home/rd/doc/文档生成/comment_test.docx"
     comments_dict = get_comments_dict(my_file)
     logger.info(f"comments_dict={comments_dict}")
-    for comment, paragraphs in comments_dict.items():
-        print(f"批注: {comment}")
-        print(f"关联段落: {paragraphs}")
-        print("-" * 50)
+    for id, comment in comments_dict.items():
+        logger.info(f"id:{id}, comment: {comment}")
+        para_id = comment.get('paragraph_id')
+        para_txt = get_paragraph_by_id(my_file, para_id)
+        logger.info(f"para_id:{para_id}, para_txt:{para_txt}")
+
 
 
 if __name__ == "__main__":
