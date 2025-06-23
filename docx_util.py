@@ -191,66 +191,125 @@ def calc_process_percent(sub_title: str, target_doc_catalogue: list) -> str:
         return "0%"
 
 
-def get_all_comments_with_paragraphs(target_doc: str) -> dict:
+import zipfile
+from xml.etree import ElementTree as ET
+from collections import defaultdict
+
+
+def get_comments_dict(target_doc: str) -> dict:
+    """
+    获取文档中所有批注的字典
+    格式: {批注ID: {"author": 作者, "date": 日期, "initials": 缩写, "text": 内容}}
+    """
     if not os.path.exists(target_doc):
-        logger.error(f"file_not_exist {target_doc}")
+        logger.error(f"文件不存在: {target_doc}")
         return {}
 
+    comments_dict = {}
     try:
-        doc = Document(target_doc)
-        comments_dict = {}
-        comment_to_paragraph = defaultdict(list)
+        with zipfile.ZipFile(target_doc) as z:
+            if 'word/comments.xml' in z.namelist():
+                with z.open('word/comments.xml') as f:
+                    xml_content = f.read()
+                    root = ET.fromstring(xml_content)
 
-        # 方法1：尝试所有可能的命名空间变体
-        namespaces = [
-            '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}',
-            '{http://purl.oclc.org/ooxml/wordprocessingml/main}',
-            '{http://schemas.microsoft.com/office/word/2006/wordml}'
-        ]
+                    # 定义命名空间（不需要注册）
+                    namespaces = {
+                        'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+                    }
 
-        # 方法2：使用通用方法查找所有批注元素
-        comments = []
-        for elem in doc.element.iter():
-            if 'comment' in elem.tag.lower():
-                comments.append(elem)
+                    # 查找所有comment元素
+                    for comment in root.findall('.//w:comment', namespaces):
+                        # 获取属性
+                        comment_id = comment.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}id')
+                        author = comment.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}author',
+                                             '未知作者')
+                        date = comment.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}date',
+                                           '未知日期')
+                        initials = comment.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}initials',
+                                               '')
 
-        # 提取批注内容
-        for comment in comments:
-            comment_id = comment.get("id")
-            # 提取批注文本（兼容多段落批注）
-            comment_text = ""
-            for t in comment.iter():
-                if t.text and 't' in t.tag.lower():
-                    comment_text += t.text
-            if comment_text:
-                comments_dict[comment_id] = comment_text
+                        # 提取批注文本
+                        text_parts = []
+                        for t in comment.findall('.//w:t', namespaces):
+                            if t.text and t.text.strip():
+                                text_parts.append(t.text.strip())
 
-        # 查找批注引用
-        for para in doc.paragraphs:
-            for run in para.runs:
-                for child in run._element.iter():
-                    if 'commentreference' in child.tag.lower():
-                        comment_id = child.get("id")
-                        if comment_id in comments_dict:
-                            comment_to_paragraph[comment_id].append(para.text)
-
-        # 返回结果
-        return {comments_dict[k]: list(set(v)) for k, v in comment_to_paragraph.items() if k in comments_dict}
+                        if comment_id:  # 确保有有效的ID
+                            comments_dict[comment_id] = {
+                                "author": author,
+                                "date": date,
+                                "initials": initials,
+                                "text": ' '.join(text_parts)
+                            }
+                        else:
+                            logger.warning(f"发现无ID的批注: {text_parts}")
 
     except Exception as e:
-        logger.error(f"处理文档时出错: {str(e)}")
-        return {}
+        logger.error(f"解析批注时出错: {str(e)}", exc_info=True)
+
+    return comments_dict
+
+
+def get_paragraph_by_id(target_doc: str, paragraph_id: int) -> str:
+    """
+    通过段落ID获取段落文本
+    :param target_doc: Word文档路径
+    :param paragraph_id: 段落ID（索引或实际ID）
+    :return: 段落文本（如未找到返回空字符串）
+    """
+    if not os.path.exists(target_doc):
+        logger.error(f"文件不存在: {target_doc}")
+        return ""
+
+    try:
+        with zipfile.ZipFile(target_doc) as z:
+            if 'word/document.xml' not in z.namelist():
+                logger.warning("无法解析正文内容")
+                return ""
+
+            with z.open('word/document.xml') as f:
+                doc_xml = ET.fromstring(f.read())
+                namespaces = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+                paragraphs = doc_xml.findall('.//w:p', namespaces)
+
+                if paragraph_id < 0 or paragraph_id >= len(paragraphs):
+                    logger.warning(f"段落ID {paragraph_id} 超出范围")
+                    return ""
+
+                # 提取段落文本
+                paragraph = paragraphs[paragraph_id]
+                text = ' '.join(
+                    t.text.strip()
+                    for t in paragraph.findall('.//w:t', namespaces)
+                    if t.text and t.text.strip()
+                )
+                return text
+
+    except Exception as e:
+        logger.error(f"解析段落时出错: {str(e)}", exc_info=True)
+        return ""
+
+def inspect_docx_structure():
+    target_doc = "/home/rd/doc/文档生成/comment_test.docx"
+    with zipfile.ZipFile(target_doc) as z:
+        logger.info(f"文档包含的文件:{z.namelist()}")
+        if 'word/comments.xml' in z.namelist():
+            with z.open('word/comments.xml') as f:
+                logger.info(f"comments.xml内容:{f.read().decode('utf-8')}")
 
 def test_get_comment():
-    my_file = "/home/rd/workspace/llm_agent/doc_output_20260623.docx"
-    comments_map = get_all_comments_with_paragraphs(my_file)
-    for comment, paragraphs in comments_map.items():
+    my_file = "/home/rd/doc/文档生成/comment_test.docx"
+    comments_dict = get_comments_dict(my_file)
+    logger.info(f"comments_dict={comments_dict}")
+    for comment, paragraphs in comments_dict.items():
         print(f"批注: {comment}")
         print(f"关联段落: {paragraphs}")
         print("-" * 50)
 
 
 if __name__ == "__main__":
+    # inspect_docx_structure()
     test_get_comment()
     # my_cfg = init_yml_cfg()
     # my_source_dir = "/home/rd/doc/文档生成/knowledge_base"
