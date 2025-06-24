@@ -30,39 +30,40 @@ def process_paragraph(paragraph: Paragraph, sys_cfg: dict) -> str:
 
 def extract_catalogue(target_doc: str) -> str:
     """
-    生成docx 的三级目录清单
+    生成 docx 文档的三级目录清单
     """
     doc = Document(target_doc)
     catalogue_lines = []
     # 初始化各级标题计数器 [一级, 二级, 三级]
     level_counters = [0, 0, 0]
-
     for para in doc.paragraphs:
-        style_name = para.style.name.lower()  # 统一转为小写
-
+        style_name = para.style.name.lower()  # 统一转换为小写
         # 检查是否为标题（兼容中英文样式名）
-        if style_name.startswith(('heading', '标题')):
-            # 提取标题级别数字
-            level_str = ''.join(filter(str.isdigit, style_name))
-            if level_str:
-                level = int(level_str)
-                if 1 <= level <= 3:  # 仅处理1-3级标题
-                    # 更新计数器：当前级别+1，更低级别清零
-                    level_index = level - 1
-                    level_counters[level_index] += 1
-                    for i in range(level_index + 1, 3):
-                        level_counters[i] = 0
+        if not style_name.startswith(('heading', '标题')):
+            continue
+        # 提取标题级别数字
+        level_str = ''.join(filter(str.isdigit, style_name))
+        if not level_str:
+            continue
+        level = int(level_str)
+        if level <1 or level > 3:
+            continue
+        # 仅处理1-3级标题
+        # 更新计数器：当前级别+1，更低级别清零
+        level_index = level - 1
+        level_counters[level_index] += 1
+        for i in range(level_index + 1, 3):
+            level_counters[i] = 0
 
-                    # 生成编号 (如 "2.1.1")
-                    number_parts = []
-                    for i in range(level):
-                        number_parts.append(str(level_counters[i]))
-                    number_str = '.'.join(number_parts)
+        # 生成编号 (如 "2.1.1")
+        number_parts = []
+        for i in range(level):
+            number_parts.append(str(level_counters[i]))
+        number_str = '.'.join(number_parts)
 
-                    # 添加缩进和目录行
-                    indent = "  " * (level - 1)
-                    catalogue_lines.append(f"{indent}{number_str} {para.text}")
-
+        # 添加缩进和目录行
+        indent = "  " * (level - 1)
+        catalogue_lines.append(f"{indent}{number_str} {para.text}")
     return "\n".join(catalogue_lines)
 
 def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool:
@@ -163,12 +164,13 @@ if __name__ == "__main__":
     my_source_dir = "/home/rd/doc/文档生成/knowledge_base"
     # my_target_doc = "/home/rd/doc/文档生成/template.docx"
     my_target_doc = "/home/rd/doc/文档生成/2.docx"
-    # test = extract_catalogue(my_target_doc)
-    doc_ctx = "我正在写一个可行性研究报告"
-    doc_catalogue = get_catalogue(my_target_doc)
-    logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
-
-    output_doc = fill_doc(doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_cfg)
-    output_file = 'doc_output.docx'
-    output_doc.save(output_file)
-    logger.info(f"save_content_to_file: {output_file}")
+    test_catalogue = extract_catalogue(my_target_doc)
+    logger.info(f"doc_catalogue: {test_catalogue}")
+    # doc_ctx = "我正在写一个可行性研究报告"
+    # doc_catalogue = get_catalogue(my_target_doc)
+    # logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
+    #
+    # output_doc = fill_doc(doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_cfg)
+    # output_file = 'doc_output.docx'
+    # output_doc.save(output_file)
+    # logger.info(f"save_content_to_file: {output_file}")
