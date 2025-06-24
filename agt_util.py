@@ -82,7 +82,7 @@ def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str:
                 time.sleep(wait_time)
 
             label_str = ';\n'.join(map(str, labels))
-            logger.info(f"classify_txt: {txt}")
+            # logger.debug(f"classify_txt: {txt}")
             template = f'''对以下文本进行分类\n{label_str}\n文本：{txt}\n分类结果输出为单一分类标签文本，不要输出任何额外信息'''
             prompt = ChatPromptTemplate.from_template(template)
             # logger.info(f"prompt {prompt}")
@@ -187,10 +187,14 @@ def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,
                 logger.info(f"retry #{attempt} times after wait {backoff_times[attempt - 1]}s")
             model = get_model(cfg)
             chain = prompt | model
-            logger.info(f"submit_instruction_and_context_to_llm, "
+            logger.info(
+                f"submit_instruction_and_context_to_llm, "
                 # f"catalogue[{catalogue}], "
-                f"current_sub_title[{current_sub_title}], instruction[{instruction}], demo_txt[{demo_txt}], "
-                f"{cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
+                f"current_sub_title[{current_sub_title}], "
+                f"instruction[{instruction}], "
+                # f"demo_txt[{demo_txt}], "
+                # f"{cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}"
+                f"")
             response = chain.invoke({
                 "doc_context": doc_context,
                 "catalogue": catalogue,

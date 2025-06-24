@@ -100,13 +100,14 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
         return False
     classify_result = classify_txt(labels, para.text, sys_cfg, True)
     if labels[1] in classify_result:
-        logger.info(f"classify={classify_result}, tile={current_heading}, para={para.text}")
+        # logger.debug(f"classify={classify_result}, tile={current_heading}, para={para.text}")
         return False
-    logger.info(f"classify={classify_result}, tile={current_heading}, para={para.text}")
+    # logger.debug(f"classify={classify_result}, tile={current_heading}, para={para.text}")
     return True
 
-def fill_doc_with_demo(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, sys_cfg: dict) -> Document:
+def fill_doc(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, sys_cfg: dict) -> Document:
     """
+    :param doc_ctx: 文档写作背景信息
     :param source_dir: 提供的样本文档
     :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
     :param sys_cfg: 系统配置信息
@@ -168,7 +169,7 @@ if __name__ == "__main__":
     doc_catalogue = get_catalogue(my_target_doc)
     logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
 
-    output_doc = fill_doc_with_demo(doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_cfg)
+    output_doc = fill_doc(doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_cfg)
     output_file = 'doc_output.docx'
     output_doc.save(output_file)
     logger.info(f"save_content_to_file: {output_file}")
