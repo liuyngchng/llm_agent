@@ -127,9 +127,13 @@ def fill_doc(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogu
                 continue
             # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
             search_result = process_paragraph(my_para, sys_cfg['api'])
-            source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
-            demo_txt = f"{source_para_txt}\n{search_result}"
-            demo_txt = demo_txt.replace("\n", " ").strip()
+            if source_dir and os.path.exists(source_dir):
+                source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
+                demo_txt = f"{source_para_txt}\n{search_result}"
+                demo_txt = demo_txt.replace("\n", " ").strip()
+            else:
+                demo_txt = ""
+
             llm_txt = gen_txt(doc_ctx, demo_txt, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg, )
             logger.info(f"llm_txt_for_instruction[{my_para.text}]\n===gen_llm_txt===\n{llm_txt}")
         except Exception as ex:
@@ -164,13 +168,13 @@ if __name__ == "__main__":
     my_source_dir = "/home/rd/doc/文档生成/knowledge_base"
     # my_target_doc = "/home/rd/doc/文档生成/template.docx"
     my_target_doc = "/home/rd/doc/文档生成/2.docx"
-    test_catalogue = extract_catalogue(my_target_doc)
-    logger.info(f"doc_catalogue: {test_catalogue}")
-    # doc_ctx = "我正在写一个可行性研究报告"
-    # doc_catalogue = get_catalogue(my_target_doc)
-    # logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
-    #
-    # output_doc = fill_doc(doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_cfg)
-    # output_file = 'doc_output.docx'
-    # output_doc.save(output_file)
-    # logger.info(f"save_content_to_file: {output_file}")
+    # test_catalogue = extract_catalogue(my_target_doc)
+    # logger.info(f"doc_catalogue: {test_catalogue}")
+    doc_ctx = "我正在写一个可行性研究报告"
+    doc_catalogue = get_catalogue(my_target_doc)
+    logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
+
+    output_doc = fill_doc(doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_cfg)
+    output_file = 'doc_output.docx'
+    output_doc.save(output_file)
+    logger.info(f"save_content_to_file: {output_file}")
