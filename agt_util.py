@@ -85,11 +85,11 @@ def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str:
             logger.info(f"classify_txt: {txt}")
             template = f'''对以下文本进行分类\n{label_str}\n文本：{txt}\n分类结果输出为单一分类标签文本，不要输出任何额外信息'''
             prompt = ChatPromptTemplate.from_template(template)
-            logger.info(f"prompt {prompt}")
+            # logger.info(f"prompt {prompt}")
 
             model = get_model(cfg, is_remote)
             chain = prompt | model
-            logger.info(f"submit_msg_to_llm, txt[{txt}], llm[{cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}]")
+            # logger.info(f"submit_msg_to_llm, txt[{txt}], llm[{cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}]")
 
             response = chain.invoke({"txt": txt})
             output_txt = extract_md_content(rmv_think_block(response.content), "json")
@@ -156,19 +156,24 @@ def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,
     :param is_remote: 是否调用远端LLM
     :param max_retries: 最大尝试次数， 需处于集合 [1, 7]
     """
-    logger.info(
-        # f"catalogue[{catalogue}], "
-        f"user_instruction[{instruction}], "
-        f"demo_txt[{demo_txt}], "
-        f"current_sub_title[{current_sub_title}]"
-    )
-    template = ("写作背景如下：\n{doc_context}\n整个报告的三级目录如下所示:\n{catalogue}, 目前需要要写的目录标题为\n{current_sub_title}\n"
-        "可参考的语言风格如下：\n{demo_txt}\n文本写作要求如下：\n{instruction}\n生成大约300字的文本\n"
+    # logger.info(
+    #     f"catalogue[{catalogue}], "
+    #     f"user_instruction[{instruction}], "
+    #     f"demo_txt[{demo_txt}], "
+    #     f"current_sub_title[{current_sub_title}]"
+    # )
+    template = (
+        "写作背景如下：\n{doc_context}\n整个报告的三级目录如下:\n{catalogue}\n"
+        "目前需要要写的目录标题为\n{current_sub_title}\n"
+        "文本写作要求如下：\n{instruction}\n可参考的语言风格如下：\n{demo_txt}\n"
         "(1)直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式\n"
         "(2)调整输出文本的格式，需适合添加在Word文档中\n"
-        "(3)禁止输出空行\n")
+        "(3)若写作要求没有明确字数要求，则生成不超过300字的文本\n"
+        "(4)语言风格文本仅作为输出文本风格参考材料，禁止直接将其输出\n"
+        "(4)禁止输出空行\n"
+    )
     prompt = ChatPromptTemplate.from_template(template)
-    logger.debug(f"prompt {prompt}")
+    # logger.debug(f"prompt {prompt}")
     backoff_times = [5, 10, 20, 40, 80, 160]
     if max_retries < 1:
         max_retries = 1

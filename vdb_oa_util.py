@@ -125,7 +125,7 @@ def search_txt(txt: str, score_threshold: float, sys_cfg: dict, txt_num: int) ->
         s_r_txt = s_r[0].page_content.replace("\n", "")
         if "......................." in s_r_txt:
             continue
-        logger.info(f"s_r_txt: {s_r_txt}, score: {s_r[1]}, from_file: {s_r[0].metadata['source']}")
+        # logger.info(f"s_r_txt: {s_r_txt}, score: {s_r[1]}, from_file: {s_r[0].metadata['source']}")
         all_txt += s_r_txt + "\n"
     return all_txt
 

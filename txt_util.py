@@ -9,7 +9,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 def get_txt_in_dir_by_keywords(keywords: str, dir_path: str, word_count = 500) -> str:
-    logger.info(f"get_txt_by_keywords({keywords}, {dir_path})")
+    # logger.info(f"get_txt_by_keywords({keywords}, {dir_path})")
     result = ""
     for filename in os.listdir(dir_path):
         if not filename.endswith('.txt'):
@@ -19,7 +19,7 @@ def get_txt_in_dir_by_keywords(keywords: str, dir_path: str, word_count = 500) -
         if "" != file_result:
             result += f"\n\n[{file_full_path}]\n{file_result}"
     result = result.strip()
-    logger.info(f"get_txt_in_dir_by_keywords_return, [{result}]")
+    # logger.info(f"get_txt_in_dir_by_keywords_return, [{result}]")
     return result
 
 

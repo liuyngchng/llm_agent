@@ -23,10 +23,9 @@ logger = logging.getLogger(__name__)
 
 
 def process_paragraph(paragraph: Paragraph, sys_cfg: dict) -> str:
-    prompt = paragraph.text
-    gen_txt = search_txt(prompt, 0.5, sys_cfg, 1).strip()
-    logging.info(f"vdb_get_txt:\n{gen_txt}\nby_search_{prompt}")
-    return gen_txt
+    searched_txt = search_txt(paragraph.text, 0.5, sys_cfg, 1).strip()
+    # logging.info(f"vdb_get_txt:\n{searched_txt}\nby_search_{paragraph.text}")
+    return searched_txt
 
 
 def extract_catalogue(target_doc: str) -> str:
@@ -115,16 +114,16 @@ def fill_doc_with_demo(doc_ctx: str, source_dir: str, target_doc: str, target_do
     """
     doc = Document(target_doc)
     current_heading = []
-    target_doc_catalogue_list = target_doc_catalogue.split('\n')
-    for my_para in doc.paragraphs:
+    total_paragraphs = len(doc.paragraphs)
+    for index, my_para in enumerate(doc.paragraphs):
+        percent = (index + 1) / total_paragraphs * 100
+        process_percent_bar_info = f"正在处理第 {index+1}/{total_paragraphs} 段文字，总体进度 {percent:.1f}%"
+        logger.info(f"process_percent: {process_percent_bar_info}")
         try:
             is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
-            if current_heading and len(current_heading) > 0:
-                process_percent = calc_process_percent(current_heading[0], target_doc_catalogue_list)
-                print_progress(process_percent)
             if not is_prompt:
                 continue
-            logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
+            # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
             search_result = process_paragraph(my_para, sys_cfg['api'])
             source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
             demo_txt = f"{source_para_txt}\n{search_result}"
@@ -157,41 +156,6 @@ def get_catalogue(target_doc: str) -> str:
             f.write(my_catalogue)
             logger.info(f"目录内容已写入 {catalogue_file}")
     return my_catalogue
-
-
-def print_progress(percentage):
-    """
-    提取百分比数值（支持"30%"或直接30）
-    """
-    try:
-        percent = float(percentage.strip('%')) if isinstance(percentage, str) else percentage
-    except Exception as ex:
-        logger.error("err_occurred", ex)
-        percent = 0
-    bar_length = 50
-    filled = int(bar_length * percent / 100)
-    bar = '[' + '#' * filled + '-' * (bar_length - filled) + ']'
-    # print(f"当前进度： {bar} {percent:.0f}%", end='', flush=True)
-    logger.info(f"process_percent： {bar} {percent:.0f}%")
-
-
-def calc_process_percent(sub_title: str, target_doc_catalogue: list) -> str:
-    """
-    计算匹配行在文件中的位置百分比
-    :param sub_title: 子标题
-    :param target_doc_catalogue: 三集标题目录清单 list
-    """
-    try:
-        total = len(target_doc_catalogue)
-        for i, line in enumerate(target_doc_catalogue, 1):
-            if sub_title in line:
-                percent = (i / total) * 100
-                return f"{percent:.1f}%"
-        return "0%"
-    except Exception as ex:
-        logger.error("err_in_calc_process_percent", ex)
-        return "0%"
-
 
 
 if __name__ == "__main__":
