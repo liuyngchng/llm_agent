@@ -130,17 +130,20 @@ def inspect_docx_structure():
     target_doc = "/home/rd/doc/文档生成/comment_test.docx"
     with zipfile.ZipFile(target_doc) as z:
         logger.info(f"文档包含的文件:{z.namelist()}")
-        if 'word/comments.xml' in z.namelist():
-            with z.open('word/comments.xml') as f:
-                logger.info(f"comments.xml内容:{f.read().decode('utf-8')}")
+        if 'word/comments.xml' not in z.namelist():
+            logger.error("no word/comments.xml file")
+            return
+        with z.open('word/comments.xml') as f:
+            logger.info(f"comments.xml内容:{f.read().decode('utf-8')}")
 
 def get_para_comment_dict(file_fullpath: str) -> dict:
     comments_dict = get_comments_dict(file_fullpath)
     para_comments = {}
     for cid, data in comments_dict.items():
         para_id = data["paragraph_id"]
-        if para_id is not None:
-            para_comments[para_id] = data["text"]  # 一个段落只保留最后一条批注
+        if not para_id:
+            continue
+        para_comments[para_id] = data["text"]  # 一个段落只保留最后一条批注
     return para_comments
 
 def test_get_comment():
@@ -192,7 +195,7 @@ def test_modify_para_with_comment():
 
 if __name__ == "__main__":
     # test_get_comment()
-    input_file = "/home/rd/doc/文档生成/comment_test.docx"
+    # input_file = "/home/rd/doc/文档生成/comment_test.docx"
     # para_comment_dict = get_para_comment_dict(input_file)
     # logger.info(f"para_comment_dict: {para_comment_dict}")
     test_modify_para_with_comment()
