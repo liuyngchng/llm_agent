@@ -144,7 +144,7 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
 import time
 
 
-def gen_txt(demo_txt: str, instruction: str, catalogue: str,
+def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,
         current_sub_title: str, cfg: dict, is_remote=True, max_retries=6) -> str:
     """
     根据提供的文本的写作风格，以及文本写作要求，输出文本
@@ -162,11 +162,11 @@ def gen_txt(demo_txt: str, instruction: str, catalogue: str,
         f"demo_txt[{demo_txt}], "
         f"current_sub_title[{current_sub_title}]"
     )
-    template = ("我正在写一个可行性研究报告，整个报告的三级目录如下所示:\n{catalogue}, 当前要写的目录标题为\n{current_sub_title}\n"
-        "参考这种文本的语言风格：\n{demo_txt}\n以及具体的文本写作要求\n{instruction}\n生成大约300字的文本\n"
+    template = ("写作背景如下：\n{doc_context}\n整个报告的三级目录如下所示:\n{catalogue}, 目前需要要写的目录标题为\n{current_sub_title}\n"
+        "可参考的语言风格如下：\n{demo_txt}\n文本写作要求如下：\n{instruction}\n生成大约300字的文本\n"
         "(1)直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式\n"
         "(2)调整输出文本的格式，需适合添加在Word文档中\n"
-        "(3)移除多余的空行\n")
+        "(3)禁止输出空行\n")
     prompt = ChatPromptTemplate.from_template(template)
     logger.debug(f"prompt {prompt}")
     backoff_times = [5, 10, 20, 40, 80, 160]
@@ -187,6 +187,7 @@ def gen_txt(demo_txt: str, instruction: str, catalogue: str,
                 f"current_sub_title[{current_sub_title}], instruction[{instruction}], demo_txt[{demo_txt}], "
                 f"{cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
             response = chain.invoke({
+                "doc_context": doc_context,
                 "catalogue": catalogue,
                 "current_sub_title": current_sub_title,
                 "demo_txt": demo_txt,

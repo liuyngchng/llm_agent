@@ -21,6 +21,7 @@ from agt_util import classify_txt, gen_txt
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+
 def process_paragraph(paragraph: Paragraph, sys_cfg: dict) -> str:
     prompt = paragraph.text
     gen_txt = search_txt(prompt, 0.5, sys_cfg, 1).strip()
@@ -105,7 +106,7 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
     logger.info(f"classify={classify_result}, tile={current_heading}, para={para.text}")
     return True
 
-def fill_doc_with_demo(source_dir: str, target_doc: str, target_doc_catalogue: str, sys_cfg: dict) -> Document:
+def fill_doc_with_demo(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, sys_cfg: dict) -> Document:
     """
     :param source_dir: 提供的样本文档
     :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
@@ -128,7 +129,7 @@ def fill_doc_with_demo(source_dir: str, target_doc: str, target_doc_catalogue: s
             source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
             demo_txt = f"{source_para_txt}\n{search_result}"
             demo_txt = demo_txt.replace("\n", " ").strip()
-            llm_txt = gen_txt(demo_txt, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg, )
+            llm_txt = gen_txt(doc_ctx, demo_txt, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg, )
             logger.info(f"llm_txt_for_instruction[{my_para.text}]\n===gen_llm_txt===\n{llm_txt}")
         except Exception as ex:
             logger.error("fill_doc_job_err_to_break", ex)
@@ -199,13 +200,11 @@ if __name__ == "__main__":
     # my_target_doc = "/home/rd/doc/文档生成/template.docx"
     my_target_doc = "/home/rd/doc/文档生成/2.docx"
     # test = extract_catalogue(my_target_doc)
+    doc_ctx = "我正在写一个可行性研究报告"
     doc_catalogue = get_catalogue(my_target_doc)
     logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
-    output_doc = fill_doc_with_demo(my_source_dir, my_target_doc, doc_catalogue, my_cfg)
 
-    # for test purpose only
-    output_doc.add_heading("新增标题Test", 1)
-    output_doc.add_paragraph('新增段落Test')
+    output_doc = fill_doc_with_demo(doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_cfg)
     output_file = 'doc_output.docx'
     output_doc.save(output_file)
     logger.info(f"save_content_to_file: {output_file}")
