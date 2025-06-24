@@ -188,10 +188,10 @@ def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,
             model = get_model(cfg)
             chain = prompt | model
             logger.info(
-                f"submit_instruction_and_context_to_llm, "
+                f"req_llm, "
                 # f"catalogue[{catalogue}], "
-                f"current_sub_title[{current_sub_title}], "
-                f"instruction[{instruction}], "
+                f"sub_title[{current_sub_title}], "
+                f"cmd[{instruction}], "
                 # f"demo_txt[{demo_txt}], "
                 # f"{cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}"
                 f"")

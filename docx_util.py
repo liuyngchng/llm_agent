@@ -118,8 +118,8 @@ def fill_doc(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogu
     total_paragraphs = len(doc.paragraphs)
     for index, my_para in enumerate(doc.paragraphs):
         percent = (index + 1) / total_paragraphs * 100
-        process_percent_bar_info = f"正在处理第 {index+1}/{total_paragraphs} 段文字，总体进度 {percent:.1f}%"
-        logger.info(f"process_percent: {process_percent_bar_info}")
+        process_percent_bar_info = f"正在处理第 {index+1}/{total_paragraphs} 段文字，进度 {percent:.1f}%"
+        logger.info(f"percent: {process_percent_bar_info}")
         try:
             is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
             if not is_prompt:
@@ -143,7 +143,6 @@ def fill_doc(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogu
 
 
 def get_catalogue(target_doc: str) -> str:
-
     catalogue_file = "my_catalogue.txt"
     if os.path.exists(catalogue_file):
         logger.info(f"文件 {catalogue_file} 已存在")
