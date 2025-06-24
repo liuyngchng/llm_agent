@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 pip install python-docx
+处理docx的段落、标题、标题下的文本、文档目录、
+修改docx的文档内容、设定新增的docx文档的文本格式等
 """
 import logging.config
 import os
 import re
 
 from docx import Document
-from collections import defaultdict
 from docx.shared import RGBColor
 from docx.text.paragraph import Paragraph
 from vdb_oa_util import search_txt
@@ -191,160 +192,20 @@ def calc_process_percent(sub_title: str, target_doc_catalogue: list) -> str:
         return "0%"
 
 
-import zipfile
-from xml.etree import ElementTree as ET
-from collections import defaultdict
-
-
-def get_comments_dict(target_doc: str) -> dict:
-    """
-    获取文档中所有批注及其关联的段落ID
-    返回格式: {
-        comment_id: {
-            "author": 作者,
-            "date": 日期,
-            "text": 批注内容,
-            "paragraph_id": 段落ID  # 新增
-        }
-    }
-    """
-    if not os.path.exists(target_doc):
-        logger.error(f"文件不存在: {target_doc}")
-        return {}
-
-    comments_dict = {}
-    try:
-        with zipfile.ZipFile(target_doc) as z:
-            # 1. 解析批注 (comments.xml)
-            if 'word/comments.xml' not in z.namelist():
-                logger.warning("文档中没有批注")
-                return {}
-
-            with z.open('word/comments.xml') as f:
-                comments_xml = ET.fromstring(f.read())
-                namespaces = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
-
-                for comment in comments_xml.findall('.//w:comment', namespaces):
-                    comment_id = comment.get(f'{{{namespaces["w"]}}}id')
-                    if not comment_id:
-                        continue
-
-                    author = comment.get(f'{{{namespaces["w"]}}}author', '未知作者')
-                    date = comment.get(f'{{{namespaces["w"]}}}date', '未知日期')
-                    for t in comment.findall('.//w:t', namespaces):
-
-                        if t.text:
-                            text = ' '.join(t.text.strip())
-                        else:
-                            text = ""
-                    comments_dict[comment_id] = {
-                        "author": author,
-                        "date": date,
-                        "text": text,
-                        "paragraph_id": None  # 初始化为None，后续填充
-                    }
-
-                    # 2. 解析正文 (document.xml)，关联批注和段落ID
-                    if 'word/document.xml' not in z.namelist():
-                        logger.warning("无法解析正文内容")
-
-            with z.open('word/document.xml') as f:
-                doc_xml = ET.fromstring(f.read())
-                paragraphs = doc_xml.findall('.//w:p', namespaces)
-
-                # 为每个段落生成唯一ID（如果没有现成的ID，用索引代替）
-                for para_idx, paragraph in enumerate(paragraphs):
-                    # 查找当前段落中的批注引用
-                    comment_refs = paragraph.findall('.//w:commentReference', namespaces)
-                    if not comment_refs:
-                        continue
-
-                    # 关联批注ID和段落ID（这里用索引作为段落ID）
-                    for ref in comment_refs:
-                        ref_id = ref.get(f'{{{namespaces["w"]}}}id')
-                        if ref_id in comments_dict:
-                            comments_dict[ref_id]["paragraph_id"] = para_idx
-
-    except Exception as e:
-        logger.error(f"解析文档时出错: {str(e)}", exc_info=True)
-
-    return comments_dict
-
-
-def get_paragraph_by_id(target_doc: str, paragraph_id: int) -> str:
-    """
-    通过段落ID获取段落文本
-    :param target_doc: Word文档路径
-    :param paragraph_id: 段落ID（索引或实际ID）
-    :return: 段落文本（如未找到返回空字符串）
-    """
-    if not os.path.exists(target_doc):
-        logger.error(f"文件不存在: {target_doc}")
-        return ""
-
-    try:
-        with zipfile.ZipFile(target_doc) as z:
-            if 'word/document.xml' not in z.namelist():
-                logger.warning("无法解析正文内容")
-                return ""
-
-            with z.open('word/document.xml') as f:
-                doc_xml = ET.fromstring(f.read())
-                namespaces = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
-                paragraphs = doc_xml.findall('.//w:p', namespaces)
-
-                if paragraph_id < 0 or paragraph_id >= len(paragraphs):
-                    logger.warning(f"段落ID {paragraph_id} 超出范围")
-                    return ""
-
-                # 提取段落文本
-                paragraph = paragraphs[paragraph_id]
-                text = ' '.join(
-                    t.text.strip()
-                    for t in paragraph.findall('.//w:t', namespaces)
-                    if t.text and t.text.strip()
-                )
-                return text
-
-    except Exception as e:
-        logger.error(f"解析段落时出错: {str(e)}", exc_info=True)
-        return ""
-
-def inspect_docx_structure():
-    target_doc = "/home/rd/doc/文档生成/comment_test.docx"
-    with zipfile.ZipFile(target_doc) as z:
-        logger.info(f"文档包含的文件:{z.namelist()}")
-        if 'word/comments.xml' in z.namelist():
-            with z.open('word/comments.xml') as f:
-                logger.info(f"comments.xml内容:{f.read().decode('utf-8')}")
-
-def test_get_comment():
-    my_file = "/home/rd/doc/文档生成/comment_test.docx"
-    comments_dict = get_comments_dict(my_file)
-    logger.info(f"comments_dict={comments_dict}")
-    for id, comment in comments_dict.items():
-        logger.info(f"id:{id}, comment: {comment}")
-        para_id = comment.get('paragraph_id')
-        para_txt = get_paragraph_by_id(my_file, para_id)
-        logger.info(f"para_id:{para_id}, para_txt:{para_txt}")
-
-
 
 if __name__ == "__main__":
-    # inspect_docx_structure()
-    test_get_comment()
-    # my_cfg = init_yml_cfg()
-    # my_source_dir = "/home/rd/doc/文档生成/knowledge_base"
-    # # my_target_doc = "/home/rd/doc/文档生成/template.docx"
-    # my_target_doc = "/home/rd/doc/文档生成/2.docx"
-    # # test = extract_catalogue(my_target_doc)
-    # doc_catalogue = get_catalogue(my_target_doc)
-    # logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
-    # output_doc = fill_doc_with_demo(my_source_dir, my_target_doc, doc_catalogue, my_cfg)
-    #
-    # # for test purpose only
-    # output_doc.add_heading("新增标题Test", 1)
-    # output_doc.add_paragraph('新增段落Test')
-    # output_file = 'doc_output.docx'
-    # output_doc.save(output_file)
-    # logger.info(f"save_content_to_file: {output_file}")
+    my_cfg = init_yml_cfg()
+    my_source_dir = "/home/rd/doc/文档生成/knowledge_base"
+    # my_target_doc = "/home/rd/doc/文档生成/template.docx"
+    my_target_doc = "/home/rd/doc/文档生成/2.docx"
+    # test = extract_catalogue(my_target_doc)
+    doc_catalogue = get_catalogue(my_target_doc)
+    logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
+    output_doc = fill_doc_with_demo(my_source_dir, my_target_doc, doc_catalogue, my_cfg)
+
+    # for test purpose only
+    output_doc.add_heading("新增标题Test", 1)
+    output_doc.add_paragraph('新增段落Test')
+    output_file = 'doc_output.docx'
+    output_doc.save(output_file)
+    logger.info(f"save_content_to_file: {output_file}")
