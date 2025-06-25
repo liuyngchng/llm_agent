@@ -8,6 +8,7 @@ pip install python-docx
 import logging.config
 import os
 import re
+import time
 
 from docx import Document
 from docx.shared import RGBColor
@@ -118,21 +119,31 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
     # logger.debug(f"classify={classify_result}, tile={current_heading}, para={para.text}")
     return True
 
-def fill_doc_stream(doc_ctx: str, target_doc: str, target_doc_catalogue: str, sys_cfg: dict):
+def fill_doc_with_progress(task_id:str, progress_lock, task_progress:dict, doc_ctx: str, target_doc: str,
+                           target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
     """
+    :param task_id: 执行任务的ID
+    :param progress_lock: A thread lock
+    :param task_progress: task process information dict with task_id as key
     :param doc_ctx: 文档写作背景信息
-    :param source_dir: 提供的样本文档
     :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
     :param sys_cfg: 系统配置信息
     :param target_doc_catalogue: 需要写的文档的三级目录文本信息
+    :param output_file_name: 输出文档的文件名
     """
     doc = Document(target_doc)
+    gen_txt_count = 0
     current_heading = []
     total_paragraphs = len(doc.paragraphs)
     for index, my_para in enumerate(doc.paragraphs):
-        percent = (index + 1) / total_paragraphs * 100
-        process_percent_bar_info = f"正在处理第 {index+1}/{total_paragraphs} 段文字，进度 {percent:.1f}%"
-        yield f"data: {process_percent_bar_info}"
+        percent = index / total_paragraphs * 100
+        process_percent_bar_info = f"正在处理第 {index+1}/{total_paragraphs} 段文字，已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%"
+        logger.info(process_percent_bar_info)
+        with progress_lock:
+            task_progress[task_id] = {
+                "text": process_percent_bar_info,
+                "timestamp": time.time()
+            }
         try:
             is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
             if not is_prompt:
@@ -140,21 +151,30 @@ def fill_doc_stream(doc_ctx: str, target_doc: str, target_doc_catalogue: str, sy
             # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
             search_result = process_paragraph(my_para, sys_cfg['api'])
             demo_txt = f"{search_result}"
-            yield f"data: 正在处理文本[{my_para.text}]"
+            # with progress_lock:
+            #     task_progress[task_id] = f"正在处理文本[{my_para.text}]"
             llm_txt = gen_txt(doc_ctx, demo_txt, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg, )
-            yield f"data: 生成文本：{llm_txt}"
+            gen_txt_count += 1
+            # with progress_lock:
+            #     task_progress[task_id] = f"生成文本：{llm_txt}"
         except Exception as ex:
             logger.error("fill_doc_job_err_to_break", ex)
-            yield f"data: 在处理文档的过程中出现了异常，程序已中途退出"
+            with progress_lock:
+                task_progress[task_id] = {
+                    "text": f"在处理文档的过程中出现了异常，任务已中途退出",
+                    "timestamp": time.time()
+                }
             break
-        # if len(my_txt) > 0:
         new_para = doc.add_paragraph()
         red_run = new_para.add_run(llm_txt)
         red_run.font.color.rgb = RGBColor(255, 0, 0)
         my_para._p.addnext(new_para._p)
-        output_file = 'doc_output.docx'
-        doc.save(output_file)
-        yield f"data: 文档已经处理完毕， 信息已保存至 {output_file}"
+        doc.save(output_file_name)
+        with progress_lock:
+            task_progress[task_id] = {
+                "text": f"任务已完成，共处理 {total_paragraphs} 段文字，已生成 {gen_txt_count} 段文本，进度 100%",
+                "timestamp": time.time()
+            }
 
 def fill_doc(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, sys_cfg: dict) -> Document:
     """

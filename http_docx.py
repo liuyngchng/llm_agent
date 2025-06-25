@@ -8,29 +8,32 @@ import json
 import logging.config
 import os
 import re
+import threading
 import time
+import cfg_util as cfg_utl
 
 from flask import (Flask, request, jsonify, render_template, Response,
                    send_from_directory, abort, make_response)
-from cfg_util import auth_user, get_user_role_by_uid
-from csm_service import CsmService
-from docx_util import extract_catalogue, fill_doc
-from my_enums import ActorRole, AI_SERVICE_STATUS
-from agt_util import classify_msg
+from docx_util import extract_catalogue, fill_doc_with_progress
+
 from sys_init import init_yml_cfg
+
 
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
 UPLOAD_FOLDER = 'upload_doc'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # 确保上传目录存在
-
+auth_info = {}
 my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
+task_progress = {}  # 存储文本进度信息
+progress_lock = threading.Lock()
 
 @app.route('/', methods=['GET'])
 def login_index():
@@ -49,19 +52,19 @@ def login_index():
 def login():
     """
     form submit, get data from form
-    curl -s --noproxy '*' -X POST 'http://127.0.0.1:19000/login' \
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' \
         -H "Content-Type: application/x-www-form-urlencoded" \
         -d '{"user":"test"}'
     :return:
     echo -n 'my_str' |  md5sum
     """
     dt_idx = "docx_index.html"
-    logger.debug(f"request.form: {request.form}")
+    logger.debug(f"request_form: {request.form}")
     user = request.form.get('usr').strip()
     t = request.form.get('t').strip()
-    logger.info(f"user login: {user}, {t}")
-    auth_result = auth_user(user, t, my_cfg)
-    logger.info(f"user login result: {user}, {t}, {auth_result}")
+    logger.info(f"user_login: {user}, {t}")
+    auth_result = cfg_utl.auth_user(user, t, my_cfg)
+    logger.info(f"user_login_result: {user}, {t}, {auth_result}")
     if not auth_result["pass"]:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
         ctx = {
@@ -70,16 +73,43 @@ def login():
             "waring_info" : "用户名或密码输入错误",
         }
         return render_template("login.html", **ctx)
-    else:
-        logger.info(f"return_page {dt_idx}")
-        ctx = {
-            "uid": auth_result["uid"],
-            "sys_name": my_cfg['sys']['name'],
-            "role": auth_result["role"],
-            "t": auth_result["t"],
-        }
-        return render_template(dt_idx, **ctx)
 
+    logger.info(f"return_page {dt_idx}")
+    ctx = {
+        "uid": auth_result["uid"],
+        "t": auth_result["t"],
+        "sys_name": my_cfg['sys']['name'],
+        "greeting": cfg_utl.get_const("greeting")
+    }
+    session_key = f"{auth_result['uid']}_{get_client_ip()}"
+    auth_info[session_key] = time.time()
+    return render_template(dt_idx, **ctx)
+
+
+@app.route('/logout', methods=['GET'])
+def logout():
+    """
+    form submit, get data from form
+    curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/login' \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d '{"user":"test"}'
+    :return:
+    echo -n 'my_str' |  md5sum
+    """
+    dt_idx = "login.html"
+    logger.debug(f"request_form: {request.args}")
+    uid = request.args.get('uid').strip()
+    logger.info(f"user_logout: {uid}")
+    session_key = f"{uid}_{get_client_ip()}"
+    auth_info.pop(session_key, None)
+    usr_info = cfg_utl.get_user_info_by_uid(uid)
+    usr_name = usr_info.get('name', '')
+    ctx = {
+        "user": usr_name,
+        "sys_name": my_cfg['sys']['name'],
+        "waring_info":f"用户 {usr_name} 已退出"
+    }
+    return render_template(dt_idx, **ctx)
 
 @app.route('/health', methods=['GET'])
 def get_data():
@@ -95,52 +125,114 @@ def get_data():
     # return Response({"status":200}, content_type=content_type, status=200)
 
 
-
-@app.route('/upload/<file_name>', methods=['POST'])
-def upload_file(file_name):
-    """
-    上传文件，保存在当前目录下的 upload_doc 文件夹下面，文件名称为 "当前时间戳_用户上传文件名的md5值.docx"
-    """
-
+@app.route('/upload', methods=['POST'])  # 修正路由路径
+def upload_file():
     if 'file' not in request.files:
-        return '未找到文件', 400
+        return jsonify({"error": "未找到文件"}), 400
     file = request.files['file']
     if file.filename == '':
-        return '空文件名', 400
+        return jsonify({"error": "空文件名"}), 400
 
-    # 生成新文件名：时间戳_MD5.docx
-    filename_md5 = hashlib.md5(file_name.encode()).hexdigest()
-    new_name = f"{int(time.time())}_{filename_md5}.docx"
-    my_target_doc = os.path.join(UPLOAD_FOLDER, new_name)
-    file.save(my_target_doc)
+    # 生成任务ID和文件名
+    task_id = str(int(time.time()))
+    filename = f"{task_id}_{file.filename}"
+    save_path = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(save_path)
 
-    doc_ctx = "我正在写一个可行性研究报告"
-    doc_catalogue = extract_catalogue(my_target_doc)
-    logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
+    # 初始化进度
+    with progress_lock:
+        task_progress[task_id] = 0
+    logger.info(f"upload_file_saved_as {filename}")
+    return jsonify({
+        "task_id": task_id,
+        "file_name": filename
+    }), 200
 
-    output_doc = fill_doc(doc_ctx, "", my_target_doc, doc_catalogue, my_cfg)
-    output_file = 'doc_output.docx'
-    output_doc.save(output_file)
-    return f'文件已保存为: {new_name}', 200
 
-@app.route('/download/<file_name>', methods=['POST'])
-def download_file(file_name):
-    """
-    按照文件名下载相应的文件
-    """
-    file_path = os.path.join(UPLOAD_FOLDER, file_name)
-    if not os.path.exists(file_path):
-        return '文件不存在', 404
-    return send_from_directory(UPLOAD_FOLDER, file_name, as_attachment=True)
+@app.route("/write/doc", methods=['POST'])
+def write_doc():
+    data = request.json
+    task_id = data.get("task_id")
+    file_name = data.get("file_name")
+
+    if not task_id or not file_name:
+        return jsonify({"error": "缺少参数"}), 400
+
+    threading.Thread(
+        target=process_document,
+        args=(task_id, file_name)
+    ).start()
+
+    return jsonify({"status": "started", "task_id": task_id}), 200
+
+
+@app.route('/download/<filename>', methods=['GET'])
+def download_output(filename):
+    if not re.match(r"output_\w+\.docx", filename):
+        abort(404)
+    return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
 
 
 @app.route('/get/process/info', methods=['POST'])
 def get_doc_process_info():
-    """
-    获取文件处理进度信息文本，用于在用户前端显示处理信息，前端每隔几秒刷新一次
-    """
+    task_id = request.json.get("task_id")
+    if not task_id:
+        return jsonify({"error": "缺少任务ID"}), 400
+    with progress_lock:
+        progress_info = task_progress.get(task_id, {"text": "未知状态"})
+    return jsonify({
+        "task_id": task_id,
+        "progress": progress_info["text"]
+    }), 200
+
+def clean_tasks():
+    while True:
+        with progress_lock:
+            now = time.time()
+            expired = [k for k, v in task_progress.items()
+                      if now - v['timestamp'] > 3600]  # 1小时过期
+            for k in expired:
+                del task_progress[k]
+        time.sleep(300)
+
+def get_client_ip():
+    """获取客户端真实 IP"""
+    if forwarded_for := request.headers.get('X-Forwarded-For'):
+        return forwarded_for.split(',')[0]
+    return request.headers.get('X-Real-IP', request.remote_addr)
 
 
+def process_document(task_id, file_name):
+    try:
+        task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
+        my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
+        catalogue = extract_catalogue(my_target_doc)
+        output_file = os.path.join(UPLOAD_FOLDER, f"output_{task_id}.docx")
+        with progress_lock:
+            task_progress[task_id] = {
+                "text": "开始处理文档...",
+                "timestamp": time.time()
+            }
+
+        # 实际处理函数（需改造为更新task_progress）
+        fill_doc_with_progress(
+            task_id,
+            progress_lock,
+            task_progress,
+            "我正在写一个可行性研究报告",
+            my_target_doc,
+            catalogue,
+            my_cfg,
+            output_file,
+        )
+    except Exception as e:
+        with progress_lock:
+            task_progress[task_id] = {
+                "text": f"任务处理失败: {str(e)}",
+                "timestamp": time.time()
+            }
+        logger.exception("文档生成异常", e)
 
 if __name__ == '__main__':
+    threading.Thread(target=clean_tasks, daemon=True).start()
     app.run(host='0.0.0.0', port=19000)
