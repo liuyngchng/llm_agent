@@ -111,6 +111,61 @@ def logout():
     }
     return render_template(dt_idx, **ctx)
 
+@app.route('/reg/usr', methods=['GET'])
+def reg_user_index():
+    """
+     A index for reg user
+    curl -s --noproxy '*' http://127.0.0.1:19000 | jq
+    :return:
+    """
+    logger.info(f"request_args_in_reg_usr_index {request.args}")
+    ctx = {
+        "sys_name": my_cfg['sys']['name'] + "_新用户注册",
+        "waring_info":""
+    }
+    dt_idx = "reg_usr_index.html"
+    logger.info(f"return_page {dt_idx}, ctx {ctx}")
+    return render_template(dt_idx, **ctx)
+
+@app.route('/reg/usr', methods=['POST'])
+def reg_user():
+    """
+     A index for reg user
+    curl -s --noproxy '*' http://127.0.0.1:19000 | jq
+    :return:
+    """
+    logger.info(f"reg_user_req, {request.form}, from_IP {get_client_ip()}")
+    ctx = {
+        "sys_name": my_cfg['sys']['name']+ "_新用户注册"
+    }
+    try:
+        usr = request.form.get('usr').strip()
+        ctx["user"] = usr
+        t = request.form.get('t').strip()
+        usr_info = cfg_utl.get_uid_by_user(usr)
+        if usr_info:
+            ctx["waring_info"]= f"用户 {usr} 已存在，请重新输入用户名"
+            logger.error(f"reg_user_exist_err {usr}")
+        else:
+            cfg_utl.save_usr(usr, t)
+            uid = cfg_utl.get_uid_by_user(usr)
+            if uid:
+                ctx["uid"] = uid
+                ctx["waring_info"] = f"用户 {usr} 已成功创建，欢迎使用本系统"
+                dt_idx = "login.html"
+                logger.error(f"reg_user_success, {usr}")
+                return render_template(dt_idx, **ctx)
+            else:
+                ctx["waring_info"] = f"用户 {usr} 创建失败"
+                logger.error(f"reg_user_fail, {usr}")
+    except Exception as e:
+        ctx["waring_info"] = "创建用户发生异常"
+        logger.error(f"reg_user_exception, {ctx['waring_info']}, url: {request.url}", exc_info=True)
+    dt_idx = "reg_usr_index.html"
+    logger.info(f"return_page {dt_idx}, ctx {ctx}")
+    return render_template(dt_idx, **ctx)
+
+
 @app.route('/health', methods=['GET'])
 def get_data():
     """
