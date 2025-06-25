@@ -12,8 +12,6 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 import base64
 
-from db_util import DbUtl
-
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 config_db = "cfg.db"
@@ -24,7 +22,7 @@ def auth_user(user:str, t: str, cfg: dict) -> dict:
     auth_result ={"pass": False, "uid": ""}
     with sqlite3.connect(config_db) as my_conn:
         sql = f"select id, role from user where name='{user}' and t = '{t}' limit 1"
-        check_info = DbUtl.sqlite_query_tool(my_conn, sql)
+        check_info = query_sqlite(my_conn, sql)
         user_dt = check_info['data']
 
     if user_dt:
@@ -39,7 +37,7 @@ def get_user_info_by_uid(uid: str)-> dict:
     with sqlite3.connect(config_db) as my_conn:
         try:
             sql = f"select id, name, role, area from user where id='{uid}' limit 1"
-            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
+            check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             if user_dt:
                 user_info['id']     = user_dt[0][0]
@@ -57,7 +55,7 @@ def get_uid_by_user(usr:str) ->str:
     check_sql = f"select id from user where name='{usr}' limit 1"
     uid = ''
     with sqlite3.connect(config_db) as my_conn:
-        check_info = DbUtl.sqlite_query_tool(my_conn, check_sql)
+        check_info = query_sqlite(my_conn, check_sql)
         logger.debug(f"check_info {check_info}")
         check_data = check_info['data']
         try:
@@ -71,7 +69,7 @@ def get_user_name_by_uid(uid:str)-> str | None:
     with sqlite3.connect(config_db) as my_conn:
         try:
             sql = f"select name from user where id='{uid}' limit 1"
-            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
+            check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             user = user_dt[0][0]
             logger.info(f"get_user_with_uid, {user}, {uid}")
@@ -84,7 +82,7 @@ def get_user_role_by_uid(uid:str)-> str | None:
     with sqlite3.connect(config_db) as my_conn:
         try:
             sql = f"select role from user where id='{uid}' limit 1"
-            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
+            check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             role = user_dt[0][0]
             logger.info(f"role {role}, uid {uid}")
@@ -98,7 +96,7 @@ def get_ds_cfg_by_uid(uid:str, cfg: dict) -> dict:
         check_sql = (
             f"select uid, db_type, db_name, db_host, db_port, "
             f"db_usr, db_psw, tables, add_chart, is_strict, llm_ctx from db_config where uid='{uid}' limit 1")
-        db_config_info = DbUtl.sqlite_query_tool(my_conn, check_sql)
+        db_config_info = query_sqlite(my_conn, check_sql)
         logger.debug(f"check_sql, {check_sql}")
         check_info = db_config_info['data']
         if not check_info:
@@ -182,7 +180,7 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
         try:
             exec_sql = exec_sql.replace('\n', ' ')
             exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
-            result = DbUtl.sqlite_insert_delete_tool(my_conn, exec_sql)
+            result = insert_del_sqlite(my_conn, exec_sql)
             logger.info(f"exec_sql_success {exec_sql}")
             if result.get('result'):
                 save_result = True
@@ -201,7 +199,7 @@ def save_usr(user_name: str, token: str) -> bool:
         try:
             exec_sql = exec_sql.replace('\n', ' ')
             exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
-            result = DbUtl.sqlite_insert_delete_tool(my_conn, exec_sql)
+            result = insert_del_sqlite(my_conn, exec_sql)
             logger.info(f"exec_sql_success {exec_sql}")
             if result.get('result'):
                 save_result = True
@@ -222,7 +220,7 @@ def delete_data_source_config(uid: str, cfg: dict) -> bool:
         return False
     with sqlite3.connect(config_db) as my_conn:
         try:
-            result = DbUtl.sqlite_insert_delete_tool(my_conn, delete_sql)
+            result = insert_del_sqlite(my_conn, delete_sql)
             logger.info(f"exec_sql_success {delete_sql}")
             if result.get('result'):
                 delete_result = True
@@ -269,7 +267,7 @@ def get_const(key:str)->str | None:
     with sqlite3.connect(config_db) as my_conn:
         try:
             sql = f"select value from const where key='{key}' limit 1"
-            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
+            check_info = query_sqlite(my_conn, sql)
             value_dt = check_info['data']
             value = value_dt[0][0]
             logger.info(f"get_const {value} with key {key}")
@@ -282,7 +280,7 @@ def get_consts()-> dict:
     with sqlite3.connect(config_db) as my_conn:
         sql = f"select key, value from const limit 100"
         try:
-            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
+            check_info = query_sqlite(my_conn, sql)
             value_dt = check_info['data']
             for key, value in value_dt:
                 const[key] = value
@@ -294,7 +292,7 @@ def get_hack_info(uid: str)-> dict:
     with sqlite3.connect(config_db) as my_conn:
         sql = f"select hack_q_dict from hack_list where uid = '{uid}' limit 1"
         try:
-            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
+            check_info = query_sqlite(my_conn, sql)
             hack_q_list = check_info['data']
             if hack_q_list:
                 return json.loads(hack_q_list[0][0])
@@ -320,7 +318,7 @@ def get_user_sample_data(sql: str)-> dict:
     const = {}
     with sqlite3.connect(user_sample_data_db) as my_conn:
         try:
-            check_info = DbUtl.sqlite_query_tool(my_conn, sql)
+            check_info = query_sqlite(my_conn, sql)
             value_dt = check_info['data']
             for key, value in value_dt:
                 const[key] = value
@@ -336,6 +334,31 @@ def get_user_sample_data_rd_cfg_dict(cfg_dict: dict) -> dict:
     user_sample_data_rd_dict["api"] = cfg_dict["api"]
     return user_sample_data_rd_dict
 
+
+def query_sqlite(db_con, query: str) -> dict:
+    try:
+        cursor = db_con.cursor()
+        query = query.replace('\n', ' ')
+        logger.debug(f"execute_query, {query}")
+        cursor.execute(query)
+        columns = [desc[0] for desc in cursor.description] if cursor.description else []
+        data = cursor.fetchall()
+        return {"columns": columns, "data": data}
+    except Exception as e:
+        logger.exception(f"sqlite_query_err")
+        return {"error": str(e)}
+
+def insert_del_sqlite(db_con, sql: str) -> dict:
+    # ///TODO 防止sql注入
+    try:
+        cursor = db_con.cursor()
+        cursor.execute(sql)
+        db_con.commit()
+        return {"result":True, "affected_rows": cursor.rowcount}
+    except Exception as e:
+        db_con.rollback()
+        logger.error(f"save_data_err: {e}, sql {sql}")
+        return {"result":False, "error": "save data failed"}
 
 if __name__ == '__main__':
     """
