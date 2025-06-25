@@ -12,6 +12,8 @@ from xml.etree import ElementTree as ET
 from docx import Document
 from docx.shared import RGBColor
 
+from sys_init import init_yml_cfg
+
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
@@ -157,10 +159,13 @@ def test_get_comment():
         logger.info(f"para_id:{para_id}, para_txt:{para_txt}")
 
 
-def modify_para_with_comment(target_doc: str, comments_dict: dict) -> Document:
+def modify_para_with_comment_prompt(target_doc: str, doc_ctx: str, comments_dict: dict, cfg: dict) -> Document:
     """
     将批注内容替换到对应段落，并将新文本设为红色
     :param target_doc: 需要修改的文档路径
+    :param doc_ctx: 文档写作的大背景信息
+    :param comments_dict: 段落ID和段落批注的对应关系字典
+    :param cfg: 系统配置，用于使用大模型的能力
     """
     if not os.path.exists(target_doc):
         logger.error(f"输入文件不存在: {target_doc}")
@@ -170,25 +175,38 @@ def modify_para_with_comment(target_doc: str, comments_dict: dict) -> Document:
         return
     logger.info(f"comments: {comments_dict}")
     doc = Document(target_doc)
+    current_heading = []
     try:
         for para_idx, para in enumerate(doc.paragraphs):
+            from docx_util import refresh_current_heading
+            refresh_current_heading(para, current_heading)
             if para_idx not in comments_dict:
                 continue
             logger.info(f"matched_comment_for_para_idx {para_idx}")
             comment_text = comments_dict[para_idx]
             # TODO: 这里可以根据大模型对文本进行处理之后，生成新的文本，添加至文档中
-            para.clear()
-            run = para.add_run(comment_text)
-            run.font.color.rgb = RGBColor(255, 0, 0)
+
+            from agt_util import gen_txt
+            from docx_util import get_catalogue
+            catalogue = get_catalogue(target_doc)
+            modified_txt = gen_txt(doc_ctx, "", comment_text, catalogue, str(current_heading), cfg)
+            if modified_txt:
+                para.clear()
+                run = para.add_run(modified_txt)
+                run.font.color.rgb = RGBColor(255, 0, 0)
+            else:
+                logger.error(f"no_gen_txt_for_para, {para_idx}, comment {comment_text}")
     except Exception as e:
         logger.error(f"替换失败: {str(e)}", exc_info=True)
     return doc
 
 
 def test_modify_para_with_comment():
+    my_cfg = init_yml_cfg()
     input_file = "/home/rd/doc/文档生成/comment_test.docx"
     para_comment_dict = get_para_comment_dict(input_file)
-    output_doc = modify_para_with_comment(input_file, para_comment_dict)
+    doc_ctx = "我正在写一个可行性研究报告"
+    output_doc = modify_para_with_comment_prompt(input_file, doc_ctx, para_comment_dict, my_cfg)
     output_file = "modify_comment_test.docx"
     output_doc.save(output_file)
     logger.info(f"处理完成，输出文件: {output_file}")

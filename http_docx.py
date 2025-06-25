@@ -55,7 +55,7 @@ def login():
     :return:
     echo -n 'my_str' |  md5sum
     """
-    dt_idx = "rag_index.html"
+    dt_idx = "docx_index.html"
     logger.debug(f"request.form: {request.form}")
     user = request.form.get('usr').strip()
     t = request.form.get('t').strip()
@@ -111,14 +111,14 @@ def upload_file(file_name):
     # 生成新文件名：时间戳_MD5.docx
     filename_md5 = hashlib.md5(file_name.encode()).hexdigest()
     new_name = f"{int(time.time())}_{filename_md5}.docx"
-    save_path = os.path.join(UPLOAD_FOLDER, new_name)
-    file.save(save_path)
+    my_target_doc = os.path.join(UPLOAD_FOLDER, new_name)
+    file.save(my_target_doc)
 
     doc_ctx = "我正在写一个可行性研究报告"
-    doc_catalogue = extract_catalogue(save_path)
+    doc_catalogue = extract_catalogue(my_target_doc)
     logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
 
-    output_doc = fill_doc(doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_cfg)
+    output_doc = fill_doc(doc_ctx, "", my_target_doc, doc_catalogue, my_cfg)
     output_file = 'doc_output.docx'
     output_doc.save(output_file)
     return f'文件已保存为: {new_name}', 200

@@ -21,6 +21,8 @@ from agt_util import classify_txt, gen_txt
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+MIN_PROMPT_LEN = 20
+
 
 def process_paragraph(paragraph: Paragraph, sys_cfg: dict) -> str:
     searched_txt = search_txt(paragraph.text, 0.5, sys_cfg, 1).strip()
@@ -66,6 +68,22 @@ def extract_catalogue(target_doc: str) -> str:
         catalogue_lines.append(f"{indent}{number_str} {para.text}")
     return "\n".join(catalogue_lines)
 
+def refresh_current_heading(para: Paragraph, heading: list) -> bool:
+    if "Heading" not in para.style.name:
+        return False
+
+    level = int(para.style.name.split()[-1])  # 提取数字
+    headings = {1: [], 2: [], 3: [], 4: [], 5: []}  # 按需扩展层级
+    headings[level].append(para.text)
+    logger.info(f"heading_part_caught: H{level}: {para.text}")
+    if None == heading:
+        logger.error("heading_list_cant't_be_refresh")
+        return True
+    if len(heading) != 0:
+        heading.pop()
+    heading.append(para.text)
+    return True
+
 def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool:
     """
     判断写作要求文档中的每段文本，是否为用户所提的写作要求文本
@@ -74,16 +92,10 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
     :param sys_cfg: 系统配置，涉及大模型的地址等
     return False： 不是写作要求； True： 是写作要求
     """
-    headings = {1: [], 2: [], 3: [], 4: [], 5: []}  # 按需扩展层级
+
     pattern = r'^(图|表)\s*\d+[\.\-\s]'  # 匹配"图1."/"表2-"等开头
     labels = ["需要生成文本", "不需要生成文本"]
-    if "Heading" in para.style.name:
-        level = int(para.style.name.split()[-1])  # 提取数字
-        headings[level].append(para.text)
-        logger.info(f"heading_part: H{level}: {para.text}")
-        if len(current_heading) != 0:
-            current_heading.pop()
-        current_heading.append(para.text)
+    if refresh_current_heading(para, current_heading):
         return False
     if "TOC" in para.style.name or para._element.xpath(".//w:instrText[contains(.,'TOC')]"):
         logger.info(f"doc_table_of_content: {para.text}")
@@ -93,7 +105,7 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
         return False
     if not para.text:
         return False
-    if len(para.text.strip()) < 20:
+    if len(para.text.strip()) < MIN_PROMPT_LEN:
         logger.info(f"ignored_short_txt {para.text}")
         return False
     if len(current_heading) == 0 or len(current_heading[0]) < 2:
@@ -105,6 +117,44 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
         return False
     # logger.debug(f"classify={classify_result}, tile={current_heading}, para={para.text}")
     return True
+
+def fill_doc_stream(doc_ctx: str, target_doc: str, target_doc_catalogue: str, sys_cfg: dict):
+    """
+    :param doc_ctx: 文档写作背景信息
+    :param source_dir: 提供的样本文档
+    :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
+    :param sys_cfg: 系统配置信息
+    :param target_doc_catalogue: 需要写的文档的三级目录文本信息
+    """
+    doc = Document(target_doc)
+    current_heading = []
+    total_paragraphs = len(doc.paragraphs)
+    for index, my_para in enumerate(doc.paragraphs):
+        percent = (index + 1) / total_paragraphs * 100
+        process_percent_bar_info = f"正在处理第 {index+1}/{total_paragraphs} 段文字，进度 {percent:.1f}%"
+        yield f"data: {process_percent_bar_info}"
+        try:
+            is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
+            if not is_prompt:
+                continue
+            # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
+            search_result = process_paragraph(my_para, sys_cfg['api'])
+            demo_txt = f"{search_result}"
+            yield f"data: 正在处理文本[{my_para.text}]"
+            llm_txt = gen_txt(doc_ctx, demo_txt, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg, )
+            yield f"data: 生成文本：{llm_txt}"
+        except Exception as ex:
+            logger.error("fill_doc_job_err_to_break", ex)
+            yield f"data: 在处理文档的过程中出现了异常，程序已中途退出"
+            break
+        # if len(my_txt) > 0:
+        new_para = doc.add_paragraph()
+        red_run = new_para.add_run(llm_txt)
+        red_run.font.color.rgb = RGBColor(255, 0, 0)
+        my_para._p.addnext(new_para._p)
+        output_file = 'doc_output.docx'
+        doc.save(output_file)
+        yield f"data: 文档已经处理完毕， 信息已保存至 {output_file}"
 
 def fill_doc(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, sys_cfg: dict) -> Document:
     """
@@ -132,7 +182,7 @@ def fill_doc(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogu
                 demo_txt = f"{source_para_txt}\n{search_result}"
                 demo_txt = demo_txt.replace("\n", " ").strip()
             else:
-                demo_txt = ""
+                demo_txt = f"{search_result}"
 
             llm_txt = gen_txt(doc_ctx, demo_txt, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg, )
             logger.info(f"llm_txt_for_instruction[{my_para.text}]\n===gen_llm_txt===\n{llm_txt}")

@@ -16,11 +16,12 @@ logger = logging.getLogger(__name__)
 
 def get_model(cfg, is_remote=True):
     if is_remote:
-        model = ChatOpenAI(api_key=cfg['api']['llm_api_key'],
-                           base_url=cfg['api']['llm_api_uri'],
-                           http_client=httpx.Client(verify=False, proxy=None),
-                           model=cfg['api']['llm_model_name']
-                           )
+        model = ChatOpenAI(
+            api_key=cfg['api']['llm_api_key'],
+            base_url=cfg['api']['llm_api_uri'],
+            http_client=httpx.Client(verify=False, proxy=None),
+            model=cfg['api']['llm_model_name']
+        )
     else:
         model = ChatOllama(model=cfg['api']['llm_model_name'], base_url=cfg['api']['llm_api_uri'])
     return model
@@ -147,14 +148,15 @@ import time
 def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,
         current_sub_title: str, cfg: dict, is_remote=True, max_retries=6) -> str:
     """
-    根据提供的文本的写作风格，以及文本写作要求，输出文本
-    :param demo_txt: 写作风格样例子文本
-    :param instruction: 写作要求
-    :param catalogue: 输出文档的三级目录
-    :param current_sub_title: 当前需要输出文本的目录标题
-    :param cfg: 系统配置
-    :param is_remote: 是否调用远端LLM
-    :param max_retries: 最大尝试次数， 需处于集合 [1, 7]
+    根据提供的三级目录、文本的写作风格，以及每个章节的具体文本写作要求，输出文本
+    :param doc_context:     整体的写作背景
+    :param demo_txt:        写作风格样例子文本
+    :param instruction:     局部章节文本的写作要求
+    :param catalogue:       要求输出的文档的三级目录
+    :param current_sub_title: 当前章节文本的目录标题
+    :param cfg:             系统配置
+    :param is_remote:       是否调用远端LLM
+    :param max_retries:     最大尝试次数， 需处于集合 [1, 7]
     """
     # logger.info(
     #     f"catalogue[{catalogue}], "
