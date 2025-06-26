@@ -61,12 +61,14 @@
         <header>
             <h2>文档生成</h2>
             <p class="subtitle">根据上传的包含三级目录以及各段落写作要求的docx文档，由 AI 进行文档创作</p>
+            <p>输入文档可参考文件&nbsp;&nbsp;<a href="/download/input_template.docx">输入文档参考模板</a></p>
         </header>
         <div class="input-group">
             <input type="file" id="fileInput" accept=".docx" style="display:none">
             <button id="selectBtn">选择文档</button>
             <span id="fileName" style="padding:0 15px">未选择文件</span>
             <button id="startBtn">开始生成</button>
+
         </div>
         <div class="text-progress" id="textProgress">
             等待开始...

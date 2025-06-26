@@ -170,9 +170,13 @@ def fill_doc_with_progress(task_id:str, progress_lock, task_progress:dict, doc_c
         red_run.font.color.rgb = RGBColor(255, 0, 0)
         my_para._p.addnext(new_para._p)
         doc.save(output_file_name)
+        if gen_txt_count > 0:
+            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，已生成 {gen_txt_count} 段文本，进度 100%"
+        else:
+            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，进度 100%，未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
         with progress_lock:
             task_progress[task_id] = {
-                "text": f"任务已完成，共处理 {total_paragraphs} 段文字，已生成 {gen_txt_count} 段文本，进度 100%",
+                "text": txt_info,
                 "timestamp": time.time()
             }
 
@@ -236,7 +240,7 @@ def get_catalogue(target_doc: str) -> str:
 if __name__ == "__main__":
     my_cfg = init_yml_cfg()
     my_source_dir = "/home/rd/doc/文档生成/knowledge_base"
-    # my_target_doc = "/home/rd/doc/文档生成/template.docx"
+    # my_target_doc = "/home/rd/doc/文档生成/output_template.docx"
     my_target_doc = "/home/rd/doc/文档生成/2.docx"
     # test_catalogue = extract_catalogue(my_target_doc)
     # logger.info(f"doc_catalogue: {test_catalogue}")

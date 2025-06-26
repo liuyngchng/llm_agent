@@ -223,7 +223,8 @@ def write_doc():
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_output(filename):
-    if not re.match(r"output_\w+\.docx", filename):
+    if not os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
+        logger.error(f"文件 {filename} 不存在")
         abort(404)
     return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
 
