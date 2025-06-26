@@ -151,6 +151,7 @@ def reg_user():
             uid = cfg_utl.get_uid_by_user(usr)
             if uid:
                 ctx["uid"] = uid
+                ctx["sys_name"] = my_cfg['sys']['name']
                 ctx["waring_info"] = f"用户 {usr} 已成功创建，欢迎使用本系统"
                 dt_idx = "login.html"
                 logger.error(f"reg_user_success, {usr}")
