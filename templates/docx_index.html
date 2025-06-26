@@ -51,6 +51,12 @@
             margin-top: 15px;
             font-weight: bold;
         }
+        .nav-links {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -59,12 +65,14 @@
             <a href="/logout?uid={{uid}}" class="system-settings-link">退出</a>
         </div>
         <header>
-            <h2>文档生成</h2>
-            <p class="subtitle">根据上传的包含三级目录以及各段落写作要求的docx文档模板，由 AI 进行文档创作</p>
-            <p>输入文档可参考文件&nbsp;&nbsp;<a href="/download/input_template.docx">输入文档参考模板</a></p>
+            <h2 style="text-align:center;">文档生成</h2>
+            <p class="subtitle">
+                (1) 根据上传的包含三级目录以及各段落写作要求的docx文档模板，由 AI 进行文档创作，输入文档可下载&nbsp;&nbsp;
+                <a href="/download/input_template.docx">Word文档模板</a>， 供参考
+            </p>
             <p>
-                系统涉及详见&nbsp;&nbsp;
-                <a href="https://nipj5983sr.fklzl.cnpc.com.cn/docx/doxgtEu8WXVSegtJpckpBeR5wdd">
+                (2) 系统设计详见&nbsp;&nbsp;
+                <a href="https://nipj5983sr.fklzl.cnpc.com.cn/docx/doxgtEu8WXVSegtJpckpBeR5wdd" target="_blank">
                     文档生成系统设计
                 </a>
             </p>
@@ -88,7 +96,7 @@
         </div>
         <input type="hidden" id ="uid" name="uid" value="{{uid}}">
         <input type="hidden" id ="t" name="t" value="{{t}}">
-        <footer>
+        <footer style="text-align:center;">
             <p>© 2025 文档生成平台 | KLSZ</p>
         </footer>
     </div>

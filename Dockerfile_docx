@@ -1,22 +1,25 @@
 FROM ubuntu_py:24.04 as builder
-#FROM llm_nl2sql:1.1
 
 WORKDIR /opt
 ARG PROXY=""
 # ARG PROXY=" -i http://devpi.11.11.77.81.nip.io/root/pypi/+simple --trusted-host devpi.11.11.77.81.nip.io"
 #ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple"
+# 确保 当前目录下的 ./llm_py_env_whl.Python.3.12.3 存在，且whl离线包与当前python的版本完全一致, 离线安装时使用
 COPY ./llm_py_env /tmp/whl
-RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn flask \
-    concurrent-log-handler langchain_openai langchain_ollama langchain_core langchain_community \
-    openai pandas tabulate docx pydub pycryptodome wheel sympy && \
+RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn \
+    langgraph langchain_ollama langchain_openai langchain_community \
+    langchain langchain_huggingface langchain_text_splitters langchain_huggingface langchain_unstructured unstructured \
+    unstructured[pdf] langchain_core flask pydantic python-docx nltk sentence-transformers faiss_cpu torch \
+    concurrent_log_handler pymysql oracledb sounddevice pydub pycryptodome wheel qrcode[pil] \
+    python-docx pypdf2 lxml websockets $PROXY && \
     rm -rf /tmp/whl && \
     rm -rf ~/.cache/pip
 
 
 FROM ubuntu_py:24.04
+COPY --from=builder /opt/llm_py_env /opt/llm_py_env
 RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime' && \
     ulimit -n 65535
-COPY --from=builder /opt/llm_py_env /opt/llm_py_env
 WORKDIR /opt/app
 EXPOSE 19000
 ENTRYPOINT ["sh", "./boot.sh"]

@@ -6,4 +6,4 @@ docker run -dit --name llm_docx  \
   --security-opt seccomp=unconfined \
   -v /data/llm_agent:/opt/app \
   -p 19003:19000 \
-  llm_docx:1.0
+  llm_rag:1.1
