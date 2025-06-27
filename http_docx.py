@@ -3,18 +3,17 @@
 """
 pip install flask
 """
-import hashlib
-import json
 import logging.config
 import os
-import re
 import threading
 import time
 import cfg_util as cfg_utl
 
 from flask import (Flask, request, jsonify, render_template, Response,
                    send_from_directory, abort, make_response)
-from docx_util import extract_catalogue, fill_doc_with_progress
+
+from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
+from docx_util import extract_catalogue, fill_doc_in_progress
 
 from sys_init import init_yml_cfg
 
@@ -270,18 +269,31 @@ def process_document(task_id, file_name):
                 "text": "开始处理文档...",
                 "timestamp": time.time()
             }
-
-        # 实际处理函数（需改造为更新task_progress）
-        fill_doc_with_progress(
-            task_id,
-            progress_lock,
-            task_progress,
-            "我正在写一个可行性研究报告",
-            my_target_doc,
-            catalogue,
-            my_cfg,
-            output_file,
-        )
+        para_comment_dict = get_para_comment_dict(my_target_doc)
+        if para_comment_dict:
+            logger.info("process_word_comment_doc")
+            modify_para_with_comment_prompt_in_process(
+                task_id,
+                progress_lock,
+                task_progress,
+                my_target_doc,
+                "我正在写一个可行性研究报告",
+                para_comment_dict,
+                my_cfg,
+                output_file
+            )
+        else:
+            logger.info("fill_doc_with_catalogue")
+            fill_doc_in_progress(
+                task_id,
+                progress_lock,
+                task_progress,
+                "我正在写一个可行性研究报告",
+                my_target_doc,
+                catalogue,
+                my_cfg,
+                output_file,
+            )
     except Exception as e:
         with progress_lock:
             task_progress[task_id] = {

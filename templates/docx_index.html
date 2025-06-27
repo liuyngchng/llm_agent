@@ -67,11 +67,13 @@
         <header>
             <h2 style="text-align:center;">文档生成</h2>
             <p class="subtitle">
-                (1) 根据上传的包含三级目录以及各段落写作要求的docx文档模板，由 AI 进行文档创作，上传文档可参考&nbsp;&nbsp;
-                <a href="/download/input_template.docx">Word文档模板</a>
+                <span style="font-weight:bold;">（1）系统能力</span><br>系统提供2种文档生成功能：<br>
+                1）上传包含三级目录以及各段落写作要求的docx文档模板，由 AI 进行文档创作，上传文档可参考&nbsp;&nbsp;
+                <a href="/download/input_template.docx">Word文档模板</a><br>
+                2）上传包含 Word 批注的文档， 由 AI 进行文档修改。
             </p>
             <p>
-                (2) 系统设计详见&nbsp;&nbsp;
+                <span style="font-weight:bold;">（2）系统设计</span><br>系统设计详见&nbsp;&nbsp;
                 <a href="https://nipj5983sr.fklzl.cnpc.com.cn/docx/doxgtEu8WXVSegtJpckpBeR5wdd" target="_blank">
                     文档生成系统设计
                 </a>
@@ -79,10 +81,9 @@
         </header>
         <div class="input-group">
             <input type="file" id="fileInput" accept=".docx" style="display:none">
-            <button id="selectBtn">选择Word文档模板</button>
+            <button id="selectBtn">选择Word文档模板或者含有批注的文档</button>
             <span id="fileName" style="padding:0 15px">未选择文件</span>
             <button id="startBtn">上传</button>
-
         </div>
         <div class="text-progress" id="textProgress">
             等待开始...

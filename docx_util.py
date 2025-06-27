@@ -119,8 +119,8 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
     # logger.debug(f"classify={classify_result}, tile={current_heading}, para={para.text}")
     return True
 
-def fill_doc_with_progress(task_id:str, progress_lock, task_progress:dict, doc_ctx: str, target_doc: str,
-                           target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
+def fill_doc_in_progress(task_id:str, progress_lock, task_progress:dict, doc_ctx: str, target_doc: str,
+                         target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
     """
     :param task_id: 执行任务的ID
     :param progress_lock: A thread lock
@@ -137,7 +137,8 @@ def fill_doc_with_progress(task_id:str, progress_lock, task_progress:dict, doc_c
     total_paragraphs = len(doc.paragraphs)
     for index, my_para in enumerate(doc.paragraphs):
         percent = index / total_paragraphs * 100
-        process_percent_bar_info = f"正在处理第 {index+1}/{total_paragraphs} 段文字，已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%"
+        process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文字，"
+            f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
         logger.info(process_percent_bar_info)
         with progress_lock:
             task_progress[task_id] = {

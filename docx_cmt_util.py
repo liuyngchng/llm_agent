@@ -7,12 +7,15 @@ pip install python-docx
 """
 import logging.config
 import os
+import time
 import zipfile
 from xml.etree import ElementTree as ET
 from docx import Document
 from docx.shared import RGBColor
 
 from sys_init import init_yml_cfg
+from agt_util import gen_txt
+from docx_util import get_catalogue, refresh_current_heading
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -158,8 +161,76 @@ def test_get_comment():
         para_txt = get_paragraph_by_id(my_file, para_id)
         logger.info(f"para_id:{para_id}, para_txt:{para_txt}")
 
+def modify_para_with_comment_prompt_in_process(task_id:str, progress_lock, task_progress:dict,
+        target_doc: str, doc_ctx: str, comments_dict: dict, cfg: dict, output_file_name:str):
+    """
+    将批注内容替换到对应段落，并将新文本设为红色
+    :param task_id: 执行任务的ID
+    :param progress_lock: A thread lock
+    :param task_progress: task process information dict with task_id as key
+    :param target_doc: 需要修改的文档路径
+    :param doc_ctx: 文档写作的大背景信息
+    :param comments_dict: 段落ID和段落批注的对应关系字典
+    :param cfg: 系统配置，用于使用大模型的能力
+    :param output_file_name: 输出文档的文件名
+    """
+    if not os.path.exists(target_doc):
+        logger.error(f"输入文件不存在: {target_doc}")
+        return
+    if not comments_dict:
+        logger.warning(f"文件批注信息为空")
+        return
+    logger.info(f"comments: {comments_dict}")
+    doc = Document(target_doc)
+    current_heading = []
+    total_paragraphs = len(doc.paragraphs)
+    gen_txt_count = 0
+    comment_count = 0
+    try:
+        for para_idx, para in enumerate(doc.paragraphs):
+            percent = para_idx / total_paragraphs * 100
+            process_percent_bar_info = (f"正在处理第 {para_idx + 1}/{total_paragraphs} 段文字，已识别 {comment_count} 个批注，"
+                f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
+            logger.info(process_percent_bar_info)
+            with progress_lock:
+                task_progress[task_id] = {
+                    "text": process_percent_bar_info,
+                    "timestamp": time.time()
+                }
+            refresh_current_heading(para, current_heading)
+            if para_idx not in comments_dict:
+                continue
+            comment_count += 1
+            logger.info(f"matched_comment_for_para_idx {para_idx}")
+            comment_text = comments_dict[para_idx]
+            catalogue = get_catalogue(target_doc)
+            modified_txt = gen_txt(doc_ctx, "", comment_text, catalogue, str(current_heading), cfg)
+            if modified_txt:
+                gen_txt_count += 1
+                para.clear()
+                run = para.add_run(modified_txt)
+                run.font.color.rgb = RGBColor(255, 0, 0)
+            else:
+                logger.error(f"no_gen_txt_for_para, {para_idx}, comment {comment_text}")
+    except Exception as e:
+        err_info = f"在处理文档批注时发生异常: {str(e)}"
+        logger.error(err_info, exc_info=True)
+        with progress_lock:
+            task_progress[task_id] = {
+                "text": err_info,
+                "timestamp": time.time()
+            }
+    doc.save(output_file_name)
+    txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，识别 {comment_count} 个批注, 生成 {gen_txt_count} 段文本，进度 100%"
 
-def modify_para_with_comment_prompt(target_doc: str, doc_ctx: str, comments_dict: dict, cfg: dict) -> Document:
+    with progress_lock:
+        task_progress[task_id] = {
+            "text": txt_info,
+            "timestamp": time.time()
+        }
+
+def modify_para_with_comment_prompt(target_doc: str,
+        doc_ctx: str, comments_dict: dict, cfg: dict) -> Document:
     """
     将批注内容替换到对应段落，并将新文本设为红色
     :param target_doc: 需要修改的文档路径
@@ -184,10 +255,6 @@ def modify_para_with_comment_prompt(target_doc: str, doc_ctx: str, comments_dict
                 continue
             logger.info(f"matched_comment_for_para_idx {para_idx}")
             comment_text = comments_dict[para_idx]
-            # TODO: 这里可以根据大模型对文本进行处理之后，生成新的文本，添加至文档中
-
-            from agt_util import gen_txt
-            from docx_util import get_catalogue
             catalogue = get_catalogue(target_doc)
             modified_txt = gen_txt(doc_ctx, "", comment_text, catalogue, str(current_heading), cfg)
             if modified_txt:
