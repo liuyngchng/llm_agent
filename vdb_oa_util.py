@@ -17,8 +17,6 @@ from openai import OpenAI
 from sys_init import init_yml_cfg
 
 
-vector_db_dir = "./faiss_oa_vector"
-
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
@@ -75,19 +73,19 @@ def search_similar_text(query: str, score_threshold: float, vector_db, sys_cfg: 
     return db.similarity_search_with_relevance_scores(query,k= top_k, score_threshold = score_threshold)
 
 
-def vector_txt_file(txt_file: str, sys_cfg:dict):
+def vector_txt_file(txt_file: str, vector_db_dir: str, sys_cfg:dict):
     logger.info(f"start_load_txt_doc {txt_file}")
     loader = TextLoader(txt_file, encoding='utf8')
     docs = loader.load()
     process_doc(docs, vector_db_dir, sys_cfg)
 
-def vector_pdf_file(pdf_file: str, sys_cfg:dict):
+def vector_pdf_file(pdf_file: str, vector_db_dir: str, sys_cfg:dict):
     logger.info(f"start_load_pdf_doc {pdf_file}")
     loader = UnstructuredPDFLoader(pdf_file, encoding='utf8')
     docs = loader.load()
     process_doc(docs, vector_db_dir, sys_cfg)
 
-def vector_txt_dir(txt_dir: str, sys_cfg: dict):  # 修改函数
+def vector_txt_dir(txt_dir: str, vector_db_dir: str, sys_cfg: dict):  # 修改函数
     logger.info(f"start_load_txt_dir: {txt_dir}")
     loader = DirectoryLoader(
         path=txt_dir,
@@ -99,7 +97,7 @@ def vector_txt_dir(txt_dir: str, sys_cfg: dict):  # 修改函数
     documents = loader.load()
     process_doc(documents, vector_db_dir, sys_cfg)
 
-def vector_pdf_dir(pdf_dir: str, sys_cfg: dict):
+def vector_pdf_dir(pdf_dir: str, vector_db_dir: str, sys_cfg: dict):
     """
     :param pdf_dir: a directory with all pdf file
     :param sys_cfg: system configuration info.
@@ -118,7 +116,7 @@ def vector_pdf_dir(pdf_dir: str, sys_cfg: dict):
     process_doc(documents, vector_db_dir, sys_cfg)
 
 
-def search_txt(txt: str, score_threshold: float, sys_cfg: dict, txt_num: int) -> str:
+def search_txt(txt: str, vector_db_dir: str, score_threshold: float, sys_cfg: dict, txt_num: int) -> str:
     search_results = search_similar_text(txt, score_threshold, vector_db_dir, sys_cfg, txt_num)
     all_txt = ""
     for s_r in search_results:
@@ -132,11 +130,12 @@ def search_txt(txt: str, score_threshold: float, sys_cfg: dict, txt_num: int) ->
 if __name__ == "__main__":
     os.environ["NO_PROXY"] = "*"  # 禁用代理
     my_cfg = init_yml_cfg()
-    # vector_txt_file("/home/rd/doc/文档生成/knowledge_base/1.txt", my_cfg['api'])
+    vector_db_dir = "./faiss_oa_vector"
+    vector_txt_file("/home/rd/doc/文档生成/knowledge_base/1.txt", vector_db_dir, my_cfg['api'])
     # vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg['api'])
     # vector_pdf_file("/home/rd/doc/文档生成/knowledge_base/1.pdf", my_cfg['api'])
     # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base", my_cfg['api'])
-    # q = "分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等"
-    # logger.info(f"start_search: {q}")
-    # results = search_txt(q, 0.5, my_cfg['api'], 3)
+    q = "分析本系统需遵循的国家合规性要求，包括但不限于网络安全法、等级保护要求、数据安全法，密码法，个人信息保护规范等"
+    logger.info(f"start_search: {q}")
+    results = search_txt(q, vector_db_dir, 0.5, my_cfg['api'], 3)
     # logger.info(f"result: {results}")
