@@ -4,6 +4,7 @@
 """
 通过调用远程的 embedding API，将本地文档向量化，形成矢量数据库文件，用于进行向量检索
 for OpenAI compatible remote API
+通过将大文档分为多个批次，实现实时查看向量化进度，对于大批量文档的向量化比较友好
 """
 import httpx
 import os
