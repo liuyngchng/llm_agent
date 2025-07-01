@@ -57,7 +57,7 @@ def process_doc(documents: list[Document], vector_db: str, sys_cfg:dict,
     logger.info(f"开始向量化处理（批量大小={batch_size}）")
     vectorstore = None
 
-    pbar = tqdm(total=len(doc_list), desc="向量化进度", unit="chunk")
+    pbar = tqdm(total=len(doc_list), desc="文档向量化进度", unit="chunk")
     for i in range(0, len(doc_list), batch_size):
         batch = doc_list[i:i + batch_size]
         if vectorstore is None:
@@ -66,7 +66,10 @@ def process_doc(documents: list[Document], vector_db: str, sys_cfg:dict,
             batch_store = FAISS.from_documents(batch, embeddings)
             vectorstore.merge_from(batch_store)
         pbar.update(len(batch))
-        logger.info(f"已处理 {min(i + batch_size, len(doc_list))}/{len(doc_list)} 文本块")
+        info= f"已处理 {min(i + batch_size, len(doc_list))}/{len(doc_list)} 文本块"
+        # logger.info(info)
+        tqdm.write(info)
+        pbar.update(1)
     pbar.close()
     logger.info(f"向量数据库构建完成，保存到 {vector_db}")
     # vectorstore = FAISS.from_documents(doc_list, embeddings)
@@ -149,10 +152,10 @@ if __name__ == "__main__":
     os.environ["NO_PROXY"] = "*"  # 禁用代理
     my_cfg = init_yml_cfg()
     my_vector_db_dir = "./faiss_oa_vector"
-    vector_txt_file("/home/rd/doc/文档生成/knowledge_base/1.txt", my_vector_db_dir, my_cfg['api'])
+    # vector_txt_file("/home/rd/doc/文档生成/knowledge_base/1.txt", my_vector_db_dir, my_cfg['api'])
     # vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_vector_db_dir, my_cfg['api'])
     # vector_pdf_file("/home/rd/doc/文档生成/knowledge_base/1.pdf", my_vector_db_dir, my_cfg['api'])
-    # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base", my_vector_db_dir, my_cfg['api'])
+    vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base", my_vector_db_dir, my_cfg['api'])
     q = "危化品车辆监控涉及哪些内容"
     logger.info(f"start_search: {q}")
     results = search_txt(q, my_vector_db_dir, 0.5, my_cfg['api'], 3)
