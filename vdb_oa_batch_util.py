@@ -66,10 +66,10 @@ def process_doc(documents: list[Document], vector_db: str, sys_cfg:dict,
             batch_store = FAISS.from_documents(batch, embeddings)
             vectorstore.merge_from(batch_store)
         pbar.update(len(batch))
-        info= f"已处理 {min(i + batch_size, len(doc_list))}/{len(doc_list)} 文本块"
+        # info = str(pbar)
         # logger.info(info)
-        tqdm.write(info)
-        pbar.update(1)
+        # tqdm.write()
+        # pbar.update(1)
     pbar.close()
     logger.info(f"向量数据库构建完成，保存到 {vector_db}")
     # vectorstore = FAISS.from_documents(doc_list, embeddings)
