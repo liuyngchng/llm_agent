@@ -8,7 +8,7 @@ for OpenAI compatible remote API
 """
 import httpx
 import os
-from langchain_community.document_loaders import TextLoader, DirectoryLoader, UnstructuredPDFLoader
+from langchain_community.document_loaders import TextLoader, DirectoryLoader, UnstructuredPDFLoader, Docx2txtLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
@@ -22,19 +22,21 @@ from tqdm import tqdm
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+# model="bge-m3"
+model="bce-base"
 
 class RemoteEmbeddings(Embeddings):  # 适配器类
     def __init__(self, client):
         self.client = client
 
-    def embed_documents(self, texts):
+    def embed_documents(self, texts: str):
         return [self._get_embedding(t) for t in texts]
 
-    def embed_query(self, text):
+    def embed_query(self, text:str ):
         return self._get_embedding(text)
 
-    def _get_embedding(self, text):
-        resp = self.client.embeddings.create(model="bge-m3", input=text)
+    def _get_embedding(self, text: str):
+        resp = self.client.embeddings.create(model=model, input=text)
         return resp.data[0].embedding
 
 
@@ -44,21 +46,27 @@ def process_doc(documents: list[Document], vector_db: str, sys_cfg:dict,
     for doc in documents:
         logger.info(f"file:{doc.metadata['source']}")
     logger.info("split_doc")
+    # separators = ['\n\n', '。', '！', '？', '；', '...']
+    separators = ['。', '！', '？', '；', '...']
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
-        separators=['\n\n', '。', '！', '？', '；', '...']
+        separators=separators
     )
     doc_list = text_splitter.split_documents(documents)
     logger.info(f"split_doc_finished")
     client = build_client(sys_cfg)
     logger.info(f"init_client_with_config: {sys_cfg}")
     embeddings = RemoteEmbeddings(client)
-    logger.info(f"开始向量化处理（批量大小={batch_size}）")
+    len_doc_list = len(doc_list)
+    if len_doc_list  == 0:
+        logger.error("no_doc_need_process_err")
+        return
+    logger.info(f"开始向量化处理（批量大小={batch_size}）doc_list, {len_doc_list}")
     vectorstore = None
 
     pbar = tqdm(total=len(doc_list), desc="文档向量化进度", unit="chunk")
-    for i in range(0, len(doc_list), batch_size):
+    for i in range(0, len_doc_list, batch_size):
         batch = doc_list[i:i + batch_size]
         if vectorstore is None:
             vectorstore = FAISS.from_documents(batch, embeddings)
@@ -100,7 +108,7 @@ def vector_txt_file(txt_file: str, vector_db_dir: str, sys_cfg:dict):
     docs = loader.load()
     process_doc(docs, vector_db_dir, sys_cfg)
 
-def vector_pdf_file(pdf_file: str, vector_db_dir: str, sys_cfg:dict):
+def vector_pdf_file(pdf_file: str, vector_db_dir: str, sys_cfg: dict):
     logger.info(f"start_load_pdf_doc {pdf_file}")
     loader = UnstructuredPDFLoader(pdf_file, encoding='utf8')
     docs = loader.load()
@@ -136,6 +144,28 @@ def vector_pdf_dir(pdf_dir: str, vector_db_dir: str, sys_cfg: dict):
     documents = loader.load()
     process_doc(documents, vector_db_dir, sys_cfg)
 
+def vector_docx_file(docx_file: str, vector_db_dir: str, sys_cfg: dict):
+    """
+    处理单个DOCX文档
+    """
+    logger.info(f"start_load_docx_file {docx_file}")
+    loader = Docx2txtLoader(docx_file)
+    docs = loader.load()
+    process_doc(docs, vector_db_dir, sys_cfg)
+
+def vector_docx_dir(docx_dir: str, vector_db_dir: str, sys_cfg: dict):
+    """
+    处理目录中的所有DOCX文档
+    """
+    logger.info(f"start_load_docx_dir: {docx_dir}")
+    loader = DirectoryLoader(
+        path=docx_dir,
+        glob="**/*.docx",
+        loader_cls=Docx2txtLoader, # type: ignore
+        silent_errors=True
+    )
+    documents = loader.load()
+    process_doc(documents, vector_db_dir, sys_cfg)
 
 def search_txt(txt: str, vector_db_dir: str, score_threshold: float, sys_cfg: dict, txt_num: int) -> str:
     search_results = search_similar_text(txt, score_threshold, vector_db_dir, sys_cfg, txt_num)
@@ -155,8 +185,10 @@ if __name__ == "__main__":
     # vector_txt_file("/home/rd/doc/文档生成/knowledge_base/1.txt", my_vector_db_dir, my_cfg['api'])
     # vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_vector_db_dir, my_cfg['api'])
     # vector_pdf_file("/home/rd/doc/文档生成/knowledge_base/1.pdf", my_vector_db_dir, my_cfg['api'])
-    vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base", my_vector_db_dir, my_cfg['api'])
-    q = "危化品车辆监控涉及哪些内容"
+    # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base", my_vector_db_dir, my_cfg['api'])
+    vector_docx_dir("/home/rd/doc/文档生成/docx_test", my_vector_db_dir, my_cfg['api'])
+    # q = "危化品车辆监控涉及哪些内容"
+    q = "远传表的表号规则是什么"
     logger.info(f"start_search: {q}")
     results = search_txt(q, my_vector_db_dir, 0.5, my_cfg['api'], 3)
     logger.info(f"result: {results}")
