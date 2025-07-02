@@ -7,7 +7,6 @@ import logging.config
 import os
 import threading
 import time
-import cfg_util as cfg_utl
 
 from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for)
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
@@ -20,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
+app.register_blueprint(auth_bp)
 UPLOAD_FOLDER = 'upload_doc'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # 确保上传目录存在
 auth_info = {}
@@ -31,11 +31,11 @@ task_progress = {}  # 存储文本进度信息
 progress_lock = threading.Lock()
 
 @app.route('/')
-def docx_home():
+def app_home():
     logger.info("redirect_auth_login_index")
     return redirect(url_for('auth.login_index', app_source='docx'))
 
-app.register_blueprint(auth_bp)
+
 
 @app.route('/upload', methods=['POST'])  # 修正路由路径
 def upload_file():
