@@ -12,13 +12,10 @@ import cfg_util as cfg_utl
 
 from flask import (Flask, request, jsonify, render_template,
                    send_from_directory, abort, redirect, url_for)
-
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
 from docx_util import extract_catalogue, fill_doc_in_progress
 from http_auth import auth_bp
-
 from sys_init import init_yml_cfg
-
 
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -82,14 +79,12 @@ def write_doc():
 
     return jsonify({"status": "started", "task_id": task_id}), 200
 
-
 @app.route('/download/<filename>', methods=['GET'])
 def download_output(filename):
     if not os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
         logger.error(f"文件 {filename} 不存在")
         abort(404)
     return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
-
 
 @app.route('/get/process/info', methods=['POST'])
 def get_doc_process_info():
@@ -112,8 +107,6 @@ def clean_tasks():
             for k in expired:
                 del task_progress[k]
         time.sleep(300)
-
-
 
 
 def process_document(task_id, file_name):
