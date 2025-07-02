@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
+pip install docx2txt python-docx
 通过调用远程的 embedding API，将本地文档向量化，形成矢量数据库文件，用于进行向量检索
 for OpenAI compatible remote API
 通过将大文档分为多个批次，实现实时查看向量化进度，对于大批量文档的向量化比较友好
@@ -17,6 +18,7 @@ import logging.config
 from openai import OpenAI
 from sys_init import init_yml_cfg
 from tqdm import tqdm
+from typing import List
 
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -26,6 +28,24 @@ logger = logging.getLogger(__name__)
 model="bce-base"
 
 class RemoteEmbeddings(Embeddings):  # 适配器类
+    """
+    :param client: 远程客户端
+    :param model: 模型名称
+    :param batch_size: 批量大小
+    :param chunk_size: 文档切分块大小
+    :param chunk_overlap: 文档切分块重叠大小
+    :param separators: 文档切分块分隔符
+    :param embedding_function: 向量化函数
+    :param embedding_function_kwargs: 向量化函数参数
+    :param embedding_function_name: 向量化函数名称
+    :param embedding_function_type: 向量化函数类型
+    :param embedding_function_version: 向量化函数版本
+    :param embedding_function_description: 向量化函数描述
+    :param embedding_function_input_schema: 向量化函数输入参数
+    :param embedding_function_output_schema: 向量化函数输出参数
+    :param embedding_function_input_example: 向量化函数输入示例
+    :param embedding_function_output_example: 向量化函数输出示例
+    """
     def __init__(self, client):
         self.client = client
 
@@ -42,6 +62,15 @@ class RemoteEmbeddings(Embeddings):  # 适配器类
 
 def process_doc(documents: list[Document], vector_db: str, sys_cfg:dict,
                 chunk_size=500, chunk_overlap=50, batch_size=10) -> None:
+    """
+    :param documents: 文档列表
+    :param vector_db: 向量数据库文件路径
+    :param sys_cfg: 系统配置信息
+    :param chunk_size: 文档切分块大小
+    :param chunk_overlap: 文档切分块重叠大小
+    :param batch_size: 批量处理大小
+    :return: None
+    """
     logger.info(f"loaded {len(documents)} documents, files_name_list_as_following")
     for doc in documents:
         logger.info(f"file:{doc.metadata['source']}")
@@ -86,6 +115,10 @@ def process_doc(documents: list[Document], vector_db: str, sys_cfg:dict,
     logger.info(f"save_vector_to_local {vector_db}")
 
 def build_client(sys_cfg: dict):
+    """
+    :param sys_cfg: system configuration info.
+    :return: the client
+    """
     return OpenAI(
         base_url= sys_cfg['llm_api_uri'],   # "https://myhost/v1",
         api_key= sys_cfg['llm_api_key'],    # "sk-xxxxx",
@@ -93,28 +126,62 @@ def build_client(sys_cfg: dict):
     )
 
 def load_vector_db(vector_db: str, sys_cfg: dict):
+    """
+    :param vector_db: the vector db file
+    :param sys_cfg: system configuration info.
+    :return: the vector db
+    """
     client = build_client(sys_cfg)
     embeddings = RemoteEmbeddings(client)
     return FAISS.load_local(vector_db, embeddings, allow_dangerous_deserialization=True)
 
 def search_similar_text(query: str, score_threshold: float, vector_db, sys_cfg: dict, top_k=3):
+    """
+    :param query: the query text
+    :param score_threshold: the score threshold
+    :param vector_db: the vector db file
+    :param sys_cfg: system configuration info.
+    :param top_k: the top k results
+    :return: the results
+    """
     db = load_vector_db(vector_db, sys_cfg)
     return db.similarity_search_with_relevance_scores(query,k= top_k, score_threshold = score_threshold)
 
 
 def vector_txt_file(txt_file: str, vector_db_dir: str, sys_cfg:dict):
+    """
+    :param txt_file: a single txt file
+    :param vector_db_dir: the directory to save the vector db
+    :param sys_cfg: system configuration info.
+    """
+    if not os.path.isfile(txt_file):
+        raise FileNotFoundError(f"file_not_found_err, {txt_file}")
     logger.info(f"start_load_txt_doc {txt_file}")
     loader = TextLoader(txt_file, encoding='utf8')
     docs = loader.load()
     process_doc(docs, vector_db_dir, sys_cfg)
 
 def vector_pdf_file(pdf_file: str, vector_db_dir: str, sys_cfg: dict):
+    """
+    :param pdf_file: a single pdf file
+    :param vector_db_dir: the directory to save the vector db
+    :param sys_cfg: system configuration info.
+    """
+    if not os.path.isfile(pdf_file):
+        raise FileNotFoundError(f"file_not_found_err, {pdf_file}")
     logger.info(f"start_load_pdf_doc {pdf_file}")
     loader = UnstructuredPDFLoader(pdf_file, encoding='utf8')
     docs = loader.load()
     process_doc(docs, vector_db_dir, sys_cfg)
 
 def vector_txt_dir(txt_dir: str, vector_db_dir: str, sys_cfg: dict):  # 修改函数
+    """
+    :param txt_dir: a directory with all txt file
+    :param vector_db_dir: the directory to save the vector db
+    :param sys_cfg: system configuration info.
+    """
+    if not os.path.isdir(txt_dir):
+        raise FileNotFoundError(f"txt_dir_not_found_err, {txt_dir}")
     logger.info(f"start_load_txt_dir: {txt_dir}")
     loader = DirectoryLoader(
         path=txt_dir,
@@ -129,9 +196,11 @@ def vector_txt_dir(txt_dir: str, vector_db_dir: str, sys_cfg: dict):  # 修改�
 def vector_pdf_dir(pdf_dir: str, vector_db_dir: str, sys_cfg: dict):
     """
     :param pdf_dir: a directory with all pdf file
+    :param vector_db_dir: the directory to save the vector db
     :param sys_cfg: system configuration info.
     """
-
+    if not os.path.isdir(pdf_dir):
+        raise FileNotFoundError(f"dir_not_found_err, {pdf_dir}")
     # 加载知识库文件
     logger.info(f"start_load_pdf_dir {pdf_dir}")
     loader = DirectoryLoader(
@@ -146,28 +215,61 @@ def vector_pdf_dir(pdf_dir: str, vector_db_dir: str, sys_cfg: dict):
 
 def vector_docx_file(docx_file: str, vector_db_dir: str, sys_cfg: dict):
     """
+    :param docx_file: a single docx file
+    :param vector_db_dir: the directory to save the vector db
+    :param sys_cfg: system configuration info.
     处理单个DOCX文档
     """
+    if not os.path.isfile(docx_file):
+        raise FileNotFoundError(f"file_not_found_err, {docx_file}")
     logger.info(f"start_load_docx_file {docx_file}")
     loader = Docx2txtLoader(docx_file)
     docs = loader.load()
     process_doc(docs, vector_db_dir, sys_cfg)
 
-def vector_docx_dir(docx_dir: str, vector_db_dir: str, sys_cfg: dict):
-    """
-    处理目录中的所有DOCX文档
-    """
-    logger.info(f"start_load_docx_dir: {docx_dir}")
-    loader = DirectoryLoader(
-        path=docx_dir,
-        glob="**/*.docx",
-        loader_cls=Docx2txtLoader, # type: ignore
-        silent_errors=True
-    )
-    documents = loader.load()
-    process_doc(documents, vector_db_dir, sys_cfg)
 
-def search_txt(txt: str, vector_db_dir: str, score_threshold: float, sys_cfg: dict, txt_num: int) -> str:
+
+
+def vector_docx_dir(docx_dir: str, vector_db_dir: str, sys_cfg: dict) -> None:
+    """
+    :param docx_dir: a directory with all docx file
+    :param vector_db_dir: the directory to save the vector db
+    :param sys_cfg: system configuration info.
+    """
+    if not os.path.isdir(docx_dir):
+        raise FileNotFoundError(f"dir_not_found_err, {docx_dir}")
+    try:
+        logger.info(f"开始加载DOCX文件，目录: {docx_dir}")
+        # 初始化文档加载器
+        loader = DirectoryLoader(
+            path=docx_dir,
+            recursive=True,
+            glob="**/*.docx",
+            loader_cls=Docx2txtLoader, # type: ignore
+            silent_errors=False
+        )
+        # 加载文档
+        documents: List[Document] = loader.load()
+        if not documents:
+            logger.warning(f"目录中没有找到任何DOCX文件: {docx_dir}")
+            return
+        logger.info(f"成功加载 {len(documents)} 个文档")
+        # 处理文档
+        process_doc(documents, vector_db_dir, sys_cfg)
+    except Exception as e:
+        logger.error(f"处理DOCX文件时发生错误: {str(e)}")
+        raise
+
+def search_txt(txt: str, vector_db_dir: str, score_threshold: float,
+        sys_cfg: dict, txt_num: int) -> str:
+    """
+    :param txt: the query text
+    :param vector_db_dir: the directory to save the vector db
+    :param score_threshold: the score threshold
+    :param sys_cfg: system configuration info.
+    :param txt_num: the number of txt to return
+    :return: the results
+    """
     search_results = search_similar_text(txt, score_threshold, vector_db_dir, sys_cfg, txt_num)
     all_txt = ""
     for s_r in search_results:
@@ -186,9 +288,10 @@ if __name__ == "__main__":
     # vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_vector_db_dir, my_cfg['api'])
     # vector_pdf_file("/home/rd/doc/文档生成/knowledge_base/1.pdf", my_vector_db_dir, my_cfg['api'])
     # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base", my_vector_db_dir, my_cfg['api'])
+    # vector_docx_file("/home/rd/doc/文档生成/docx_test/1.docx", my_vector_db_dir, my_cfg['api'])
     vector_docx_dir("/home/rd/doc/文档生成/docx_test", my_vector_db_dir, my_cfg['api'])
     # q = "危化品车辆监控涉及哪些内容"
-    q = "远传表的表号规则是什么"
+    q = "阀门控制单元"
     logger.info(f"start_search: {q}")
     results = search_txt(q, my_vector_db_dir, 0.5, my_cfg['api'], 3)
-    logger.info(f"result: {results}")
+    logger.info(f"result:\n{results}")
