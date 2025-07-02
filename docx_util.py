@@ -13,7 +13,7 @@ import time
 from docx import Document
 from docx.shared import RGBColor
 from docx.text.paragraph import Paragraph
-from vdb_oa_util import search_txt
+from vdb_util import search_txt
 from txt_util import get_txt_in_dir_by_keywords, strip_prefix_no
 
 from sys_init import init_yml_cfg
@@ -23,10 +23,11 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 MIN_PROMPT_LEN = 20
+vdb_dir = "./faiss_oa_vector"
 
 
 def process_paragraph(paragraph: Paragraph, sys_cfg: dict) -> str:
-    searched_txt = search_txt(paragraph.text, 0.5, sys_cfg, 1).strip()
+    searched_txt = search_txt(paragraph.text, vdb_dir, 0.2, sys_cfg, 2).strip()
     # logging.info(f"vdb_get_txt:\n{searched_txt}\nby_search_{paragraph.text}")
     return searched_txt
 

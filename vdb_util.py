@@ -9,7 +9,7 @@ for OpenAI compatible remote API
 """
 import httpx
 import os
-from langchain_community.document_loaders import TextLoader, DirectoryLoader, UnstructuredPDFLoader, Docx2txtLoader
+from langchain_community.document_loaders import TextLoader, DirectoryLoader, UnstructuredPDFLoader, UnstructuredWordDocumentLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
@@ -24,27 +24,12 @@ from typing import List
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-# model="bge-m3"
-model="bce-base"
+model="bge-m3"
+# model="bce-base"
 
 class RemoteEmbeddings(Embeddings):  # 适配器类
     """
-    :param client: 远程客户端
-    :param model: 模型名称
-    :param batch_size: 批量大小
-    :param chunk_size: 文档切分块大小
-    :param chunk_overlap: 文档切分块重叠大小
-    :param separators: 文档切分块分隔符
-    :param embedding_function: 向量化函数
-    :param embedding_function_kwargs: 向量化函数参数
-    :param embedding_function_name: 向量化函数名称
-    :param embedding_function_type: 向量化函数类型
-    :param embedding_function_version: 向量化函数版本
-    :param embedding_function_description: 向量化函数描述
-    :param embedding_function_input_schema: 向量化函数输入参数
-    :param embedding_function_output_schema: 向量化函数输出参数
-    :param embedding_function_input_example: 向量化函数输入示例
-    :param embedding_function_output_example: 向量化函数输出示例
+    远程分词客户端
     """
     def __init__(self, client):
         self.client = client
@@ -61,7 +46,7 @@ class RemoteEmbeddings(Embeddings):  # 适配器类
 
 
 def process_doc(documents: list[Document], vector_db: str, sys_cfg:dict,
-                chunk_size=500, chunk_overlap=50, batch_size=10) -> None:
+                chunk_size=300, chunk_overlap=80, batch_size=10) -> None:
     """
     :param documents: 文档列表
     :param vector_db: 向量数据库文件路径
@@ -75,14 +60,20 @@ def process_doc(documents: list[Document], vector_db: str, sys_cfg:dict,
     for doc in documents:
         logger.info(f"file:{doc.metadata['source']}")
     logger.info("split_doc")
-    # separators = ['\n\n', '。', '！', '？', '；', '...']
-    separators = ['。', '！', '？', '；', '...']
+    # separators = ['\n\n', '。', '！', '？', '；', '...', '、', '，']
+    separators = ['。', '！', '？', '；', '...', '、', '，']
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
-        separators=separators
+        separators=separators,
+        keep_separator=False
     )
     doc_list = text_splitter.split_documents(documents)
+    with open('chunks.txt', 'w', encoding='utf-8') as f:
+        for i, chunk in enumerate(doc_list):
+            f.write(f"Chunk {i}, Source: {chunk.metadata['source']}\n")
+            f.write(chunk.page_content)
+            f.write("\n" + "-" * 50 + "\n")
     logger.info(f"split_doc_finished")
     client = build_client(sys_cfg)
     logger.info(f"init_client_with_config: {sys_cfg}")
@@ -148,7 +139,7 @@ def search_similar_text(query: str, score_threshold: float, vector_db, sys_cfg: 
     return db.similarity_search_with_relevance_scores(query,k= top_k, score_threshold = score_threshold)
 
 
-def vector_txt_file(txt_file: str, vector_db_dir: str, sys_cfg:dict):
+def vector_txt_file(txt_file: str, vector_db_dir: str, sys_cfg:dict, chunk_size=300, chunk_overlap=80):
     """
     :param txt_file: a single txt file
     :param vector_db_dir: the directory to save the vector db
@@ -159,26 +150,30 @@ def vector_txt_file(txt_file: str, vector_db_dir: str, sys_cfg:dict):
     logger.info(f"start_load_txt_doc {txt_file}")
     loader = TextLoader(txt_file, encoding='utf8')
     docs = loader.load()
-    process_doc(docs, vector_db_dir, sys_cfg)
+    process_doc(docs, vector_db_dir, sys_cfg, chunk_size, chunk_overlap)
 
-def vector_pdf_file(pdf_file: str, vector_db_dir: str, sys_cfg: dict):
+def vector_pdf_file(pdf_file: str, vector_db_dir: str, sys_cfg: dict, chunk_size=300, chunk_overlap=80):
     """
     :param pdf_file: a single pdf file
     :param vector_db_dir: the directory to save the vector db
     :param sys_cfg: system configuration info.
+    :param chunk_size: the chunk size
+    :param chunk_overlap: the chunk overlap
     """
     if not os.path.isfile(pdf_file):
         raise FileNotFoundError(f"file_not_found_err, {pdf_file}")
     logger.info(f"start_load_pdf_doc {pdf_file}")
     loader = UnstructuredPDFLoader(pdf_file, encoding='utf8')
     docs = loader.load()
-    process_doc(docs, vector_db_dir, sys_cfg)
+    process_doc(docs, vector_db_dir, sys_cfg, chunk_size, chunk_overlap)
 
-def vector_txt_dir(txt_dir: str, vector_db_dir: str, sys_cfg: dict):  # 修改函数
+def vector_txt_dir(txt_dir: str, vector_db_dir: str, sys_cfg: dict, chunk_size=300, chunk_overlap=80):  # 修改函数
     """
     :param txt_dir: a directory with all txt file
     :param vector_db_dir: the directory to save the vector db
     :param sys_cfg: system configuration info.
+    :param chunk_size: the chunk size
+    :param chunk_overlap: the chunk overlap
     """
     if not os.path.isdir(txt_dir):
         raise FileNotFoundError(f"txt_dir_not_found_err, {txt_dir}")
@@ -191,13 +186,15 @@ def vector_txt_dir(txt_dir: str, vector_db_dir: str, sys_cfg: dict):  # 修改�
         silent_errors=True
     )
     documents = loader.load()
-    process_doc(documents, vector_db_dir, sys_cfg)
+    process_doc(documents, vector_db_dir, sys_cfg, chunk_size, chunk_overlap)
 
-def vector_pdf_dir(pdf_dir: str, vector_db_dir: str, sys_cfg: dict):
+def vector_pdf_dir(pdf_dir: str, vector_db_dir: str, sys_cfg: dict, chunk_size=300, chunk_overlap=80):
     """
     :param pdf_dir: a directory with all pdf file
     :param vector_db_dir: the directory to save the vector db
     :param sys_cfg: system configuration info.
+    :param chunk_size: the chunk size
+    :param chunk_overlap: the chunk overlap
     """
     if not os.path.isdir(pdf_dir):
         raise FileNotFoundError(f"dir_not_found_err, {pdf_dir}")
@@ -211,30 +208,32 @@ def vector_pdf_dir(pdf_dir: str, vector_db_dir: str, sys_cfg: dict):
         glob="**/*.pdf"
     )
     documents = loader.load()
-    process_doc(documents, vector_db_dir, sys_cfg)
+    process_doc(documents, vector_db_dir, sys_cfg, chunk_size, chunk_overlap)
 
-def vector_docx_file(docx_file: str, vector_db_dir: str, sys_cfg: dict):
+def vector_docx_file(docx_file: str, vector_db_dir: str, sys_cfg: dict, chunk_size=300, chunk_overlap=80):
     """
     :param docx_file: a single docx file
     :param vector_db_dir: the directory to save the vector db
     :param sys_cfg: system configuration info.
+    :param chunk_size: the chunk size
+    :param chunk_overlap: the chunk overlap
     处理单个DOCX文档
     """
     if not os.path.isfile(docx_file):
         raise FileNotFoundError(f"file_not_found_err, {docx_file}")
     logger.info(f"start_load_docx_file {docx_file}")
-    loader = Docx2txtLoader(docx_file)
+    loader = UnstructuredWordDocumentLoader(docx_file)
     docs = loader.load()
-    process_doc(docs, vector_db_dir, sys_cfg)
+    process_doc(docs, vector_db_dir, sys_cfg, chunk_size, chunk_overlap)
 
 
-
-
-def vector_docx_dir(docx_dir: str, vector_db_dir: str, sys_cfg: dict) -> None:
+def vector_docx_dir(docx_dir: str, vector_db_dir: str, sys_cfg: dict, chunk_size=300, chunk_overlap=80) -> None:
     """
     :param docx_dir: a directory with all docx file
     :param vector_db_dir: the directory to save the vector db
     :param sys_cfg: system configuration info.
+    :param chunk_size: the chunk size
+    :param chunk_overlap: the chunk overlap
     """
     if not os.path.isdir(docx_dir):
         raise FileNotFoundError(f"dir_not_found_err, {docx_dir}")
@@ -245,7 +244,8 @@ def vector_docx_dir(docx_dir: str, vector_db_dir: str, sys_cfg: dict) -> None:
             path=docx_dir,
             recursive=True,
             glob="**/*.docx",
-            loader_cls=Docx2txtLoader, # type: ignore
+            # loader_cls=Docx2txtLoader, # type: ignore
+            loader_cls=UnstructuredWordDocumentLoader,
             silent_errors=False
         )
         # 加载文档
@@ -255,7 +255,7 @@ def vector_docx_dir(docx_dir: str, vector_db_dir: str, sys_cfg: dict) -> None:
             return
         logger.info(f"成功加载 {len(documents)} 个文档")
         # 处理文档
-        process_doc(documents, vector_db_dir, sys_cfg)
+        process_doc(documents, vector_db_dir, sys_cfg, chunk_size, chunk_overlap)
     except Exception as e:
         logger.error(f"处理DOCX文件时发生错误: {str(e)}")
         raise
@@ -288,10 +288,10 @@ if __name__ == "__main__":
     # vector_txt_dir("/home/rd/doc/文档生成/knowledge_base", my_vector_db_dir, my_cfg['api'])
     # vector_pdf_file("/home/rd/doc/文档生成/knowledge_base/1.pdf", my_vector_db_dir, my_cfg['api'])
     # vector_pdf_dir("/home/rd/doc/文档生成/knowledge_base", my_vector_db_dir, my_cfg['api'])
-    # vector_docx_file("/home/rd/doc/文档生成/docx_test/1.docx", my_vector_db_dir, my_cfg['api'])
+    # vector_docx_file("/home/rd/doc/文档生成/docx_test/2.docx", my_vector_db_dir, my_cfg['api'])
     vector_docx_dir("/home/rd/doc/文档生成/docx_test", my_vector_db_dir, my_cfg['api'])
     # q = "危化品车辆监控涉及哪些内容"
     q = "阀门控制单元"
     logger.info(f"start_search: {q}")
-    results = search_txt(q, my_vector_db_dir, 0.5, my_cfg['api'], 3)
+    results = search_txt(q, my_vector_db_dir, 0.25, my_cfg['api'], 3)
     logger.info(f"result:\n{results}")

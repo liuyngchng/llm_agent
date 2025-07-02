@@ -24,6 +24,7 @@
                 <input id = "usr" name = "usr"  type="text" value="{{user}}">
             </div>
             <input id = "t" name = "t"  type="hidden">
+            <input type="hidden" name="app_source" value="{{app_source}}">
         </form>
         <div align="center" style="margin-bottom: 1%"><span>密&nbsp;&nbsp;&nbsp;码:</span>
             <input id = "psw" name="psw" type="password" value="{{password}}">
@@ -33,7 +34,7 @@
             <button type="submit" content="" id="button">&nbsp;登&nbsp;&nbsp;录&nbsp;</button>
         </div>
         <div align="center" style="margin-bottom: 1%">
-            <a href="/reg/usr" class="system-settings-link" target="_blank">用户注册</a>
+            <a href="/reg/usr?app_source={{app_source}}" class="system-settings-link" target="_blank">用户注册</a>
         </div>
         <div align="center"><span style="color: red">{{waring_info}}</span></div>
     </div>
