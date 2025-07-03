@@ -48,7 +48,6 @@ def login():
     :return:
     echo -n 'my_str' |  md5sum
     """
-
     logger.debug(f"request_form: {request.form}")
     user = request.form.get('usr').strip()
     t = request.form.get('t').strip()

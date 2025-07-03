@@ -17,7 +17,7 @@ from my_enums import DataType, DBType
 from sql_agent import SqlAgent
 from sys_init import init_yml_cfg
 from audio import transcribe_webm_audio_bytes
-from http_auth import auth_bp
+from http_auth import auth_bp, auth_info
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -36,7 +36,6 @@ os.system(
 usr_page_dt = {}
 
 # {"uid1":17234657891, "uid2":176543980}
-auth_info = {}
 
 SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 

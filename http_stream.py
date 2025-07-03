@@ -11,7 +11,7 @@ import cfg_util as cfg_utl
 
 from flask import Flask, render_template, Response, request, jsonify, redirect, url_for
 
-from http_auth import auth_bp
+from http_auth import auth_bp, auth_info
 from my_enums import DataType, DBType
 from sql_yield import SqlYield
 from sys_init import init_yml_cfg
@@ -24,7 +24,6 @@ app.register_blueprint(auth_bp)
 app.config['JSON_AS_ASCII'] = False
 my_cfg = init_yml_cfg()
 
-auth_info = {}
 # user's last sql, {"my_uid": {"sql":"my_sql", "curr_page":1, "total_page":1}}
 # last search sql, current page and total page for the SQL
 usr_page_dt = {}
