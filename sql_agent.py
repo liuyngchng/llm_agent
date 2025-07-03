@@ -345,7 +345,8 @@ class SqlAgent(DbUtl):
                 ou_id_list = area.split(',')
                 area_sql = DbUtl.add_ou_id_condition(nl_dt_dict["sql"], ou_id_list)
                 nl_dt_dict["sql"] = area_sql
-            logger.info(f"gen_sql_from_txt {q}, {nl_dt_dict.get('sql', '').replace('\n', ' ')}")
+            tmp_sql = nl_dt_dict.get('sql', '').replace('\n', ' ')
+            logger.info(f"gen_sql_from_txt {q}, {tmp_sql}")
         except Exception as e:
             logger.error(f"gen_sql_err, {e}, txt: {q}", exc_info=True)
             nl_dt_dict["raw_dt"] = "用户问题转换为数据查询条件时发生异常"
@@ -354,7 +355,7 @@ class SqlAgent(DbUtl):
         try:
             nl_dt_dict["raw_dt"] = self.get_dt_with_sql(nl_dt_dict["sql"], dt_fmt)
         except Exception as e:
-            logger.error(f"get_dt_with_sql_err, {e}, sql: {nl_dt_dict["sql"]}", exc_info=True)
+            logger.error(f"get_dt_with_sql_err, {e}, sql: {nl_dt_dict['sql']}", exc_info=True)
             nl_dt_dict["raw_dt"] = "从数据源查询数据时发生异常"
             return nl_dt_dict
         count_sql = ''
@@ -362,10 +363,9 @@ class SqlAgent(DbUtl):
             # count_sql_txt = self.gen_count_sql_by_sql(uid, nl_dt_dict["sql"])
             # count_sql = extract_md_content(count_sql_txt, "sql")
             count_sql = DbUtl.gen_count_sql(nl_dt_dict["sql"])
-            logger.info(f"gen_count_sql_by_get_dt_sql, result "
-                f"{count_sql.replace('\n', ' ')}, "
-                f"get_dt_sql {nl_dt_dict["sql"].replace('\n', ' ')}"
-            )
+            tmp_count_sql = count_sql.replace('\n', ' ')
+            tmp_get_dt_sql = nl_dt_dict["sql"].replace('\n', ' ')
+            logger.info(f"gen_count_sql_by_get_dt_sql, result {tmp_count_sql}, get_dt_sql {tmp_get_dt_sql}")
             count_dt = self.get_dt_with_sql(count_sql, DataType.JSON.value)
             logger.info(f"dt_count_result, {count_dt}")
         except Exception as e:
@@ -388,9 +388,10 @@ class SqlAgent(DbUtl):
             explain_sql_txt = self.get_explain_sql_txt(uid, nl_dt_dict["sql"])
             explain_sql_txt = extract_md_content(explain_sql_txt, "sql")
             nl_dt_dict["explain_sql"] = explain_sql_txt
-            logger.info(f"get_explain_sql_txt, {explain_sql_txt}, input_sql, {nl_dt_dict["sql"].replace('\n', ' ')}")
+            tmp_nl_dt_dict = nl_dt_dict["sql"].replace('\n', ' ')
+            logger.info(f"get_explain_sql_txt, {explain_sql_txt}, input_sql, {tmp_nl_dt_dict}")
         except Exception as e:
-            logger.error(f"get_explain_sql_txt_err, {e}, sql: {nl_dt_dict["sql"]}", exc_info=True)
+            logger.error(f"get_explain_sql_txt_err, {e}, sql: {nl_dt_dict['sql']}", exc_info=True)
             nl_dt_dict["explain_sql"] = "暂时无法给您提供数据查询的相关解释"
         logger.info(f"nl_dt:{nl_dt_dict}")
         return self.build_chart_dt(uid, nl_dt_dict)
@@ -404,7 +405,8 @@ class SqlAgent(DbUtl):
             return 0
 
     def get_pg_dt(self, uid: str, usr_page_dt: dict, page_size=PAGE_SIZE) -> dict:
-        logger.info(f"last_sql_for_{uid}: {usr_page_dt.get('sql', '').replace('\n', '')}")
+        tmp_sql = usr_page_dt.get('sql', '').replace('\n', '')
+        logger.info(f"last_sql_for_{uid}: {tmp_sql}")
         page_sql = DbUtl.get_page_sql(usr_page_dt['sql'], usr_page_dt['cur_page'], page_size)
         logger.info(f"next_sql: {page_sql}")
         dt = self.get_dt_with_sql(page_sql)
@@ -469,11 +471,14 @@ class SqlAgent(DbUtl):
         chart_dt = {}
         try:
             nl_dt = self.get_chart_dt(nl_dt_dict["raw_dt"])
-            logger.debug(f"nl_dt_from_agent, {nl_dt.replace('\n', ' ')}")
+            tmp_nl_dt = nl_dt.replace('\n', ' ')
+            logger.debug(f"nl_dt_from_agent, {tmp_nl_dt}")
             nl_dt = rmv_think_block(nl_dt)
-            logger.debug(f"nl_dt_without_think, {nl_dt.replace('\n', ' ')}")
+            tmp_nl_dt = nl_dt.replace('\n', ' ')
+            logger.debug(f"nl_dt_without_think, {tmp_nl_dt}")
             nl_dt = extract_json(nl_dt)
-            logger.debug(f"nl_dt_only_json_str, {nl_dt.replace('\n', ' ')}")
+            tmp_nl_dt = nl_dt.replace('\n', ' ')
+            logger.debug(f"nl_dt_only_json_str, {tmp_nl_dt}")
             chart_dt = json.loads(nl_dt)
         except Exception as e:
             logger.exception(f"err_to_add_description_to_data, nl_dt {nl_dt}", nl_dt_dict["raw_dt"])
