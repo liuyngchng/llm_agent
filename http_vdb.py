@@ -16,7 +16,7 @@ from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt
 from docx_util import extract_catalogue, fill_doc_in_progress
 from http_auth import auth_bp
 from sys_init import init_yml_cfg
-from vdb_realtime_util import vector_file_in_progress
+from vdb_util import vector_file_in_progress
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -158,7 +158,7 @@ def process_doc(task_id: str, file_name: str, uid: str):
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
         output_vdb_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
         vector_file_in_progress(task_id, thread_lock, task_progress, my_target_doc,
-            output_vdb_dir, my_cfg,300, 80)
+            output_vdb_dir, my_cfg['api'],300, 80)
     except Exception as e:
         with thread_lock:
             task_progress[task_id] = {

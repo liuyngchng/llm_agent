@@ -550,8 +550,9 @@ if __name__ == "__main__":
     # logger.info(f"my_comment_list {my_comment_list}")
     tables = my_doris.get_table_list()
     for table in tables:
-        count = my_doris.count_dt(f"select count(1) from {table}")
-        logger.info(f"{table}_dt_count\t\t{count}")
+        logger.info(f"table_{table}")
+        # count = my_doris.count_dt(f"select count(1) from {table}")
+        # logger.info(f"{table}_dt_count\t\t{count}")
     # logger.info(f"my_tables {tables}")
     # my_tb_schema_list = my_doris.get_schema_info()
     # logger.info(f"my_dt {my_tb_schema_list}")

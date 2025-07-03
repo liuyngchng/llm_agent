@@ -13,7 +13,7 @@ import time
 from docx import Document
 from docx.shared import RGBColor
 from docx.text.paragraph import Paragraph
-from vdb_util import search_txt
+from vdb_util_test import search_txt
 from txt_util import get_txt_in_dir_by_keywords, strip_prefix_no
 
 from sys_init import init_yml_cfg
