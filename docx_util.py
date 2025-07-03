@@ -120,12 +120,12 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
     # logger.debug(f"classify={classify_result}, tile={current_heading}, para={para.text}")
     return True
 
-def fill_doc_in_progress(task_id:str, progress_lock, task_progress:dict, doc_ctx: str, target_doc: str,
+def fill_doc_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: str, target_doc: str,
                          target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
     """
     :param task_id: 执行任务的ID
     :param progress_lock: A thread lock
-    :param task_progress: task process information dict with task_id as key
+    :param thread_lock: task process information dict with task_id as key
     :param doc_ctx: 文档写作背景信息
     :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
     :param sys_cfg: 系统配置信息
@@ -142,7 +142,7 @@ def fill_doc_in_progress(task_id:str, progress_lock, task_progress:dict, doc_ctx
             f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
         logger.info(process_percent_bar_info)
         with progress_lock:
-            task_progress[task_id] = {
+            thread_lock[task_id] = {
                 "text": process_percent_bar_info,
                 "timestamp": time.time()
             }
@@ -153,16 +153,16 @@ def fill_doc_in_progress(task_id:str, progress_lock, task_progress:dict, doc_ctx
             # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
             search_result = process_paragraph(my_para, sys_cfg['api'])
             demo_txt = f"{search_result}"
-            # with progress_lock:
-            #     task_progress[task_id] = f"正在处理文本[{my_para.text}]"
+            # with thread_lock:
+            #     thread_lock[task_id] = f"正在处理文本[{my_para.text}]"
             llm_txt = gen_txt(doc_ctx, demo_txt, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg, )
             gen_txt_count += 1
-            # with progress_lock:
-            #     task_progress[task_id] = f"生成文本：{llm_txt}"
+            # with thread_lock:
+            #     thread_lock[task_id] = f"生成文本：{llm_txt}"
         except Exception as ex:
             logger.error("fill_doc_job_err_to_break", ex)
             with progress_lock:
-                task_progress[task_id] = {
+                thread_lock[task_id] = {
                     "text": f"在处理文档的过程中出现了异常，任务已中途退出",
                     "timestamp": time.time()
                 }
@@ -177,7 +177,7 @@ def fill_doc_in_progress(task_id:str, progress_lock, task_progress:dict, doc_ctx
         else:
             txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，进度 100%，未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
         with progress_lock:
-            task_progress[task_id] = {
+            thread_lock[task_id] = {
                 "text": txt_info,
                 "timestamp": time.time()
             }

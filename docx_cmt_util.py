@@ -161,12 +161,12 @@ def test_get_comment():
         para_txt = get_paragraph_by_id(my_file, para_id)
         logger.info(f"para_id:{para_id}, para_txt:{para_txt}")
 
-def modify_para_with_comment_prompt_in_process(task_id:str, progress_lock, task_progress:dict,
-        target_doc: str, doc_ctx: str, comments_dict: dict, cfg: dict, output_file_name:str):
+def modify_para_with_comment_prompt_in_process(task_id:str, thread_lock, task_progress:dict,
+                                               target_doc: str, doc_ctx: str, comments_dict: dict, cfg: dict, output_file_name:str):
     """
     将批注内容替换到对应段落，并将新文本设为红色
     :param task_id: 执行任务的ID
-    :param progress_lock: A thread lock
+    :param thread_lock: A thread lock
     :param task_progress: task process information dict with task_id as key
     :param target_doc: 需要修改的文档路径
     :param doc_ctx: 文档写作的大背景信息
@@ -192,7 +192,7 @@ def modify_para_with_comment_prompt_in_process(task_id:str, progress_lock, task_
             process_percent_bar_info = (f"正在处理第 {para_idx + 1}/{total_paragraphs} 段文字，已识别 {comment_count} 个批注，"
                 f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
             logger.info(process_percent_bar_info)
-            with progress_lock:
+            with thread_lock:
                 task_progress[task_id] = {
                     "text": process_percent_bar_info,
                     "timestamp": time.time()
@@ -215,7 +215,7 @@ def modify_para_with_comment_prompt_in_process(task_id:str, progress_lock, task_
     except Exception as e:
         err_info = f"在处理文档批注时发生异常: {str(e)}"
         logger.error(err_info, exc_info=True)
-        with progress_lock:
+        with thread_lock:
             task_progress[task_id] = {
                 "text": err_info,
                 "timestamp": time.time()
@@ -223,7 +223,7 @@ def modify_para_with_comment_prompt_in_process(task_id:str, progress_lock, task_
     doc.save(output_file_name)
     txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，识别 {comment_count} 个批注, 生成 {gen_txt_count} 段文本，进度 100%"
 
-    with progress_lock:
+    with thread_lock:
         task_progress[task_id] = {
             "text": txt_info,
             "timestamp": time.time()
