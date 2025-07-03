@@ -34,7 +34,7 @@ class RemoteEmbeddings(Embeddings):  # 适配器类
     def __init__(self, client):
         self.client = client
 
-    def embed_documents(self, texts: str):
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return [self._get_embedding(t) for t in texts]
 
     def embed_query(self, text:str ):
@@ -45,8 +45,8 @@ class RemoteEmbeddings(Embeddings):  # 适配器类
         return resp.data[0].embedding
 
 
-def process_doc(documents: list[Document], vector_db: str, sys_cfg:dict,
-                chunk_size=300, chunk_overlap=80, batch_size=10) -> None:
+def process_doc(documents: list[Document], vector_db: str, sys_cfg: dict,
+    chunk_size=300, chunk_overlap=80, batch_size=10) -> None:
     """
     :param documents: 文档列表
     :param vector_db: 向量数据库文件路径
@@ -56,54 +56,61 @@ def process_doc(documents: list[Document], vector_db: str, sys_cfg:dict,
     :param batch_size: 批量处理大小
     :return: None
     """
-    logger.info(f"loaded {len(documents)} documents, files_name_list_as_following")
-    for doc in documents:
-        logger.info(f"file:{doc.metadata['source']}")
-    logger.info("split_doc")
-    # separators = ['\n\n', '。', '！', '？', '；', '...', '、', '，']
-    separators = ['。', '！', '？', '；', '...', '、', '，']
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=chunk_overlap,
-        separators=separators,
-        keep_separator=False
-    )
-    doc_list = text_splitter.split_documents(documents)
-    with open('chunks.txt', 'w', encoding='utf-8') as f:
-        for i, chunk in enumerate(doc_list):
-            f.write(f"Chunk {i}, Source: {chunk.metadata['source']}\n")
-            f.write(chunk.page_content)
-            f.write("\n" + "-" * 50 + "\n")
-    logger.info(f"split_doc_finished")
-    client = build_client(sys_cfg)
-    logger.info(f"init_client_with_config: {sys_cfg}")
-    embeddings = RemoteEmbeddings(client)
-    len_doc_list = len(doc_list)
-    if len_doc_list  == 0:
-        logger.error("no_doc_need_process_err")
-        return
-    logger.info(f"开始向量化处理（批量大小={batch_size}）doc_list, {len_doc_list}")
-    vectorstore = None
+    pbar = None
+    try:
+        logger.info(f"loaded {len(documents)} documents, files_name_list_as_following")
+        for doc in documents:
+            logger.info(f"file:{doc.metadata['source']}")
+        logger.info("split_doc")
+        # separators = ['\n\n', '。', '！', '？', '；', '...', '、', '，']
+        separators = ['。', '！', '？', '；', '...', '、', '，']
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            separators=separators,
+            keep_separator=False
+        )
+        doc_list = text_splitter.split_documents(documents)
+        with open('chunks.txt', 'w', encoding='utf-8') as f:
+            for i, chunk in enumerate(doc_list):
+                f.write(f"Chunk {i}, Source: {chunk.metadata['source']}\n")
+                f.write(chunk.page_content)
+                f.write("\n" + "-" * 50 + "\n")
+        logger.info(f"split_doc_finished")
+        client = build_client(sys_cfg)
+        logger.info(f"init_client_with_config: {sys_cfg}")
+        embeddings = RemoteEmbeddings(client)
+        len_doc_list = len(doc_list)
+        if len_doc_list  == 0:
+            logger.error("no_doc_need_process_err")
+            return
+        logger.info(f"开始向量化处理（批量大小={batch_size}）doc_list, {len_doc_list}")
+        vectorstore = None
 
-    pbar = tqdm(total=len(doc_list), desc="文档向量化进度", unit="chunk")
-    for i in range(0, len_doc_list, batch_size):
-        batch = doc_list[i:i + batch_size]
-        if vectorstore is None:
-            vectorstore = FAISS.from_documents(batch, embeddings)
-        else:
-            batch_store = FAISS.from_documents(batch, embeddings)
-            vectorstore.merge_from(batch_store)
-        pbar.update(len(batch))
-        # info = str(pbar)
-        # logger.info(info)
-        # tqdm.write()
-        # pbar.update(1)
-    pbar.close()
-    logger.info(f"向量数据库构建完成，保存到 {vector_db}")
-    # vectorstore = FAISS.from_documents(doc_list, embeddings)
-    # logger.info(f"vector_store_finished, save_vector_to_local {vector_db}")
-    vectorstore.save_local(vector_db)
-    logger.info(f"save_vector_to_local {vector_db}")
+        pbar = tqdm(total=len(doc_list), desc="文档向量化进度", unit="chunk")
+        for i in range(0, len_doc_list, batch_size):
+            batch = doc_list[i:i + batch_size]
+            try:
+                if vectorstore is None:
+                    vectorstore = FAISS.from_documents(batch, embeddings)
+                else:
+                    batch_store = FAISS.from_documents(batch, embeddings)
+                    vectorstore.merge_from(batch_store)
+                pbar.update(len(batch))
+            except Exception as e:
+                logger.error(f"处理批次 {i}-{i + batch_size} 时出错: {str(e)}")
+                continue
+        logger.info(f"向量数据库构建完成，保存到 {vector_db}")
+        # vectorstore = FAISS.from_documents(doc_list, embeddings)
+        # logger.info(f"vector_store_finished, save_vector_to_local {vector_db}")
+        vectorstore.save_local(vector_db)
+        logger.info(f"save_vector_to_local {vector_db}")
+    except Exception as e:
+        logger.error(f"处理文档时发生错误: {str(e)}")
+        raise
+    finally:
+        if pbar is not None:
+            pbar.close()
 
 def build_client(sys_cfg: dict):
     """
@@ -113,7 +120,10 @@ def build_client(sys_cfg: dict):
     return OpenAI(
         base_url= sys_cfg['llm_api_uri'],   # "https://myhost/v1",
         api_key= sys_cfg['llm_api_key'],    # "sk-xxxxx",
-        http_client=httpx.Client(verify=False),
+        http_client=httpx.Client(
+            verify=False,
+            timeout=httpx.Timeout(30.0)
+        ),
     )
 
 def load_vector_db(vector_db: str, sys_cfg: dict):
