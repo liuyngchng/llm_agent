@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 PAGE_SIZE = 20
 cache_dict = {}
 
+table_schema_cache_dict = {}
+
 class Doris:
     """
     A doris data source class
@@ -137,10 +139,18 @@ class Doris:
         """
         [{'COLUMN_NAME': 'a', 'COLUMN_COMMENT': 'comment_a'}, {'COLUMN_NAME': 'b', 'COLUMN_COMMENT': 'comment_b'}]
         """
-        sql = f"SHOW CREATE TABLE {schema_name}.{table_name}"
+        table_schema_cache_dict_key = f"{schema_name}.{table_name}"
+        table_schema = table_schema_cache_dict.get(table_schema_cache_dict_key)
+        sql = f"SHOW CREATE TABLE {table_schema_cache_dict_key}"
+        if table_schema:
+            logger.info(f"return_table_schema_from_cache_for_sql {sql}, {table_schema}")
+            return table_schema
         logger.info(f"get_col_comment_sql, {sql}")
         exe_result = self.request_dt(self.build_dml(sql))
-        return exe_result[0].get('Create Table').split('ENGINE')[0]
+        table_schema = exe_result[0].get('Create Table').split('ENGINE')[0]
+        table_schema_cache_dict[table_schema_cache_dict_key] = table_schema
+        logger.info(f"return_table_schema_from_dt_source_for_sql {sql}, {table_schema}")
+        return table_schema
 
     def get_table_list(self) -> list:
         if self.tables:
@@ -263,6 +273,9 @@ class Doris:
         logger.info(f"build_doris_cfg, {cfg}")
         return cfg
 
+    def exec_sql(self, sql: str) -> list:
+        return self.request_dt(self.build_dml(sql))
+
     def output_data(self, sql: str, data_format: str) -> str | LiteralString | None:
         try:
             """
@@ -297,7 +310,7 @@ class Doris:
             logger.info(f"output_dt_doris, {dt}")
             return dt
         except Exception as e:
-            logger.error(f"doris_output_error: {str(e)}")
+            logger.error(f"doris_output_error", e)
             return json.dumps({"error": str(e)})
 
     def get_col_name_from_sql(self, raw_columns: list, sql):
@@ -416,7 +429,8 @@ def console_simulator():
     """
     控制台模拟器，得到一个sql后，执行，显示执行结果，等待其他sql的输入
     """
-    console_cfg = init_yml_cfg()['doris']
+    logger.info("start a console simulator")
+    console_cfg = init_yml_cfg()['db']
     logger.info(f"my_cfg: {console_cfg}")
     console_doris = Doris(console_cfg)
 
@@ -548,9 +562,9 @@ if __name__ == "__main__":
     my_doris = Doris(my_cfg)
     # my_comment_list = my_doris.get_table_col_comment("a10analysis", "dws_dw_ycb_day")
     # logger.info(f"my_comment_list {my_comment_list}")
-    tables = my_doris.get_table_list()
-    for table in tables:
-        logger.info(f"table_{table}")
+    # tables = my_doris.get_table_list()
+    # for table in tables:
+    #     logger.info(f"table_{table}")
         # count = my_doris.count_dt(f"select count(1) from {table}")
         # logger.info(f"{table}_dt_count\t\t{count}")
     # logger.info(f"my_tables {tables}")
@@ -560,5 +574,12 @@ if __name__ == "__main__":
     # logger.info(f"schema_for_llm {llm_schema_info}")
     # count = my_doris.count_dt()
     # logger.info(f"my_count {count}")
-    # sample_dt = my_doris.exec_sql("select * from dws_dw_ycb_day limit 1")
-    # logger.info(f"sample_dt {sample_dt}")
+    sql='''
+    SELECT PROVINCE_NAME, SUM(VOLUME) AS total_volume
+    FROM ai_gas_pay
+    WHERE CREATE_DTTM >= '2024-01-01' AND CREATE_DTTM < '2025-01-01' 
+    GROUP BY PROVINCE_NAME
+    ORDER BY total_volume DESC
+'''
+    sample_dt = my_doris.exec_sql(sql)
+    logger.info(f"sample_dt {sample_dt}")
