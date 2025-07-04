@@ -161,7 +161,7 @@
                 progressInterval = setInterval(fetchProgress, 1000);
 
                 // 启动文档索引生成,这里修改为流式请求
-                uid = document.getElementById('stream_output').innerText;
+                uid = document.getElementById('uid').value;
 
                 const writeRes = await fetch('/index/doc', {
                     method: 'POST',

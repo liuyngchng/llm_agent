@@ -94,9 +94,9 @@ def process_doc(task_id:str, thread_lock, task_progress:dict, documents: list[Do
         logger.info(f"load_vector_db({vector_db}, {sys_cfg})")
         vectorstore = load_vector_db(vector_db, sys_cfg)
         with tqdm(total=len(doc_list), desc="文档向量化进度", unit="chunk") as pbar:
-            with thread_lock:
-                task_progress[task_id] = {"text": str(pbar), "timestamp": time.time()}
             for i in range(0, len(doc_list), batch_size):
+                with thread_lock:
+                    task_progress[task_id] = {"text": str(pbar), "timestamp": time.time()}
                 batch = doc_list[i:i + batch_size]
                 try:
                     if vectorstore is None:
@@ -111,6 +111,7 @@ def process_doc(task_id:str, thread_lock, task_progress:dict, documents: list[Do
                         task_progress[task_id] = {"text": info, "timestamp": time.time()}
                     continue
             logger.info(f"向量数据库构建完成，保存到 {vector_db}")
+            os.makedirs(os.path.dirname(vector_db), exist_ok=True)
             vectorstore.save_local(vector_db)
             logger.info(f"save_vector_db_to_local_dir {vector_db}")
             with thread_lock:
@@ -141,10 +142,13 @@ def build_client(sys_cfg: dict):
 
 def load_vector_db(vector_db: str, sys_cfg: dict):
     """
-    :param vector_db: the vector db file
+    :param vector_db: the vector db file dir
     :param sys_cfg: system configuration info.
     :return: the vector db
     """
+    if not os.path.exists(vector_db):  # 新增检查
+        logger.info(f"vector_db_dir_not_exists_return_none, {vector_db}")
+        return None
     client = build_client(sys_cfg)
     embeddings = RemoteEmbeddings(client)
     return FAISS.load_local(vector_db, embeddings, allow_dangerous_deserialization=True)
