@@ -11,7 +11,7 @@ import cfg_util as cfg_utl
 
 from flask import Flask, render_template, Response, request, jsonify, redirect, url_for
 
-from http_auth import auth_bp, auth_info
+from http_auth import auth_bp, auth_info, get_client_ip
 from my_enums import DataType, DBType
 from sql_yield import SqlYield
 from sys_init import init_yml_cfg
@@ -160,12 +160,6 @@ def generate_data():
         time.sleep(1)  # 模拟处理延迟
         yield f"data: {msg}\n\n"
 
-
-def get_client_ip():
-    """获取客户端真实 IP"""
-    if forwarded_for := request.headers.get('X-Forwarded-For'):
-        return forwarded_for.split(',')[0]
-    return request.headers.get('X-Real-IP', request.remote_addr)
 
 if __name__ == '__main__':
     """

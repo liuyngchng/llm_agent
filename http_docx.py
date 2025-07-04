@@ -35,7 +35,6 @@ def app_home():
     return redirect(url_for('auth.login_index', app_source='docx'))
 
 
-
 @app.route('/upload', methods=['POST'])  # 修正路由路径
 def upload_file():
     if 'file' not in request.files:
@@ -107,11 +106,6 @@ def clean_tasks():
                 del task_progress[k]
         time.sleep(300)
 
-def get_client_ip():
-    """获取客户端真实 IP"""
-    if forwarded_for := request.headers.get('X-Forwarded-For'):
-        return forwarded_for.split(',')[0]
-    return request.headers.get('X-Real-IP', request.remote_addr)
 
 
 def process_document(task_id, file_name):

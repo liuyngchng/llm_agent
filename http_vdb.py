@@ -39,7 +39,7 @@ def app_home():
     logger.info("redirect_auth_login_index")
     return redirect(url_for('auth.login_index', app_source='vdb'))
 
-@app.route('/upload', methods=['POST'])  # 修正路由路径
+@app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
         return jsonify({"error": "未找到文件"}), 400

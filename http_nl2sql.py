@@ -17,7 +17,7 @@ from my_enums import DataType, DBType
 from sql_agent import SqlAgent
 from sys_init import init_yml_cfg
 from audio import transcribe_webm_audio_bytes
-from http_auth import auth_bp, auth_info
+from http_auth import auth_bp, auth_info, get_client_ip
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -317,12 +317,6 @@ def test_query_data():
         answer="没有查询到相关数据，请您尝试换个问题提问"
     logger.info(f"answer_is：\n{answer}")
     return answer
-
-def get_client_ip():
-    """获取客户端真实 IP"""
-    if forwarded_for := request.headers.get('X-Forwarded-For'):
-        return forwarded_for.split(',')[0]
-    return request.headers.get('X-Real-IP', request.remote_addr)
 
 
 if __name__ == '__main__':
