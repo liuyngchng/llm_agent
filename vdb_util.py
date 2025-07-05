@@ -110,12 +110,18 @@ def process_doc(task_id:str, thread_lock, task_progress:dict, documents: list[Do
                     with thread_lock:
                         task_progress[task_id] = {"text": info, "timestamp": time.time()}
                     continue
-            logger.info(f"向量数据库构建完成，保存到 {vector_db}")
-            os.makedirs(os.path.dirname(vector_db), exist_ok=True)
-            vectorstore.save_local(vector_db)
-            logger.info(f"save_vector_db_to_local_dir {vector_db}")
-            with thread_lock:
-                task_progress[task_id] = {"text": "向量化已完成，保存至个人知识空间", "timestamp": time.time()}
+            if vectorstore is not None:
+                logger.info(f"向量数据库构建完成，保存到 {vector_db}")
+                os.makedirs(os.path.dirname(vector_db), exist_ok=True)
+                vectorstore.save_local(vector_db)
+                logger.info(f"save_vector_db_to_local_dir {vector_db}")
+                with thread_lock:
+                    task_progress[task_id] = {"text": "向量化已完成，保存至个人知识空间", "timestamp": time.time()}
+            else:
+                error_info = "向量数据库创建失败，无有效数据"
+                logger.error(error_info)
+                with thread_lock:
+                    task_progress[task_id] = {"text": error_info, "timestamp": time.time()}
     except Exception as e:
         info = f"处理文档时发生错误: {str(e)}"
         logger.error(info, exc_info=True)
