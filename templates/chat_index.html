@@ -9,10 +9,95 @@
     <link rel="stylesheet" href="/static/my.nl2sql.css">
     <style>
         .system-settings-link-container {
-        display: flex;
-        justify-content: flex-end; /* 右对齐关键属性 */
-        gap: 10px; /* 按钮间距 */
-        margin: 10px 0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .loading-dots {
+            display: inline-block;
+        }
+        .loading-dots:after {
+            content: '.';
+            animation: dots 1s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
+        .typing-indicator {
+            display: inline-block;
+            position: relative;
+            height: 20px;
+        }
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 10%;
+            background: #ccc;
+            margin: 0 2px;
+            animation: bounce 1.5s infinite ease-in-out;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .stop-button {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .stop-button:hover {
+            background-color: #e60000;
+        }
+        .copy-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .copy-button:hover {
+            background-color: #45a049;
+        }
+        .message-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .bot-message-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        .message-bubble {
+            padding: 2px 2px;
+            border-radius: 5px;
+            max-width: 85%;
+            line-height: 1.5;
+        }
+        .user-message-bubble {
+            background-color: #e6f7ff;
+            align-self: flex-end;
+        }
+        .bot-message-bubble {
+            background-color: #f0f0f0;
+            align-self: flex-start;
         }
     </style>
     <title>智能问答</title>
@@ -29,11 +114,12 @@
         <div class="chat-container" id="chat-container">
             <!-- 聊天内容将在这里动态生成 -->
         </div>
-        
+
         <form id="query-form">
             <div class="input-container">
-                <input type="text" class="input-field" id="query-input" name="msg" placeholder="输入你的问题，帮你深度解答" required>
-                <button type="submit" class="send-button">发送</button>
+                <input type="text" class="input-field" id="query-input" name="msg" placeholder="输入你的问题，帮你深度解答" required autocomplete="off">
+                <button type="submit" class="send-button" id="send-button">发送</button>
+                <button type="button" class="stop-button" id="stop-button" style="display:none;">停止</button>
             </div>
             <input type="hidden" id ="uid" name="uid" value="{{uid}}">
             <input type="hidden" id ="t" name="t" value="{{t}}">
@@ -41,152 +127,222 @@
             <input type="hidden" id ="greeting" name="greeting" value="{{greeting}}">
         </form>
     </div>
-    <div class="status-indicator" id="status-indicator"></div>
     <script>
-        DOMPurify.addHook('uponSanitizeElement', (node, data) => {
-            if (data.tagName === 'canvas') {
-                node.setAttribute('id', data.attr.id);
-            }
-        });
-        // 聊天容器
+        // 聊天容器和元素
         const chatContainer = document.getElementById('chat-container');
         const queryForm = document.getElementById('query-form');
-        const queryInput = document.getElementById('query-input');   //查询输入框
-        const dbUriInput = document.getElementById('db-uri-input');
-        const sendButton = document.querySelector('.send-button');  // 发送按钮
-        let isFetching = false;                                     //是否正在请求数据
+        const queryInput = document.getElementById('query-input');
+        const sendButton = document.getElementById('send-button');
+        const stopButton = document.getElementById('stop-button');
+        let isFetching = false;
+        let currentResponse = null;
+        let abortController = null;
+        let currentBotMessage = null;
 
+        // 页面加载时显示欢迎信息
         window.onload = function() {
             const greetingEl = document.getElementById('greeting');
             if (greetingEl && greetingEl.value) {
-                addMessage(greetingEl.value, '', '', 'bot');
+                addMessage(greetingEl.value, 'bot');
             }
+            queryInput.focus();
         };
-        // 表单提交
-        queryForm.addEventListener('submit', function(e) {
-            try {
-                e.preventDefault();
-                console.log('prevent_default')
-                const query = queryInput.value.trim();
-                if (!query) {
-                    console.log('query=' + query)
-                    addMessage("请填写您想问的问题", '', '', 'bot');
-                    return;
-                }
-                // 添加用户消息到聊天
-                console.log('add_usr_msg')
-                addMessage(query, 'user');
 
-                // 清空输入框
-                queryInput.value = '';
-                // 发送API请求
-                console.log('start_fetch')
-                fetchQueryData(query).then(({response, data}) => {
-                    if (!response.ok) {
-                        let errorMessage = '查询失败，请稍后再试';
-                        switch(response.status) {
-                            case 400:
-                                errorMessage = '请求参数错误，请检查您的输入';
-                                break;
-                            case 401:
-                                errorMessage = '未授权，请重新登录';
-                                break;
-                            case 404:
-                                errorMessage = '请求的资源不存在';
-                                break;
-                            case 500:
-                                errorMessage = '服务器内部错误，请联系管理员';
-                                break;
-                            case 503:
-                                errorMessage = '服务暂时不可用，请稍后再试';
-                                break;
-                        }
-                        addMessage(errorMessage, 'bot');
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    console.log("data=" + data)
-                    if (data) {
-                        addMessage(data, 'bot');
-                    } else {
-                        addMessage("收到空响应，请重试", 'bot');
-                    }
-                }).catch(error => {
-                    console.log("error_occurred", error.message)
-                })
+        // 表单提交事件
+        queryForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (isFetching) return;
+
+            const query = queryInput.value.trim();
+            if (!query) {
+                addMessage("请填写您想问的问题", 'bot');
+                return;
+            }
+
+            // 添加用户消息
+            addMessage(query, 'user');
+            queryInput.value = '';
+            queryInput.focus();
+
+            try {
+                // 开始获取数据
+                await fetchQueryData(query);
             } catch (error) {
-                console.error("表单提交异常:", error);
-                e.preventDefault(); // 双重保险
+                console.error("请求出错:", error);
+                if (currentBotMessage) {
+                    updateBotMessage("回答生成中断或出错，请重试");
+                }
+                resetUI();
             }
         });
 
+        // 停止按钮事件
+        stopButton.addEventListener('click', function() {
+            if (abortController) {
+                abortController.abort();
+            }
+            if (currentBotMessage) {
+                updateBotMessage("回答生成已停止");
+            }
+            resetUI();
+        });
 
-
-        // 发送API请求
+        // 获取流式数据
         async function fetchQueryData(query) {
-            console.log('fetch_data')
-            let loadingMsg;
+            isFetching = true;
+            sendButton.disabled = true;
+            stopButton.style.display = 'inline-block';
+
+            // 创建新的中止控制器
+            abortController = new AbortController();
+
+            // 添加加载中的消息
+            currentBotMessage = addMessage('<div class="typing-indicator"><span></span><span></span><span></span></div>', 'bot');
+
             try {
-                sendButton.disabled = true;
-                isFetching = true;      // 表示正在请求数据
-                loadingMsg = addMessage('<div class="loading-dots">处理中</div>', 'bot');
-                const controller = new AbortController();
-                setTimeout(() => controller.abort(), 300000);
                 const t = document.getElementById('t').value;
                 const appSource = document.getElementById('app_source').value;
-                console.log('post_to_chat')
+                const uid = document.getElementById('uid').value;
+
                 const response = await fetch('/chat', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(document.getElementById('uid').value)}&t=${t}&app_source=${appSource}`,
-                    signal: controller.signal
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'text/event-stream'
+                    },
+                    body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&t=${t}&app_source=${appSource}`,
+                    signal: abortController.signal
                 });
-                const responseText = await response.text();
-                if (loadingMsg && chatContainer.contains(loadingMsg)) {
-                    chatContainer.removeChild(loadingMsg);
+
+                // 检查响应是否正常
+                if (!response.ok || !response.body) {
+                    throw new Error('网络响应失败');
                 }
-                sendButton.disabled = false;
-                isFetching = false;              // 数据请求完成
-                if (!response.ok) throw new Error('网络响应失败');
-                return {
-                    response: response,
-                    data: responseText
-                };
+
+                // 设置当前响应对象
+                currentResponse = response;
+
+                // 读取流数据
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let accumulatedText = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    accumulatedText += chunk;
+
+                    // 更新消息内容
+                    updateBotMessage(accumulatedText);
+                }
+
+                // 添加复制按钮
+                addCopyButton(currentBotMessage, accumulatedText);
+
             } catch (error) {
-                if (loadingMsg && chatContainer.contains(loadingMsg)) {
-                    chatContainer.removeChild(loadingMsg);
+                if (error.name === 'AbortError') {
+                    console.log('请求已中止');
+                } else {
+                    console.error('请求出错:', error);
+                    if (currentBotMessage) {
+                        updateBotMessage("回答生成出错，请重试");
+                    }
                 }
-                sendButton.disabled = false;
-                throw error;
+            } finally {
+                resetUI();
             }
         }
+
+        // 更新机器人消息
+        function updateBotMessage(text) {
+            if (!currentBotMessage) return;
+
+            const messageBubble = currentBotMessage.querySelector('.bot-message-bubble');
+            if (messageBubble) {
+                // 使用DOMPurify和Marked解析Markdown
+                const sanitizedContent = DOMPurify.sanitize(
+                    marked.parse(text),
+                    { ADD_TAGS: ['canvas'], ADD_ATTR: ['id'] }
+                );
+                messageBubble.innerHTML = sanitizedContent;
+
+                // 滚动到底部
+                messageBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // 添加消息到聊天容器
         function addMessage(text, type) {
-            console.log("log_addMessage text=" + text);
             const messageContainer = document.createElement('div');
             messageContainer.classList.add('message-container');
 
-            // 安全处理内容
-            const sanitizedContent = DOMPurify.sanitize(
-                type === 'bot' ? marked.parse(text) : text,
-                { ADD_TAGS: ['canvas'], ADD_ATTR: ['id'] }
-            );
+            let sanitizedContent = '';
 
             if (type === 'user') {
                 messageContainer.classList.add('user-message-container');
+                sanitizedContent = DOMPurify.sanitize(text);
                 messageContainer.innerHTML = `
-                <div class="message-bubble user-message-bubble">${sanitizedContent}</div>`;
+                    <div class="message-bubble user-message-bubble">${sanitizedContent}</div>
+                `;
             } else {
                 messageContainer.classList.add('bot-message-container');
+                sanitizedContent = DOMPurify.sanitize(
+                    marked.parse(text),
+                    { ADD_TAGS: ['canvas'], ADD_ATTR: ['id'] }
+                );
                 messageContainer.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                    <img width="24" height="24" src="/static/bot.png">
+                    <div class="bot-message-header">
+                        <img width="24" height="24" src="/static/bot.png">
+                    </div>
                     <div class="message-bubble bot-message-bubble">${sanitizedContent}</div>
-                    </div>`;
+                `;
             }
 
             chatContainer.appendChild(messageContainer);
             messageContainer.scrollIntoView({ behavior: 'smooth' });
             return messageContainer;
         }
-        </script>
-    </body>
+
+        // 添加复制按钮
+        function addCopyButton(messageContainer, text) {
+            const actionsContainer = document.createElement('div');
+            actionsContainer.classList.add('message-actions');
+
+            const copyButton = document.createElement('button');
+            copyButton.classList.add('copy-button');
+            copyButton.textContent = '复制';
+            copyButton.onclick = function() {
+                navigator.clipboard.writeText(text).then(() => {
+                    copyButton.textContent = '已复制!';
+                    setTimeout(() => {
+                        copyButton.textContent = '复制';
+                    }, 2000);
+                });
+            };
+
+            actionsContainer.appendChild(copyButton);
+            messageContainer.appendChild(actionsContainer);
+        }
+
+        // 重置UI状态
+        function resetUI() {
+            isFetching = false;
+            sendButton.disabled = false;
+            stopButton.style.display = 'none';
+            currentResponse = null;
+            abortController = null;
+            currentBotMessage = null;
+        }
+
+        // 键盘快捷键支持
+        queryInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                queryForm.dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
 </html>
