@@ -262,11 +262,11 @@ def decrypt(dt: str, key: str) -> str:
     logger.info(f"get_pln_txt_for_cypher_txt, {pln_txt}, {dt}")
     return pln_txt
 
-def get_const(key:str)->str | None:
+def get_const(key:str, app: str)->str | None:
     value = None
     with sqlite3.connect(config_db) as my_conn:
         try:
-            sql = f"select value from const where key='{key}' limit 1"
+            sql = f"select value from const where key='{key}' and app='{app}' limit 1"
             check_info = query_sqlite(my_conn, sql)
             value_dt = check_info['data']
             value = value_dt[0][0]
@@ -275,10 +275,10 @@ def get_const(key:str)->str | None:
             logger.info(f"no_value_info_found_for_key, {key}")
     return value
 
-def get_consts()-> dict:
+def get_consts(app: str)-> dict:
     const = {}
     with sqlite3.connect(config_db) as my_conn:
-        sql = f"select key, value from const limit 100"
+        sql = f"select key, value from const where app='{app}' limit 100"
         try:
             check_info = query_sqlite(my_conn, sql)
             value_dt = check_info['data']
@@ -375,7 +375,7 @@ if __name__ == '__main__':
     # logger.info(dt1)
     # dt2 = decrypt(dt1, key0)
     # logger.info(dt2)
-    a = get_consts()
+    a = get_consts('test')
     logger.info(f"a {a}")
     uid = '332987921'
     user = get_user_info_by_uid(uid)

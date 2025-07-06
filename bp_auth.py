@@ -69,7 +69,7 @@ def login():
         "uid": auth_result["uid"],
         "t": auth_result["t"],
         "sys_name": my_cfg['sys']['name'],
-        "greeting": cfg_utl.get_const("greeting"),
+        "greeting": cfg_utl.get_const("greeting", app_source),
         "app_source": app_source,
     }
     session_key = f"{auth_result['uid']}_{get_client_ip()}"

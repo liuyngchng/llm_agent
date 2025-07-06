@@ -38,7 +38,7 @@ class CsmService:
         # TODO: to limit the size of history to the maximum token size of LLM
         # limit msg_history size to MAX_MSG_COUNT
         self.msg_history = []
-        self.const_dict = get_consts()
+        self.const_dict = get_consts('csm_service')
         logger.info(f"const: {self.const_dict}")
 
 
