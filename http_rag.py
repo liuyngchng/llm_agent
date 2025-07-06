@@ -12,7 +12,7 @@ from flask import (Flask, request, jsonify, render_template, Response,
                    send_from_directory, abort, make_response, redirect, url_for)
 from cfg_util import auth_user, get_user_role_by_uid
 from csm_service import CsmService
-from http_auth import auth_bp
+from bp_auth import auth_bp
 from my_enums import ActorRole, AI_SERVICE_STATUS
 from agt_util import classify_msg
 from sys_init import init_yml_cfg

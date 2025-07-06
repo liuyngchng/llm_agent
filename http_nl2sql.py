@@ -17,7 +17,7 @@ from my_enums import DataType, DBType
 from sql_agent import SqlAgent
 from sys_init import init_yml_cfg
 from audio import transcribe_webm_audio_bytes
-from http_auth import auth_bp, auth_info, get_client_ip
+from bp_auth import auth_bp, auth_info, get_client_ip
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)

@@ -11,7 +11,7 @@ import cfg_util as cfg_utl
 
 from flask import Flask, render_template, Response, request, jsonify, redirect, url_for
 
-from http_auth import auth_bp, auth_info, get_client_ip
+from bp_auth import auth_bp, auth_info, get_client_ip
 from my_enums import DataType, DBType
 from sql_yield import SqlYield
 from sys_init import init_yml_cfg

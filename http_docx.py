@@ -12,7 +12,7 @@ from flask import (Flask, request, jsonify, send_from_directory, abort, redirect
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
 from docx_util import extract_catalogue, fill_doc_in_progress
 from sys_init import init_yml_cfg
-from http_auth import auth_bp
+from bp_auth import auth_bp
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)

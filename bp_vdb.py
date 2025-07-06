@@ -9,38 +9,29 @@ import os
 import threading
 import time
 
-from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for)
+from flask import (request, jsonify, redirect, url_for, Blueprint)
 from werkzeug.utils import secure_filename
 
-from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
-from docx_util import extract_catalogue, fill_doc_in_progress
-from http_auth import auth_bp
 from sys_init import init_yml_cfg
 from vdb_util import vector_file_in_progress
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
-app.register_blueprint(auth_bp)
-app.config['JSON_AS_ASCII'] = False
+file_vdb = Blueprint('file_vdb', __name__)
+
 UPLOAD_FOLDER = 'upload_doc'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # 确保上传目录存在
 
 my_cfg = init_yml_cfg()
-os.system(
-    "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
-)
+
 task_progress = {}  # 存储文本进度信息
 thread_lock = threading.Lock()
 
-@app.route('/')
-def app_home():
-    logger.info("redirect_auth_login_index")
-    return redirect(url_for('auth.login_index', app_source='vdb'))
 
-@app.route('/upload', methods=['POST'])
+@file_vdb.route('/upload', methods=['POST'])
 def upload_file():
+    logger.info(f"start_upload_file, {request}")
     if 'file' not in request.files:
         return jsonify({"error": "未找到文件"}), 400
     file = request.files['file']
@@ -94,9 +85,7 @@ def upload_file():
                 'filename': filename,
                 'timestamp': time.time()
             }
-
         logger.info(f"文件上传成功: {filename}, 大小: {os.path.getsize(save_path)}字节")
-
         return jsonify({
             "success": True,
             "task_id": task_id,
@@ -112,8 +101,9 @@ def upload_file():
         }), 500
 
 
-@app.route("/index/doc", methods=['POST'])
+@file_vdb.route("/index/doc", methods=['POST'])
 def index_doc():
+    logger.info(f"start_index_doc, {request}")
     data = request.json
     task_id = data.get("task_id")
     file_name = data.get("file_name")
@@ -129,7 +119,7 @@ def index_doc():
 
     return jsonify({"status": "started", "task_id": task_id}), 200
 
-@app.route('/get/process/info', methods=['POST'])
+@file_vdb.route('/get/process/info', methods=['POST'])
 def get_doc_process_info():
     task_id = request.json.get("task_id")
     if not task_id:
@@ -168,5 +158,4 @@ def process_doc(task_id: str, file_name: str, uid: str):
         logger.exception("文档生成异常", e)
 
 if __name__ == '__main__':
-    threading.Thread(target=clean_tasks, daemon=True).start()
-    app.run(host='0.0.0.0', port=19000)
+    logger.info("just for test")
