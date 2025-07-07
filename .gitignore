@@ -41,3 +41,4 @@ cfg.yml
 llm_py_env/*
 llm_py_env_whl.Python.3.12.3/*
 __pycache__
+upload_doc/*
