@@ -148,9 +148,24 @@ class Doris:
         logger.info(f"get_col_comment_sql, {sql}")
         exe_result = self.request_dt(self.build_dml(sql))
         table_schema = exe_result[0].get('Create Table').split('ENGINE')[0]
-        table_schema_cache_dict[table_schema_cache_dict_key] = table_schema
+        table_comment = self.get_table_comment_from_ddl(exe_result[0].get('Create Table').split('ENGINE')[1])
+        table_schema_with_comment = f"{table_schema} COMMENT='{table_comment}'"
+        table_schema_cache_dict[table_schema_cache_dict_key] = table_schema_with_comment
         logger.info(f"return_table_schema_from_dt_source_for_sql\n{sql}, {table_schema}")
-        return table_schema
+        return table_schema_with_comment
+
+    @staticmethod
+    def get_table_comment_from_ddl(ddl_tail: str)-> str:
+        """
+        get table comment from ddl
+        """
+        pattern = r'COMMENT\s+\'(.*?)\''
+        match = re.search(pattern, ddl_tail)
+        # logger.info(f"get_table_comment_from_ddl, {ddl}, {pattern}, {match}")
+        if match:
+            return match.group(1)
+        else:
+            return ""
 
     def get_table_list(self) -> list:
         if self.tables:
@@ -575,11 +590,30 @@ if __name__ == "__main__":
     # count = my_doris.count_dt()
     # logger.info(f"my_count {count}")
     sql='''
-    SELECT PROVINCE_NAME, SUM(VOLUME) AS total_volume
-    FROM ai_gas_pay
-    WHERE CREATE_DTTM >= '2024-01-01' AND CREATE_DTTM < '2025-01-01' 
-    GROUP BY PROVINCE_NAME
-    ORDER BY total_volume DESC
+    SHOW CREATE TABLE a10analysis.ai_cust_info
 '''
-    sample_dt = my_doris.exec_sql(sql)
-    logger.info(f"sample_dt {sample_dt}")
+    # sample_dt = my_doris.exec_sql(sql)
+    # logger.info(f"sample_dt {sample_dt}")
+
+    ddl="""
+    CREATE TABLE `ai_meter_info` (
+  `id` bigint NOT NULL AUTO_INCREMENT(1) COMMENT '自增ID',
+  `badge_nmb` varchar(64) NOT NULL COMMENT '燃气表号',
+  `meter_type` int NOT NULL COMMENT '燃气表类型, 0:基表/流量计,1:IC卡表/流量计,2:远传表/流量计',
+  `meter_manufacture` varchar(100) NOT NULL COMMENT '燃气表制造厂商',
+  `meter_base_num` decimal(12,3) NOT NULL COMMENT '燃气表基底数, 抄表、换表的起始读数，法定计量器具读数只能增加不能减少也不可人为认为修改，单位:立方米',
+  `province` varchar(20) NOT NULL COMMENT '燃气表所属省',
+  `city` varchar(20) NOT NULL COMMENT '燃气表所属市',
+  `district` varchar(20) NOT NULL COMMENT '燃气表所属区县',
+  `company` varchar(100) NOT NULL COMMENT '燃气表所属的燃气公司名称',
+  `user_type` int NOT NULL COMMENT '使用燃气表的用户类型, 0:居民用户, 1:非居民用户，一般有工业用户、商业用户、福利用户等',
+  `active_date` date NOT NULL COMMENT '启用时间， 燃气表在这一天开始提供给用户使用',
+  `expire_date` date NOT NULL COMMENT '过期时间，燃气表在这个日期不能再给用户使用了，需要进行更换，一般使用10年'
+) ENGINE=OLAP
+UNIQUE KEY(`id`, `badge_nmb`)
+COMMENT '燃气表信息表'
+DISTRIBUTED BY HASH(`id`) BUCKETS AUTO
+PROPERTIES (
+
+    """
+    my_doris.get_table_comment_from_ddl(ddl.split('ENGINE')[1])
