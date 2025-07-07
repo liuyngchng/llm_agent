@@ -27,14 +27,14 @@ from typing import List
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-model="bge-m3"
 
 class RemoteEmbeddings(Embeddings):  # 适配器类
     """
     远程分词客户端
     """
-    def __init__(self, client):
+    def __init__(self, client, llm_cfg: dict):
         self.client = client
+        self.llm_cfg = llm_cfg
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return [self._get_embedding(t) for t in texts]
@@ -43,12 +43,12 @@ class RemoteEmbeddings(Embeddings):  # 适配器类
         return self._get_embedding(text)
 
     def _get_embedding(self, text: str):
-        resp = self.client.embeddings.create(model=model, input=text)
+        resp = self.client.embeddings.create(model=self.llm_cfg['embedding_model_name'], input=text)
         return resp.data[0].embedding
 
 
 def process_doc(task_id:str, thread_lock, task_progress:dict, documents: list[Document],
-    vector_db: str, sys_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10) -> None:
+                vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10) -> None:
     """处理文档并构建向量数据库
 
     Args:
@@ -57,7 +57,7 @@ def process_doc(task_id:str, thread_lock, task_progress:dict, documents: list[Do
         task_progress: 任务进度字典
         documents: 待处理文档列表
         vector_db: 向量数据库存储路径
-        sys_cfg: 系统配置
+        llm_cfg: 系统 LLM 配置
         chunk_size: 文本分块大小
         chunk_overlap: 分块重叠大小
         batch_size: 批量处理大小
@@ -82,17 +82,17 @@ def process_doc(task_id:str, thread_lock, task_progress:dict, documents: list[Do
         with open('chunks.txt', 'w', encoding='utf-8') as f:
             for i, chunk in enumerate(doc_list):
                 f.write(f"Chunk {i}, Source: {chunk.metadata['source']}\n{chunk.page_content}\n" + "-" * 50 + "\n")
-        client = build_client(sys_cfg)
-        logger.info(f"init_client_with_config: {sys_cfg}")
-        embeddings = RemoteEmbeddings(client)
+        client = build_client(llm_cfg)
+        logger.info(f"init_client_with_config: {llm_cfg}")
+        embeddings = RemoteEmbeddings(client, llm_cfg)
         if not doc_list:
             logger.error("no_doc_need_process_err")
             return
         logger.info(f"开始向量化 {len(doc_list)} chunks (batch_size={batch_size})")
         with thread_lock:
             task_progress[task_id] = {"text": f"开始文本向量化","timestamp": time.time()}
-        logger.info(f"load_vector_db({vector_db}, {sys_cfg})")
-        vectorstore = load_vector_db(vector_db, sys_cfg)
+        logger.info(f"load_vector_db({vector_db}, {llm_cfg})")
+        vectorstore = load_vector_db(vector_db, llm_cfg)
         with tqdm(total=len(doc_list), desc="文档向量化进度", unit="chunk") as pbar:
             for i in range(0, len(doc_list), batch_size):
                 with thread_lock:
@@ -132,31 +132,31 @@ def process_doc(task_id:str, thread_lock, task_progress:dict, documents: list[Do
         if pbar and not pbar.disable:
             pbar.close()
 
-def build_client(sys_cfg: dict):
+def build_client(llm_cfg: dict):
     """
-    :param sys_cfg: system configuration info.
+    :param llm_cfg: LLM configuration info.
     :return: the client
     """
     return OpenAI(
-        base_url= sys_cfg['llm_api_uri'],   # "https://myhost/v1",
-        api_key= sys_cfg['llm_api_key'],    # "sk-xxxxx",
+        base_url= llm_cfg['llm_api_uri'],   # "https://myhost/v1",
+        api_key= llm_cfg['llm_api_key'],    # "sk-xxxxx",
         http_client=httpx.Client(
             verify=False,
             timeout=httpx.Timeout(30.0)
         ),
     )
 
-def load_vector_db(vector_db: str, sys_cfg: dict):
+def load_vector_db(vector_db: str, llm_cfg: dict):
     """
     :param vector_db: the vector db file dir
-    :param sys_cfg: system configuration info.
+    :param llm_cfg: LLM configuration info.
     :return: the vector db
     """
     if not os.path.exists(vector_db):  # 新增检查
         logger.info(f"vector_db_dir_not_exists_return_none, {vector_db}")
         return None
-    client = build_client(sys_cfg)
-    embeddings = RemoteEmbeddings(client)
+    client = build_client(llm_cfg)
+    embeddings = RemoteEmbeddings(client, llm_cfg)
     return FAISS.load_local(vector_db, embeddings, allow_dangerous_deserialization=True)
 
 def search_similar_text(query: str, score_threshold: float, vector_db, sys_cfg: dict, top_k=3):
@@ -174,7 +174,7 @@ def search_similar_text(query: str, score_threshold: float, vector_db, sys_cfg: 
 
 
 def vector_file_in_progress(task_id:str, thread_lock, task_progress:dict, file_name: str,
-    vector_db_dir: str, sys_cfg: dict, chunk_size=300, chunk_overlap=80) -> None:
+    vector_db_dir: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80) -> None:
     """Process a document file and build a vector database.
     Args:
         task_id (str): Unique identifier for the task.
@@ -182,7 +182,7 @@ def vector_file_in_progress(task_id:str, thread_lock, task_progress:dict, file_n
         task_progress (dict): Dictionary to track task progress.
         file_name (str): Path to the input document file.
         vector_db_dir (str): Directory to save the vector database.
-        sys_cfg (dict): System configuration parameters.
+        llm_cfg (dict): LLM configuration parameters.
         chunk_size (int, optional): Size of text chunks. Defaults to 300.
         chunk_overlap (int, optional): Overlap between chunks. Defaults to 80.
 
@@ -230,7 +230,7 @@ def vector_file_in_progress(task_id:str, thread_lock, task_progress:dict, file_n
                 "timestamp": time.time()
             }
         # 处理文档
-        process_doc(task_id, thread_lock, task_progress, documents, vector_db_dir, sys_cfg, chunk_size, chunk_overlap)
+        process_doc(task_id, thread_lock, task_progress, documents, vector_db_dir, llm_cfg, chunk_size, chunk_overlap)
     except Exception as e:
         logger.error(f"load_file_fail_err, {file_name}, {e}", exc_info=True)
 
