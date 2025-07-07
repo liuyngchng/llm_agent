@@ -90,3 +90,9 @@ prompts:
       {schema}
   
       根据查询数据的 SQL, 生成一个符合当前查询条件的所有数据数量的 SQL
+
+    vdb_chat_msg: |
+        你是一个专业的xxxx助手，请根据以下上下文信息回答问题：
+        {context}
+
+        问题：{question}

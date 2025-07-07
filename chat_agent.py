@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 
 class ChatAgent:
 
-    def __init__(self, cfg:dict , is_remote_model=True, prompt_padding=""):
-        self.cfg = cfg
-        self.llm_api_uri = cfg['api']['llm_api_uri']
-        self.llm_api_key = SecretStr(cfg['api']['llm_api_key'])
-        self.llm_model_name = cfg['api']['llm_model_name']
+    def __init__(self, syc_cfg:dict , is_remote_model=True, prompt_padding=""):
+        self.syc_cfg = syc_cfg
+        self.llm_api_uri = syc_cfg['api']['llm_api_uri']
+        self.llm_api_key = SecretStr(syc_cfg['api']['llm_api_key'])
+        self.llm_model_name = syc_cfg['api']['llm_model_name']
         self.is_remote_model = is_remote_model
         self.llm = self.get_llm()
 
@@ -36,18 +36,25 @@ class ChatAgent:
                     streaming=True,
                 )
             else:
-                model = ChatOllama(model=self.llm_model_name, base_url=self.llm_api_uri, temperature=0, disable_streaming= False,)
+                model = ChatOllama(
+                    model=self.llm_model_name,
+                    base_url=self.llm_api_uri,
+                    temperature=0,
+                    disable_streaming= False,
+                )
         else:
-            model = ChatOllama(model=self.llm_model_name, base_url=self.llm_api_uri, temperature=0, disable_streaming= False,)
+            model = ChatOllama(
+                model=self.llm_model_name,
+                base_url=self.llm_api_uri,
+                temperature=0,
+                disable_streaming= False,
+            )
         logger.debug(f"model, {model}")
         return model
 
     def get_chain(self):
-        template = """你是一个专业的燃气运营支持助手，请根据以下上下文信息回答问题：
-            {context}
-            
-            问题：{question}
-            """
+        template = self.syc_cfg.get('prompts').get('vdb_chat_msg')
+        logger.debug(f"template {template}")
         prompt = ChatPromptTemplate.from_template(template)
         model = self.get_llm()
         chain = (
