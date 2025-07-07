@@ -16,9 +16,12 @@ from docx.shared import RGBColor
 from sys_init import init_yml_cfg
 from agt_util import gen_txt
 from docx_util import get_catalogue, refresh_current_heading
+from vdb_util import search_txt
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
+
+UPLOAD_FOLDER = 'upload_doc'
 
 
 def get_comments_dict(target_doc: str) -> dict:
@@ -204,7 +207,10 @@ def modify_para_with_comment_prompt_in_process(task_id:str, thread_lock, task_pr
             logger.info(f"matched_comment_for_para_idx {para_idx}")
             comment_text = comments_dict[para_idx]
             catalogue = get_catalogue(target_doc)
-            modified_txt = gen_txt(doc_ctx, "", comment_text, catalogue, str(current_heading), cfg)
+            # TODO : get text context to gen_txt
+            my_vector_db_dir = f"{UPLOAD_FOLDER}/faiss_oa_idx_332987902"
+            ctx_txt = search_txt(comment_text, my_vector_db_dir, 0.1, cfg['api'], 3)
+            modified_txt = gen_txt(doc_ctx, ctx_txt, comment_text, catalogue, str(current_heading), cfg)
             if modified_txt:
                 gen_txt_count += 1
                 para.clear()
