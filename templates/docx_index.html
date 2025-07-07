@@ -63,6 +63,7 @@
     <div class="container">
         <div class="nav-links">
             <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="system-settings-link">退出</a>
+            <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}" class="system-settings-link" target="_blank">知识库配置</a>
         </div>
         <header>
             <h2 style="text-align:center;">文档生成</h2>
@@ -159,12 +160,12 @@
                 // 启动进度轮询
                 clearInterval(progressInterval);
                 progressInterval = setInterval(fetchProgress, 1000);
-
+                const uid = document.getElementById('uid').val()
                 // 启动文档生成,这里修改为流式请求
                 const writeRes = await fetch('/write/doc', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ task_id, file_name })
+                    body: JSON.stringify({ uid, task_id, file_name })
                 });
 
             } catch (error) {

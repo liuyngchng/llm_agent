@@ -8,11 +8,14 @@ import os
 import threading
 import time
 
-from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for)
+from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for, render_template)
+
+from bp_vdb import file_vdb
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
 from docx_util import extract_catalogue, fill_doc_in_progress
 from sys_init import init_yml_cfg
 from bp_auth import auth_bp
+import cfg_util as cfg_utl
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -37,6 +40,7 @@ def app_home():
 
 @app.route('/upload', methods=['POST'])  # 修正路由路径
 def upload_file():
+    logger.info(f"upload_file {request}")
     if 'file' not in request.files:
         return jsonify({"error": "未找到文件"}), 400
     file = request.files['file']
@@ -61,23 +65,26 @@ def upload_file():
 
 @app.route("/write/doc", methods=['POST'])
 def write_doc():
+    logger.info(f"write_doc {request}")
     data = request.json
     task_id = data.get("task_id")
     file_name = data.get("file_name")
+    uid = data.get("uid")
 
-    if not task_id or not file_name:
+    if not task_id or not file_name or not uid:
         return jsonify({"error": "缺少参数"}), 400
 
     threading.Thread(
         target=process_document,
-        args=(task_id, file_name)
+        args=(uid, task_id, file_name)
     ).start()
 
     return jsonify({"status": "started", "task_id": task_id}), 200
 
 
 @app.route('/download/<filename>', methods=['GET'])
-def download_output(filename):
+def download_file(filename):
+    logger.info(f"download_file, {filename}")
     if not os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
         logger.error(f"文件 {filename} 不存在")
         abort(404)
@@ -86,6 +93,7 @@ def download_output(filename):
 
 @app.route('/get/process/info', methods=['POST'])
 def get_doc_process_info():
+    logger.info(f"get_doc_process_info {request}")
     task_id = request.json.get("task_id")
     if not task_id:
         return jsonify({"error": "缺少任务ID"}), 400
@@ -95,6 +103,29 @@ def get_doc_process_info():
         "task_id": task_id,
         "progress": progress_info["text"]
     }), 200
+
+@app.route('/vdb/idx', methods=['GET'])
+def vdb_index():
+    """
+     A index for static
+    curl -s --noproxy '*' http://127.0.0.1:19000 | jq
+    :return:
+    """
+    logger.info(f"request_args_in_vdb_index {request.args}")
+    try:
+        uid = request.args.get('uid').strip()
+        if not uid:
+            return "user is null in config, please submit your username in config request"
+    except Exception as e:
+        logger.error(f"err_in_vdb_index, {e}, url: {request.url}", exc_info=True)
+        raise jsonify("err_in_vdb_index")
+    ctx = cfg_utl.get_ds_cfg_by_uid(uid, my_cfg)
+    ctx["uid"] = uid
+    ctx['sys_name'] = my_cfg['sys']['name']
+    ctx["waring_info"] = ""
+    dt_idx = "vdb_index.html"
+    logger.info(f"return_page {dt_idx}, ctx {ctx}")
+    return render_template(dt_idx, **ctx)
 
 def clean_tasks():
     while True:
@@ -108,7 +139,7 @@ def clean_tasks():
 
 
 
-def process_document(task_id, file_name):
+def process_document(uid: str, task_id: str, file_name: str):
     try:
         task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
@@ -123,6 +154,7 @@ def process_document(task_id, file_name):
         if para_comment_dict:
             logger.info("process_word_comment_doc")
             modify_para_with_comment_prompt_in_process(
+                uid,
                 task_id,
                 thread_lock,
                 task_progress,

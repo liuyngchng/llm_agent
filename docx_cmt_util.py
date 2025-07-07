@@ -164,10 +164,11 @@ def test_get_comment():
         para_txt = get_paragraph_by_id(my_file, para_id)
         logger.info(f"para_id:{para_id}, para_txt:{para_txt}")
 
-def modify_para_with_comment_prompt_in_process(task_id:str, thread_lock, task_progress:dict,
-                                               target_doc: str, doc_ctx: str, comments_dict: dict, cfg: dict, output_file_name:str):
+def modify_para_with_comment_prompt_in_process(uid:str, task_id:str, thread_lock, task_progress:dict,
+    target_doc: str, doc_ctx: str, comments_dict: dict, cfg: dict, output_file_name:str):
     """
     将批注内容替换到对应段落，并将新文本设为红色
+    :param uid: user id to submit the task
     :param task_id: 执行任务的ID
     :param thread_lock: A thread lock
     :param task_progress: task process information dict with task_id as key
@@ -208,7 +209,7 @@ def modify_para_with_comment_prompt_in_process(task_id:str, thread_lock, task_pr
             comment_text = comments_dict[para_idx]
             catalogue = get_catalogue(target_doc)
             # TODO : get text context to gen_txt
-            my_vector_db_dir = f"{UPLOAD_FOLDER}/faiss_oa_idx_332987902"
+            my_vector_db_dir = f"{UPLOAD_FOLDER}/faiss_oa_idx_{uid}"
             ctx_txt = search_txt(comment_text, my_vector_db_dir, 0.1, cfg['api'], 3)
             modified_txt = gen_txt(doc_ctx, ctx_txt, comment_text, catalogue, str(current_heading), cfg)
             if modified_txt:
