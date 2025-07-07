@@ -169,7 +169,7 @@ def search_similar_text(query: str, score_threshold: float, vector_db, sys_cfg: 
     :return: the results
     """
     db = load_vector_db(vector_db, sys_cfg)
-    return db.similarity_search_with_relevance_scores(query,k= top_k, score_threshold = score_threshold)
+    return db.similarity_search_with_relevance_scores(query, k=top_k, score_threshold = score_threshold)
 
 
 

@@ -143,13 +143,13 @@ class Doris:
         table_schema = table_schema_cache_dict.get(table_schema_cache_dict_key)
         sql = f"SHOW CREATE TABLE {table_schema_cache_dict_key}"
         if table_schema:
-            logger.info(f"return_table_schema_from_cache_for_sql {sql}, {table_schema}")
+            logger.info(f"return_table_schema_from_cache_for_sql\n{sql}, {table_schema}")
             return table_schema
         logger.info(f"get_col_comment_sql, {sql}")
         exe_result = self.request_dt(self.build_dml(sql))
         table_schema = exe_result[0].get('Create Table').split('ENGINE')[0]
         table_schema_cache_dict[table_schema_cache_dict_key] = table_schema
-        logger.info(f"return_table_schema_from_dt_source_for_sql {sql}, {table_schema}")
+        logger.info(f"return_table_schema_from_dt_source_for_sql\n{sql}, {table_schema}")
         return table_schema
 
     def get_table_list(self) -> list:
