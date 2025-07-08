@@ -10,6 +10,7 @@ from utils import rmv_think_block, extract_md_content
 import httpx
 import torch
 import logging.config
+import time
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -141,8 +142,53 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
         logger.error(f"json_loads_err_for {response.content}")
     return fill_result
 
-
-import time
+def gen_doc_outline(doc_type: str, doc_title: str, cfg: dict, is_remote=True) -> dict:
+    """
+    search user questions in knowledge base,
+    submit the search result and user msg to LLM, return the answer
+    """
+    logger.info(f"doc_type [{doc_type}] , doc_title {doc_title}")
+    template = '''
+        目前我正在写一个文档，当前的任务是生成文档的三级目录，已知文档类型和文档的标题如下，
+        文档类型：{doc_type}
+        文档标题：{doc_title}
+        请输出以下格式的文档三级标题，数据格式举例如下：
+        [
+            {
+                "title": "1. 背景",
+                "items": [
+                    {"title": "1.1 概述", "items": ["1.1.1 项目背景", "1.1.2 核心问题", "1.1.3 关键数据"]},
+                    {"title": "1.2 项目进展", "items": ["1.2.1 项目进展", "1.2.2 里程碑节点", "1.2.3 关键技术"]},
+                    {"title": "1.3 关键数据", "items": ["1.3.1 数据类型", "1.3.2 数据存储", "1.3.3 数据价值"]}
+                ]
+            },
+            {
+                "title": "2. 问题分析",
+                "items": [
+                    {"title": "2.1 面临挑战", "items": ["2.1.1 国内外现状", "2.1.2 解决的问题", "2.1.3 面临的问题"]},
+                    {"title": "2.2 解决思路", "items": ["2.2.1 基础研究投入", "2.2.2 样品试制", "2.2.3 工程环境应用"]},
+                    {"title": "2.3 经验总结", "items": ["2.3.1 理论研究支持", "2.3.2 专利限制突破", "2.2.3 自有技术积累"]}
+                ]
+            }
+        ]
+        '''
+    prompt = ChatPromptTemplate.from_template(template)
+    logger.info(f"prompt {prompt}")
+    model = get_model(cfg, is_remote)
+    chain = prompt | model
+    logger.info(f"submit doc_type[{doc_type}], doc_title[{doc_title}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
+    response = chain.invoke({
+        "doc_type": doc_type,
+        "doc_title": doc_title,
+    })
+    del model
+    torch.cuda.empty_cache()
+    doc_outline = ""
+    try:
+        doc_outline =  json.loads(rmv_think_block(response.content))
+    except Exception as es:
+        logger.error(f"json_loads_err_for {response.content}")
+    return doc_outline
 
 
 def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,

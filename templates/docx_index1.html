@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线文档生成工具</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(to right, #4b6cb7, #182848);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .progress-container {
+            padding: 25px 40px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .progress-steps::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+
+        .progress-bar {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            height: 4px;
+            background: #4b6cb7;
+            transform: translateY(-50%);
+            z-index: 2;
+            transition: width 0.4s ease;
+        }
+
+        .step {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #777;
+            position: relative;
+            z-index: 3;
+            transition: all 0.4s ease;
+        }
+
+        .step.active {
+            border-color: #4b6cb7;
+            background: #4b6cb7;
+            color: white;
+            box-shadow: 0 4px 10px rgba(75, 108, 183, 0.3);
+        }
+
+        .step-label {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 0.9rem;
+            color: #777;
+            font-weight: 500;
+        }
+
+        .step.active .step-label {
+            color: #4b6cb7;
+            font-weight: 600;
+        }
+
+        .step-content {
+            padding: 40px;
+        }
+
+        .step-panel {
+            display: none;
+        }
+
+        .step-panel.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.8rem;
+        }
+
+        h2 i {
+            background: #4b6cb7;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #444;
+            font-size: 1.05rem;
+        }
+
+        select, textarea, input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        select:focus, textarea:focus, input:focus {
+            outline: none;
+            border-color: #4b6cb7;
+            box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+            font-family: inherit;
+            line-height: 1.6;
+        }
+
+        .outline-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #eee;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .outline-item {
+            padding: 12px 15px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #4b6cb7;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .outline-item h3 {
+            font-size: 1.1rem;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .outline-item ul {
+            padding-left: 25px;
+            margin-top: 8px;
+        }
+
+        .outline-item li {
+            padding: 5px 0;
+            color: #555;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #4b6cb7;
+            border: 1px solid #4b6cb7;
+        }
+
+        .btn:disabled {
+            background: #e0e0e0;
+            cursor: not-allowed;
+            color: #aaa;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(to right, #3a5a9e, #2c487e);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(75, 108, 183, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: #f0f4ff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(75, 108, 183, 0.1);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(75, 108, 183, 0.2);
+            border-radius: 50%;
+            border-top: 5px solid #4b6cb7;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .download-success {
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        .download-success i {
+            font-size: 4rem;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        .download-success h3 {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .download-success p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                border-radius: 12px;
+            }
+
+            header {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .progress-container {
+                padding: 20px;
+            }
+
+            .step-content {
+                padding: 25px;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .btn-container {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-file-word"></i> 在线文档生成工具</h1>
+            <p>四步创建专业文档，智能生成，高效便捷</p>
+        </header>
+
+        <div class="progress-container">
+            <div class="progress-steps">
+                <div class="progress-bar" id="progressBar"></div>
+                <div class="step active">
+                    <span>1</span>
+                    <div class="step-label">选择类型</div>
+                </div>
+                <div class="step">
+                    <span>2</span>
+                    <div class="step-label">生成目录</div>
+                </div>
+                <div class="step">
+                    <span>3</span>
+                    <div class="step-label">编辑内容</div>
+                </div>
+                <div class="step">
+                    <span>4</span>
+                    <div class="step-label">下载文档</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="step-content">
+            <!-- 步骤1: 选择文档类型 -->
+            <div class="step-panel active" id="step1">
+                <h2><i class="fas fa-clipboard-list"></i> 选择文档类型</h2>
+                <p>请选择您要创建的文档类型，系统将智能生成相应结构</p>
+
+                <div class="form-group">
+                    <label for="docType">文档类型</label>
+                    <select id="docType">
+                        <option value="">-- 请选择文档类型 --</option>
+                        <option value="report">工作报告</option>
+                        <option value="report">国家标准(GB/(GB/T))</option>
+                        <option value="proposal">项目计划书</option>
+                        <option value="summary">年度工作总结</option>
+                        <option value="research">可行性研究报告</option>
+                        <option value="marketing">营销策划方案</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="docTitle">文档标题</label>
+                    <input type="text" id="docTitle" placeholder="请输入文档标题">
+                </div>
+
+                <div class="form-group">
+                    <label for="keywords">关键词 (可选)</label>
+                    <input type="text" id="keywords" placeholder="输入关键词，用逗号分隔">
+                </div>
+
+                <div class="btn-container">
+                    <div></div> <!-- 占位元素 -->
+                    <button class="btn btn-primary" onclick="nextStep(1)">
+                        下一步 <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 步骤2: 显示生成目录 -->
+            <div class="step-panel" id="step2">
+                <h2><i class="fas fa-sitemap"></i> 智能生成目录</h2>
+                <p>根据您的选择，系统已生成以下文档结构：</p>
+
+                <div class="outline-container" id="outlineContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>正在智能生成文档结构，请稍候...</p>
+                    </div>
+                </div>
+
+                <div class="btn-container">
+                    <button class="btn btn-secondary" onclick="prevStep(2)">
+                        <i class="fas fa-arrow-left"></i> 上一步
+                    </button>
+                    <button class="btn btn-primary" onclick="nextStep(2)">
+                        确认并编辑 <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 步骤3: 编辑目录 -->
+            <div class="step-panel" id="step3">
+                <h2><i class="fas fa-edit"></i> 编辑文档内容</h2>
+                <p>请修改以下文档结构，完成后点击生成文档按钮</p>
+
+                <div class="form-group">
+                    <label for="modifiedOutline">文档结构编辑</label>
+                    <textarea id="modifiedOutline" placeholder="在此编辑您的文档结构..."></textarea>
+                </div>
+
+                <div class="btn-container">
+                    <button class="btn btn-secondary" onclick="prevStep(3)">
+                        <i class="fas fa-arrow-left"></i> 上一步
+                    </button>
+                    <button class="btn btn-primary" onclick="nextStep(3)">
+                        生成文档 <i class="fas fa-file-word"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 步骤4: 下载文档 -->
+            <div class="step-panel" id="step4">
+                <div class="download-success">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>文档生成成功！</h3>
+                    <p>您的专业文档已准备就绪，点击下方按钮下载</p>
+
+                    <div class="btn-container">
+                        <button class="btn btn-secondary" onclick="prevStep(4)">
+                            <i class="fas fa-arrow-left"></i> 返回编辑
+                        </button>
+                        <button class="btn btn-primary" onclick="downloadDoc()">
+                            <i class="fas fa-download"></i> 下载Word文档
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <input type="hidden" id ="uid" name="uid" value="{{uid}}">
+    <input type="hidden" id ="t" name="t" value="{{t}}">
+    <script>
+        // 当前步骤
+        let currentStep = 1;
+
+        // 初始化进度条
+        function updateProgressBar() {
+            const progressBar = document.getElementById('progressBar');
+            const progress = ((currentStep - 1) / 3) * 100;
+            progressBar.style.width = `${progress}%`;
+
+            // 更新步骤激活状态
+            document.querySelectorAll('.step').forEach((step, index) => {
+                if (index < currentStep) {
+                    step.classList.add('active');
+                } else {
+                    step.classList.remove('active');
+                }
+            });
+        }
+
+        // 下一步函数
+        function nextStep(step) {
+            // 验证步骤1的输入
+            if (step === 1) {
+                const docType = document.getElementById('docType').value;
+                const docTitle = document.getElementById('docTitle').value;
+
+                if (!docType) {
+                    alert('请选择文档类型');
+                    return;
+                }
+
+                if (!docTitle.trim()) {
+                    alert('请输入文档标题');
+                    return;
+                }
+            }
+
+            // 隐藏当前步骤
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+
+            // 更新当前步骤
+            currentStep = step + 1;
+
+            // 显示下一步
+            document.getElementById(`step${currentStep}`).classList.add('active');
+
+            // 更新进度条
+            updateProgressBar();
+
+            // 如果是第二步，生成目录
+            if (currentStep === 2) {
+                generateOutline();
+            }
+
+            // 如果是第三步，填充编辑区域
+            if (currentStep === 3) {
+                document.getElementById('modifiedOutline').value = document.getElementById('outlineText').innerText;
+            }
+        }
+
+        // 上一步函数
+        function prevStep(step) {
+            // 隐藏当前步骤
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+
+            // 更新当前步骤
+            currentStep = step - 1;
+
+            // 显示上一步
+            document.getElementById(`step${currentStep}`).classList.add('active');
+
+            // 更新进度条
+            updateProgressBar();
+        }
+
+        // 模拟目录生成
+        function generateOutline() {
+            const docType = document.getElementById('docType').value;
+            const docTitle = document.getElementById('docTitle').value;
+
+            // 模拟网络请求延迟
+            setTimeout(() => {
+                const outlines = {
+                    report: [
+                        {title: "一、工作回顾", items: ["1.1 项目进展", "1.2 成果展示", "1.3 关键数据"]},
+                        {title: "二、问题分析", items: ["2.1 面临挑战", "2.2 解决思路", "2.3 经验总结"]},
+                        {title: "三、未来计划", items: ["3.1 工作目标", "3.2 实施步骤", "3.3 预期成果"]}
+                    ],
+                    proposal: [
+                        {title: "一、项目背景", items: ["1.1 市场分析", "1.2 项目目标", "1.3 核心价值"]},
+                        {title: "二、实施计划", items: ["2.1 时间规划", "2.2 资源分配", "2.3 里程碑节点"]},
+                        {title: "三、效益分析", items: ["3.1 成本预算", "3.2 预期收益", "3.3 风险评估"]}
+                    ],
+                    summary: [
+                        {title: "一、年度综述", items: ["1.1 关键数据", "1.2 整体评价", "1.3 成果亮点"]},
+                        {title: "二、部门业绩", items: ["2.1 市场部", "2.2 技术部", "2.3 运营部"]},
+                        {title: "三、未来展望", items: ["3.1 发展目标", "3.2 行动计划", "3.3 战略规划"]}
+                    ],
+                    research: [
+                        {title: "一、研究背景", items: ["1.1 研究目的", "1.2 研究意义", "1.3 国内外现状"]},
+                        {title: "二、研究方法", items: ["2.1 研究设计", "2.2 数据收集", "2.3 分析方法"]},
+                        {title: "三、研究结果", items: ["3.1 数据分析", "3.2 研究发现", "3.3 结果讨论"]}
+                    ],
+                    marketing: [
+                        {title: "一、市场分析", items: ["1.1 目标市场", "1.2 竞争分析", "1.3 SWOT分析"]},
+                        {title: "二、营销策略", items: ["2.1 产品策略", "2.2 价格策略", "2.3 推广策略"]},
+                        {title: "三、执行计划", items: ["3.1 时间安排", "3.2 预算分配", "3.3 效果评估"]}
+                    ]
+                };
+
+                const outline = outlines[docType] || outlines.report;
+
+                let outlineHTML = `
+                    <h3 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">${docTitle}</h3>
+                    <div id="outlineText" style="display: none;">
+                `;
+
+                outline.forEach(section => {
+                    outlineHTML += `${section.title}\n`;
+                    section.items.forEach(item => {
+                        outlineHTML += `  ${item}\n`;
+                    });
+                    outlineHTML += '\n';
+                });
+
+                outlineHTML += '</div>';
+
+                outline.forEach(section => {
+                    outlineHTML += `
+                        <div class="outline-item">
+                            <h3>${section.title}</h3>
+                            <ul>
+                    `;
+
+                    section.items.forEach(item => {
+                        outlineHTML += `<li>${item}</li>`;
+                    });
+
+                    outlineHTML += `
+                            </ul>
+                        </div>
+                    `;
+                });
+
+                document.getElementById('outlineContainer').innerHTML = outlineHTML;
+            }, 1500);
+        }
+
+        // 模拟文档下载
+        function downloadDoc() {
+            // 模拟生成文档的延迟
+            setTimeout(() => {
+                alert("文档已生成！在实际应用中，这里会下载Word文档。");
+            }, 1000);
+        }
+
+        // 初始化页面
+        updateProgressBar();
+    </script>
+</body>
+</html>
