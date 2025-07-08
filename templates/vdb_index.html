@@ -58,16 +58,35 @@
             width: 100%;
             margin-bottom: 15px;
         }
+        #search_result_table {
+            text-align: left;
+            margin-top: 15px;
+        }
+        #search_result_table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-weight: normal;
+          }
+        #search_result_table th,
+        #search_result_table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-weight: normal;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h2 style="text-align:center;">语义搜索知识库构建</h2>
+
+            <div id="vdb_status">{{vdb_status}}</div>
+
             <p class="subtitle">
                 <span style="font-weight:bold;">（1）系统能力</span><br>系统提供3种文档的知识库构建：<br>
-                1）可以上传PDF（非扫描版）、Word(docx), TXT文件，由模型按照语义进行向量化<br>
-                2）可自定义向量化过程中的文本块大小），以及文本重叠量
+                1）支持上传PDF（非扫描版）、Word（docx）和TXT文件，由模型按照语义进行向量化；<br>
+                2）可自定义向量化过程中的文本块大小），以及文本重叠量。
             </p>
             <p>
                 <span style="font-weight:bold;">（2）系统设计</span><br>系统设计详见&nbsp;&nbsp;
@@ -91,6 +110,12 @@
                 <p>文档索引构建慢进度将在此处实时展示</p>
                 <p style="margin-top: 10px; font-size: 0.9rem;">选择本地文件后点击"上传"按钮开始</p>
             </div>
+        </div>
+        <div class="text-progress" id="search_test">
+            <input type="text" id="search_input" placeholder="请输入检索文本，测试上传文档是否可以被命中">
+            <button id="search_btn">检索</button>
+            <div id="search_result_table"></div>
+
         </div>
         <input type="hidden" id ="uid" name="uid" value="{{uid}}">
         <input type="hidden" id ="t" name="t" value="{{t}}">
@@ -137,7 +162,7 @@
                 document.getElementById('stream_output').innerHTML =
                     '<div class="status">正在上传文档...</div>';
 
-                const uploadRes = await fetch('/upload', {
+                const uploadRes = await fetch('/vdb/upload', {
                     method: 'POST',
                     body: formData
                 });
@@ -160,7 +185,7 @@
                 // 启动文档索引生成,这里修改为流式请求
                 uid = document.getElementById('uid').value;
 
-                const writeRes = await fetch('/index/doc', {
+                const writeRes = await fetch('/vdb/index/doc', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ task_id, file_name, uid })
@@ -179,7 +204,7 @@
             if (!currentTaskId)
                 return;
             try {
-                const res = await fetch('/get/process/info', {
+                const res = await fetch('/vdb/process/info', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ task_id: currentTaskId })
@@ -204,6 +229,20 @@
                 document.getElementById('textProgress').textContent = "进度获取失败";
             }
         }
+        <!--  检索功能-->
+        document.getElementById('search_btn').addEventListener('click', async () => {
+            const search_input = document.getElementById('search_input').value;
+            const uid = document.getElementById('uid').value;
+            const t = document.getElementById('t').value;
+            const search_res = await fetch('/vdb/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ search_input, uid, t })
+            });
+            const data = await search_res.json();
+            // 修复这里的目标元素ID ↓
+            document.getElementById('search_result_table').innerHTML = data.search_output;
+        });
     </script>
 </body>
 </html>

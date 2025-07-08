@@ -9,16 +9,16 @@ import os
 import threading
 import time
 
-from flask import (request, jsonify, redirect, url_for, Blueprint)
+from flask import (request, jsonify, Blueprint, render_template)
 from werkzeug.utils import secure_filename
 
 from sys_init import init_yml_cfg
-from vdb_util import vector_file_in_progress
+from vdb_util import vector_file_in_progress, search_txt
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-file_vdb = Blueprint('file_vdb', __name__)
+vdb_bp = Blueprint('vdb', __name__)
 
 UPLOAD_FOLDER = 'upload_doc'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # 确保上传目录存在
@@ -28,8 +28,39 @@ my_cfg = init_yml_cfg()
 task_progress = {}  # 存储文本进度信息
 thread_lock = threading.Lock()
 
+@vdb_bp.route('/vdb/idx', methods=['GET'])
+def vdb_index():
+    """
+     A index for static
+    curl -s --noproxy '*' http://127.0.0.1:19000/vdb/idx | jq
+    :return:
+    """
+    logger.info(f"request_args_in_vdb_index {request.args}")
+    try:
+        uid = request.args.get('uid').strip()
+        t = request.args.get('t').strip()
+        if not uid:
+            return "user is null in config, please submit your username in config request"
+    except Exception as e:
+        logger.error(f"err_in_vdb_index, {e}, url: {request.url}", exc_info=True)
+        raise jsonify("err_in_vdb_index")
+    vdb_status = "目前没有矢量知识库，请您即使上传文件创建知识库"
+    vdb_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
+    if os.path.exists(vdb_dir):
+        total_kb = get_dir_file_size_in_kb(vdb_dir)
+        vdb_status = f"当前知识库大小: {total_kb}"
+    ctx = {
+        "uid": uid,
+        "t": t,
+        "vdb_status": vdb_status,
+        "sys_name": my_cfg['sys']['name'],
+        "waring_info": ""
+    }
+    dt_idx = "vdb_index.html"
+    logger.info(f"return_page {dt_idx}, ctx {ctx}")
+    return render_template(dt_idx, **ctx)
 
-@file_vdb.route('/upload', methods=['POST'])
+@vdb_bp.route('/vdb/upload', methods=['POST'])
 def upload_file():
     logger.info(f"start_upload_file, {request}")
     if 'file' not in request.files:
@@ -101,7 +132,7 @@ def upload_file():
         }), 500
 
 
-@file_vdb.route("/index/doc", methods=['POST'])
+@vdb_bp.route("/vdb/index/doc", methods=['POST'])
 def index_doc():
     logger.info(f"start_index_doc, {request}")
     data = request.json
@@ -119,7 +150,7 @@ def index_doc():
 
     return jsonify({"status": "started", "task_id": task_id}), 200
 
-@file_vdb.route('/get/process/info', methods=['POST'])
+@vdb_bp.route('/vdb/process/info', methods=['POST'])
 def get_doc_process_info():
     task_id = request.json.get("task_id")
     if not task_id:
@@ -130,6 +161,25 @@ def get_doc_process_info():
         "task_id": task_id,
         "progress": progress_info["text"]
     }), 200
+
+
+@vdb_bp.route('/vdb/search', methods=['POST'])
+def search_vdb():
+    logger.info(f"start_search_vdb, {request}")
+    data = request.json
+    search_input = data.get("search_input")
+    uid = data.get("uid")
+    t = data.get("t")
+    if not search_input or not uid or not t:
+        return jsonify({"error": "缺少参数"}), 400
+    my_vector_db_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
+
+    ctx_txt = search_txt(search_input, my_vector_db_dir, 0.1, my_cfg['api'], 3)
+    if ctx_txt:
+        ctx_txt = ctx_txt.replace("\n", "<br>")
+        return jsonify({"search_output": ctx_txt}), 200
+    else:
+        return jsonify({"search_output": "未检索到有效内容"}), 200
 
 def clean_tasks():
     while True:
@@ -156,6 +206,15 @@ def process_doc(task_id: str, file_name: str, uid: str):
                 "timestamp": time.time()
             }
         logger.exception("文档生成异常", e)
+
+def get_dir_file_size_in_kb(file_dir: str):
+    total_size = 0
+    for dirpath, _, filenames in os.walk(file_dir):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    total_kb = f"{total_size / 1024:.2f} KB"
+    return total_kb
 
 if __name__ == '__main__':
     logger.info("just for test")

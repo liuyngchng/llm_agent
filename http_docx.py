@@ -10,12 +10,11 @@ import time
 
 from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for, render_template)
 
-from bp_vdb import file_vdb
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
 from docx_util import extract_catalogue, fill_doc_in_progress
 from sys_init import init_yml_cfg
 from bp_auth import auth_bp
-import cfg_util as cfg_utl
+from bp_vdb import vdb_bp
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -23,6 +22,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 app.register_blueprint(auth_bp)
+app.register_blueprint(vdb_bp)
 UPLOAD_FOLDER = 'upload_doc'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # 确保上传目录存在
 my_cfg = init_yml_cfg()
@@ -38,7 +38,7 @@ def app_home():
     return redirect(url_for('auth.login_index', app_source='docx'))
 
 
-@app.route('/upload', methods=['POST'])  # 修正路由路径
+@app.route('/docx/upload', methods=['POST'])  # 修正路由路径
 def upload_file():
     logger.info(f"upload_file {request}")
     if 'file' not in request.files:
@@ -63,7 +63,7 @@ def upload_file():
     }), 200
 
 
-@app.route("/write/doc", methods=['POST'])
+@app.route("/docx/write", methods=['POST'])
 def write_doc():
     logger.info(f"write_doc {request}")
     data = request.json
@@ -82,7 +82,7 @@ def write_doc():
     return jsonify({"status": "started", "task_id": task_id}), 200
 
 
-@app.route('/download/<filename>', methods=['GET'])
+@app.route('/docx/download/<filename>', methods=['GET'])
 def download_file(filename):
     logger.info(f"download_file, {filename}")
     if not os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
@@ -91,7 +91,7 @@ def download_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
 
 
-@app.route('/get/process/info', methods=['POST'])
+@app.route('/docx/process/info', methods=['POST'])
 def get_doc_process_info():
     logger.info(f"get_doc_process_info {request}")
     task_id = request.json.get("task_id")
@@ -104,28 +104,6 @@ def get_doc_process_info():
         "progress": progress_info["text"]
     }), 200
 
-@app.route('/vdb/idx', methods=['GET'])
-def vdb_index():
-    """
-     A index for static
-    curl -s --noproxy '*' http://127.0.0.1:19000 | jq
-    :return:
-    """
-    logger.info(f"request_args_in_vdb_index {request.args}")
-    try:
-        uid = request.args.get('uid').strip()
-        if not uid:
-            return "user is null in config, please submit your username in config request"
-    except Exception as e:
-        logger.error(f"err_in_vdb_index, {e}, url: {request.url}", exc_info=True)
-        raise jsonify("err_in_vdb_index")
-    ctx = cfg_utl.get_ds_cfg_by_uid(uid, my_cfg)
-    ctx["uid"] = uid
-    ctx['sys_name'] = my_cfg['sys']['name']
-    ctx["waring_info"] = ""
-    dt_idx = "vdb_index.html"
-    logger.info(f"return_page {dt_idx}, ctx {ctx}")
-    return render_template(dt_idx, **ctx)
 
 def clean_tasks():
     while True:
