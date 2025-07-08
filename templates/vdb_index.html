@@ -79,7 +79,7 @@
 <body>
     <div class="container">
         <header>
-            <h2 style="text-align:center;">语义搜索知识库构建</h2>
+            <h2 style="text-align:center;">知识库构建</h2>
 
             <div id="vdb_status">{{vdb_status}}</div>
 
@@ -114,6 +114,7 @@
         <div class="text-progress" id="search_test">
             <input type="text" id="search_input" placeholder="请输入检索文本，测试上传文档是否可以被命中">
             <button id="search_btn">检索</button>
+            <div id="search_status" style="margin-top:8px;color:#888;font-style:italic;"></div>
             <div id="search_result_table"></div>
 
         </div>
@@ -232,16 +233,33 @@
         <!--  检索功能-->
         document.getElementById('search_btn').addEventListener('click', async () => {
             const search_input = document.getElementById('search_input').value;
+            if (!search_input.trim()) {
+                alert('请输入检索内容');
+                return;
+            }
             const uid = document.getElementById('uid').value;
             const t = document.getElementById('t').value;
-            const search_res = await fetch('/vdb/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ search_input, uid, t })
-            });
-            const data = await search_res.json();
-            // 修复这里的目标元素ID ↓
-            document.getElementById('search_result_table').innerHTML = data.search_output;
+            const statusEl = document.getElementById('search_status');
+            const searchBtn = document.getElementById('search_btn');
+            try {
+                statusEl.textContent = "处理中...";
+                searchBtn.disabled = true;
+                const search_res = await fetch('/vdb/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ search_input, uid, t })
+                });
+                const data = await search_res.json();
+                document.getElementById('search_result_table').innerHTML = data.search_output;
+            } catch (error) {
+                console.error('检索失败:', error);
+                document.getElementById('search_result_table').innerHTML =
+                    `<div class="error">检索失败: ${error.message}</div>`;
+            } finally {
+                // 清除状态并恢复按钮
+                statusEl.textContent = "";
+                searchBtn.disabled = false;
+            }
         });
     </script>
 </body>
