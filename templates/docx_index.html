@@ -558,6 +558,7 @@
     </div>
     <input type="hidden" id ="uid" name="uid" value="{{uid}}">
     <input type="hidden" id ="t" name="t" value="{{t}}">
+    <textarea id="outlineText" style="display:none;"></textarea>
     <script>
         // 当前步骤
         let currentStep = 1;
@@ -615,7 +616,7 @@
 
             // 如果是第三步，填充编辑区域
             if (currentStep === 3) {
-                document.getElementById('modifiedOutline').value = document.getElementById('outlineText').innerText;
+                document.getElementById('modifiedOutline').value = document.getElementById('outlineText').value;
             }
         }
 
@@ -684,22 +685,24 @@
                     outlineHTML += `<div class="outline-item">
                     <h3>${section.title}</h3>
                     <ul>`;
-
+                    outlineText += `${section.title}\n`;
                     section.items.forEach((subsection) => {
                         outlineHTML += `<li>
                           <strong>${subsection.title}</strong>
                           <ul>`;
-
+                        outlineText += `\t${subsection.title}\n`;
                         // 添加三级目录项
                         subsection.items.forEach((item) => {
-                          outlineHTML += `<li>${item}</li>`;
+                            outlineHTML += `<li>${item}</li>`;
+                            outlineText += `\t\t${item}\n`;
                         });
                         outlineHTML += `</ul></li>`;
                     });
                     outlineHTML += `</ul></div>`;
                 });
-                outlineHTML += `</div>${outlineText}</div>`;
+<!--                outlineHTML += `</div>${outlineText}</div>`;-->
                 outlineContainer.innerHTML = outlineHTML;
+                document.getElementById('outlineText').value = outlineText;
             })
             .catch(error => {
                 console.error('Error:', error);
