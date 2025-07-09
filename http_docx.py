@@ -10,6 +10,7 @@ import time
 
 from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for, render_template)
 
+import docx_util
 import my_enums
 from agt_util import gen_doc_outline
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
@@ -99,14 +100,40 @@ def upload_file():
     }), 200
 
 
-@app.route("/docx/write", methods=['POST'])
+@app.route("/docx/write/outline", methods=['POST'])
 def write_doc():
-    logger.info(f"write_doc {request}")
+    """
+    按照提供的三级目录文本生成文档
+    """
     data = request.json
+    logger.info(f"write_doc , data{data}")
+    uid = data.get("uid")
+    doc_title = data.get("docTitle")
+    doc_outline = data.get("docOutline")
+    doc_type = data.get("docType")
+    doc_type_chinese = my_enums.WriteDocType.get_doc_type(doc_type)
+    if not doc_type_chinese or not doc_title or not doc_outline:
+        return jsonify({"error": "缺少参数"}), 400
+    task_id = str(int(time.time()))
+    file_name = docx_util.gen_docx_template_with_outline(task_id, UPLOAD_FOLDER, doc_outline)
+    logger.info(f"docx_template file_name {file_name}")
+    threading.Thread(
+        target=process_document,
+        args=(uid, task_id, file_name)
+    ).start()
+
+    return jsonify({"status": "started", "task_id": task_id}), 200
+
+@app.route("/docx/write/template", methods=['POST'])
+def write_doc_from_template():
+    """
+    按照一定的 Word 文件模板生成文档
+    """
+    data = request.json
+    logger.info(f"write_doc , data{data}")
     task_id = data.get("task_id")
     file_name = data.get("file_name")
     uid = data.get("uid")
-    logger.info(f"write_doc , data{data}")
     if not task_id or not file_name or not uid:
         return jsonify({"error": "缺少参数"}), 400
 
@@ -135,10 +162,12 @@ def get_doc_process_info():
         return jsonify({"error": "缺少任务ID"}), 400
     with thread_lock:
         progress_info = task_progress.get(task_id, {"text": "未知状态"})
-    return jsonify({
+    info = {
         "task_id": task_id,
         "progress": progress_info["text"]
-    }), 200
+    }
+    logger.info(f"get_doc_process_info, {info}")
+    return jsonify(info), 200
 
 
 def clean_tasks():

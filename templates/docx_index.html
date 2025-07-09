@@ -523,7 +523,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="modifiedOutline">文档结构编辑</label>
+<!--                    <label for="modifiedOutline">文档结构编辑</label>-->
                     <textarea id="modifiedOutline" placeholder="在此编辑您的文档结构..."></textarea>
                 </div>
 
@@ -739,8 +739,9 @@
         async function generateDocument() {
             const uid = document.getElementById('uid').value;
             const token = document.getElementById('t').value;
-            const modifiedContent = document.getElementById('modifiedOutline').value;
+            const docOutline = document.getElementById('modifiedOutline').value;
             const docTitle = document.getElementById('docTitle').value;
+            const docType = document.getElementById('docType').value;
             const generateBtn = document.getElementById('generateBtn');
             const progressDisplay = document.getElementById('progressDisplay');
             const progressText = document.getElementById('progressText');
@@ -761,7 +762,7 @@
             }, 300000);
             try {
                 // 调用后端接口
-                const response = await fetch('/docx/write', {
+                const response = await fetch('/docx/write/outline', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -769,8 +770,9 @@
                     },
                     body: JSON.stringify({
                         uid: uid,
-                        content: modifiedContent,
-                        title: docTitle
+                        docOutline: docOutline,
+                        docTitle: docTitle,
+                        docType: docType,
                     })
                 });
 

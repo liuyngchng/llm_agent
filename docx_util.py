@@ -239,6 +239,38 @@ def get_catalogue(target_doc: str) -> str:
     return my_catalogue
 
 
+def gen_docx_template_with_outline(task_id: str, os_dir:str, outline: str) -> str:
+    """
+    :param os_dir: 输出的本地文件目录
+    :param outline: 三级目录文本信息
+    :return: 生成目录的文档文件名称 full_path
+    """
+    doc = Document()
+    lines = outline.strip().split('\n')
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        indent_level = 0
+        for char in line:
+            if char == '\t':
+                indent_level += 1
+            elif not char.isspace():
+                break
+        if indent_level == 0:
+            doc.add_heading(stripped, level=0 if line == lines[0] else 1)
+        elif indent_level == 1:
+            doc.add_heading(stripped, level=2)
+        else:
+            doc.add_heading(stripped, level=3)
+
+    filename = f"{task_id}_outline.docx"
+    save_path = os.path.join(os_dir, filename)
+    doc.save(save_path)
+    return filename
+
+
 if __name__ == "__main__":
     my_cfg = init_yml_cfg()
     my_source_dir = "/home/rd/doc/文档生成/knowledge_base"

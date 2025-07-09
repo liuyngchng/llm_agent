@@ -162,7 +162,7 @@
                 progressInterval = setInterval(fetchProgress, 1000);
                 const uid = document.getElementById('uid').val()
                 // 启动文档生成,这里修改为流式请求
-                const writeRes = await fetch('/docx/write', {
+                const writeRes = await fetch('/docx/write/template', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ uid, task_id, file_name })
