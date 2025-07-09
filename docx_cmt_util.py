@@ -145,6 +145,17 @@ def inspect_docx_structure():
             logger.info(f"comments.xml内容:{f.read().decode('utf-8')}")
 
 def get_para_comment_dict(file_fullpath: str) -> dict:
+    """
+    获取文档中所有修改批注及其关联的段落ID
+    返回格式: {
+        comment_id: {
+            "author": 作者,
+            "date": 日期,
+            "text": 批注内容,
+            "paragraph_id": 段落ID  # 新增
+        }
+    """
+
     comments_dict = get_comments_dict(file_fullpath)
     para_comments = {}
     for cid, data in comments_dict.items():

@@ -14,7 +14,7 @@ import docx_util
 import my_enums
 from agt_util import gen_doc_outline
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
-from docx_util import extract_catalogue, fill_doc_in_progress
+from docx_util import extract_catalogue, fill_doc_with_prompt_in_progress
 from sys_init import init_yml_cfg
 from bp_auth import auth_bp
 from bp_vdb import vdb_bp
@@ -101,9 +101,9 @@ def upload_file():
 
 
 @app.route("/docx/write/outline", methods=['POST'])
-def write_doc():
+def write_doc_without_template():
     """
-    按照提供的三级目录文本生成文档
+    按照提供的三级目录文本,生成文档
     """
     data = request.json
     logger.info(f"write_doc , data{data}")
@@ -116,18 +116,18 @@ def write_doc():
         return jsonify({"error": "缺少参数"}), 400
     task_id = str(int(time.time()))
     file_name = docx_util.gen_docx_template_with_outline(task_id, UPLOAD_FOLDER, doc_outline)
-    logger.info(f"docx_template file_name {file_name}")
+    logger.info(f"gen_docx_template_file_name {file_name}")
     threading.Thread(
-        target=process_document,
-        args=(uid, task_id, file_name)
+        target=process_document_without_template,
+        args=(uid,  doc_type, doc_title, task_id, file_name)
     ).start()
 
     return jsonify({"status": "started", "task_id": task_id}), 200
 
 @app.route("/docx/write/template", methods=['POST'])
-def write_doc_from_template():
+def write_doc_with_template():
     """
-    按照一定的 Word 文件模板生成文档
+    按照一定的 Word 文件模板, 生成文档
     """
     data = request.json
     logger.info(f"write_doc , data{data}")
@@ -138,7 +138,7 @@ def write_doc_from_template():
         return jsonify({"error": "缺少参数"}), 400
 
     threading.Thread(
-        target=process_document,
+        target=process_document_with_template,
         args=(uid, task_id, file_name)
     ).start()
 
@@ -181,18 +181,73 @@ def clean_tasks():
         time.sleep(300)
 
 
-
-def process_document(uid: str, task_id: str, file_name: str):
+def process_document_without_template(uid: str, doc_type: str, doc_title: str, task_id: str, file_name: str):
+    """
+    处理无模板的文档，三级目录自动生成，每个段落无写作要求
+    :param uid: 用户ID
+    :param doc_type: 文档类型
+    :param doc_title: 文档标题
+    :param task_id: 任务ID
+    :param file_name: 文件名
+    """
     try:
         task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
         catalogue = extract_catalogue(my_target_doc)
         output_file = os.path.join(UPLOAD_FOLDER, f"output_{task_id}.docx")
         with thread_lock:
+            task_progress[task_id] = {"text": "开始处理文档...","timestamp": time.time()}
+        doc_ctx = f"我正在写一个{doc_type}, 题目是{doc_title}"
+        para_comment_dict = get_para_comment_dict(my_target_doc)
+
+        if para_comment_dict:
+            logger.info("process_word_comment_doc")
+            modify_para_with_comment_prompt_in_process(
+                uid,
+                task_id,
+                thread_lock,
+                task_progress,
+                my_target_doc,
+                doc_ctx,
+                para_comment_dict,
+                my_cfg,
+                output_file
+            )
+        else:
+            logger.info("fill_doc_without_prompt_in_progress")
+            docx_util.fill_doc_without_prompt_in_progress(
+                task_id,
+                thread_lock,
+                task_progress,
+                doc_ctx,
+                my_target_doc,
+                catalogue,
+                my_cfg,
+                output_file,
+            )
+    except Exception as e:
+        with thread_lock:
             task_progress[task_id] = {
-                "text": "开始处理文档...",
+                "text": f"任务处理失败: {str(e)}",
                 "timestamp": time.time()
             }
+        logger.exception("文档生成异常", e)
+
+
+def process_document_with_template(uid: str, task_id: str, file_name: str):
+    """
+    处理有模板的文档, 三级目录及写作要求已有要求
+    :param uid: 用户ID
+    :param task_id: 任务ID
+    :param file_name: 文件名
+    """
+    try:
+        task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
+        my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
+        catalogue = extract_catalogue(my_target_doc)
+        output_file = os.path.join(UPLOAD_FOLDER, f"output_{task_id}.docx")
+        with thread_lock:
+            task_progress[task_id] = {"text": "开始处理文档...","timestamp": time.time()}
         para_comment_dict = get_para_comment_dict(my_target_doc)
         if para_comment_dict:
             logger.info("process_word_comment_doc")
@@ -208,8 +263,8 @@ def process_document(uid: str, task_id: str, file_name: str):
                 output_file
             )
         else:
-            logger.info("fill_doc_with_catalogue")
-            fill_doc_in_progress(
+            logger.info("fill_doc_with_prompt_in_progress")
+            fill_doc_with_prompt_in_progress(
                 task_id,
                 thread_lock,
                 task_progress,

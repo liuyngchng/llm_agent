@@ -86,6 +86,16 @@ def refresh_current_heading(para: Paragraph, heading: list) -> bool:
     heading.append(para.text)
     return True
 
+def is_3rd_heading(para: Paragraph) -> bool:
+    if "Heading" not in para.style.name:
+        return False
+
+    level = int(para.style.name.split()[-1])  # 提取数字
+    if level == 3:
+        return True
+    else:
+        return False
+
 def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool:
     """
     判断写作要求文档中的每段文本，是否为用户所提的写作要求文本
@@ -120,8 +130,57 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
     # logger.debug(f"classify={classify_result}, tile={current_heading}, para={para.text}")
     return True
 
-def fill_doc_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: str, target_doc: str,
-                         target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
+def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: str, target_doc: str,
+    target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
+    """
+    :param task_id: 执行任务的ID
+    :param progress_lock: A thread lock
+    :param thread_lock: task process information dict with task_id as key
+    :param doc_ctx: 文档写作背景信息
+    :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
+    :param sys_cfg: 系统配置信息
+    :param target_doc_catalogue: 需要写的文档的三级目录文本信息
+    :param output_file_name: 输出文档的文件名
+    """
+    doc = Document(target_doc)
+    gen_txt_count = 0
+    total_paragraphs = len(doc.paragraphs)
+    for index, my_para in enumerate(doc.paragraphs):
+        percent = index / total_paragraphs * 100
+        process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文字，"
+            f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
+        logger.info(process_percent_bar_info)
+        update_process_info(progress_lock, task_id, thread_lock, process_percent_bar_info)
+        try:
+            thrd_hd_check = is_3rd_heading(my_para)
+            if not thrd_hd_check:
+                continue
+            # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
+            search_result = process_paragraph(my_para, sys_cfg['api'])
+            demo_txt = f"{search_result}"
+            # with thread_lock:
+            #     thread_lock[task_id] = f"正在处理文本[{my_para.text}]"
+            llm_txt = gen_txt(doc_ctx, demo_txt, "", target_doc_catalogue, my_para.text, sys_cfg, )
+            gen_txt_count += 1
+            # with thread_lock:
+            #     thread_lock[task_id] = f"生成文本：{llm_txt}"
+        except Exception as ex:
+            logger.error("fill_doc_job_err_to_break", ex)
+            update_process_info(progress_lock, task_id, thread_lock, f"在处理文档的过程中出现了异常，任务已中途退出")
+            break
+        new_para = doc.add_paragraph()
+        red_run = new_para.add_run(llm_txt)
+        red_run.font.color.rgb = RGBColor(255, 0, 0)
+        my_para._p.addnext(new_para._p)
+        doc.save(output_file_name)
+        if gen_txt_count > 0:
+            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，已生成 {gen_txt_count} 段文本，进度 100%"
+        else:
+            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，进度 100%，未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
+        update_process_info(progress_lock, task_id, thread_lock, txt_info)
+
+def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: str, target_doc: str,
+    target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
     """
     :param task_id: 执行任务的ID
     :param progress_lock: A thread lock
@@ -141,11 +200,7 @@ def fill_doc_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: 
         process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文字，"
             f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
         logger.info(process_percent_bar_info)
-        with progress_lock:
-            thread_lock[task_id] = {
-                "text": process_percent_bar_info,
-                "timestamp": time.time()
-            }
+        update_process_info(progress_lock, task_id, thread_lock, process_percent_bar_info)
         try:
             is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
             if not is_prompt:
@@ -161,11 +216,7 @@ def fill_doc_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: 
             #     thread_lock[task_id] = f"生成文本：{llm_txt}"
         except Exception as ex:
             logger.error("fill_doc_job_err_to_break", ex)
-            with progress_lock:
-                thread_lock[task_id] = {
-                    "text": f"在处理文档的过程中出现了异常，任务已中途退出",
-                    "timestamp": time.time()
-                }
+            update_process_info(progress_lock, task_id, thread_lock, f"在处理文档的过程中出现了异常，任务已中途退出")
             break
         new_para = doc.add_paragraph()
         red_run = new_para.add_run(llm_txt)
@@ -176,13 +227,21 @@ def fill_doc_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: 
             txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，已生成 {gen_txt_count} 段文本，进度 100%"
         else:
             txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，进度 100%，未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
-        with progress_lock:
-            thread_lock[task_id] = {
-                "text": txt_info,
-                "timestamp": time.time()
-            }
+        update_process_info(progress_lock, task_id, thread_lock, txt_info)
 
-def fill_doc(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, sys_cfg: dict) -> Document:
+
+def update_process_info(progress_lock, task_id, thread_lock, txt_info):
+    """
+    :param progress_lock: A thread lock
+    :param task_id: 执行任务的ID
+    :param thread_lock: task process information dict with task_id as key
+    :param txt_info: 任务进度信息
+    """
+    with progress_lock:
+        thread_lock[task_id] = {"text": txt_info, "timestamp": time.time()}
+
+
+def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, sys_cfg: dict) -> Document:
     """
     :param doc_ctx: 文档写作背景信息
     :param source_dir: 提供的样本文档
@@ -282,7 +341,7 @@ if __name__ == "__main__":
     doc_catalogue = get_catalogue(my_target_doc)
     logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
 
-    output_doc = fill_doc(doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_cfg)
+    output_doc = fill_doc_with_prompt(doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_cfg)
     output_file = 'doc_output.docx'
     output_doc.save(output_file)
     logger.info(f"save_content_to_file: {output_file}")
