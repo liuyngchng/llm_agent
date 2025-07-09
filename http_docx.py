@@ -10,6 +10,7 @@ import time
 
 from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for, render_template)
 
+import my_enums
 from agt_util import gen_doc_outline
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
 from docx_util import extract_catalogue, fill_doc_in_progress
@@ -65,10 +66,11 @@ def generate_outline():
     """
     logger.info(f"gen_doc_outline {request}")
     doc_type = request.json.get("doc_type")
+    doc_type_chinese = my_enums.WriteDocType.get_doc_type(doc_type)
     doc_title = request.json.get("doc_title")
-    if not doc_type or not doc_title:
+    if not doc_type_chinese or not doc_title:
         return jsonify({"error": "缺少参数"}), 400
-    doc_outline = gen_doc_outline(doc_type, doc_title, my_cfg)
+    doc_outline = gen_doc_outline(doc_type_chinese, doc_title, my_cfg)
     return jsonify({"status": "success", "outline": doc_outline}), 200
 
 
@@ -104,7 +106,7 @@ def write_doc():
     task_id = data.get("task_id")
     file_name = data.get("file_name")
     uid = data.get("uid")
-
+    logger.info(f"write_doc , data{data}")
     if not task_id or not file_name or not uid:
         return jsonify({"error": "缺少参数"}), 400
 

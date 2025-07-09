@@ -28,6 +28,26 @@ class MsgType(Enum):
     MSG = "msg"
     WARN = "warn"
 
+
+class WriteDocType(Enum):
+    """文档类型枚举（英文键，汉字值）"""
+    REPORT = "工作报告"
+    STANDARD = "国家标准(GB/(GB/T))"
+    PROPOSAL = "项目计划书"
+    YEAR_SUMMARY = "年度工作总结"
+    RESEARCH = "可行性研究报告"
+    MARKETING = "营销策划方案"
+
+    @staticmethod
+    def get_doc_type(input_str: str) -> str:
+        """根据输入字符串获取对应的文档类型"""
+        input_upper = input_str.upper()  # 转换为大写匹配枚举键
+        try:
+            return WriteDocType[input_upper].value
+        except KeyError:
+            return None  # 或抛出异常
+
+
 class ActorRole(Enum):
     """
     the role of actor engaged in system
