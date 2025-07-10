@@ -558,6 +558,7 @@
     </div>
     <input type="hidden" id ="uid" name="uid" value="{{uid}}">
     <input type="hidden" id ="t" name="t" value="{{t}}">
+    <input type="hidden" id ="taskId" name="taskId" value="{{taskId}}">
     <textarea id="outlineText" style="display:none;"></textarea>
     <script>
         // 当前步骤
@@ -720,17 +721,29 @@
 
         // 模拟文档下载
         function downloadDoc() {
-            if (window.generatedDocUrl) {
-                // 创建隐藏下载链接
-                const link = document.createElement('a');
-                link.href = window.generatedDocUrl;
-                link.download = '生成的文档.docx';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } else {
-                alert('文档生成中，请稍后再试');
+            const taskId = document.getElementById('taskId').value;
+            if (!taskId) {
+                alert('任务ID不存在，请先生成文档');
+                return;
             }
+
+            // 构建下载URL
+            const downloadUrl = `/docx/download/task/${taskId}`;
+
+            // 创建隐藏下载链接
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = '生成的文档.docx'; // 设置默认文件名
+            link.style.display = 'none';
+            document.body.appendChild(link);
+
+            // 触发下载
+            link.click();
+
+            // 清理DOM
+            setTimeout(() => {
+                document.body.removeChild(link);
+            }, 100);
         }
 
         // 初始化页面
@@ -781,6 +794,7 @@
                 const result = await response.json();
                 if (result.status === "started") {
                     taskId = result.task_id; // 存储任务ID
+                    document.getElementById('taskId').value = taskId;
                     progressText.innerHTML = '文档生成中，请稍候...';
 
                     // 启动进度轮询

@@ -146,8 +146,26 @@ def write_doc_with_template():
 
 
 @app.route('/docx/download/<filename>', methods=['GET'])
-def download_file(filename):
+def download_file_by_filename(filename):
+    """
+    下载文件
+    ：param filename: 文件名， 格式如下 f"output_{task_id}.docx"
+    """
     logger.info(f"download_file, {filename}")
+    if not os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
+        logger.error(f"文件 {filename} 不存在")
+        abort(404)
+    return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
+
+
+@app.route('/docx/download/task/<taskId>', methods=['GET'])
+def download_file_by_task_id(taskId):
+    """
+    根据任务ID下载文件
+    ：param taskId: 任务ID，其对应的文件名格式如下 f"output_{taskId}.docx"
+    """
+    logger.info(f"download_file_task_id, {taskId}")
+    filename = f"output_{taskId}.docx"
     if not os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
         logger.error(f"文件 {filename} 不存在")
         abort(404)
@@ -194,7 +212,9 @@ def process_document_without_template(uid: str, doc_type: str, doc_title: str, t
         task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
         catalogue = extract_catalogue(my_target_doc)
-        output_file = os.path.join(UPLOAD_FOLDER, f"output_{task_id}.docx")
+        output_file_name = f"output_{task_id}.docx"
+        output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
+        logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
         with thread_lock:
             task_progress[task_id] = {"text": "开始处理文档...","timestamp": time.time()}
         doc_ctx = f"我正在写一个{doc_type}, 题目是{doc_title}"

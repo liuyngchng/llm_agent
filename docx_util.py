@@ -173,11 +173,13 @@ def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:
         red_run.font.color.rgb = RGBColor(255, 0, 0)
         my_para._p.addnext(new_para._p)
         doc.save(output_file_name)
+        logger.info(f"fill_doc_job_success_save_doc, {output_file_name}")
         if gen_txt_count > 0:
             txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，已生成 {gen_txt_count} 段文本，进度 100%"
         else:
             txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，进度 100%，未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
-        update_process_info(progress_lock, task_id, thread_lock, txt_info)
+        download_url = f"/docx/download/task/{task_id}"
+        update_process_info(progress_lock, task_id, thread_lock, txt_info, "100%", download_url)
 
 def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: str, target_doc: str,
     target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
@@ -230,15 +232,21 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
         update_process_info(progress_lock, task_id, thread_lock, txt_info)
 
 
-def update_process_info(progress_lock, task_id, thread_lock, txt_info):
+def update_process_info(progress_lock, task_id, thread_lock, txt_info, status="", download_url=""):
     """
     :param progress_lock: A thread lock
     :param task_id: 执行任务的ID
     :param thread_lock: task process information dict with task_id as key
     :param txt_info: 任务进度信息
+    :param status: 任务状态
+    :param download_url: 下载地址
     """
     with progress_lock:
-        thread_lock[task_id] = {"text": txt_info, "timestamp": time.time()}
+        thread_lock[task_id] = {
+            "text": txt_info, "timestamp": time.time(),
+            "status": status, "download_url": download_url,
+            "type": "docx"
+        }
 
 
 def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, sys_cfg: dict) -> Document:
