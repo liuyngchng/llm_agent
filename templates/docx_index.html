@@ -605,7 +605,7 @@
             <!-- 步骤2: 显示生成目录 -->
             <div class="step-panel" id="step2">
                 <h2><i class="fas fa-sitemap"></i> 生成目录</h2>
-                <p>请选择使用系统生成目录或上传自定义Word模板</p>
+                <p>请选择使用系统生成目录，或上传自定义Word模板，也可以上传含批注修改意见的文档</p>
 
                 <div class="template-selector">
                     <h3>选择目录来源</h3>
@@ -617,8 +617,9 @@
                         </div>
                         <div class="template-option" id="customTemplate" onclick="selectTemplate('custom')">
                             <i class="fas fa-file-upload"></i>
-                            <h3>上传Word模板</h3>
+                            <h3>上传Word模板/含批注修改意见文档</h3>
                             <p>使用自定义模板提取三级目录结构</p>
+                            <p>支持按照批注修改文档</p>
                         </div>
                     </div>
 
@@ -677,7 +678,7 @@
                 </div>
 
                 <div class="form-group">
-                    <textarea id="modifiedOutline" placeholder="在此编辑您的文档结构..."></textarea>
+                    <textarea id="modifiedOutline" rows="20" placeholder="在此编辑您的文档结构..."></textarea>
                 </div>
 
                 <div class="btn-container">
