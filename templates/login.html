@@ -1,59 +1,258 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <title>{{sys_name}}</title>
-	<meta charset="utf-8">
+    <meta charset="utf-8">
     <meta id="login.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="text/javascript" src="/static/crypto.js"></script>
-<!--    <link rel="stylesheet" href="/static/my.nl2sql.css">-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        div, span, input, button {font:18px Verdana}
-        div, button {font-weight:bold;text-align: center;}
-        span {text-align: center;}
-        input {width: 300px;}
-        button {width: 308px;}
-        select {width: 308px;}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            padding: 40px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-size: 2.2rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .login-icon {
+            background: linear-gradient(to right, #4b6cb7, #182848);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.8rem;
+        }
+
+        .login-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #4b6cb7;
+            font-size: 1.2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #444;
+            font-size: 1.05rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 14px 14px 45px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #4b6cb7;
+            box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
+        }
+
+        .btn-container {
+            margin-top: 30px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(to right, #3a5a9e, #2c487e);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(75, 108, 183, 0.3);
+        }
+
+        .login-links {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .login-link {
+            color: #4b6cb7;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .login-link:hover {
+            color: #2c487e;
+            text-decoration: underline;
+        }
+
+        .warning-message {
+            text-align: center;
+            color: #e74c3c;
+            font-weight: 500;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #fef2f2;
+        }
+
+        @media (max-width: 768px) {
+            .login-container {
+                padding: 25px;
+            }
+
+            .login-title {
+                font-size: 1.8rem;
+            }
+
+            .login-links {
+                flex-direction: column;
+                gap: 15px;
+                align-items: center;
+            }
+        }
     </style>
 </head>
 <body>
-    <div style="text-align: center;margin-top: 15%;" >
-        <p style="font:22px Verdana; font-weight:bold;">{{sys_name}}</p>
-        <form id = "my_form" style="margin-top: 2%" method="post" action="/login">
-            <div align="center" style="margin-bottom: 1%">
-                <span>用户名:</span>
-                <input id = "usr" name = "usr"  type="text" value="{{user}}">
+    <div class="login-container">
+        <div class="login-header">
+            <div class="login-title">
+                <div class="login-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <div>{{sys_name}}</div>
             </div>
-            <input id = "t" name = "t"  type="hidden">
+            <p class="login-subtitle">安全登录您的账户</p>
+        </div>
+
+        <form id="my_form" method="post" action="/login">
+            <div class="form-group">
+                <div class="input-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <input id="usr" name="usr" type="text" value="{{user}}" placeholder="请输入用户名">
+            </div>
+
+            <div class="form-group">
+                <div class="input-icon">
+                    <i class="fas fa-key"></i>
+                </div>
+                <input id="psw" name="psw" type="password" placeholder="请输入密码" value="{{password}}">
+            </div>
+
+            <input id="t" name="t" type="hidden">
             <input type="hidden" name="app_source" value="{{app_source}}">
+
+            <div class="btn-container">
+                <button type="button" class="btn btn-primary" id="login-button">
+                    <i class="fas fa-sign-in-alt"></i> 登 录
+                </button>
+            </div>
         </form>
-        <div align="center" style="margin-bottom: 1%"><span>密&nbsp;&nbsp;&nbsp;码:</span>
-            <input id = "psw" name="psw" type="password" value="{{password}}">
+
+        <div class="login-links">
+            <a href="/reg/usr?app_source={{app_source}}" class="login-link">
+                <i class="fas fa-user-plus"></i> 用户注册
+            </a>
+            <a href="#" class="login-link">
+                <i class="fas fa-question-circle"></i> 忘记密码?
+            </a>
         </div>
-        <div id="login-button-container" style="margin-bottom: 1%">
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            <button type="submit" content="" id="button">&nbsp;登&nbsp;&nbsp;录&nbsp;</button>
-        </div>
-        <div align="center" style="margin-bottom: 1%">
-            <a href="/reg/usr?app_source={{app_source}}" class="system-settings-link" target="_blank">用户注册</a>
-        </div>
-        <div align="center"><span style="color: red">{{waring_info}}</span></div>
+
+        <div class="warning-message">{{waring_info}}</div>
     </div>
+
     <script>
         var psw_input = document.getElementById("psw");
         psw_input.onchange = function () {
             document.getElementById("t").value = CryptoJS.MD5(psw_input.value).toString();
         };
-        document.getElementById("button").onclick = function () {
-            if (document.getElementById("usr").value.trim() == '') {
+
+        document.getElementById("login-button").onclick = function () {
+            if (document.getElementById("usr").value.trim() === '') {
                 alert("请输入用户名");
                 return;
             }
-            if (document.getElementById("psw").value.trim() == '') {
+            if (document.getElementById("psw").value.trim() === '') {
                 alert("请输入密码");
                 return;
             }
             document.getElementById("my_form").submit();
         }
+
+        // 按回车键提交表单
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById("login-button").click();
+            }
+        });
     </script>
 </body>
 </html>

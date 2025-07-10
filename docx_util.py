@@ -170,7 +170,7 @@ def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:
             break
         new_para = doc.add_paragraph()
         red_run = new_para.add_run(llm_txt)
-        red_run.font.color.rgb = RGBColor(255, 0, 0)
+        red_run.font.color.rgb = RGBColor(0, 0, 0)
         my_para._p.addnext(new_para._p)
         doc.save(output_file_name)
         logger.info(f"fill_doc_job_success_save_doc, {output_file_name}")

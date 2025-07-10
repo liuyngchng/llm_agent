@@ -1,56 +1,236 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <title>{{sys_name}}</title>
-	<meta charset="utf-8">
+    <meta charset="utf-8">
     <meta id="reg_usr_index.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="text/javascript" src="/static/crypto.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        div, span, input, button {font:18px Verdana}
-        div, button {font-weight:bold;text-align: center;}
-        span {text-align: center;}
-        input {width: 300px;}
-        select {width: 308px;}
-        button {width: 308px;}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .register-container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            padding: 40px;
+        }
+
+        .register-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .register-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-size: 2.2rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .register-icon {
+            background: linear-gradient(to right, #4b6cb7, #182848);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.8rem;
+        }
+
+        .register-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #4b6cb7;
+            font-size: 1.2rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 14px 14px 45px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #4b6cb7;
+            box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
+        }
+
+        .btn-container {
+            margin-top: 30px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(to right, #3a5a9e, #2c487e);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(75, 108, 183, 0.3);
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #4b6cb7;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: #2c487e;
+            text-decoration: underline;
+        }
+
+        .warning-message {
+            text-align: center;
+            color: #e74c3c;
+            font-weight: 500;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #fef2f2;
+        }
+
+        @media (max-width: 768px) {
+            .register-container {
+                padding: 25px;
+            }
+
+            .register-title {
+                font-size: 1.8rem;
+            }
+        }
     </style>
 </head>
 <body>
-<div style="text-align: center;margin-top: 15%;" >
-    <p style="font:22px Verdana; font-weight:bold;">{{sys_name}}</p>
-    <form id = "my_form" style="margin-top: 2%" method="post" action="/reg/usr">
-        <div align="center" style="margin-bottom: 1%">
-            <span>用户名:</span>
-            <input id = "usr" name = "usr"  type="text" value="{{user}}" placeholder="请输入用户名">
+    <div class="register-container">
+        <div class="register-header">
+            <div class="register-title">
+                <div class="register-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div>{{sys_name}}</div>
+            </div>
+            <p class="register-subtitle">创建您的账户</p>
         </div>
-        <input id = "t" name = "t"  type="hidden">
-        <input type="hidden" name="app_source" value="{{app_source}}">
-    </form>
-    <div align="center" style="margin-bottom: 1%"><span>密&nbsp;&nbsp;&nbsp;码:</span>
-        <input id = "psw" name="psw" type="password" value="{{password}}" placeholder="请输入密码">
+
+        <form id="my_form" method="post" action="/reg/usr">
+            <div class="form-group">
+                <div class="input-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <input id="usr" name="usr" type="text" value="{{user}}" placeholder="设置用户名">
+            </div>
+
+            <div class="form-group">
+                <div class="input-icon">
+                    <i class="fas fa-key"></i>
+                </div>
+                <input id="psw" name="psw" type="password" placeholder="设置登录密码" value="{{password}}">
+            </div>
+
+            <input id="t" name="t" type="hidden">
+            <input type="hidden" name="app_source" value="{{app_source}}">
+
+            <div class="btn-container">
+                <button type="button" class="btn btn-primary" id="register-button">
+                    <i class="fas fa-user-plus"></i> 注册账户
+                </button>
+            </div>
+        </form>
+
+        <a href="#" class="back-link" onclick="history.back()">
+            <i class="fas fa-arrow-left"></i> 返回登录
+        </a>
+
+        <div class="warning-message" id="warning-message">{{waring_info}}</div>
     </div>
-    <div align="center" style="margin-bottom: 1%">
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <button type="submit" content="" id="button">&nbsp;注&nbsp;&nbsp;册&nbsp;</button>
-    </div>
-    <div align="center"><span id="waring_info" style="color: red">{{waring_info}}</span></div>
-</div>
-<script>
-    var psw_input = document.getElementById("psw");
-    psw_input.onchange = function () {
-        document.getElementById("t").value = CryptoJS.MD5(psw_input.value).toString();
-    };
-    document.getElementById("button").onclick = function () {
-        if (document.getElementById("usr").value.trim() == '') {
-            alert("请输入用户名");
-            return;
+
+    <script>
+        var psw_input = document.getElementById("psw");
+        psw_input.onchange = function () {
+            document.getElementById("t").value = CryptoJS.MD5(psw_input.value).toString();
+        };
+
+        document.getElementById("register-button").onclick = function () {
+            if (document.getElementById("usr").value.trim() === '') {
+                alert("请输入用户名");
+                return;
+            }
+            if (document.getElementById("psw").value.trim() === '') {
+                alert("请输入密码");
+                return;
+            }
+            document.getElementById('warning-message').textContent = '';
+            document.getElementById("my_form").submit();
         }
-        if (document.getElementById("psw").value.trim() == '') {
-            alert("请输入密码");
-            return;
-        }
-        document.getElementById('waring_info').textContent = '';
-        document.getElementById("my_form").submit();
-    }
-</script>
+
+        // 按回车键提交表单
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById("register-button").click();
+            }
+        });
+    </script>
 </body>
 </html>
