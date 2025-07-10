@@ -96,6 +96,72 @@ def is_3rd_heading(para: Paragraph) -> bool:
     else:
         return False
 
+def get_outline(file_name: str) -> list:
+    """
+    获取word文档的三级目录， 输出数据格式如下所示：
+    [
+        {
+            "title": "1. 背景",
+            "items": [
+                {"title": "1.1 概述", "items": ["1.1.1 项目背景", "1.1.2 核心问题", "1.1.3 关键数据"]},
+                {"title": "1.2 项目进展", "items": ["1.2.1 项目进展", "1.2.2 里程碑节点", "1.2.3 关键技术"]},
+                {"title": "1.3 关键数据", "items": ["1.3.1 数据类型", "1.3.2 数据存储", "1.3.3 数据价值"]}
+            ]
+        },
+        {
+            "title": "2. 问题分析",
+            "items": [
+                {"title": "2.1 面临挑战", "items": ["2.1.1 国内外现状", "2.1.2 解决的问题", "2.1.3 面临的问题"]},
+                {"title": "2.2 解决思路", "items": ["2.2.1 基础研究投入", "2.2.2 样品试制", "2.2.3 工程环境应用"]},
+                {"title": "2.3 经验总结", "items": ["2.3.1 理论研究支持", "2.3.2 专利限制突破", "2.2.3 自有技术积累"]}
+            ]
+        }
+    ]
+    """
+    doc = Document(file_name)
+    result = []  # 最终结果
+    current_chapter = None  # 当前一级标题节点
+    current_section = None  # 当前二级标题节点
+
+    for para in doc.paragraphs:
+        style_name = para.style.name.lower()
+
+        # 跳过非标题段落
+        if not style_name.startswith(('heading', '标题')):
+            continue
+
+        # 提取标题级别
+        level_str = ''.join(filter(str.isdigit, style_name))
+        if not level_str:
+            continue
+        level = int(level_str)
+
+        # 只处理1-3级标题
+        if level < 1 or level > 3:
+            continue
+
+        text = para.text.strip()
+        if not text:
+            continue
+
+        # 处理一级标题 (level=1)
+        if level == 1:
+            current_chapter = {"title": text, "items": []}
+            result.append(current_chapter)
+            current_section = None  # 重置二级节点
+
+        # 处理二级标题 (level=2)
+        elif level == 2 and current_chapter:
+            current_section = {"title": text, "items": []}
+            current_chapter["items"].append(current_section)
+
+        # 处理三级标题 (level=3) 下的文本
+        elif level == 3 and current_section:
+            # 三级标题本身作为普通文本项
+            current_section["items"].append(text)
+
+    return result
+
 def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool:
     """
     判断写作要求文档中的每段文本，是否为用户所提的写作要求文本
@@ -150,7 +216,7 @@ def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:
         process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文字，"
             f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
         logger.info(process_percent_bar_info)
-        update_process_info(progress_lock, task_id, thread_lock, process_percent_bar_info)
+        update_process_info(progress_lock, task_id, thread_lock, process_percent_bar_info, percent)
         try:
             thrd_hd_check = is_3rd_heading(my_para)
             if not thrd_hd_check:
@@ -179,7 +245,7 @@ def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:
         else:
             txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，进度 100%，未检测到写作要求文本"
         download_url = f"/docx/download/task/{task_id}"
-        update_process_info(progress_lock, task_id, thread_lock, txt_info, "100%", download_url)
+        update_process_info(progress_lock, task_id, thread_lock, txt_info, 100, download_url)
 
 def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: str, target_doc: str,
     target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
@@ -202,7 +268,7 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
         process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文字，"
             f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
         logger.info(process_percent_bar_info)
-        update_process_info(progress_lock, task_id, thread_lock, process_percent_bar_info)
+        update_process_info(progress_lock, task_id, thread_lock, process_percent_bar_info, percent)
         try:
             is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
             if not is_prompt:
@@ -221,30 +287,30 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
             update_process_info(progress_lock, task_id, thread_lock, f"在处理文档的过程中出现了异常，任务已中途退出")
             break
         new_para = doc.add_paragraph()
-        red_run = new_para.add_run(llm_txt)
-        red_run.font.color.rgb = RGBColor(255, 0, 0)
+        red_run = new_para.add_run(f"[_AI生成_]{llm_txt}")
+        red_run.font.color.rgb = RGBColor(0, 0, 0)
         my_para._p.addnext(new_para._p)
         doc.save(output_file_name)
         if gen_txt_count > 0:
-            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，已生成 {gen_txt_count} 段文本，进度 100%"
+            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，已生成 {gen_txt_count} 段文本，进度 100%"
         else:
-            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，进度 100%，未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
+            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，进度 100%，未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
         update_process_info(progress_lock, task_id, thread_lock, txt_info)
 
 
-def update_process_info(progress_lock, task_id, thread_lock, txt_info, status="", download_url=""):
+def update_process_info(progress_lock, task_id, thread_lock, txt_info, percent=0.0, download_url=""):
     """
     :param progress_lock: A thread lock
     :param task_id: 执行任务的ID
     :param thread_lock: task process information dict with task_id as key
     :param txt_info: 任务进度信息
-    :param status: 任务状态
+    :param percent: 任务进度百分比
     :param download_url: 下载地址
     """
     with progress_lock:
         thread_lock[task_id] = {
             "text": txt_info, "timestamp": time.time(),
-            "status": status, "download_url": download_url,
+            "percent": percent, "download_url": download_url,
             "type": "docx"
         }
 

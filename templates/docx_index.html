@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta id="docx_index.html">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>在线文档生成工具</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -373,6 +374,118 @@
             content: "▪";
         }
 
+        /* 模板选择样式 */
+        .template-selector {
+            margin-bottom: 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .template-options {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .template-option {
+            flex: 1;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            background: white;
+        }
+
+        .template-option:hover {
+            border-color: #a0b4e0;
+            background: #f5f8ff;
+        }
+
+        .template-option.active {
+            border-color: #4b6cb7;
+            background: #f0f4ff;
+            box-shadow: 0 5px 15px rgba(75, 108, 183, 0.1);
+        }
+
+        .template-option i {
+            font-size: 2.5rem;
+            color: #4b6cb7;
+            margin-bottom: 15px;
+        }
+
+        .template-option h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .template-option p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .upload-container {
+            display: none;
+            background: white;
+            border: 2px dashed #4b6cb7;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .upload-container.active {
+            display: block;
+        }
+
+        .upload-container i {
+            font-size: 3rem;
+            color: #4b6cb7;
+            margin-bottom: 20px;
+        }
+
+        .upload-btn {
+            position: relative;
+            display: inline-block;
+            margin-top: 15px;
+        }
+
+        .file-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f4ff;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: #4b6cb7;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-size {
+            font-size: 0.85rem;
+            color: #777;
+            margin-top: 5px;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -416,6 +529,10 @@
             .btn {
                 width: 100%;
             }
+
+            .template-options {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -428,7 +545,7 @@
 
         <div class="progress-container">
             <div class="progress-steps">
-                <div class="progress-bar" id="progressBar"></div>
+                <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
                 <div class="step active">
                     <span>1</span>
                     <div class="step-label">选择类型</div>
@@ -488,12 +605,49 @@
             <!-- 步骤2: 显示生成目录 -->
             <div class="step-panel" id="step2">
                 <h2><i class="fas fa-sitemap"></i> 生成目录</h2>
-                <p>文档目录结构如下：</p>
+                <p>请选择使用系统生成目录或上传自定义Word模板</p>
+
+                <div class="template-selector">
+                    <h3>选择目录来源</h3>
+                    <div class="template-options">
+                        <div class="template-option active" id="systemTemplate" onclick="selectTemplate('system')">
+                            <i class="fas fa-robot"></i>
+                            <h3>系统智能生成</h3>
+                            <p>基于文档类型自动生成专业目录结构</p>
+                        </div>
+                        <div class="template-option" id="customTemplate" onclick="selectTemplate('custom')">
+                            <i class="fas fa-file-upload"></i>
+                            <h3>上传Word模板</h3>
+                            <p>使用自定义模板提取三级目录结构</p>
+                        </div>
+                    </div>
+
+                    <div class="upload-container" id="uploadContainer">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h3>上传Word文档模板</h3>
+                        <p>支持.docx格式文件，系统将自动提取三级目录结构</p>
+
+                        <div class="upload-btn">
+                            <button class="btn btn-primary">
+                                <i class="fas fa-file-word"></i> 选择Word文件
+                            </button>
+                            <input type="file" class="file-input" id="templateFile" accept=".docx" onchange="handleFileUpload(this)">
+                        </div>
+
+                        <div class="file-info" id="fileInfo">
+                            <div class="file-name">
+                                <i class="fas fa-file-word"></i>
+                                <span id="fileName">未选择文件</span>
+                            </div>
+                            <div class="file-size" id="fileSize">-</div>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="outline-container" id="outlineContainer">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>正在生成文档结构，请稍候...</p>
+                    <div class="info-message">
+                        <i class="fas fa-info-circle"></i>
+                        <p>请选择目录来源，系统将自动生成或提取目录结构</p>
                     </div>
                 </div>
 
@@ -501,7 +655,7 @@
                     <button class="btn btn-secondary" onclick="prevStep(2)">
                         <i class="fas fa-arrow-left"></i> 上一步
                     </button>
-                    <button class="btn btn-primary" onclick="nextStep(2)">
+                    <button class="btn btn-primary" id="confirmOutlineBtn" disabled onclick="nextStep(2)">
                         确认并编辑 <i class="fas fa-edit"></i>
                     </button>
                 </div>
@@ -510,7 +664,7 @@
             <!-- 步骤3: 编辑目录 -->
             <div class="step-panel" id="step3">
                 <h2><i class="fas fa-edit"></i> 编辑文档内容</h2>
-                <p>请修改以下文档结构，完成后点击生成文档按钮</p>
+                <p>请修改以下文档结构(若上传了Word模板，则修改 Word 模板后重新上传)，完成后点击生成文档按钮</p>
 
                 <div class="progress-display" id="progressDisplay">
                     <div class="progress-text">
@@ -523,7 +677,6 @@
                 </div>
 
                 <div class="form-group">
-<!--                    <label for="modifiedOutline">文档结构编辑</label>-->
                     <textarea id="modifiedOutline" placeholder="在此编辑您的文档结构..."></textarea>
                 </div>
 
@@ -531,7 +684,7 @@
                     <button class="btn btn-secondary" onclick="prevStep(3)">
                         <i class="fas fa-arrow-left"></i> 上一步
                     </button>
-                    <button class="btn btn-primary" id="generateBtn" onclick="generateDocument()">
+                    <button class="btn btn-primary" id="generateBtn" onclick="gen_doc()">
                         生成文档 <i class="fas fa-file-word"></i>
                     </button>
                 </div>
@@ -559,13 +712,18 @@
     <input type="hidden" id ="uid" name="uid" value="{{uid}}">
     <input type="hidden" id ="t" name="t" value="{{t}}">
     <input type="hidden" id ="taskId" name="taskId" value="{{taskId}}">
+    <input type="hidden" id ="file_name" name="file_name" value="{{file_name}}">
+    <!--    记录三级目录的来源，来自于系统自动生成(system)，还是来自用户自己上传的word文档模板(custom)-->
+    <input type="hidden" id ="outline_source" name="outline_source" value="{{outline_source}}">
     <textarea id="outlineText" style="display:none;"></textarea>
     <script>
         // 当前步骤
         let currentStep = 1;
         let taskId = null;
         let pollInterval = null;
+        let selectedTemplate = 'system'; // 默认选择系统模板
         window.generatedDocUrl = null; // 存储生成的文档URL
+
         // 初始化进度条
         function updateProgressBar() {
             const progressBar = document.getElementById('progressBar');
@@ -580,6 +738,40 @@
                     step.classList.remove('active');
                 }
             });
+        }
+
+        // 选择模板类型
+        function selectTemplate(type) {
+            selectedTemplate = type;
+            document.getElementById('outline_source').value = type;
+            // 更新UI
+            document.getElementById('systemTemplate').classList.toggle('active', type === 'system');
+            document.getElementById('customTemplate').classList.toggle('active', type === 'custom');
+            document.getElementById('uploadContainer').classList.toggle('active', type === 'custom');
+
+            // 重置目录显示
+            const outlineContainer = document.getElementById('outlineContainer');
+            if (type === 'system') {
+                outlineContainer.innerHTML = `
+                    <div class="info-message" style="text-align: center; padding: 30px;">
+                        <i class="fas fa-robot" style="font-size: 3rem; color: #4b6cb7; margin-bottom: 15px;"></i>
+                        <p>已选择系统智能生成模式，点击下方按钮生成目录</p>
+                        <button class="btn btn-primary" onclick="generateOutline()" style="margin-top: 20px;">
+                            <i class="fas fa-sync-alt"></i> 生成目录
+                        </button>
+                    </div>
+                `;
+            } else {
+                outlineContainer.innerHTML = `
+                    <div class="info-message" style="text-align: center; padding: 30px;">
+                        <i class="fas fa-file-upload" style="font-size: 3rem; color: #4b6cb7; margin-bottom: 15px;"></i>
+                        <p>请上传Word文档模板，系统将自动提取三级目录</p>
+                    </div>
+                `;
+            }
+
+            // 禁用确认按钮
+            document.getElementById('confirmOutlineBtn').disabled = true;
         }
 
         // 下一步函数
@@ -612,7 +804,8 @@
 
             // 如果是第二步，生成目录
             if (currentStep === 2) {
-                generateOutline();
+                // 初始化模板选择
+                selectTemplate('system');
             }
 
             // 如果是第三步，填充编辑区域
@@ -636,6 +829,79 @@
 
             // 更新进度条
             updateProgressBar();
+        }
+
+        // 处理文件上传
+        function handleFileUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // 验证文件类型
+            if (!file.name.endsWith('.docx')) {
+                alert('请上传 .docx 格式的Word文档');
+                return;
+            }
+
+            // 显示文件信息
+            document.getElementById('fileInfo').style.display = 'block';
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+
+            // 解析文件并提取目录
+            uploadTemplateFile(file);
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 上传文件到后端
+        async function uploadTemplateFile(file) {
+            const outlineContainer = document.getElementById('outlineContainer');
+            outlineContainer.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>正在解析Word模板，提取目录结构...</p>
+                </div>
+            `;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const response = await fetch('/docx/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) {
+                    throw new Error('文件上传失败');
+                }
+                const data = await response.json();
+                // 记录上传的文件模板的名称
+                document.getElementById('file_name').value = data.file_name;
+                // 保存任务ID和目录结构
+                document.getElementById('taskId').value = data.task_id;
+                document.getElementById('outlineText').value = data.outline;
+                // 渲染目录
+                renderOutline(data.outline);
+                // 启用确认按钮
+                document.getElementById('confirmOutlineBtn').disabled = false;
+
+            } catch (error) {
+                console.error('上传错误:', error);
+                outlineContainer.innerHTML = `
+                    <div class="error-message" style="color: #e74c3c; text-align: center; padding: 30px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem;"></i>
+                        <p>文件解析失败: ${error.message}</p>
+                        <button class="btn btn-secondary" onclick="selectTemplate('custom')" style="margin-top: 20px;">
+                            重新上传
+                        </button>
+                    </div>
+                `;
+            }
         }
 
         // 目录生成
@@ -674,36 +940,8 @@
                 return response.json();
             })
             .then(data => {
-                // 创建隐藏的文本内容（用于第三步编辑）
-                let outlineText = `${docTitle}\n\n`;
-                let outlineHTML = `<h3 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">${docTitle}</h3>`;
-                if (!Array.isArray(data.outline)) {
-                    throw new Error('无效的目录数据格式');
-                    console.log('无效的目录数据格式')
-                }
-                // 渲染三级目录结构
-                data.outline.forEach((section) => {
-                    outlineHTML += `<div class="outline-item">
-                    <h3>${section.title}</h3>
-                    <ul>`;
-                    outlineText += `${section.title}\n`;
-                    section.items.forEach((subsection) => {
-                        outlineHTML += `<li>
-                          <strong>${subsection.title}</strong>
-                          <ul>`;
-                        outlineText += `\t${subsection.title}\n`;
-                        // 添加三级目录项
-                        subsection.items.forEach((item) => {
-                            outlineHTML += `<li>${item}</li>`;
-                            outlineText += `\t\t${item}\n`;
-                        });
-                        outlineHTML += `</ul></li>`;
-                    });
-                    outlineHTML += `</ul></div>`;
-                });
-<!--                outlineHTML += `</div>${outlineText}</div>`;-->
-                outlineContainer.innerHTML = outlineHTML;
-                document.getElementById('outlineText').value = outlineText;
+                renderOutline(data.outline);
+                document.getElementById('confirmOutlineBtn').disabled = false;
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -719,7 +957,42 @@
             });
         }
 
-        // 模拟文档下载
+        // 渲染目录数据
+        function renderOutline(outlineData) {
+            const docTitle = document.getElementById('docTitle').value;
+            const outlineContainer = document.getElementById('outlineContainer');
+
+            // 创建隐藏的文本内容（用于第三步编辑）
+            let outlineText = `${docTitle}\n\n`;
+            let outlineHTML = `<h3 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">${docTitle}</h3>`;
+
+            // 渲染三级目录结构
+            outlineData.forEach((section) => {
+                outlineHTML += `<div class="outline-item">
+                    <h3>${section.title}</h3>
+                    <ul>`;
+                outlineText += `${section.title}\n`;
+                section.items.forEach((subsection) => {
+                    outlineHTML += `<li>
+                          <strong>${subsection.title}</strong>
+                          <ul>`;
+                    outlineText += `\t${subsection.title}\n`;
+
+                    // 添加三级目录项
+                    subsection.items.forEach((item) => {
+                        outlineHTML += `<li>${item}</li>`;
+                        outlineText += `\t\t${item}\n`;
+                    });
+                    outlineHTML += `</ul></li>`;
+                });
+                outlineHTML += `</ul></div>`;
+            });
+
+            outlineContainer.innerHTML = outlineHTML;
+            document.getElementById('outlineText').value = outlineText;
+        }
+
+        // 文档下载
         function downloadDoc() {
             const taskId = document.getElementById('taskId').value;
             if (!taskId) {
@@ -748,45 +1021,56 @@
 
         // 初始化页面
         updateProgressBar();
-        // 根据三级目录，生成文档内容
-        async function generateDocument() {
+
+        // 生成文档内容,分两种情况，如果之前选择了系统智能生成文档结构，
+        // 则请求 /docx/write/outline， 如果之前选择了上传Word模板
+        // 则请求 /docx/write/template，需要提交上传Word模板后返回的file_name
+        async function gen_doc() {
             const uid = document.getElementById('uid').value;
             const token = document.getElementById('t').value;
-            const docOutline = document.getElementById('modifiedOutline').value;
-            const docTitle = document.getElementById('docTitle').value;
-            const docType = document.getElementById('docType').value;
+            const task_id = document.getElementById('taskId').value;
+            const doc_outline = document.getElementById('modifiedOutline').value;
+            const doc_title = document.getElementById('docTitle').value;
+            const doc_type = document.getElementById('docType').value;
             const generateBtn = document.getElementById('generateBtn');
             const progressDisplay = document.getElementById('progressDisplay');
             const progressText = document.getElementById('progressText');
             const progressBarFill = document.getElementById('progressBarFill');
-
+            const outlineSource = document.getElementById('outline_source').value;
+            const file_name = document.getElementById('file_name').value;
             // 禁用按钮并显示加载状态
-            const btn = document.querySelector('#step3 .btn-primary');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 文档生成中...';
-            btn.disabled = true;
             generateBtn.disabled = true;
+            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 文档生成中...';
             progressDisplay.style.display = 'block';
             progressText.innerHTML = '文档生成任务运行中...';
             progressBarFill.style.width = '0%';
-            const timeout = setTimeout(() => {
-                if (pollInterval) clearInterval(pollInterval);
-                alert("文档生成超时，请重试");
-                resetGenerateState();
-            }, 300000);
+            let apiUrl, postData;
+            if (outlineSource === 'system') {
+                apiUrl = '/docx/write/outline';
+                postData = {
+                    uid: uid,
+                    doc_type: doc_type,
+                    doc_title: doc_title,
+                    doc_outline: doc_outline
+                };
+            } else {
+                apiUrl = '/docx/write/template';
+                postData = {
+                    uid: uid,
+                    task_id: task_id,
+                    file_name: file_name
+                };
+            }
+
             try {
-                // 调用后端接口
-                const response = await fetch('/docx/write/outline', {
+                // 发送生成请求
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({
-                        uid: uid,
-                        docOutline: docOutline,
-                        docTitle: docTitle,
-                        docType: docType,
-                    })
+                    body: JSON.stringify(postData)
                 });
 
                 if (!response.ok) throw new Error('文档生成失败');
@@ -801,7 +1085,6 @@
                     pollInterval = setInterval(() => {
                         fetchTaskProgress(taskId, token);
                     }, 1000);
-                    clearTimeout(timeout);
                 } else {
                     throw new Error('未知响应状态');
                 }
@@ -832,10 +1115,9 @@
                 progressText.innerHTML = progressInfo.progress || '正在处理...';
 
                 // 如果包含百分比数字则更新进度条
-                const percentMatch = progressInfo.progress.match(/(\d+)%/);
+                const percentMatch = progressInfo.percent
                 if (percentMatch) {
-                    const percent = parseInt(percentMatch[1]);
-                    progressBarFill.style.width = `${percent}%`;
+                    progressBarFill.style.width = `${percentMatch}%`;
                 }
 
                 // 检查任务是否完成
@@ -848,7 +1130,7 @@
                     setTimeout(() => {
                         window.generatedDocUrl = progressInfo.download_url; // 假设返回下载URL
                         nextStep(3);
-                    }, 1000);
+                    }, 2000);
                 }
                 if (progressInfo.error) {
                     clearInterval(pollInterval);

@@ -93,27 +93,35 @@ def upload_file():
     # 初始化进度
     with thread_lock:
         task_progress[task_id] = 0
-    logger.info(f"upload_file_saved_as {filename}")
-    return jsonify({
+    logger.info(f"upload_file_saved_as {filename}, {task_id}")
+    outline = docx_util.get_outline(save_path)
+    logger.info(f"get_file_outline,task_id {task_id}, {outline}")
+    info = {
         "task_id": task_id,
-        "file_name": filename
-    }), 200
+        "file_name": filename,
+        "outline": outline
+    }
+    logger.info(f"upload_file, {info}")
+    return jsonify(info), 200
 
 
 @app.route("/docx/write/outline", methods=['POST'])
-def write_doc_without_template():
+def write_doc_with_outline_txt():
     """
     按照提供的三级目录文本,生成文档
     """
+    logger.info("write_doc_with_outline_txt")
     data = request.json
     logger.info(f"write_doc , data{data}")
     uid = data.get("uid")
-    doc_title = data.get("docTitle")
-    doc_outline = data.get("docOutline")
-    doc_type = data.get("docType")
+    doc_title = data.get("doc_title")
+    doc_outline = data.get("doc_outline")
+    doc_type = data.get("doc_type")
     doc_type_chinese = my_enums.WriteDocType.get_doc_type(doc_type)
     if not doc_type_chinese or not doc_title or not doc_outline:
-        return jsonify({"error": "缺少参数"}), 400
+        err_info = {"error": "缺少参数"}
+        logger.error(f"err_occurred, {err_info}")
+        return jsonify(err_info), 400
     task_id = str(int(time.time()))
     file_name = docx_util.gen_docx_template_with_outline(task_id, UPLOAD_FOLDER, doc_outline)
     logger.info(f"gen_docx_template_file_name {file_name}")
@@ -121,28 +129,33 @@ def write_doc_without_template():
         target=process_document_without_template,
         args=(uid,  doc_type, doc_title, task_id, file_name)
     ).start()
-
-    return jsonify({"status": "started", "task_id": task_id}), 200
+    info = {"status": "started", "task_id": task_id}
+    logger.info(f"write_doc_with_outline_txt, {info}")
+    return jsonify(info), 200
 
 @app.route("/docx/write/template", methods=['POST'])
-def write_doc_with_template():
+def write_doc_with_docx_template():
     """
     按照一定的 Word 文件模板, 生成文档
     """
     data = request.json
-    logger.info(f"write_doc , data{data}")
+    logger.info(f"write_doc_with_docx_template, {data}")
     task_id = data.get("task_id")
-    file_name = data.get("file_name")
+    template_file_name = data.get("file_name")
     uid = data.get("uid")
-    if not task_id or not file_name or not uid:
-        return jsonify({"error": "缺少参数"}), 400
+    if not task_id or not template_file_name or not uid:
+        err_info = {"error": "缺少参数"}
+        logger.error(f"err_occurred, {err_info}")
+        return jsonify(err_info), 400
 
     threading.Thread(
         target=process_document_with_template,
-        args=(uid, task_id, file_name)
+        args=(uid, task_id, template_file_name)
     ).start()
 
-    return jsonify({"status": "started", "task_id": task_id}), 200
+    info = {"status": "started", "task_id": task_id}
+    logger.info(f"write_doc_with_docx_template, {info}")
+    return jsonify(info), 200
 
 
 @app.route('/docx/download/<filename>', methods=['GET'])
@@ -179,10 +192,11 @@ def get_doc_process_info():
     if not task_id:
         return jsonify({"error": "缺少任务ID"}), 400
     with thread_lock:
-        progress_info = task_progress.get(task_id, {"text": "未知状态"})
+        progress_info = task_progress.get(task_id, {"text": "未知状态", "percent": 0, "timestamp": time.time()})
     info = {
         "task_id": task_id,
-        "progress": progress_info["text"]
+        "progress": progress_info["text"],
+        "percent": progress_info["percent"],
     }
     logger.info(f"get_doc_process_info, {info}")
     return jsonify(info), 200
