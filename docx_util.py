@@ -175,9 +175,9 @@ def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:
         doc.save(output_file_name)
         logger.info(f"fill_doc_job_success_save_doc, {output_file_name}")
         if gen_txt_count > 0:
-            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，已生成 {gen_txt_count} 段文本，进度 100%"
+            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，已生成 {gen_txt_count} 段文本，进度 100%"
         else:
-            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，进度 100%，未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
+            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，进度 100%，未检测到写作要求文本"
         download_url = f"/docx/download/task/{task_id}"
         update_process_info(progress_lock, task_id, thread_lock, txt_info, "100%", download_url)
 
