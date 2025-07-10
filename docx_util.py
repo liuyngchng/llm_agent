@@ -213,7 +213,7 @@ def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:
     total_paragraphs = len(doc.paragraphs)
     for index, my_para in enumerate(doc.paragraphs):
         percent = index / total_paragraphs * 100
-        process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文字，"
+        process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文本，"
             f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
         logger.info(process_percent_bar_info)
         update_process_info(progress_lock, task_id, thread_lock, process_percent_bar_info, percent)
@@ -265,7 +265,7 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
     total_paragraphs = len(doc.paragraphs)
     for index, my_para in enumerate(doc.paragraphs):
         percent = index / total_paragraphs * 100
-        process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文字，"
+        process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文本，"
             f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
         logger.info(process_percent_bar_info)
         update_process_info(progress_lock, task_id, thread_lock, process_percent_bar_info, percent)
@@ -328,7 +328,7 @@ def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_
     total_paragraphs = len(doc.paragraphs)
     for index, my_para in enumerate(doc.paragraphs):
         percent = (index + 1) / total_paragraphs * 100
-        process_percent_bar_info = f"正在处理第 {index+1}/{total_paragraphs} 段文字，进度 {percent:.1f}%"
+        process_percent_bar_info = f"正在处理第 {index+1}/{total_paragraphs} 段文本，进度 {percent:.1f}%"
         logger.info(f"percent: {process_percent_bar_info}")
         try:
             is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)

@@ -187,7 +187,7 @@ def download_file_by_task_id(taskId):
 
 @app.route('/docx/process/info', methods=['POST'])
 def get_doc_process_info():
-    logger.info(f"get_doc_process_info {request}")
+    # logger.info(f"get_doc_process_info {request}")
     task_id = request.json.get("task_id")
     if not task_id:
         return jsonify({"error": "缺少任务ID"}), 400
@@ -198,7 +198,7 @@ def get_doc_process_info():
         "progress": progress_info["text"],
         "percent": progress_info["percent"],
     }
-    logger.info(f"get_doc_process_info, {info}")
+    # logger.info(f"get_doc_process_info, {info}")
     return jsonify(info), 200
 
 

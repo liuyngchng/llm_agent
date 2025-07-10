@@ -204,7 +204,7 @@ def modify_para_with_comment_prompt_in_process(uid:str, task_id:str, thread_lock
     try:
         for para_idx, para in enumerate(doc.paragraphs):
             percent = para_idx / total_paragraphs * 100
-            process_percent_bar_info = (f"正在处理第 {para_idx + 1}/{total_paragraphs} 段文字，已识别 {comment_count} 个批注，"
+            process_percent_bar_info = (f"正在处理第 {para_idx + 1}/{total_paragraphs} 段文本，已识别 {comment_count} 个批注，"
                 f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
             logger.info(process_percent_bar_info)
             with thread_lock:
@@ -239,7 +239,7 @@ def modify_para_with_comment_prompt_in_process(uid:str, task_id:str, thread_lock
                 "timestamp": time.time()
             }
     doc.save(output_file_name)
-    txt_info = f"任务已完成，共处理 {total_paragraphs} 段文字，识别 {comment_count} 个批注, 生成 {gen_txt_count} 段文本，进度 100%"
+    txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，识别 {comment_count} 个批注, 生成 {gen_txt_count} 段文本，进度 100%"
 
     with thread_lock:
         task_progress[task_id] = {
