@@ -928,6 +928,10 @@
                     throw new Error('文件上传失败');
                 }
                 const data = await response.json();
+                // 检查目录是否为空
+                if (!data.outline || data.outline.length === 0) {
+                    throw new Error('请上传含有三级目录的 Word docx模板');
+                }
                 // 记录上传的文件模板的名称
                 document.getElementById('file_name').value = data.file_name;
                 // 保存任务ID和目录结构
@@ -940,6 +944,7 @@
 
             } catch (error) {
                 console.error('上传错误:', error);
+                alert(error.message);
                 outlineContainer.innerHTML = `
                     <div class="error-message" style="color: #e74c3c; text-align: center; padding: 30px;">
                         <i class="fas fa-exclamation-triangle" style="font-size: 3rem;"></i>
@@ -949,6 +954,9 @@
                         </button>
                     </div>
                 `;
+                // 重置文件选择
+                document.getElementById('templateFile').value = '';
+                document.getElementById('fileInfo').style.display = 'none'
             }
         }
 
