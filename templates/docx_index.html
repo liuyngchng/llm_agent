@@ -485,6 +485,31 @@
             color: #777;
             margin-top: 5px;
         }
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-weight: 600;
+        }
+
+        .logout-btn:hover {
+            background: linear-gradient(to right, #5b6cb7, #4a5a9e);
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -533,12 +558,21 @@
             .template-options {
                 flex-direction: column;
             }
+            .logout-btn {
+                top: 10px;
+                right: 10px;
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
+            <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </a>
             <h1><i class="fas fa-file-word"></i> 在线文档生成</h1>
             <p>四步创建专业文档，智能生成，高效便捷</p>
         </header>
