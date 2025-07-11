@@ -108,11 +108,10 @@ def upload_file():
 @app.route("/docx/write/outline", methods=['POST'])
 def write_doc_with_outline_txt():
     """
-    按照提供的三级目录文本,生成文档
+    按照提供的三级目录文本,生成文档，这里的文档模板只有三级目录，具体的段落中没有写作要求
     """
-    logger.info("write_doc_with_outline_txt")
     data = request.json
-    logger.info(f"write_doc , data{data}")
+    logger.info(f"write_doc_with_outline_txt , data{data}")
     uid = data.get("uid")
     doc_title = data.get("doc_title")
     doc_outline = data.get("doc_outline")
@@ -126,8 +125,8 @@ def write_doc_with_outline_txt():
     file_name = docx_util.gen_docx_template_with_outline(task_id, UPLOAD_FOLDER, doc_outline)
     logger.info(f"gen_docx_template_file_name {file_name}")
     threading.Thread(
-        target=process_document_without_template,
-        args=(uid,  doc_type, doc_title, task_id, file_name)
+        target=process_document_with_template,
+        args=(uid,  doc_type, doc_title, task_id, file_name, False)
     ).start()
     info = {"status": "started", "task_id": task_id}
     logger.info(f"write_doc_with_outline_txt, {info}")
@@ -137,6 +136,7 @@ def write_doc_with_outline_txt():
 def write_doc_with_docx_template():
     """
     按照一定的 Word 文件模板, 生成文档
+    在word文档模板中，有三级目录，在每个小节中，有用户提供的写作要求
     """
     data = request.json
     logger.info(f"write_doc_with_docx_template, {data}")
@@ -154,16 +154,14 @@ def write_doc_with_docx_template():
         err_info = {"error": "缺少参数"}
         logger.error(f"err_occurred, {err_info}")
         return jsonify(err_info), 400
-
     threading.Thread(
         target=process_document_with_template,
-        args=(uid, doc_type_chinese, doc_title, task_id, template_file_name)
+        args=(uid, doc_type_chinese, doc_title, task_id, template_file_name, True)
     ).start()
 
     info = {"status": "started", "task_id": task_id}
     logger.info(f"write_doc_with_docx_template, {info}")
     return jsonify(info), 200
-
 
 @app.route('/docx/download/<filename>', methods=['GET'])
 def download_file_by_filename(filename):
@@ -177,7 +175,6 @@ def download_file_by_filename(filename):
         abort(404)
     return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
 
-
 @app.route('/docx/download/task/<task_id>', methods=['GET'])
 def download_file_by_task_id(task_id):
     """
@@ -190,7 +187,6 @@ def download_file_by_task_id(task_id):
         logger.error(f"文件 {filename} 不存在")
         abort(404)
     return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
-
 
 @app.route('/docx/process/info', methods=['POST'])
 def get_doc_process_info():
@@ -220,15 +216,18 @@ def clean_tasks():
         time.sleep(300)
 
 
-def process_document_without_template(uid: str, doc_type: str, doc_title: str, task_id: str, file_name: str):
+def process_document_with_template(uid: str, doc_type: str, doc_title: str, task_id: str,
+    file_name: str, is_include_prompt = False):
     """
     处理无模板的文档，三级目录自动生成，每个段落无写作要求
     :param uid: 用户ID
     :param doc_type: 文档类型
     :param doc_title: 文档标题
     :param task_id: 任务ID
-    :param file_name: 模板文件名,其中只包含三级目录
+    :param file_name: Word template 模板文件名, 其中包含三级目录，可能含有段落写作的提示词，也可能没有
+    :param is_include_prompt: 各小节是否包含有写作提示词语
     """
+    logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, task_id: {task_id}, file_name: {file_name}, is_include_prompt = {is_include_prompt}")
     try:
         task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
@@ -238,33 +237,26 @@ def process_document_without_template(uid: str, doc_type: str, doc_title: str, t
         logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
         with thread_lock:
             task_progress[task_id] = {"text": "开始处理文档...","timestamp": time.time()}
-        doc_ctx = f"我正在写一个{doc_type}, 题目是{doc_title}"
+        doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
         para_comment_dict = get_para_comment_dict(my_target_doc)
-
         if para_comment_dict:
             logger.info("process_word_comment_doc")
             modify_para_with_comment_prompt_in_process(
-                uid,
-                task_id,
-                thread_lock,
-                task_progress,
-                my_target_doc,
-                doc_ctx,
-                para_comment_dict,
-                my_cfg,
+                uid, task_id, thread_lock, task_progress,
+                my_target_doc, doc_ctx, para_comment_dict, my_cfg,
                 output_file
+            )
+        elif is_include_prompt:
+            logger.info("fill_doc_with_prompt_in_progress")
+            fill_doc_with_prompt_in_progress(
+                task_id, thread_lock, task_progress, doc_ctx,
+                my_target_doc, catalogue, my_cfg, output_file,
             )
         else:
             logger.info("fill_doc_without_prompt_in_progress")
             docx_util.fill_doc_without_prompt_in_progress(
-                task_id,
-                thread_lock,
-                task_progress,
-                doc_ctx,
-                my_target_doc,
-                catalogue,
-                my_cfg,
-                output_file,
+                task_id, thread_lock, task_progress, doc_ctx,
+                my_target_doc, catalogue, my_cfg, output_file,
             )
     except Exception as e:
         with thread_lock:
@@ -274,57 +266,6 @@ def process_document_without_template(uid: str, doc_type: str, doc_title: str, t
             }
         logger.exception("文档生成异常", e)
 
-
-def process_document_with_template(uid: str, doc_type: str, doc_title: str, task_id: str, file_name: str):
-    """
-    处理有模板的文档, 三级目录及写作要求已有要求
-    :param uid: 用户ID
-    :param doc_type: 文档类型
-    :param doc_title: 文档标题
-    :param task_id: 任务ID
-    :param file_name: 文件名
-    """
-    logger.info(f"process_document_with_template, {uid}, {doc_type}, {doc_title}, {task_id}, {file_name}")
-    try:
-        task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
-        my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
-        catalogue = extract_catalogue(my_target_doc)
-        output_file = os.path.join(UPLOAD_FOLDER, f"output_{task_id}.docx")
-        with thread_lock:
-            task_progress[task_id] = {"text": "开始处理文档...","timestamp": time.time()}
-        para_comment_dict = get_para_comment_dict(my_target_doc)
-        if para_comment_dict:
-            logger.info("modify_para_with_comment_prompt")
-            modify_para_with_comment_prompt_in_process(
-                uid,
-                task_id,
-                thread_lock,
-                task_progress,
-                my_target_doc,
-                f"我正在写一个{doc_type}, 题目是{doc_title}",
-                para_comment_dict,
-                my_cfg,
-                output_file
-            )
-        else:
-            logger.info("fill_doc_with_prompt_in_progress")
-            fill_doc_with_prompt_in_progress(
-                task_id,
-                thread_lock,
-                task_progress,
-                f"我正在写一个{doc_type}, 题目是{doc_title}",
-                my_target_doc,
-                catalogue,
-                my_cfg,
-                output_file,
-            )
-    except Exception as e:
-        with thread_lock:
-            task_progress[task_id] = {
-                "text": f"任务处理失败: {str(e)}",
-                "timestamp": time.time()
-            }
-        logger.exception("文档生成异常", e)
 
 if __name__ == '__main__':
     threading.Thread(target=clean_tasks, daemon=True).start()
