@@ -47,23 +47,23 @@ def generate_outline():
     生成文档目录
     return outline like
     [
-        {
-            "title": "1. 背景",
-            "items": [
-                {"title": "1.1 概述", "items": ["1.1.1 项目背景", "1.1.2 核心问题", "1.1.3 关键数据"]},
-                {"title": "1.2 项目进展", "items": ["1.2.1 项目进展", "1.2.2 里程碑节点", "1.2.3 关键技术"]},
-                {"title": "1.3 关键数据", "items": ["1.3.1 数据类型", "1.3.2 数据存储", "1.3.3 数据价值"]}
-            ]
-        },
-        {
-            "title": "2. 问题分析",
-            "items": [
-                {"title": "2.1 面临挑战", "items": ["2.1.1 国内外现状", "2.1.2 解决的问题", "2.1.3 面临的问题"]},
-                {"title": "2.2 解决思路", "items": ["2.2.1 基础研究投入", "2.2.2 样品试制", "2.2.3 工程环境应用"]},
-                {"title": "2.3 经验总结", "items": ["2.3.1 理论研究支持", "2.3.2 专利限制突破", "2.2.3 自有技术积累"]}
-            ]
-        }
-    ]
+            {{
+                "title": "1. xxx",
+                "items": [
+                    {{"title": "1.1 xxx", "items": ["1.1.1 xxx", "1.1.2 xxx", "1.1.3 xxx"]}},
+                    {{"title": "1.2 xxx", "items": ["1.2.1 xxx", "1.2.2 xxx", "1.2.3 xxx"]}},
+                    {{"title": "1.3 xxx", "items": ["1.3.1 xxx", "1.3.2 xxx", "1.3.3 xxx"]}}
+                ]
+            }},
+            {{
+                "title": "2. xxx",
+                "items": [
+                    {{"title": "2.1 xxx", "items": ["2.1.1 xxx", "2.1.2 xxx", "2.1.3 xxx"]}},
+                    {{"title": "2.2 xxx", "items": ["2.2.1 xxx", "2.2.2 xxx", "2.2.3 xxx"]}},
+                    {{"title": "2.3 xxx", "items": ["2.3.1 xxx", "2.3.2 xxx", "2.2.3 xxx"]}}
+                ]
+            }}
+        ]
     """
     logger.info(f"gen_doc_outline {request}")
     doc_type = request.json.get("doc_type")
