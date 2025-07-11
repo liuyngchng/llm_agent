@@ -141,6 +141,13 @@ def write_doc_with_docx_template():
     data = request.json
     logger.info(f"write_doc_with_docx_template, {data}")
     task_id = data.get("task_id")
+    doc_type = data.get("doc_type")
+    doc_type_chinese = my_enums.WriteDocType.get_doc_type(doc_type)
+    doc_title = data.get("doc_title")
+    if not doc_type_chinese or not doc_title:
+        err_info = {"error": "缺少参数"}
+        logger.error(f"err_occurred, {err_info}")
+        return jsonify(err_info), 400
     template_file_name = data.get("file_name")
     uid = data.get("uid")
     if not task_id or not template_file_name or not uid:
@@ -150,7 +157,7 @@ def write_doc_with_docx_template():
 
     threading.Thread(
         target=process_document_with_template,
-        args=(uid, task_id, template_file_name)
+        args=(uid, doc_type_chinese, doc_title, task_id, template_file_name)
     ).start()
 
     info = {"status": "started", "task_id": task_id}
@@ -171,14 +178,14 @@ def download_file_by_filename(filename):
     return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
 
 
-@app.route('/docx/download/task/<taskId>', methods=['GET'])
-def download_file_by_task_id(taskId):
+@app.route('/docx/download/task/<task_id>', methods=['GET'])
+def download_file_by_task_id(task_id):
     """
     根据任务ID下载文件
-    ：param taskId: 任务ID，其对应的文件名格式如下 f"output_{taskId}.docx"
+    ：param task_id: 任务ID，其对应的文件名格式如下 f"output_{task_id}.docx"
     """
-    logger.info(f"download_file_task_id, {taskId}")
-    filename = f"output_{taskId}.docx"
+    logger.info(f"download_file_task_id, {task_id}")
+    filename = f"output_{task_id}.docx"
     if not os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
         logger.error(f"文件 {filename} 不存在")
         abort(404)
@@ -220,7 +227,7 @@ def process_document_without_template(uid: str, doc_type: str, doc_title: str, t
     :param doc_type: 文档类型
     :param doc_title: 文档标题
     :param task_id: 任务ID
-    :param file_name: 文件名
+    :param file_name: 模板文件名,其中只包含三级目录
     """
     try:
         task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
@@ -268,13 +275,16 @@ def process_document_without_template(uid: str, doc_type: str, doc_title: str, t
         logger.exception("文档生成异常", e)
 
 
-def process_document_with_template(uid: str, task_id: str, file_name: str):
+def process_document_with_template(uid: str, doc_type: str, doc_title: str, task_id: str, file_name: str):
     """
     处理有模板的文档, 三级目录及写作要求已有要求
     :param uid: 用户ID
+    :param doc_type: 文档类型
+    :param doc_title: 文档标题
     :param task_id: 任务ID
     :param file_name: 文件名
     """
+    logger.info(f"process_document_with_template, {uid}, {doc_type}, {doc_title}, {task_id}, {file_name}")
     try:
         task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
@@ -284,14 +294,14 @@ def process_document_with_template(uid: str, task_id: str, file_name: str):
             task_progress[task_id] = {"text": "开始处理文档...","timestamp": time.time()}
         para_comment_dict = get_para_comment_dict(my_target_doc)
         if para_comment_dict:
-            logger.info("process_word_comment_doc")
+            logger.info("modify_para_with_comment_prompt")
             modify_para_with_comment_prompt_in_process(
                 uid,
                 task_id,
                 thread_lock,
                 task_progress,
                 my_target_doc,
-                "我正在写一个可行性研究报告",
+                f"我正在写一个{doc_type}, 题目是{doc_title}",
                 para_comment_dict,
                 my_cfg,
                 output_file
@@ -302,7 +312,7 @@ def process_document_with_template(uid: str, task_id: str, file_name: str):
                 task_id,
                 thread_lock,
                 task_progress,
-                "我正在写一个可行性研究报告",
+                f"我正在写一个{doc_type}, 题目是{doc_title}",
                 my_target_doc,
                 catalogue,
                 my_cfg,

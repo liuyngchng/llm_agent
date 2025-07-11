@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import json
+import re
 
 from sys_init import init_yml_cfg
 from langchain_core.prompts import ChatPromptTemplate
@@ -155,25 +156,25 @@ def gen_doc_outline(doc_type: str, doc_title: str, cfg: dict, is_remote=True) ->
         请输出以下格式的文档三级标题，数据格式举例如下：
         [
             {{
-                "title": "1. 背景",
+                "title": "1. xxx",
                 "items": [
-                    {{"title": "1.1 概述", "items": ["1.1.1 项目背景", "1.1.2 核心问题", "1.1.3 关键数据"]}},
-                    {{"title": "1.2 项目进展", "items": ["1.2.1 项目进展", "1.2.2 里程碑节点", "1.2.3 关键技术"]}},
-                    {{"title": "1.3 关键数据", "items": ["1.3.1 数据类型", "1.3.2 数据存储", "1.3.3 数据价值"]}}
+                    {{"title": "1.1 xxx", "items": ["1.1.1 xxx", "1.1.2 xxx", "1.1.3 xxx"]}},
+                    {{"title": "1.2 xxx", "items": ["1.2.1 xxx", "1.2.2 xxx", "1.2.3 xxx"]}},
+                    {{"title": "1.3 xxx", "items": ["1.3.1 xxx", "1.3.2 xxx", "1.3.3 xxx"]}}
                 ]
             }},
             {{
-                "title": "2. 问题分析",
+                "title": "2. xxx",
                 "items": [
-                    {{"title": "2.1 面临挑战", "items": ["2.1.1 国内外现状", "2.1.2 解决的问题", "2.1.3 面临的问题"]}},
-                    {{"title": "2.2 解决思路", "items": ["2.2.1 基础研究投入", "2.2.2 样品试制", "2.2.3 工程环境应用"]}},
-                    {{"title": "2.3 经验总结", "items": ["2.3.1 理论研究支持", "2.3.2 专利限制突破", "2.2.3 自有技术积累"]}}
+                    {{"title": "2.1 xxx", "items": ["2.1.1 xxx", "2.1.2 xxx", "2.1.3 xxx"]}},
+                    {{"title": "2.2 xxx", "items": ["2.2.1 xxx", "2.2.2 xxx", "2.2.3 xxx"]}},
+                    {{"title": "2.3 xxx", "items": ["2.3.1 xxx", "2.3.2 xxx", "2.2.3 xxx"]}}
                 ]
             }}
         ]
         直接输出纯文本，不要输出Markdown格式
         '''
-    prompt = ChatPromptTemplate.from_template(template)
+    prompt = ChatPromptTemplate.from_template(replace_spaces(template))
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
@@ -371,6 +372,8 @@ def test_complete_user_info():
     complete_user_info_result = update_session_info(user_info1, user_info2, my_cfg, True)
     logger.info(f"complete_user_info_result2={complete_user_info_result}")
 
+def replace_spaces(text):
+    return re.sub(r'[ \t]+', ' ', text)
 
 def test_classify():
      my_cfg = init_yml_cfg()
