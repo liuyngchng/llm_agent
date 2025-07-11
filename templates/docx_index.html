@@ -745,6 +745,13 @@
         function selectTemplate(type) {
             selectedTemplate = type;
             document.getElementById('outline_source').value = type;
+            // 更新按钮文本
+            const confirmBtn = document.getElementById('confirmOutlineBtn');
+            if (type === 'custom') {
+                confirmBtn.innerHTML = '下一步 <i class="fas fa-arrow-right"></i>';
+            } else {
+                confirmBtn.innerHTML = '确认并编辑 <i class="fas fa-edit"></i>';
+            }
             // 更新UI
             document.getElementById('systemTemplate').classList.toggle('active', type === 'system');
             document.getElementById('customTemplate').classList.toggle('active', type === 'custom');
@@ -812,24 +819,30 @@
             // 如果是第三步，填充编辑区域
             if (currentStep === 3) {
                 document.getElementById('modifiedOutline').value = document.getElementById('outlineText').value;
+                // 根据来源设置只读状态
+                const outlineSource = document.getElementById('outline_source').value;
+                document.getElementById('modifiedOutline').readOnly = (outlineSource === 'custom');
             }
         }
 
         // 上一步函数
         function prevStep(step) {
+            document.getElementById('modifiedOutline').readOnly = false;
             resetGenerateState();
             document.getElementById('progressDisplay').style.display = 'none';
             // 隐藏当前步骤
             document.getElementById(`step${currentStep}`).classList.remove('active');
-
             // 更新当前步骤
             currentStep = step - 1;
-
             // 显示上一步
             document.getElementById(`step${currentStep}`).classList.add('active');
-
             // 更新进度条
             updateProgressBar();
+            // 如果回到步骤3，保持只读状态
+            if (currentStep === 3) {
+                const outlineSource = document.getElementById('outline_source').value;
+                document.getElementById('modifiedOutline').readOnly = (outlineSource === 'custom');
+            }
         }
 
         // 处理文件上传
@@ -942,7 +955,10 @@
             })
             .then(data => {
                 renderOutline(data.outline);
-                document.getElementById('confirmOutlineBtn').disabled = false;
+                // 恢复按钮文本
+                const confirmBtn = document.getElementById('confirmOutlineBtn');
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '确认并编辑 <i class="fas fa-edit"></i>';
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -1022,11 +1038,8 @@
 
         // 初始化页面
         updateProgressBar();
-
-        // 生成文档内容,分两种情况，如果之前选择了系统智能生成文档结构，
-        // 则请求 /docx/write/outline， 如果之前选择了上传Word模板
-        // 则请求 /docx/write/template，需要提交上传Word模板后返回的file_name
         async function gen_doc() {
+            document.getElementById('modifiedOutline').readOnly = true;
             const uid = document.getElementById('uid').value;
             const token = document.getElementById('t').value;
             const task_id = document.getElementById('taskId').value;
@@ -1159,6 +1172,7 @@
 
             const progressDisplay = document.getElementById('progressDisplay');
             if (progressDisplay) progressDisplay.style.display = 'none';
+            document.getElementById('modifiedOutline').readOnly = false;
         }
     </script>
 </body>
