@@ -6,6 +6,7 @@ pip install flask
 """
 import logging.config
 import os
+import shutil
 import threading
 import time
 
@@ -44,7 +45,7 @@ def vdb_index():
     except Exception as e:
         logger.error(f"err_in_vdb_index, {e}, url: {request.url}", exc_info=True)
         raise jsonify("err_in_vdb_index")
-    vdb_status = "目前没有矢量知识库，请您即使上传文件创建知识库"
+    vdb_status = ""
     vdb_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
     if os.path.exists(vdb_dir):
         total_kb = get_dir_file_size_in_kb(vdb_dir)
@@ -130,6 +131,33 @@ def upload_file():
             "error": "文件处理失败",
             "details": str(e)
         }), 500
+
+@vdb_bp.route('/vdb/delete', methods=['POST'])
+def delete_vdb_dir():
+    data = request.json
+    logger.info(f"vdb_delete, {data}")
+    uid = data.get("uid")
+    t = data.get("t")
+    del_result = False
+    msg = ""
+    try:
+        if not uid or not t:
+            msg = "未提供合法的用户信息"
+            logger.error(msg)
+            return jsonify({"success": del_result,"message": msg}), 200
+        vdb_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
+        if os.path.exists(vdb_dir):
+            shutil.rmtree(vdb_dir)
+            msg = "成功删除知识库"
+            del_result = True
+        else:
+            msg = "知识库不存在"
+        logger.info(f"{msg}, {vdb_dir}")
+        return jsonify({"success": del_result, "message": msg}), 200
+    except Exception as e:
+        msg = f"删除知识库出现异常 {str(e)}"
+        logger.error(f"err_msg, {msg}", exc_info=True)
+        return jsonify({"success": del_result, "message": msg}), 200
 
 
 @vdb_bp.route("/vdb/index/doc", methods=['POST'])

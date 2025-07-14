@@ -193,6 +193,18 @@
             box-shadow: 0 5px 15px rgba(75, 108, 183, 0.1);
         }
 
+        .btn-danger {
+            background: linear-gradient(to right, #e53935, #c62828);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: linear-gradient(to right, #d32f2f, #b71c1c);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(229, 57, 53, 0.3);
+        }
+
         #fileName {
             flex: 1;
             padding: 14px;
@@ -416,7 +428,10 @@
 
             <div class="info-box" id="vdb_status">
                 <h3><i class="fas fa-cogs"></i> 知识库状态</h3>
-                {{vdb_status}}
+                <span id="vdb_status_desc">{{vdb_status}}</span>
+                <button class="btn btn-danger" id="deleteBtn" style="display: none;">
+                    <i class="fas fa-trash-alt"></i> 删除知识库
+                </button>
             </div>
 
             <h2><i class="fas fa-file-upload"></i> 文档上传</h2>
@@ -651,6 +666,56 @@
             } finally {
                 searchBtn.disabled = false;
             }
+        });
+        // 页面加载时检查知识库状态
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusDesc = document.getElementById('vdb_status_desc').textContent.trim();
+            const deleteBtn = document.getElementById('deleteBtn');
+
+        // 当状态描述非空且不是"无知识库"时显示按钮
+        if (statusDesc && !statusDesc.includes("无知识库")) {
+            deleteBtn.style.display = 'block';
+        }
+        });
+
+        // 删除知识库功能
+        document.getElementById('deleteBtn').addEventListener('click', async () => {
+        if (!confirm('确定要删除整个知识库吗？此操作不可恢复！')) return;
+
+        const deleteBtn = document.getElementById('deleteBtn');
+        const statusDesc = document.getElementById('vdb_status_desc');
+        const uid = document.getElementById('uid').value;
+        const t = document.getElementById('t').value;
+        const originalText = deleteBtn.innerHTML;
+
+        try {
+            // 禁用按钮并显示加载状态
+            deleteBtn.disabled = true;
+            deleteBtn.innerHTML = '<div class="spinner"></div> 删除中...';
+
+            const response = await fetch('/vdb/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ uid, t })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                statusDesc.textContent = "无知识库";
+                deleteBtn.style.display = 'none';
+                alert('知识库已成功删除！');
+            } else {
+                throw new Error(result.message || '删除失败');
+            }
+        } catch (error) {
+            console.error('删除失败:', error);
+            alert(`删除失败: ${error.message}`);
+        } finally {
+            // 恢复按钮状态
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = originalText;
+        }
         });
     </script>
 </body>
