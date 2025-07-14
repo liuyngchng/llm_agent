@@ -6,125 +6,409 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="text/javascript" src="/static/purify.min.js"></script>
     <script type="text/javascript" src="/static/marked.min.js"></script>
-    <link rel="stylesheet" href="/static/my.nl2sql.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .system-settings-link-container {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin: 10px 0;
-        }
-        .loading-dots {
-            display: inline-block;
-        }
-        .loading-dots:after {
-            content: '.';
-            animation: dots 1s steps(5, end) infinite;
-        }
-        @keyframes dots {
-            0%, 20% { content: '.'; }
-            40% { content: '..'; }
-            60% { content: '...'; }
-            80%, 100% { content: ''; }
-        }
-        .typing-indicator {
-            display: inline-block;
-            position: relative;
-            height: 20px;
-        }
-        .typing-indicator span {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 10%;
-            background: #ccc;
-            margin: 0 2px;
-            animation: bounce 1.5s infinite ease-in-out;
-        }
-        .typing-indicator span:nth-child(1) { animation-delay: 0s; }
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
-        .stop-button {
-            background-color: #ff4d4d;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: 10px;
-        }
-        .stop-button:hover {
-            background-color: #e60000;
-        }
-        .copy-button {
-            height: 24px;
-            line-height: 24px;
+        * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: 10px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .copy-button:hover {
-            background-color: #45a049;
-        }
-        .message-actions {
-            height: 28px;
-            align-items: center;
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            min-height: 100vh;
+            padding: 20px;
             display: flex;
-            gap: 5px;
-            margin-top: 5px;
+            justify-content: center;
+            align-items: center;
         }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+        }
+
+        header {
+            background: linear-gradient(to right, #4b6cb7, #182848);
+            color: white;
+            padding: 20px 30px;
+            position: relative;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 5px;
+        }
+
+        .system-settings-link-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .system-settings-link {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-weight: 600;
+        }
+
+        .system-settings-link:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .chat-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message-container {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-message-container {
+            align-items: flex-end;
+        }
+
+        .bot-message-container {
+            align-items: flex-start;
+        }
+
+        .message-bubble {
+            padding: 15px;
+            border-radius: 12px;
+            max-width: 85%;
+            line-height: 1.6;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            position: relative;
+        }
+
+        .user-message-bubble {
+            background: linear-gradient(to right, #e6f7ff, #d1edff);
+            border: 1px solid #c5e3ff;
+            color: #1a3c5a;
+        }
+
+        .bot-message-bubble {
+            background: white;
+            border: 1px solid #e0e0e0;
+            color: #333;
+        }
+
         .bot-message-header {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
-        .message-bubble {
-            padding: 2px 2px;
-            border-radius: 5px;
-            max-width: 85%;
-            line-height: 1.5;
+
+        .bot-message-header img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #4b6cb7;
+            padding: 4px;
         }
-        .user-message-bubble {
-            background-color: #e6f7ff;
-            align-self: flex-end;
+
+        .message-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            justify-content: flex-end;
         }
-        .bot-message-bubble {
-            background-color: #f0f0f0;
-            align-self: flex-start;
+
+        .stop-button, .copy-button {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border: none;
+            transition: all 0.3s;
+        }
+
+        .stop-button {
+            background: #ff4d4d;
+            color: white;
+        }
+
+        .stop-button:hover {
+            background: #e60000;
+            transform: translateY(-2px);
+        }
+
+        .copy-button {
+            background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+            color: white;
+        }
+
+        .copy-button:hover {
+            background: linear-gradient(to right, #3a5a9e, #2c487e);
+            transform: translateY(-2px);
+        }
+
+        #query-form {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            background: white;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+            position: relative;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 14px 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #4b6cb7;
+            box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
+        }
+
+        .send-button, .stop-button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .send-button {
+            background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+            color: white;
+        }
+
+        .send-button:hover:not(:disabled) {
+            background: linear-gradient(to right, #3a5a9e, #2c487e);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(75, 108, 183, 0.3);
+        }
+
+        .send-button:disabled {
+            background: #e0e0e0;
+            cursor: not-allowed;
+            color: #aaa;
+        }
+
+        .typing-indicator {
+            display: inline-flex;
+            gap: 6px;
+            align-items: center;
+            padding: 8px 15px;
+            background: #f0f4ff;
+            border-radius: 20px;
+            color: #4b6cb7;
+            font-size: 0.9rem;
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4b6cb7;
+            animation: bounce 1.5s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* Markdown内容样式 */
+        .bot-message-bubble h1,
+        .bot-message-bubble h2,
+        .bot-message-bubble h3 {
+            color: #2c3e50;
+            margin: 15px 0 10px 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .bot-message-bubble p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .bot-message-bubble ul,
+        .bot-message-bubble ol {
+            padding-left: 25px;
+            margin: 10px 0;
+        }
+
+        .bot-message-bubble li {
+            margin: 8px 0;
+        }
+
+        .bot-message-bubble code {
+            background: #f5f7fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .bot-message-bubble pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border-left: 4px solid #4b6cb7;
+        }
+
+        .bot-message-bubble blockquote {
+            border-left: 4px solid #4b6cb7;
+            padding: 5px 15px;
+            margin: 15px 0;
+            background: #f8f9fa;
+            color: #555;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                height: 95vh;
+                border-radius: 12px;
+            }
+
+            header {
+                padding: 15px;
+            }
+
+            header h1 {
+                font-size: 1.5rem;
+                padding-top: 10px;
+            }
+
+            .system-settings-link-container {
+                position: static;
+                justify-content: center;
+                margin-top: 10px;
+            }
+
+            .system-settings-link {
+                font-size: 0.8rem;
+                padding: 6px 12px;
+            }
+
+            .chat-container {
+                padding: 15px;
+            }
+
+            .message-bubble {
+                max-width: 90%;
+                padding: 12px;
+            }
+
+            .input-container {
+                flex-direction: column;
+            }
+
+            .send-button, .stop-button {
+                width: 100%;
+                padding: 12px;
+            }
+
+            .bot-message-header img {
+                width: 28px;
+                height: 28px;
+            }
         }
     </style>
     <title>智能问答</title>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>智能问答</h1>
-        </div>
-        <div class="system-settings-link-container">
-          <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="system-settings-link" target="_blank">退出</a>
-          <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="system-settings-link" target="_blank">知识库配置</a>
-        </div>
+        <header>
+            <h1><i class="fas fa-comments"></i> 智能问答</h1>
+            <div class="system-settings-link-container">
+                <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="system-settings-link" target="_blank">
+                    <i class="fas fa-book"></i> 知识库配置
+                </a>
+                <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="system-settings-link" target="_blank">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </a>
+            </div>
+        </header>
+
         <div class="chat-container" id="chat-container">
-            <!-- 聊天内容将在这里动态生成 -->
+            <!-- 初始欢迎消息 -->
+            <div class="message-container bot-message-container">
+                <div class="bot-message-header">
+                    <img src="/static/bot.png" alt="AI Assistant">
+                    <span>智能助手</span>
+                </div>
+                <div class="message-bubble bot-message-bubble">
+                    <p>您好！我是您的智能助手，随时准备解答您的问题。请问有什么可以帮您的？</p>
+                    <p class="suggestions">您可以尝试询问：</p>
+                    <ul>
+                        <li>燃气表无法充值应该怎么做？</li>
+                        <li>已经换表的用户，目前新表无法通信，需要怎么做？</li>
+                        <li>之前欠费的表，已经充值了，如何重新恢复用气？</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
         <form id="query-form">
             <div class="input-container">
-                <input type="text" class="input-field" id="query-input" name="msg" placeholder="输入你的问题，帮你深度解答" required autocomplete="off">
-                <button type="submit" class="send-button" id="send-button">发送</button>
-                <button type="button" class="stop-button" id="stop-button" style="display:none;">停止</button>
+                <input type="text" class="input-field" id="query-input" name="msg"
+                       placeholder="输入你的问题，帮你深度解答..." required autocomplete="off">
+                <button type="submit" class="send-button" id="send-button">
+                    <i class="fas fa-paper-plane"></i> 发送
+                </button>
+                <button type="button" class="stop-button" id="stop-button" style="display:none;">
+                    <i class="fas fa-stop"></i> 停止
+                </button>
             </div>
             <input type="hidden" id ="uid" name="uid" value="{{uid}}">
             <input type="hidden" id ="t" name="t" value="{{t}}">
@@ -202,7 +486,7 @@
             abortController = new AbortController();
 
             // 添加加载中的消息
-            currentBotMessage = addMessage('<div class="typing-indicator"><span></span><span></span><span></span></div>', 'bot');
+            currentBotMessage = addMessage('<div class="typing-indicator"><span></span><span></span><span></span> 思考中...</div>', 'bot');
 
             try {
                 const t = document.getElementById('t').value;
@@ -299,7 +583,8 @@
                 );
                 messageContainer.innerHTML = `
                     <div class="bot-message-header">
-                        <img width="24" height="24" src="/static/bot.png">
+                        <img src="/static/bot.png" alt="AI Assistant">
+                        <span>智能助手</span>
                     </div>
                     <div class="message-bubble bot-message-bubble">${sanitizedContent}</div>
                 `;
@@ -317,12 +602,13 @@
 
             const copyButton = document.createElement('button');
             copyButton.classList.add('copy-button');
-            copyButton.textContent = '复制';
+            copyButton.innerHTML = '<i class="fas fa-copy"></i> 复制';
             copyButton.onclick = function() {
                 navigator.clipboard.writeText(text).then(() => {
-                    copyButton.textContent = '已复制!';
+                    const originalText = copyButton.innerHTML;
+                    copyButton.innerHTML = '<i class="fas fa-check"></i> 已复制!';
                     setTimeout(() => {
-                        copyButton.textContent = '复制';
+                        copyButton.innerHTML = originalText;
                     }, 2000);
                 });
             };
