@@ -6,6 +6,7 @@ import logging.config
 from flask import (request, render_template)
 import time
 import cfg_util as cfg_utl
+import my_enums
 from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -21,9 +22,10 @@ def login_index():
     app_source = request.args.get('app_source')
     if not app_source:
         raise RuntimeError("no_app_info_found")
+    sys_name = my_enums.AppType.get_app_type(app_source)
     ctx = {
         "uid": "foo",
-        "sys_name": my_cfg['sys']['name'],
+        "sys_name": sys_name,
         "app_source": app_source,
         "waring_info": "",
     }
@@ -55,11 +57,12 @@ def login():
     logger.info(f"user_login: {user}, {t}, {app_source}")
     auth_result = cfg_utl.auth_user(user, t, my_cfg)
     logger.info(f"user_login_result: {user}, {t}, {auth_result}")
+    sys_name = my_enums.AppType.get_app_type(app_source)
     if not auth_result["pass"]:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
         ctx = {
             "user" : user,
-            "sys_name" : my_cfg['sys']['name'],
+            "sys_name" : sys_name,
             "waring_info" : "用户名或密码输入错误",
         }
         return render_template("login.html", **ctx)
@@ -68,7 +71,7 @@ def login():
     ctx = {
         "uid": auth_result["uid"],
         "t": auth_result["t"],
-        "sys_name": my_cfg['sys']['name'],
+        "sys_name": sys_name,
         "greeting": cfg_utl.get_const("greeting", app_source),
         "app_source": app_source,
     }
@@ -91,6 +94,7 @@ def logout():
     logger.debug(f"request_form: {request.args}")
     uid = request.args.get('uid').strip()
     app_source = request.args.get('app_source')
+    sys_name = my_enums.AppType.get_app_type(app_source)
     logger.info(f"user_logout, {uid}, {app_source}")
     session_key = f"{uid}_{get_client_ip()}"
     auth_info.pop(session_key, None)
@@ -98,7 +102,7 @@ def logout():
     usr_name = usr_info.get('name', '')
     ctx = {
         "user": usr_name,
-        "sys_name": my_cfg['sys']['name'],
+        "sys_name": sys_name,
         "waring_info":f"用户 {usr_name} 已退出",
         "app_source": app_source,
     }
@@ -113,8 +117,9 @@ def reg_user_index():
     """
     logger.info(f"request_args_in_reg_usr_index {request.args}")
     app_source = request.args.get('app_source')
+    sys_name = my_enums.AppType.get_app_type(app_source)
     ctx = {
-        "sys_name": my_cfg['sys']['name'] + "_新用户注册",
+        "sys_name": sys_name + "_新用户注册",
         "waring_info":"",
         "app_source": app_source,
     }
@@ -137,6 +142,8 @@ def reg_user():
         usr = request.form.get('usr').strip()
         ctx["user"] = usr
         ctx["app_source"] = request.form.get('app_source')
+        sys_name = my_enums.AppType.get_app_type(ctx["app_source"])
+        ctx["sys_name"] = sys_name
         t = request.form.get('t').strip()
         usr_info = cfg_utl.get_uid_by_user(usr)
         if usr_info:
@@ -147,7 +154,7 @@ def reg_user():
             uid = cfg_utl.get_uid_by_user(usr)
             if uid:
                 ctx["uid"] = uid
-                ctx["sys_name"] = my_cfg['sys']['name']
+                ctx["sys_name"] = sys_name
                 ctx["waring_info"] = f"用户 {usr} 已成功创建，欢迎使用本系统"
                 dt_idx = "login.html"
                 logger.error(f"reg_user_success, {usr}")
