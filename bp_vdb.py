@@ -202,10 +202,11 @@ def search_vdb():
         return jsonify({"error": "缺少参数"}), 400
     my_vector_db_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
 
-    ctx_txt = search_txt(search_input, my_vector_db_dir, 0.1, my_cfg['api'], 3)
-    if ctx_txt:
-        ctx_txt = ctx_txt.replace("\n", "<br>")
-        return jsonify({"search_output": ctx_txt}), 200
+    search_result = search_txt(search_input, my_vector_db_dir, 0.1, my_cfg['api'], 3)
+    logger.info(f"search_result_for_[{search_input}], {search_result}")
+    if search_result:
+        search_result = search_result.replace("\n", "<br>")
+        return jsonify({"search_output": search_result}), 200
     else:
         return jsonify({"search_output": "未检索到有效内容"}), 200
 

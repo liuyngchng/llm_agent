@@ -185,6 +185,10 @@ def get_data():
 
 def get_client_ip():
     """获取客户端真实 IP"""
-    if forwarded_for := request.headers.get('X-Forwarded-For'):
-        return forwarded_for.split(',')[0]
-    return request.headers.get('X-Real-IP', request.remote_addr)
+    # 如果有X-Forwarded-For，取第一个IP（因为可能是代理链）
+    x_forwarded_for = request.headers.get('X-Forwarded-For', '')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        ip = request.remote_addr
+    return ip

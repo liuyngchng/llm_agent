@@ -10,6 +10,7 @@ import time
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, redirect, url_for
+from flask_cors import CORS
 
 from chat_agent import ChatAgent
 from sys_init import init_yml_cfg
@@ -26,6 +27,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(vdb_bp)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config['JSON_AS_ASCII'] = False
+CORS(app, supports_credentials=True)
 
 my_cfg = init_yml_cfg()
 os.system(
@@ -70,7 +72,9 @@ def chat(catch=None):
         chat_agent = ChatAgent(my_cfg)
         def generate_stream():
             full_response = ""
-            for chunk in chat_agent.get_chain().stream({"context": context, "question": msg}):
+            stream_input = {"context": context, "question": msg}
+            logger.info(f"stream_input {stream_input}")
+            for chunk in chat_agent.get_chain().stream(stream_input):
                 full_response += chunk
                 yield chunk
             logger.info(f"full_response: {full_response}")

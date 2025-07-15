@@ -488,7 +488,8 @@
                         'Accept': 'text/event-stream'
                     },
                     body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&t=${t}&app_source=${appSource}`,
-                    signal: abortController.signal
+                    signal: abortController.signal,
+                    credentials: 'include'
                 });
 
                 // 检查响应是否正常
