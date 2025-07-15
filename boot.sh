@@ -3,7 +3,7 @@
 #MODULE=http_stream
 #MODULE=http_rag
 #MODULE=http_docx
-MODULE=http_demo
+MODULE=http_chat
 echo "current dir `pwd`"
 #nohup /opt/llm_py_env/bin/gunicorn --timeout 240 --preload -w 4 -b 0.0.0.0:19000 http_service:app > server.log &2>&1 &
 # just for simplicity to deploy and share memory

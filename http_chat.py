@@ -10,7 +10,7 @@ import time
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, redirect, url_for
-from flask_cors import CORS
+# from flask_cors import CORS
 
 from chat_agent import ChatAgent
 from sys_init import init_yml_cfg
@@ -27,7 +27,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(vdb_bp)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config['JSON_AS_ASCII'] = False
-CORS(app, supports_credentials=True)
+# CORS(app, supports_credentials=True)
 
 my_cfg = init_yml_cfg()
 os.system(
