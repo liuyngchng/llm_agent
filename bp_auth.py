@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, redirect, url_for
 import logging.config
 from flask import (request, render_template)
 import time
@@ -20,6 +20,7 @@ my_cfg = init_yml_cfg()
 def login_index():
     logger.info("login_index")
     app_source = request.args.get('app_source')
+    warning_info = request.args.get('warning_info', "")
     if not app_source:
         raise RuntimeError("no_app_info_found")
     sys_name = my_enums.AppType.get_app_type(app_source)
@@ -27,7 +28,7 @@ def login_index():
         "uid": "foo",
         "sys_name": sys_name,
         "app_source": app_source,
-        "waring_info": "",
+        "warning_info": warning_info,
     }
     auth_flag = my_cfg['sys']['auth']
     if auth_flag:
@@ -60,12 +61,8 @@ def login():
     sys_name = my_enums.AppType.get_app_type(app_source)
     if not auth_result["pass"]:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
-        ctx = {
-            "user" : user,
-            "sys_name" : sys_name,
-            "waring_info" : "用户名或密码输入错误",
-        }
-        return render_template("login.html", **ctx)
+        warning_info="用户名或密码输入错误"
+        return redirect(url_for('auth.login_index', app_source=app_source, warning_info=warning_info))
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")
     ctx = {
@@ -100,13 +97,9 @@ def logout():
     auth_info.pop(session_key, None)
     usr_info = cfg_utl.get_user_info_by_uid(uid)
     usr_name = usr_info.get('name', '')
-    ctx = {
-        "user": usr_name,
-        "sys_name": sys_name,
-        "waring_info":f"用户 {usr_name} 已退出",
-        "app_source": app_source,
-    }
-    return render_template(dt_idx, **ctx)
+    return redirect(url_for('auth.login_index',
+                           app_source=app_source,
+                           warning_info=f"用户 {usr_name} 已退出"))
 
 @auth_bp.route('/reg/usr', methods=['GET'])
 def reg_user_index():
@@ -120,7 +113,7 @@ def reg_user_index():
     sys_name = my_enums.AppType.get_app_type(app_source)
     ctx = {
         "sys_name": sys_name + "_新用户注册",
-        "waring_info":"",
+        "warning_info":"",
         "app_source": app_source,
     }
     dt_idx = "reg_usr_index.html"
@@ -147,7 +140,7 @@ def reg_user():
         t = request.form.get('t').strip()
         usr_info = cfg_utl.get_uid_by_user(usr)
         if usr_info:
-            ctx["waring_info"]= f"用户 {usr} 已存在，请重新输入用户名"
+            ctx["warning_info"]= f"用户 {usr} 已存在，请重新输入用户名"
             logger.error(f"reg_user_exist_err {usr}")
         else:
             cfg_utl.save_usr(usr, t)
@@ -155,16 +148,16 @@ def reg_user():
             if uid:
                 ctx["uid"] = uid
                 ctx["sys_name"] = sys_name
-                ctx["waring_info"] = f"用户 {usr} 已成功创建，欢迎使用本系统"
+                ctx["warning_info"] = f"用户 {usr} 已成功创建，欢迎使用本系统"
                 dt_idx = "login.html"
                 logger.error(f"reg_user_success, {usr}")
                 return render_template(dt_idx, **ctx)
             else:
-                ctx["waring_info"] = f"用户 {usr} 创建失败"
+                ctx["warning_info"] = f"用户 {usr} 创建失败"
                 logger.error(f"reg_user_fail, {usr}")
     except Exception as e:
-        ctx["waring_info"] = "创建用户发生异常"
-        logger.error(f"reg_user_exception, {ctx['waring_info']}, url: {request.url}", exc_info=True)
+        ctx["warning_info"] = "创建用户发生异常"
+        logger.error(f"reg_user_exception, {ctx['warning_info']}, url: {request.url}", exc_info=True)
     dt_idx = "reg_usr_index.html"
     logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
