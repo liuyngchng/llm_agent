@@ -5,5 +5,6 @@ docker rm llm_docx
 docker run -dit --name llm_docx  \
   --security-opt seccomp=unconfined \
   -v /data/llm_agent:/opt/app \
+  -v /data/nltk_data:/usr/share/nltk_data \
   -p 19003:19000 \
   llm_rag:1.1

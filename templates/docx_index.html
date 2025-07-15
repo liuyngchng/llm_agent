@@ -315,6 +315,30 @@
             text-align: center;
             padding: 40px 0;
         }
+        .knowledge-btn {
+            position: absolute;
+            top: 20px;
+            right: 150px; /* 在退出按钮左侧 */
+            padding: 8px 16px;
+            background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+            color: white;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-weight: 600;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .knowledge-btn:hover {
+            background: linear-gradient(to right, #3a5a9e, #2c487e);
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
 
         .spinner {
             width: 50px;
@@ -522,6 +546,12 @@
         }
 
         @media (max-width: 768px) {
+            .knowledge-btn {
+                top: 10px;
+                right: 120px;
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
             .container {
                 border-radius: 12px;
             }
@@ -570,6 +600,9 @@
 <body>
     <div class="container">
         <header>
+            <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="knowledge-btn">
+                <i class="fas fa-book"></i> 知识库配置
+            </a>
             <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="logout-btn">
                 <i class="fas fa-sign-out-alt"></i> 退出
             </a>
@@ -624,8 +657,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="keywords">关键词 (可选)</label>
-                    <input type="text" id="keywords" placeholder="输入关键词，用逗号分隔">
+                    <label for="keywords">自定义写作要求 (可选)</label>
+                    <input type="text" id="keywords" placeholder="输入写作要求，用逗号分隔">
                 </div>
 
                 <div class="btn-container">

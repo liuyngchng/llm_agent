@@ -22,11 +22,31 @@ class DataType(Enum):
     JSON = "json"
 
 class MsgType(Enum):
+    """
+    消息类型枚举
+    """
     ERROR = "error"
     HEARTBEAT = "heartbeat"
     HEARTBEAT_ACK = "heartbeat_ack"
     MSG = "msg"
     WARN = "warn"
+
+class AppType(Enum):
+    """应用类型枚举（英文键，汉字值）"""
+    CHAT = "智能问答"
+    NL2SQL = "智能问数"
+    DOCX = "文档生成"
+    CSM = "智能客服"
+    TXT2SQL = "智能问数"
+
+    @staticmethod
+    def get_app_type(app_str: str) -> str:
+        """根据输入字符串获取对应的应用类型"""
+        app_upper = app_str.upper()  # 转换为大写匹配枚举键
+        try:
+            return AppType[app_upper].value
+        except KeyError:
+            return "AI 应用"  # 或抛出异常
 
 
 class WriteDocType(Enum):
