@@ -62,7 +62,7 @@ def login():
     if not auth_result["pass"]:
         logger.error(f"用户名或密码输入错误 {user}, {t}")
         warning_info="用户名或密码输入错误"
-        return redirect(url_for('auth.login_index', app_source=app_source, warning_info=warning_info))
+        return redirect(url_for('auth.login_index', app_source=app_source, warning_info=warning_info, usr=user))
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")
     ctx = {

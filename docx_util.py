@@ -211,6 +211,7 @@ def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:
     doc = Document(target_doc)
     gen_txt_count = 0
     total_paragraphs = len(doc.paragraphs)
+    txt_info = ""
     for index, my_para in enumerate(doc.paragraphs):
         percent = index / total_paragraphs * 100
         process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文本，"
@@ -246,6 +247,7 @@ def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:
             txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，进度 100%，未检测到写作要求文本"
         download_url = f"/docx/download/task/{task_id}"
         update_process_info(progress_lock, task_id, thread_lock, txt_info, 100, download_url)
+    logger.info(f"{txt_info}, 所有内容已输出至文件 {output_file_name}")
 
 def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: str, target_doc: str,
     target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
@@ -263,6 +265,7 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
     gen_txt_count = 0
     current_heading = []
     total_paragraphs = len(doc.paragraphs)
+    txt_info = ""
     for index, my_para in enumerate(doc.paragraphs):
         percent = index / total_paragraphs * 100
         process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文本，"
@@ -296,6 +299,8 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
         else:
             txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，进度 100%，未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
         update_process_info(progress_lock, task_id, thread_lock, txt_info)
+    logger.info(f"{txt_info}, 所有内容已输出至文件 {output_file_name}")
+
 
 
 def update_process_info(progress_lock, task_id, thread_lock, txt_info, percent=0.0, download_url=""):
