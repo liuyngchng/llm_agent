@@ -7,4 +7,6 @@ docker run -dit \
   --name ragflow \
   --network host \
   ragflow:v0.12.0
+
+docker ps -a  | grep ${app} --color=always
 docker logs -f ${app}

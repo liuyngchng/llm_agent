@@ -1,5 +1,5 @@
 #!/bin/bash
-app='llm_chat'
+app='http_chat'
 docker stop ${app}
 docker rm ${app}
 #docker run -dit --name ${app} --network host --rm \
@@ -10,3 +10,6 @@ docker run -dit --name ${app}  \
   -v /data/bge-large-zh-v1.5:/opt/bge-large-zh-v1.5 \
   -p 19002:19000 \
   llm_rag:1.1
+
+docker ps -a  | grep ${app} --color=always
+docker logs -f ${app}
