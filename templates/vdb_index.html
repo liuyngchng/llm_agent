@@ -529,7 +529,9 @@
                 });
 
                 if (!uploadRes.ok) {
-                    throw new Error('文件上传失败');
+                    const errorData = await uploadRes.json();
+                    // 优先使用后端message，若不存在则用默认提示
+                    throw new Error(errorData.message || '文件上传失败');
                 }
 
                 const { task_id, file_name } = await uploadRes.json();

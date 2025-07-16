@@ -29,6 +29,13 @@ my_cfg = init_yml_cfg()
 task_progress = {}  # 存储文本进度信息
 thread_lock = threading.Lock()
 
+# 定义允许的文件类型及其魔数签名
+ALLOWED_TYPES = {
+    '.pdf': [b'%PDF'],          # PDF签名
+    '.docx': [b'PK\x03\x04'],   # ZIP格式签名(DOCX本质是ZIP)
+    '.txt': []                  # 文本文件无固定签名
+}
+
 @vdb_bp.route('/vdb/idx', methods=['GET'])
 def vdb_index():
     """
@@ -65,29 +72,34 @@ def vdb_index():
 def upload_file():
     logger.info(f"start_upload_file, {request}")
     if 'file' not in request.files:
-        return jsonify({"error": "未找到文件"}), 400
+        info = {"success": False, "message": "未找到文件"}
+        logger.error(info)
+        return jsonify(info), 400
     file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "空文件名"}), 400
 
+    if file.filename == '':
+        info = {"success": False, "message": "空文件名"}
+        logger.error(info)
+        return jsonify(info), 400
+    logger.info(f"request_filename: {file.filename}")
     try:
         # 安全检查和处理文件名
-        original_filename = secure_filename(file.filename)
-        if not original_filename:  # 安全检查后文件名仍为空
-            logger.error("文件名安全检查失败")
-            return jsonify({"error": "无效文件名"}), 400
+        safe_filename = secure_filename(file.filename)
+        if not safe_filename:  # 安全检查后文件名仍为空
+            info = {"success": False, "message": f"无效文件名, {file.filename}"}
+            logger.error(info)
+            return jsonify(info), 400
         # 检查文件类型
+        logger.info(f"safe_filename: {safe_filename}")
         allowed_extensions = {'.docx', '.pdf', '.txt'}
+        original_filename = file.filename
         file_ext = os.path.splitext(original_filename)[1].lower()  # 提取扩展名并转为小写
         if file_ext not in allowed_extensions:
-            return jsonify({"error": "不支持的文件类型，仅允许docx/pdf/txt"}), 400
+            info = {"success": False, "message": f"不支持的文件类型 {file_ext}，仅允许 docx/pdf/txt"}
+            logger.error(info)
+            return jsonify(info), 400
 
-        # 定义允许的文件类型及其魔数签名
-        ALLOWED_TYPES = {
-            '.pdf': [b'%PDF'],          # PDF签名
-            '.docx': [b'PK\x03\x04'],   # ZIP格式签名(DOCX本质是ZIP)
-            '.txt': []                  # 文本文件无固定签名
-        }
+
         # 读取文件头进行魔数验证
         file.seek(0)
         header = file.read(4)  # 读取前4字节
@@ -96,7 +108,9 @@ def upload_file():
         if file_ext in ['.docx', '.pdf']:
             valid_signatures = ALLOWED_TYPES[file_ext]
             if not any(header.startswith(sig) for sig in valid_signatures):
-                return jsonify({"error": "文件内容与类型不符"}), 400
+                info = {"success": False, "message": "文件内容与类型不符"}
+                logger.error(info)
+                return jsonify(info), 400
 
         file.seek(0)  # 重置文件指针
         # 生成唯一任务ID和文件名
@@ -117,20 +131,15 @@ def upload_file():
                 'filename': filename,
                 'timestamp': time.time()
             }
-        logger.info(f"文件上传成功: {filename}, 大小: {os.path.getsize(save_path)}字节")
-        return jsonify({
-            "success": True,
-            "task_id": task_id,
-            "file_name": filename,
-            "message": "文件上传成功"
-        }), 200
+        info = {"success": True,"task_id": task_id,"file_name": filename,"message": "文件上传成功"}
+        logger.info(f"文件上传成功: {filename}, 大小: {os.path.getsize(save_path)}字节, return {info}")
+        return jsonify(info), 200
 
     except Exception as e:
         logger.error(f"文件上传处理失败: {str(e)}", exc_info=True)
-        return jsonify({
-            "error": "文件处理失败",
-            "details": str(e)
-        }), 500
+        info = {"success": False, "message": f"文件上传处理失败: {str(e)}"}
+        logger.error(info)
+        return jsonify(info), 500
 
 @vdb_bp.route('/vdb/delete', methods=['POST'])
 def delete_vdb_dir():
