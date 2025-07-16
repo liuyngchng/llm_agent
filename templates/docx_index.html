@@ -769,9 +769,9 @@
                         <button class="btn btn-secondary" onclick="prevStep(4)">
                             <i class="fas fa-arrow-left"></i> 返回编辑
                         </button>
-                        <button class="btn btn-primary" onclick="downloadDoc()">
+                        <a id="downloadButton" class="btn btn-primary" href="#" download>
                             <i class="fas fa-download"></i> 下载Word文档
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1084,33 +1084,6 @@
             document.getElementById('outlineText').value = outlineText;
         }
 
-        // 文档下载
-        function downloadDoc() {
-            const taskId = document.getElementById('taskId').value;
-            if (!taskId) {
-                alert('任务ID不存在，请先生成文档');
-                return;
-            }
-
-            // 构建下载URL
-            const downloadUrl = `/docx/download/task/${taskId}`;
-            console.log('downloadUrl=' + downloadUrl)
-            // 创建隐藏下载链接
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = '生成的文档.docx'; // 设置默认文件名
-            link.style.display = 'none';
-            document.body.appendChild(link);
-
-            // 触发下载
-            link.click();
-
-            // 清理DOM
-            setTimeout(() => {
-                document.body.removeChild(link);
-            }, 100);
-        }
-
         // 初始化页面
         updateProgressBar();
         async function gen_doc() {
@@ -1217,9 +1190,12 @@
                     progressInfo.progress?.toLowerCase().includes("完成") ||
                     progressInfo.progress?.toLowerCase().includes("成功")) {
                     clearInterval(pollInterval);
-                    // 等待1秒显示完成状态
+                    const taskId = document.getElementById('taskId').value;
+                    const downloadUrl = `/docx/download/task/${taskId}`;
+                    console.log('downloadUrl=' + downloadUrl)
+                    updateDownloadLink(downloadUrl);
+                    // 等待2秒显示完成状态
                     setTimeout(() => {
-                        window.generatedDocUrl = progressInfo.download_url; // 假设返回下载URL
                         nextStep(3);
                     }, 2000);
                 }
@@ -1250,6 +1226,23 @@
             const progressDisplay = document.getElementById('progressDisplay');
             if (progressDisplay) progressDisplay.style.display = 'none';
             document.getElementById('modifiedOutline').readOnly = false;
+        }
+        // 在生成文档完成后设置下载链接
+        function updateDownloadLink(downloadUrl) {
+            const downloadButton = document.getElementById('downloadButton');
+            if (downloadButton) {
+                // 设置下载链接和文件名
+                downloadButton.href = downloadUrl;
+                downloadButton.download = '生成的文档.docx';
+
+                // 添加点击事件确保在自签证书环境下也能工作
+                downloadButton.onclick = function(e) {
+                    if (!downloadUrl) {
+                        e.preventDefault();
+                        alert('下载链接无效，请重试');
+                    }
+                };
+            }
         }
     </script>
 </body>
