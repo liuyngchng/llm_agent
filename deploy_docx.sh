@@ -1,8 +1,9 @@
 #!/bin/bash
-docker stop llm_docx
-docker rm llm_docx
-#docker run -dit --name llm_docx --network host --rm \
-docker run -dit --name llm_docx  \
+app='llm_docx'
+docker stop ${app}
+docker rm ${app}
+#docker run -dit --name ${app} --network host --rm \
+docker run -dit --name ${app}  \
   --security-opt seccomp=unconfined \
   -v /data/llm_agent:/opt/app \
   -v /data/nltk_data:/usr/share/nltk_data \

@@ -1,8 +1,9 @@
 #!/bin/bash
-docker stop llm_rag
-docker rm llm_rag
-#docker run -dit --name llm_rag --network host --rm \
-docker run -dit --name llm_rag  \
+app='llm_rag'
+docker stop ${app}
+docker rm ${app}
+#docker run -dit --name ${app} --network host --rm \
+docker run -dit --name ${app}  \
   --security-opt seccomp=unconfined \
   -v /data/llm_agent:/opt/app \
   -v /data/nltk_data:/usr/share/nltk_data \
