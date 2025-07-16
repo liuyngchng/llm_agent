@@ -372,7 +372,30 @@
             margin-bottom: 30px;
             font-size: 1.1rem;
         }
-         .outline-item ul {
+        #downloadTip {
+            margin-top: 20px;
+            color: #e74c3c;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 10px;
+            background: #fff9f9;
+            border-radius: 8px;
+            border: 1px solid #ffdddd;
+            max-width: 90%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #downloadUrlText {
+            font-weight: bold;
+            word-break: break-all;
+            display: inline-block;
+            padding: 5px 10px;
+            background: #fff5f5;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .outline-item ul {
             padding-left: 25px;
             list-style-type: none;
         }
@@ -772,6 +795,11 @@
                         <a id="downloadButton" class="btn btn-primary" href="#" download>
                             <i class="fas fa-download"></i> 下载Word文档
                         </a>
+                    </div>
+                    <div id="downloadTip" style="margin-top: 20px; color: #e74c3c; font-size: 0.9rem; text-align: center; display: none;">
+                        若点击'下载Word文档'按钮无法正常下载，请拷贝链接：<br>
+                        <span id="downloadUrlText" style="font-weight: bold;"></span><br>
+                        至浏览器地址栏中，回车即可下载
                     </div>
                 </div>
             </div>
@@ -1230,10 +1258,14 @@
         // 在生成文档完成后设置下载链接
         function updateDownloadLink(downloadUrl) {
             const downloadButton = document.getElementById('downloadButton');
+            const downloadTip = document.getElementById('downloadTip');
+            const downloadUrlText = document.getElementById('downloadUrlText');
             if (downloadButton) {
                 // 设置下载链接和文件名
                 downloadButton.href = downloadUrl;
                 downloadButton.download = '生成的文档.docx';
+                downloadUrlText.textContent = window.location.origin + downloadUrl;
+                downloadTip.style.display = 'block';
 
                 // 添加点击事件确保在自签证书环境下也能工作
                 downloadButton.onclick = function(e) {
