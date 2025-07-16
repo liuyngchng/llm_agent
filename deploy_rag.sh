@@ -8,4 +8,4 @@ docker run -dit --name llm_rag  \
   -v /data/nltk_data:/usr/share/nltk_data \
   -v /data/bge-large-zh-v1.5:/opt/bge-large-zh-v1.5 \
   -p 19002:19000 \
-  llm_rag:1.2
+  llm_rag:1.1
