@@ -153,7 +153,7 @@ async function uploadTemplateFile(file) {
     outlineContainer.innerHTML = `
         <div class="loading">
             <div class="snake-loader"></div>
-            <p>正在解析Word模板，提取目录结构...</p>
+            <p>正在解析Word模板，提取目录结构<span class="loading-dots"></span></p>
         </div>
     `;
     const formData = new FormData();
@@ -211,7 +211,7 @@ function generateOutline() {
     outlineContainer.innerHTML = `
         <div class="loading">
             <div class="snake-loader"></div>
-            <p>正在生成文档目录结构，请稍候...</p>
+            <p>正在生成文档目录结构<span class="loading-dots"></span></p>
         </div>
     `;
     // 清空之前的Markdown内容

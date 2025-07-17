@@ -571,6 +571,33 @@ textarea {
     }
 }
 
+@keyframes dotFlashing {
+    0% { content: ". "; }
+    25% { content: ".."; }
+    50% { content: ".:"; }
+    75% { content: "::"; }
+    100% { content: "  "; }
+}
+
+.loading-dots::after {
+    content: "  ";
+    animation: dotFlashing 1.5s infinite linear;
+    display: inline-block;
+    width: 20px;
+    text-align: left;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px 0;
+}
+
+.loading p {
+    margin-top: 15px;
+    font-size: 1.1rem;
+    color: #555;
+}
+
 @media (max-width: 768px) {
     .knowledge-btn {
         top: 10px;
