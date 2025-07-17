@@ -11,7 +11,7 @@ import re
 import time
 
 from docx import Document
-from docx.shared import RGBColor, Pt
+from docx.shared import RGBColor, Pt, Cm
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -27,8 +27,17 @@ logger = logging.getLogger(__name__)
 MIN_PROMPT_LEN = 20
 
 
+AI_GEN_TAG="[_AI生成_]"
+
 
 def get_reference_from_vdb(keywords: str, vdb_dir: str, sys_cfg: dict) -> str:
+    """
+    获取vdb中与关键词相关的文本
+    :param keywords: 关键词
+    :param vdb_dir: 向量数据库目录
+    :param sys_cfg: 系统配置
+    :return: 文本
+    """
     if os.path.exists(vdb_dir):
         reference = search_txt(keywords, vdb_dir, 0.2, sys_cfg, 2).strip()
     else:
@@ -41,6 +50,8 @@ def get_reference_from_vdb(keywords: str, vdb_dir: str, sys_cfg: dict) -> str:
 def extract_catalogue(target_doc: str) -> str:
     """
     生成 docx 文档的三级目录清单
+    :param target_doc: 目标文档
+    :return: 目录文本
     """
     doc = Document(target_doc)
     catalogue_lines = []
@@ -77,6 +88,12 @@ def extract_catalogue(target_doc: str) -> str:
     return "\n".join(catalogue_lines)
 
 def refresh_current_heading(para: Paragraph, heading: list) -> bool:
+    """
+    更新当前标题，并返回是否为三级标题
+    :param para: 段落
+    :param heading: 当前标题
+    :return: 是否为三级标题
+    """
     if "Heading" not in para.style.name:
         return False
 
@@ -93,6 +110,11 @@ def refresh_current_heading(para: Paragraph, heading: list) -> bool:
     return True
 
 def is_3rd_heading(para: Paragraph) -> bool:
+    """
+    判断是否为三级标题
+    :param para: 段落
+    :return: 是否为三级标题
+    """
     if "Heading" not in para.style.name:
         return False
 
@@ -230,6 +252,7 @@ def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:
             update_process_info(progress_lock, task_id, thread_lock, f"在处理文档的过程中出现了异常，任务已中途退出")
             break
         new_para = doc.add_paragraph()
+        new_para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
         red_run = new_para.add_run(llm_txt)
         red_run.font.color.rgb = RGBColor(0, 0, 0)
         my_para._p.addnext(new_para._p)
@@ -284,7 +307,8 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
             update_process_info(progress_lock, task_id, thread_lock, f"在处理文档的过程中出现了异常，任务已中途退出")
             break
         new_para = doc.add_paragraph()
-        red_run = new_para.add_run(f"[_AI生成_]{llm_txt}")
+        new_para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
+        red_run = new_para.add_run(f"{AI_GEN_TAG}{llm_txt}")
         red_run.font.color.rgb = RGBColor(0, 0, 0)
         my_para._p.addnext(new_para._p)
         doc.save(output_file_name)
@@ -320,13 +344,13 @@ def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_
             if not is_prompt:
                 continue
             # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
-            search_result = process_paragraph(my_para, vdb_dir, sys_cfg['api'])
+            reference = get_reference_from_vdb(my_para.text, vdb_dir, sys_cfg['api'])
             if source_dir and os.path.exists(source_dir):
                 source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
-                demo_txt = f"{source_para_txt}\n{search_result}"
+                demo_txt = f"{source_para_txt}\n{reference}"
                 demo_txt = demo_txt.replace("\n", " ").strip()
             else:
-                demo_txt = f"{search_result}"
+                demo_txt = f"{reference}"
 
             llm_txt = gen_txt(doc_ctx, demo_txt, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg, )
             logger.info(f"llm_txt_for_instruction[{my_para.text}]\n===gen_llm_txt===\n{llm_txt}")
@@ -335,7 +359,8 @@ def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_
             break
         # if len(my_txt) > 0:
         new_para = doc.add_paragraph()
-        red_run = new_para.add_run(llm_txt)
+        new_para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
+        red_run = new_para.add_run(f"{AI_GEN_TAG}{llm_txt}")
         red_run.font.color.rgb = RGBColor(255, 0, 0)
         my_para._p.addnext(new_para._p)
     return doc
@@ -433,7 +458,7 @@ def get_elapsed_time(start_timestamp: str) -> str:
     elapsed_seconds = current_time - start_time
     minutes = elapsed_seconds // 60
     seconds = elapsed_seconds % 60
-    return f"已用时 {minutes}分{seconds}秒"
+    return f"用时 {minutes}分{seconds}秒"
 
 if __name__ == "__main__":
     my_cfg = init_yml_cfg()

@@ -11,7 +11,7 @@ import time
 import zipfile
 from xml.etree import ElementTree as ET
 from docx import Document
-from docx.shared import RGBColor
+from docx.shared import RGBColor, Cm
 
 from sys_init import init_yml_cfg
 from agt_util import gen_txt
@@ -22,6 +22,8 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 UPLOAD_FOLDER = 'upload_doc'
+
+AI_GEN_TAG="[_AI生成_]"
 
 
 def get_comments_dict(target_doc: str) -> dict:
@@ -225,8 +227,9 @@ def modify_para_with_comment_prompt_in_process(uid:str, task_id:str, thread_lock
             if modified_txt:
                 gen_txt_count += 1
                 para.clear()
-                run = para.add_run(modified_txt)
-                run.font.color.rgb = RGBColor(255, 0, 0)
+                para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
+                run = para.add_run(f"{AI_GEN_TAG}{modified_txt}")
+                run.font.color.rgb = RGBColor(0, 0, 0)
             else:
                 logger.error(f"no_gen_txt_for_para, {para_idx}, comment {comment_text}")
     except Exception as e:
@@ -276,8 +279,9 @@ def modify_para_with_comment_prompt(target_doc: str,
             modified_txt = gen_txt(doc_ctx, "", comment_text, catalogue, str(current_heading), cfg)
             if modified_txt:
                 para.clear()
-                run = para.add_run(modified_txt)
-                run.font.color.rgb = RGBColor(255, 0, 0)
+                para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
+                run = para.add_run(f"{AI_GEN_TAG}{modified_txt}")
+                run.font.color.rgb = RGBColor(0, 0, 0)
             else:
                 logger.error(f"no_gen_txt_for_para, {para_idx}, comment {comment_text}")
     except Exception as e:
@@ -294,7 +298,7 @@ def get_elapsed_time(start_timestamp: str) -> str:
     elapsed_seconds = current_time - start_time
     minutes = elapsed_seconds // 60
     seconds = elapsed_seconds % 60
-    return f"已用时 {minutes}分{seconds}秒"
+    return f"用时 {minutes}分{seconds}秒"
 
 def test_modify_para_with_comment():
     my_cfg = init_yml_cfg()
