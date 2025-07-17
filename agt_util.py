@@ -154,25 +154,12 @@ def gen_doc_outline(doc_type: str, doc_title: str, cfg: dict, is_remote=True) ->
         文档类型：{doc_type}
         文档标题：{doc_title}
         请输出以下格式的文档三级标题，数据格式举例如下：
-        [
-            {{
-                "title": "1. xxx",
-                "items": [
-                    {{"title": "1.1 xxx", "items": ["1.1.1 xxx", "1.1.2 xxx", "1.1.3 xxx"]}},
-                    {{"title": "1.2 xxx", "items": ["1.2.1 xxx", "1.2.2 xxx", "1.2.3 xxx"]}},
-                    {{"title": "1.3 xxx", "items": ["1.3.1 xxx", "1.3.2 xxx", "1.3.3 xxx"]}}
-                ]
-            }},
-            {{
-                "title": "2. xxx",
-                "items": [
-                    {{"title": "2.1 xxx", "items": ["2.1.1 xxx", "2.1.2 xxx", "2.1.3 xxx"]}},
-                    {{"title": "2.2 xxx", "items": ["2.2.1 xxx", "2.2.2 xxx", "2.2.3 xxx"]}},
-                    {{"title": "2.3 xxx", "items": ["2.3.1 xxx", "2.3.2 xxx", "2.2.3 xxx"]}}
-                ]
-            }}
-        ]
-        直接输出纯文本，不要输出Markdown格式
+        ```markdown
+        # 一级标题
+        ## 二级标题
+        ### 三级标题
+        ```
+        输出Markdown格式
         '''
     prompt = ChatPromptTemplate.from_template(replace_spaces(template))
     logger.info(f"prompt {prompt}")
