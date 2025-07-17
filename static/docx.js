@@ -277,6 +277,7 @@ function renderOutline(markdown) {
     try {
         const htmlContent = marked.parse(markdown);
         outlineContainer.innerHTML = htmlContent;
+        outlineContainer.scrollTop = outlineContainer.scrollHeight;
         // 添加一些基本样式
         const style = document.createElement('style');
         style.textContent = `
@@ -338,8 +339,11 @@ function markdownToPlainText(markdown) {
     return output;
 }
 
-// 初始化页面
-updateProgressBar();
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateProgressBar();
+});
+
 async function gen_doc() {
     document.getElementById('modifiedOutline').readOnly = true;
     const uid = document.getElementById('uid').value;

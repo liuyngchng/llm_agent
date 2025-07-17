@@ -95,6 +95,7 @@ def upload_file():
 def write_doc_with_outline_txt():
     """
     按照提供的三级目录文本,生成文档，这里的文档模板只有三级目录，具体的段落中没有写作要求
+    文档目录参数 doc_outline 传递的文本格式如下： 1.标题1 \n1.1 标题1.1 \n1.2 标题1.2
     """
     data = request.json
     logger.info(f"write_doc_with_outline_txt , data{data}")
