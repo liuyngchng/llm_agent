@@ -159,7 +159,7 @@ def generate_outline_stream(doc_type: str, doc_title: str, cfg: dict, is_remote=
         ### 1.1.1 三级标题
         ### 1.1.2 三级标题
 
-        输出Markdown格式
+        输出纯文本格式
         '''
     prompt = ChatPromptTemplate.from_template(replace_spaces(template))
     logger.info(f"prompt {prompt}")
@@ -177,7 +177,7 @@ def generate_outline_stream(doc_type: str, doc_title: str, cfg: dict, is_remote=
 
     finally:
         # 清理资源
-        logger.info("目录生成完成，清理资源")
+        logger.info("outline_gen_finish，dispose resources")
         del model
         torch.cuda.empty_cache()
 

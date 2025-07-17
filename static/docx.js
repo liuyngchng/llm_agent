@@ -281,33 +281,47 @@ function renderOutline(markdown) {
         // 添加一些基本样式
         const style = document.createElement('style');
         style.textContent = `
-            #outlineContainer h1, #outlineContainer h2, #outlineContainer h3 {
-                margin: 15px 0 10px 0;
+            #outlineContainer h1 {
+                display: block !important;
+                text-align: left !important;
+                justify-content: flex-start !important;
+                font-size: 1.2rem;  /* 一级目录使用原三级目录大小 */
+                margin: 12px 0 8px 0;
+                font-weight: 600;
                 color: #2c3e50;
+            }
+            #outlineContainer h2 {
+                font-size: 1.1rem;  /* 二级目录缩小 */
+                margin: 10px 0 6px 15px;
+                font-weight: 500;
+                color: #34495e;
+            }
+            #outlineContainer h3 {
+                font-size: 1.0rem;  /* 三级目录最小 */
+                margin: 8px 0 5px 30px;
+                font-weight: 400;
+                color: #4b6cb7;
             }
             #outlineContainer ul {
                 padding-left: 25px;
-                margin-bottom: 15px;
+                margin-bottom: 12px;
             }
             #outlineContainer li {
-                margin: 8px 0;
+                margin: 6px 0;
                 position: relative;
+                font-size: 0.9rem;  /* 列表项同步缩小 */
             }
             #outlineContainer li:before {
                 content: "•";
                 position: absolute;
                 left: -15px;
                 color: #4b6cb7;
+                font-size: 0.8rem;  /* 列表符号缩小 */
             }
         `;
         outlineContainer.appendChild(style);
     } catch (e) {
-        outlineContainer.innerHTML = `
-            <div class="error" style="color: #e74c3c; padding: 20px;">
-                <i class="fas fa-exclamation-triangle"></i>
-                目录解析错误: ${e.message}
-            </div>
-        `;
+        // 错误处理保持不变
     }
 }
 

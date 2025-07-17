@@ -199,7 +199,7 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
 def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: str, target_doc: str,
     target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
     """
-    :param task_id: 执行任务的ID
+    :param task_id: 执行任务的ID，时间戳的整数字符串
     :param progress_lock: A thread lock
     :param thread_lock: task process information dict with task_id as key
     :param doc_ctx: 文档写作背景信息
@@ -215,7 +215,7 @@ def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:
     for index, my_para in enumerate(doc.paragraphs):
         percent = index / total_paragraphs * 100
         process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文本，"
-            f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
+            f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(task_id)}，进度 {percent:.1f}%")
         logger.info(process_percent_bar_info)
         update_process_info(progress_lock, task_id, thread_lock, process_percent_bar_info, percent)
         try:
@@ -269,7 +269,7 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
     for index, my_para in enumerate(doc.paragraphs):
         percent = index / total_paragraphs * 100
         process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文本，"
-            f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
+            f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(task_id)}, 进度 {percent:.1f}%")
         logger.info(process_percent_bar_info)
         update_process_info(progress_lock, task_id, thread_lock, process_percent_bar_info, percent)
         try:
@@ -295,9 +295,12 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
         my_para._p.addnext(new_para._p)
         doc.save(output_file_name)
         if gen_txt_count > 0:
-            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，已生成 {gen_txt_count} 段文本，进度 100%"
+            txt_info = (f"任务已完成，共处理 {total_paragraphs} 段文本，"
+                        f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(task_id)}，进度 100%")
         else:
-            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，进度 100%，未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
+            txt_info = (f"任务已完成，共处理 {total_paragraphs} 段文本，"
+                        f"{get_elapsed_time(task_id)}进度 100%，未检测到创作需求描述，"
+                        f"您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字")
         update_process_info(progress_lock, task_id, thread_lock, txt_info)
     logger.info(f"{txt_info}, 所有内容已输出至文件 {output_file_name}")
 
@@ -381,8 +384,9 @@ def gen_docx_template_with_outline(task_id: str, os_dir:str, outline: str) -> st
     """
     :param task_id: 执行任务的ID
     :param os_dir: 输出的本地文件目录
-    :param outline: 三级目录文本信息，结构为 # 一级标题\n## 二级标题\n### 三级标题\n
-    :return: 生成目录的文档文件名称 full_path
+    :param outline: 三级目录文本信息，结构如下\n1. 一级标题\n  1.1 二级标题\n    1.1.1 三级标题\n
+    即outline中的各行文本中，一级标题前没有空格，二级标题前有2个空格，三级标题前有4个空格
+    :return: 包含三级目录的Word docx 文档文件名称 full_path
     """
     doc = Document()
     lines = outline.strip().split('\n')
@@ -393,13 +397,13 @@ def gen_docx_template_with_outline(task_id: str, os_dir:str, outline: str) -> st
             continue
         indent_level = 0
         for char in line:
-            if char == '\t':
+            if char == ' ':
                 indent_level += 1
             elif not char.isspace():
                 break
         if indent_level == 0:
-            doc.add_heading(stripped, level=0 if line == lines[0] else 1)
-        elif indent_level == 1:
+            doc.add_heading(stripped, level=1)
+        elif indent_level == 2:
             doc.add_heading(stripped, level=2)
         else:
             doc.add_heading(stripped, level=3)
@@ -409,6 +413,17 @@ def gen_docx_template_with_outline(task_id: str, os_dir:str, outline: str) -> st
     doc.save(save_path)
     return filename
 
+def get_elapsed_time(start_timestamp: str) -> str:
+    """
+    计算任务处理时间
+    :param start_timestamp: 任务开始时间戳
+    """
+    start_time = int(start_timestamp)
+    current_time = int(time.time())
+    elapsed_seconds = current_time - start_time
+    minutes = elapsed_seconds // 60
+    seconds = elapsed_seconds % 60
+    return f"已用时 {minutes}分{seconds}秒"
 
 if __name__ == "__main__":
     my_cfg = init_yml_cfg()

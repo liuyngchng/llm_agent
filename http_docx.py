@@ -254,6 +254,7 @@ def process_document_with_template(uid: str, doc_type: str, doc_title: str, task
         logger.exception("文档生成异常", e)
 
 
+
 if __name__ == '__main__':
     threading.Thread(target=clean_tasks, daemon=True).start()
     app.run(host='0.0.0.0', port=19000)
