@@ -209,7 +209,8 @@ def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,
         "(2)调整输出文本的格式，需适合添加在Word文档中\n"
         "(3)若写作要求没有明确字数要求，则生成不超过300字的文本\n"
         "(4)语言风格文本仅作为输出文本风格参考材料，禁止直接将其输出\n"
-        "(4)禁止输出空行\n"
+        "(5)禁止输出空行\n"
+        "(6)输出内容中禁止包含当前目录标题\n"
     )
     prompt = ChatPromptTemplate.from_template(template)
     # logger.debug(f"prompt {prompt}")
@@ -244,6 +245,7 @@ def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,
             output_txt = rmv_think_block(response.content)
             del model
             torch.cuda.empty_cache()
+            output_txt = output_txt.replace(current_sub_title, "").strip()
             return output_txt
         except Exception as ex:
             last_exception = ex
