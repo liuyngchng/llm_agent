@@ -379,8 +379,9 @@ def get_catalogue(target_doc: str) -> str:
 
 def gen_docx_template_with_outline(task_id: str, os_dir:str, outline: str) -> str:
     """
+    :param task_id: 执行任务的ID
     :param os_dir: 输出的本地文件目录
-    :param outline: 三级目录文本信息
+    :param outline: 三级目录文本信息，结构为 # 一级标题\n## 二级标题\n### 三级标题\n
     :return: 生成目录的文档文件名称 full_path
     """
     doc = Document()

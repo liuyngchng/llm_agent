@@ -3,6 +3,7 @@
 import json
 import re
 
+from my_enums import DataType
 from sys_init import init_yml_cfg
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
@@ -143,42 +144,42 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
         logger.error(f"json_loads_err_for {response.content}")
     return fill_result
 
-def gen_doc_outline(doc_type: str, doc_title: str, cfg: dict, is_remote=True) -> dict:
+def generate_outline_stream(doc_type: str, doc_title: str, cfg: dict, is_remote=True):
     """
-    search user questions in knowledge base,
-    submit the search result and user msg to LLM, return the answer
+    流式生成文档目录
     """
     logger.info(f"doc_type[{doc_type}] , doc_title[{doc_title}], cfg[{cfg}]")
     template = '''
         目前我正在写一个文档，当前的任务是生成文档的三级目录，已知文档类型和文档的标题如下，
         文档类型：{doc_type}
         文档标题：{doc_title}
-        请输出以下格式的文档三级标题，数据格式举例如下：
-        ```markdown
-        # 一级标题
-        ## 二级标题
-        ### 三级标题
-        ```
+        请输出以下格式的文档三级目录，数据格式举例如下：
+        # 1.一级标题
+        ## 1.1 二级标题
+        ### 1.1.1 三级标题
+        ### 1.1.2 三级标题
+
         输出Markdown格式
         '''
     prompt = ChatPromptTemplate.from_template(replace_spaces(template))
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
-    chain = prompt | model
-    logger.info(f"submit doc_type[{doc_type}], doc_title[{doc_title}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
-    response = chain.invoke({
-        "doc_type": doc_type,
-        "doc_title": doc_title,
-    })
-    del model
-    torch.cuda.empty_cache()
-    doc_outline = ""
+    logger.info(f"submit doc_type[{doc_type}], doc_title[{doc_title}] to llm_api {cfg['api']}")
     try:
-        doc_outline =  json.loads(rmv_think_block(response.content))
-    except Exception as es:
-        logger.error(f"json_loads_err_for {response.content}")
-    logger.info(f"llm_output_doc_outline {doc_outline}")
-    return doc_outline
+        # 流式调用模型
+        for chunk in model.stream(prompt.format(doc_type=doc_type, doc_title=doc_title)):
+            if hasattr(chunk, 'content'):
+                # 直接输出内容块
+                yield chunk.content
+            elif hasattr(chunk, 'text'):
+                # 兼容不同模型输出
+                yield chunk.text
+
+    finally:
+        # 清理资源
+        logger.info("目录生成完成，清理资源")
+        del model
+        torch.cuda.empty_cache()
 
 
 def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,

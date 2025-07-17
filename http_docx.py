@@ -8,11 +8,12 @@ import os
 import threading
 import time
 
-from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for, render_template)
+from flask import (Flask, request, jsonify, send_from_directory,
+                   abort, redirect, url_for, stream_with_context, Response)
 
 import docx_util
 import my_enums
-from agt_util import gen_doc_outline
+from agt_util import generate_outline_stream
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
 from docx_util import extract_catalogue, fill_doc_with_prompt_in_progress
 from sys_init import init_yml_cfg
@@ -40,30 +41,15 @@ def app_home():
     logger.info("redirect_auth_login_index")
     return redirect(url_for('auth.login_index', app_source='docx'))
 
-
 @app.route('/docx/generate/outline', methods=['POST'])
 def generate_outline():
     """
     生成文档目录
     return outline like
-    [
-            {{
-                "title": "1. xxx",
-                "items": [
-                    {{"title": "1.1 xxx", "items": ["1.1.1 xxx", "1.1.2 xxx", "1.1.3 xxx"]}},
-                    {{"title": "1.2 xxx", "items": ["1.2.1 xxx", "1.2.2 xxx", "1.2.3 xxx"]}},
-                    {{"title": "1.3 xxx", "items": ["1.3.1 xxx", "1.3.2 xxx", "1.3.3 xxx"]}}
-                ]
-            }},
-            {{
-                "title": "2. xxx",
-                "items": [
-                    {{"title": "2.1 xxx", "items": ["2.1.1 xxx", "2.1.2 xxx", "2.1.3 xxx"]}},
-                    {{"title": "2.2 xxx", "items": ["2.2.1 xxx", "2.2.2 xxx", "2.2.3 xxx"]}},
-                    {{"title": "2.3 xxx", "items": ["2.3.1 xxx", "2.3.2 xxx", "2.2.3 xxx"]}}
-                ]
-            }}
-        ]
+    # 1.一级标题
+    ## 1.1 二级标题
+    ### 1.1.1 三级标题
+    ### 1.1.2 三级标题
     """
     logger.info(f"gen_doc_outline {request}")
     doc_type = request.json.get("doc_type")
@@ -71,9 +57,10 @@ def generate_outline():
     doc_title = request.json.get("doc_title")
     if not doc_type_chinese or not doc_title:
         return jsonify({"error": "缺少参数"}), 400
-    doc_outline = gen_doc_outline(doc_type_chinese, doc_title, my_cfg)
-    return jsonify({"status": "success", "outline": doc_outline}), 200
-
+    return Response(
+        stream_with_context(generate_outline_stream(doc_type_chinese, doc_title, my_cfg)),
+        mimetype='text/event-stream'
+    )
 
 @app.route('/docx/upload', methods=['POST'])  # 修正路由路径
 def upload_file():
@@ -103,7 +90,6 @@ def upload_file():
     }
     logger.info(f"upload_file, {info}")
     return jsonify(info), 200
-
 
 @app.route("/docx/write/outline", methods=['POST'])
 def write_doc_with_outline_txt():
