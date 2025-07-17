@@ -13,6 +13,8 @@ import httpx
 import torch
 import logging.config
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Dict, Any
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -378,6 +380,91 @@ def test_classify():
      # if labels[6] in result:
      #    logger.info(f"classify_result:labels[6] {labels[6]}")
 
+
+
+class TextGenerator:
+    """
+    文本生成器，使用多线程生成文本
+    """
+    def __init__(self, max_workers=5):
+        """
+        初始化线程池
+        :param max_workers: 最大线程数
+        """
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
+
+    def batch_generate(self, tasks: List[Dict[str, Any]]) -> Dict[str, str]:
+        """
+        批量生成文本，阻塞式获取最终结果
+        :param tasks: 任务列表，每个元素是包含gen_txt参数的字典
+        :return: 字典形式结果 {任务标识: 生成的文本}
+        """
+        results = {}
+        future_to_key = {}
+
+        # 提交所有任务到线程池 （非阻塞）
+        for task in tasks:
+            # 要求每个task必须包含unique_key作为任务标识
+            unique_key = task.pop('unique_key')
+            future = self.executor.submit(TextGenerator.gen_txt_wrapper, **task)
+            future_to_key[future] = unique_key
+
+        # 获取结果 （阻塞在这里
+        for future in as_completed(future_to_key):
+            key = future_to_key[future]
+            try:
+                results[key] = future.result()
+            except Exception as e:
+                logger.error(f"Task {key} failed: {str(e)}")
+                results[key] = None
+
+        return results
+
+    def __del__(self):
+        self.executor.shutdown(wait=True)
+
+    @staticmethod
+    def gen_txt_wrapper(**kwargs):
+            """包装原始函数，便于线程池调用"""
+            try:
+                return gen_txt(**kwargs)
+            except Exception as e:
+                logger.error(f"Error in gen_txt: {str(e)}")
+                raise
+
+
+def test_txt_generator():
+    # 初始化生成器
+    generator = TextGenerator(max_workers=3)
+
+    # 准备批量任务
+    tasks = [
+        {
+            'unique_key': 'task1',
+            'doc_context': '背景1...',
+            'demo_txt': '示例1...',
+            'instruction': '要求1...',
+            'catalogue': '目录1...',
+            'current_sub_title': '标题1...',
+            'cfg': {...},
+            'is_remote': True
+        },
+        {
+            'unique_key': 'task2',
+            # 其他参数...
+        }
+        # 更多任务...
+    ]
+
+    # 执行批量生成
+    results = generator.batch_generate(tasks)
+
+    # 处理结果
+    for task_id, text in results.items():
+        if text is not None:
+            print(f"Task {task_id} 生成成功: {text[:50]}...")
+        else:
+            print(f"Task {task_id} 生成失败")
 
 if __name__ == "__main__":
 
