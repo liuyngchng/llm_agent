@@ -15,7 +15,7 @@ from docx.shared import RGBColor, Pt
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from vdb_util_test import search_txt
+from vdb_util import search_txt
 from txt_util import get_txt_in_dir_by_keywords, strip_prefix_no
 
 from sys_init import init_yml_cfg
@@ -25,13 +25,17 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 MIN_PROMPT_LEN = 20
-vdb_dir = "./faiss_oa_vector"
 
 
-def process_paragraph(paragraph: Paragraph, sys_cfg: dict) -> str:
-    searched_txt = search_txt(paragraph.text, vdb_dir, 0.2, sys_cfg, 2).strip()
-    # logging.info(f"vdb_get_txt:\n{searched_txt}\nby_search_{paragraph.text}")
-    return searched_txt
+
+def get_reference_from_vdb(keywords: str, vdb_dir: str, sys_cfg: dict) -> str:
+    if os.path.exists(vdb_dir):
+        reference = search_txt(keywords, vdb_dir, 0.2, sys_cfg, 2).strip()
+    else:
+        logger.warn(f"vdb_dir_not_exist: {vdb_dir}, get no references")
+        reference = ""
+    # logging.info(f"vdb_get_txt:\n{reference}\nby_search_{keywords}")
+    return reference
 
 
 def extract_catalogue(target_doc: str) -> str:
@@ -187,13 +191,14 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
     return True
 
 def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: str, target_doc: str,
-    target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
+    target_doc_catalogue: str, vdb_dir, sys_cfg: dict, output_file_name:str):
     """
     :param task_id: 执行任务的ID，时间戳的整数字符串
     :param progress_lock: A thread lock
     :param thread_lock: task process information dict with task_id as key
     :param doc_ctx: 文档写作背景信息
     :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
+    :param vdb_dir: 向量数据库的目录
     :param sys_cfg: 系统配置信息
     :param target_doc_catalogue: 需要写的文档的三级目录文本信息
     :param output_file_name: 输出文档的文件名
@@ -213,11 +218,10 @@ def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:
             if not thrd_hd_check:
                 continue
             # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
-            search_result = process_paragraph(my_para, sys_cfg['api'])
-            demo_txt = f"{search_result}"
+            reference = get_reference_from_vdb(my_para.text, vdb_dir, sys_cfg['api'])
             # with thread_lock:
             #     thread_lock[task_id] = f"正在处理文本[{my_para.text}]"
-            llm_txt = gen_txt(doc_ctx, demo_txt, "", target_doc_catalogue, my_para.text, sys_cfg, )
+            llm_txt = gen_txt(doc_ctx, reference, "", target_doc_catalogue, my_para.text, sys_cfg, )
             gen_txt_count += 1
             # with thread_lock:
             #     thread_lock[task_id] = f"生成文本：{llm_txt}"
@@ -240,13 +244,14 @@ def fill_doc_without_prompt_in_progress(task_id:str, progress_lock, thread_lock:
     logger.info(f"{txt_info}, 所有内容已输出至文件 {output_file_name}")
 
 def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dict, doc_ctx: str, target_doc: str,
-    target_doc_catalogue: str, sys_cfg: dict, output_file_name:str):
+    target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict, output_file_name:str):
     """
     :param task_id: 执行任务的ID
     :param progress_lock: A thread lock
     :param thread_lock: task process information dict with task_id as key
     :param doc_ctx: 文档写作背景信息
     :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
+    :param vdb_dir: 向量数据库的目录
     :param sys_cfg: 系统配置信息
     :param target_doc_catalogue: 需要写的文档的三级目录文本信息
     :param output_file_name: 输出文档的文件名
@@ -267,11 +272,10 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
             if not is_prompt:
                 continue
             # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
-            search_result = process_paragraph(my_para, sys_cfg['api'])
-            demo_txt = f"{search_result}"
+            reference = get_reference_from_vdb(my_para.text, vdb_dir, sys_cfg['api'])
             # with thread_lock:
             #     thread_lock[task_id] = f"正在处理文本[{my_para.text}]"
-            llm_txt = gen_txt(doc_ctx, demo_txt, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg, )
+            llm_txt = gen_txt(doc_ctx, reference, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg, )
             gen_txt_count += 1
             # with thread_lock:
             #     thread_lock[task_id] = f"生成文本：{llm_txt}"
@@ -295,29 +299,12 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
     logger.info(f"{txt_info}, 所有内容已输出至文件 {output_file_name}")
 
 
-
-def update_process_info(progress_lock, task_id, thread_lock, txt_info, percent=0.0, download_url=""):
-    """
-    :param progress_lock: A thread lock
-    :param task_id: 执行任务的ID
-    :param thread_lock: task process information dict with task_id as key
-    :param txt_info: 任务进度信息
-    :param percent: 任务进度百分比
-    :param download_url: 下载地址
-    """
-    with progress_lock:
-        thread_lock[task_id] = {
-            "text": txt_info, "timestamp": time.time(),
-            "percent": percent,
-            "type": "docx", "elapsed_time": get_elapsed_time(task_id)
-        }
-
-
-def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, sys_cfg: dict) -> Document:
+def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict) -> Document:
     """
     :param doc_ctx: 文档写作背景信息
     :param source_dir: 提供的样本文档
     :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
+    :param vdb_dir: 向量数据库的目录
     :param sys_cfg: 系统配置信息
     :param target_doc_catalogue: 需要写的文档的三级目录文本信息
     """
@@ -333,7 +320,7 @@ def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_
             if not is_prompt:
                 continue
             # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
-            search_result = process_paragraph(my_para, sys_cfg['api'])
+            search_result = process_paragraph(my_para, vdb_dir, sys_cfg['api'])
             if source_dir and os.path.exists(source_dir):
                 source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
                 demo_txt = f"{source_para_txt}\n{search_result}"
@@ -352,6 +339,22 @@ def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_
         red_run.font.color.rgb = RGBColor(255, 0, 0)
         my_para._p.addnext(new_para._p)
     return doc
+
+def update_process_info(progress_lock, task_id, thread_lock, txt_info, percent=0.0, download_url=""):
+    """
+    :param progress_lock: A thread lock
+    :param task_id: 执行任务的ID
+    :param thread_lock: task process information dict with task_id as key
+    :param txt_info: 任务进度信息
+    :param percent: 任务进度百分比
+    :param download_url: 下载地址
+    """
+    with progress_lock:
+        thread_lock[task_id] = {
+            "text": txt_info, "timestamp": time.time(),
+            "percent": percent,
+            "type": "docx", "elapsed_time": get_elapsed_time(task_id)
+        }
 
 
 def get_catalogue(target_doc: str) -> str:
@@ -377,7 +380,7 @@ def gen_docx_template_with_outline(task_id: str, os_dir:str, title: str, outline
     :param title: 文档标题
     :param outline: 三级目录文本信息，结构如下\n1. 一级标题\n  1.1 二级标题\n    1.1.1 三级标题\n
     即outline中的各行文本中，一级标题前没有空格，二级标题前有2个空格，三级标题前有4个空格
-    :return: 包含三级目录的Word docx 文档文件名称 full_path
+    :return: 包含三级目录的Word docx 文档文件名称，只是文件名，不是fullpath
     """
     doc = Document()
     title_para = doc.add_paragraph()
@@ -417,7 +420,7 @@ def gen_docx_template_with_outline(task_id: str, os_dir:str, title: str, outline
     filename = f"{task_id}_outline.docx"
     save_path = os.path.join(os_dir, filename)
     doc.save(save_path)
-    return save_path
+    return filename
 
 
 def get_elapsed_time(start_timestamp: str) -> str:
@@ -439,11 +442,11 @@ if __name__ == "__main__":
     my_target_doc = "/home/rd/doc/文档生成/2.docx"
     # test_catalogue = extract_catalogue(my_target_doc)
     # logger.info(f"doc_catalogue: {test_catalogue}")
-    doc_ctx = "我正在写一个可行性研究报告"
+    my_doc_ctx = "我正在写一个可行性研究报告"
     doc_catalogue = get_catalogue(my_target_doc)
     logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
-
-    output_doc = fill_doc_with_prompt(doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_cfg)
+    my_vdb_dir = "./faiss_oa_idx"
+    output_doc = fill_doc_with_prompt(my_doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_vdb_dir, my_cfg)
     output_file = 'doc_output.docx'
     output_doc.save(output_file)
     logger.info(f"save_content_to_file: {output_file}")

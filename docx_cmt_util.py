@@ -15,7 +15,7 @@ from docx.shared import RGBColor
 
 from sys_init import init_yml_cfg
 from agt_util import gen_txt
-from docx_util import get_catalogue, refresh_current_heading
+from docx_util import get_catalogue, refresh_current_heading, get_reference_from_vdb
 from vdb_util import search_txt
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -176,7 +176,7 @@ def test_get_comment():
         logger.info(f"para_id:{para_id}, para_txt:{para_txt}")
 
 def modify_para_with_comment_prompt_in_process(uid:str, task_id:str, thread_lock, task_progress:dict,
-    target_doc: str, doc_ctx: str, comments_dict: dict, cfg: dict, output_file_name:str):
+    target_doc: str, doc_ctx: str, comments_dict: dict, vdb_dir:str, cfg: dict, output_file_name:str):
     """
     将批注内容替换到对应段落，并将新文本设为红色
     :param uid: user id to submit the task
@@ -186,6 +186,7 @@ def modify_para_with_comment_prompt_in_process(uid:str, task_id:str, thread_lock
     :param target_doc: 需要修改的文档路径
     :param doc_ctx: 文档写作的大背景信息
     :param comments_dict: 段落ID和段落批注的对应关系字典
+    :param vdb_dir: 向量数据库的目录
     :param cfg: 系统配置，用于使用大模型的能力
     :param output_file_name: 输出文档的文件名
     """
@@ -219,10 +220,8 @@ def modify_para_with_comment_prompt_in_process(uid:str, task_id:str, thread_lock
             logger.info(f"matched_comment_for_para_idx {para_idx}")
             comment_text = comments_dict[para_idx]
             catalogue = get_catalogue(target_doc)
-            # TODO : get text context to gen_txt
-            my_vector_db_dir = f"{UPLOAD_FOLDER}/faiss_oa_idx_{uid}"
-            ctx_txt = search_txt(comment_text, my_vector_db_dir, 0.1, cfg['api'], 3)
-            modified_txt = gen_txt(doc_ctx, ctx_txt, comment_text, catalogue, str(current_heading), cfg)
+            reference = get_reference_from_vdb(comment_text, vdb_dir, cfg['api'])
+            modified_txt = gen_txt(doc_ctx, reference, comment_text, catalogue, str(current_heading), cfg)
             if modified_txt:
                 gen_txt_count += 1
                 para.clear()

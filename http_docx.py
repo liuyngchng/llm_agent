@@ -227,24 +227,25 @@ def prs_doc_with_template(uid: str, doc_type: str, doc_title: str, task_id: str,
             task_progress[task_id] = {"text": "开始处理文档...","timestamp": time.time()}
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
         para_comment_dict = get_para_comment_dict(my_target_doc)
+        my_vdb_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
         if para_comment_dict:
             logger.info("process_word_comment_doc")
             modify_para_with_comment_prompt_in_process(
                 uid, task_id, thread_lock, task_progress,
-                my_target_doc, doc_ctx, para_comment_dict, my_cfg,
+                my_target_doc, doc_ctx, para_comment_dict, my_vdb_dir, my_cfg,
                 output_file
             )
         elif is_include_prompt:
             logger.info("fill_doc_with_prompt_in_progress")
             fill_doc_with_prompt_in_progress(
                 task_id, thread_lock, task_progress, doc_ctx,
-                my_target_doc, catalogue, my_cfg, output_file,
+                my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
             )
         else:
             logger.info("fill_doc_without_prompt_in_progress")
             docx_util.fill_doc_without_prompt_in_progress(
                 task_id, thread_lock, task_progress, doc_ctx,
-                my_target_doc, catalogue, my_cfg, output_file,
+                my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
             )
     except Exception as e:
         with thread_lock:
