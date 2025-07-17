@@ -185,9 +185,9 @@ def get_doc_process_info():
         progress_info = task_progress.get(task_id, {"text": "未知状态", "percent": 0, "timestamp": time.time(), "elapsed_time":""})
     info = {
         "task_id": task_id,
-        "progress": progress_info["text"],
-        "percent": progress_info["percent"],
-        "elapsed_time": progress_info['elapsed_time']
+        "progress": progress_info.get("text", ""),
+        "percent": progress_info.get("percent", ""),
+        "elapsed_time": progress_info.get("elapsed_time", "")
     }
     # logger.info(f"get_doc_process_info, {info}")
     return jsonify(info), 200
