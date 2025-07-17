@@ -562,6 +562,15 @@ textarea {
     100% { transform: rotate(360deg); }
 }
 
+@keyframes snake {
+    0% {
+        left: -100px;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
 @media (max-width: 768px) {
     .knowledge-btn {
         top: 10px;
@@ -591,7 +600,24 @@ textarea {
     #step4 .btn {
         padding: 6px 25px;
     }
+    .snake-loader {
+        width: 100px;
+        height: 8px;
+        margin: 20px auto;
+        position: relative;
+        overflow: hidden;
+    }
 
+    .snake-loader:before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100px;
+        width: 100px;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, #4b6cb7, transparent);
+        animation: snake 1.5s infinite linear;
+    }
     h2 {
         font-size: 1.5rem;
     }

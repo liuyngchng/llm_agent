@@ -152,7 +152,7 @@ async function uploadTemplateFile(file) {
     const outlineContainer = document.getElementById('outlineContainer');
     outlineContainer.innerHTML = `
         <div class="loading">
-            <div class="spinner"></div>
+            <div class="snake-loader"></div>
             <p>正在解析Word模板，提取目录结构...</p>
         </div>
     `;
@@ -210,7 +210,7 @@ function generateOutline() {
     const outlineContainer = document.getElementById('outlineContainer');
     outlineContainer.innerHTML = `
         <div class="loading">
-            <div class="spinner"></div>
+            <div class="snake-loader"></div>
             <p>正在生成文档目录结构，请稍候...</p>
         </div>
     `;
