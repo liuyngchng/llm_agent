@@ -11,8 +11,10 @@ import re
 import time
 
 from docx import Document
-from docx.shared import RGBColor
+from docx.shared import RGBColor, Pt
+from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from vdb_util_test import search_txt
 from txt_util import get_txt_in_dir_by_keywords, strip_prefix_no
 
@@ -96,32 +98,18 @@ def is_3rd_heading(para: Paragraph) -> bool:
     else:
         return False
 
-def get_outline(file_name: str) -> list:
+def get_outline(file_name: str) -> str:
     """
-    获取word文档的三级目录， 输出数据格式如下所示：
-    [
-        {
-            "title": "1. 背景",
-            "items": [
-                {"title": "1.1 概述", "items": ["1.1.1 项目背景", "1.1.2 核心问题", "1.1.3 关键数据"]},
-                {"title": "1.2 项目进展", "items": ["1.2.1 项目进展", "1.2.2 里程碑节点", "1.2.3 关键技术"]},
-                {"title": "1.3 关键数据", "items": ["1.3.1 数据类型", "1.3.2 数据存储", "1.3.3 数据价值"]}
-            ]
-        },
-        {
-            "title": "2. 问题分析",
-            "items": [
-                {"title": "2.1 面临挑战", "items": ["2.1.1 国内外现状", "2.1.2 解决的问题", "2.1.3 面临的问题"]},
-                {"title": "2.2 解决思路", "items": ["2.2.1 基础研究投入", "2.2.2 样品试制", "2.2.3 工程环境应用"]},
-                {"title": "2.3 经验总结", "items": ["2.3.1 理论研究支持", "2.3.2 专利限制突破", "2.2.3 自有技术积累"]}
-            ]
-        }
-    ]
+    获取word文档的三级目录，输出格式如下：
+    # 1. 一级目录
+    ## 1.1 二级目录
+    ### 1.1.1 三级目录
     """
     doc = Document(file_name)
-    result = []  # 最终结果
-    current_chapter = None  # 当前一级标题节点
-    current_section = None  # 当前二级标题节点
+    result_lines = []  # 存储每行目录文本
+    chapter_num = 0    # 一级标题编号
+    section_num = 0    # 二级标题编号
+    subsection_num = 0 # 三级标题编号
 
     for para in doc.paragraphs:
         style_name = para.style.name.lower()
@@ -144,23 +132,25 @@ def get_outline(file_name: str) -> list:
         if not text:
             continue
 
-        # 处理一级标题 (level=1)
+        # 处理一级标题
         if level == 1:
-            current_chapter = {"title": text, "items": []}
-            result.append(current_chapter)
-            current_section = None  # 重置二级节点
+            chapter_num += 1
+            section_num = 0
+            subsection_num = 0
+            result_lines.append(f"# {chapter_num}. {text}")
 
-        # 处理二级标题 (level=2)
-        elif level == 2 and current_chapter:
-            current_section = {"title": text, "items": []}
-            current_chapter["items"].append(current_section)
+        # 处理二级标题
+        elif level == 2 and chapter_num > 0:
+            section_num += 1
+            subsection_num = 0
+            result_lines.append(f"## {chapter_num}.{section_num} {text}")
 
-        # 处理三级标题 (level=3) 下的文本
-        elif level == 3 and current_section:
-            # 三级标题本身作为普通文本项
-            current_section["items"].append(text)
+        # 处理三级标题
+        elif level == 3 and chapter_num > 0 and section_num > 0:
+            subsection_num += 1
+            result_lines.append(f"### {chapter_num}.{section_num}.{subsection_num} {text}")
 
-    return result
+    return "\n".join(result_lines)
 
 def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool:
     """
@@ -380,17 +370,27 @@ def get_catalogue(target_doc: str) -> str:
     return my_catalogue
 
 
-def gen_docx_template_with_outline(task_id: str, os_dir:str, outline: str) -> str:
+def gen_docx_template_with_outline(task_id: str, os_dir:str, title: str, outline: str) -> str:
     """
     :param task_id: 执行任务的ID
     :param os_dir: 输出的本地文件目录
+    :param title: 文档标题
     :param outline: 三级目录文本信息，结构如下\n1. 一级标题\n  1.1 二级标题\n    1.1.1 三级标题\n
     即outline中的各行文本中，一级标题前没有空格，二级标题前有2个空格，三级标题前有4个空格
     :return: 包含三级目录的Word docx 文档文件名称 full_path
     """
     doc = Document()
-    lines = outline.strip().split('\n')
+    title_para = doc.add_paragraph()
+    title_run = title_para.add_run(title)
+    title_run.font.name = '黑体'
+    title_run._element.rPr.rFonts.set(qn('w:eastAsia'), '黑体')
+    title_run.font.color.rgb = RGBColor(0, 0, 0)
+    title_run.font.size = Pt(28)
+    title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
+    # 添加分页符使目录从新页面开始
+    doc.add_page_break()
+    lines = outline.strip().split('\n')
     for line in lines:
         stripped = line.strip()
         if not stripped:
@@ -401,17 +401,24 @@ def gen_docx_template_with_outline(task_id: str, os_dir:str, outline: str) -> st
                 indent_level += 1
             elif not char.isspace():
                 break
+        # 添加标题并获取段落对象
         if indent_level == 0:
-            doc.add_heading(stripped, level=1)
+            p = doc.add_heading(stripped, level=1)
         elif indent_level == 2:
-            doc.add_heading(stripped, level=2)
+            p = doc.add_heading(stripped, level=2)
         else:
-            doc.add_heading(stripped, level=3)
-
+            p = doc.add_heading(stripped, level=3)
+        # 统一设置格式：黑体、黑色
+        for run in p.runs:
+            run.font.color.rgb = RGBColor(0, 0, 0)  # 黑色
+            run.font.name = '黑体'
+            run._element.rPr.rFonts.set(qn('w:eastAsia'), '黑体')  # 中文字体
+    # 保存文件
     filename = f"{task_id}_outline.docx"
     save_path = os.path.join(os_dir, filename)
     doc.save(save_path)
-    return filename
+    return save_path
+
 
 def get_elapsed_time(start_timestamp: str) -> str:
     """

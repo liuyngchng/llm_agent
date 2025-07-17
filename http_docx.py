@@ -109,7 +109,7 @@ def write_doc_with_outline_txt():
         logger.error(f"err_occurred, {err_info}")
         return jsonify(err_info), 400
     task_id = str(int(time.time()))
-    file_name = docx_util.gen_docx_template_with_outline(task_id, UPLOAD_FOLDER, doc_outline)
+    file_name = docx_util.gen_docx_template_with_outline(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
     logger.info(f"gen_docx_template_file_name {file_name}")
     threading.Thread(
         target=prs_doc_with_template,

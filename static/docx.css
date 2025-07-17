@@ -158,6 +158,9 @@ h1 {
     display: block;
     animation: fadeIn 0.5s ease;
 }
+#step4 .btn {
+    padding: 7px 30px; /* 原为14px 30px，垂直内边距减半 */
+}
 
 h2 {
     color: #2c3e50;
@@ -584,6 +587,9 @@ textarea {
 
     .step-content {
         padding: 25px;
+    }
+    #step4 .btn {
+        padding: 6px 25px;
     }
 
     h2 {
