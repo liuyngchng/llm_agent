@@ -205,7 +205,7 @@ def modify_para_with_comment_prompt_in_process(uid:str, task_id:str, thread_lock
         for para_idx, para in enumerate(doc.paragraphs):
             percent = para_idx / total_paragraphs * 100
             process_percent_bar_info = (f"正在处理第 {para_idx + 1}/{total_paragraphs} 段文本，已识别 {comment_count} 个批注，"
-                f"已生成 {gen_txt_count} 段文本，进度 {percent:.1f}%")
+                f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(task_id)}，进度 {percent:.1f}%")
             logger.info(process_percent_bar_info)
             with thread_lock:
                 task_progress[task_id] = {
@@ -285,6 +285,17 @@ def modify_para_with_comment_prompt(target_doc: str,
         logger.error(f"替换失败: {str(e)}", exc_info=True)
     return doc
 
+def get_elapsed_time(start_timestamp: str) -> str:
+    """
+    计算任务处理时间
+    :param start_timestamp: 任务开始时间戳
+    """
+    start_time = int(start_timestamp)
+    current_time = int(time.time())
+    elapsed_seconds = current_time - start_time
+    minutes = elapsed_seconds // 60
+    seconds = elapsed_seconds % 60
+    return f"已用时 {minutes}分{seconds}秒"
 
 def test_modify_para_with_comment():
     my_cfg = init_yml_cfg()

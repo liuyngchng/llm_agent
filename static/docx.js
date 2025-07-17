@@ -449,6 +449,9 @@ async function fetchTaskProgress(taskId, token) {
 
         // 更新进度显示
         progressText.innerHTML = progressInfo.progress || '正在处理...';
+        if (progressInfo.elapsed_time) {
+            document.getElementById('elapsed_time').value = progressInfo.elapsed_time;
+        }
 
         // 如果包含百分比数字则更新进度条
         const percentMatch = progressInfo.percent
@@ -469,6 +472,8 @@ async function fetchTaskProgress(taskId, token) {
             // 等待2秒显示完成状态
             setTimeout(() => {
                 nextStep(3);
+                const elapsedTime = document.getElementById('elapsed_time').value;
+                document.getElementById('timeValue').innerText = elapsedTime;
             }, 2000);
         }
         if (progressInfo.error) {

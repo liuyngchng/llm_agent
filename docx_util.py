@@ -318,8 +318,8 @@ def update_process_info(progress_lock, task_id, thread_lock, txt_info, percent=0
     with progress_lock:
         thread_lock[task_id] = {
             "text": txt_info, "timestamp": time.time(),
-            "percent": percent, "download_url": download_url,
-            "type": "docx"
+            "percent": percent,
+            "type": "docx", "elapsed_time": get_elapsed_time(task_id)
         }
 
 

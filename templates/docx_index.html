@@ -177,6 +177,9 @@
                 <div class="download-success">
                     <i class="fas fa-check-circle"></i>
                     <h3>文档生成成功！</h3>
+                    <p id="elapsedTimeDisplay" style="margin: 10px 0; font-size: 0.95rem; color: #27ae60;">
+                        总用时：<span id="timeValue">{{elapsed_time}}</span>
+                    </p>
                     <p>您的专业文档已准备就绪，点击下方按钮下载</p>
 
                     <div class="btn-container">
@@ -201,6 +204,7 @@
     <input type="hidden" id ="taskId" name="taskId" value="{{taskId}}">
     <input type="hidden" id ="file_name" name="file_name" value="{{file_name}}">
     <input type="hidden" id ="outline_source" name="outline_source" value="{{outline_source}}">
+    <input type="hidden" id ="elapsed_time" name="elapsed_time" value="">
     <!--存储Markdown原始内容 -->
     <textarea id="outlineText" style="display:none;"></textarea>
 </body>

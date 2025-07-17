@@ -112,7 +112,7 @@ def write_doc_with_outline_txt():
     file_name = docx_util.gen_docx_template_with_outline(task_id, UPLOAD_FOLDER, doc_outline)
     logger.info(f"gen_docx_template_file_name {file_name}")
     threading.Thread(
-        target=process_document_with_template,
+        target=prs_doc_with_template,
         args=(uid,  doc_type, doc_title, task_id, file_name, False)
     ).start()
     info = {"status": "started", "task_id": task_id}
@@ -142,7 +142,7 @@ def write_doc_with_docx_template():
         logger.error(f"err_occurred, {err_info}")
         return jsonify(err_info), 400
     threading.Thread(
-        target=process_document_with_template,
+        target=prs_doc_with_template,
         args=(uid, doc_type_chinese, doc_title, task_id, template_file_name, True)
     ).start()
 
@@ -182,11 +182,12 @@ def get_doc_process_info():
     if not task_id:
         return jsonify({"error": "缺少任务ID"}), 400
     with thread_lock:
-        progress_info = task_progress.get(task_id, {"text": "未知状态", "percent": 0, "timestamp": time.time()})
+        progress_info = task_progress.get(task_id, {"text": "未知状态", "percent": 0, "timestamp": time.time(), "elapsed_time":""})
     info = {
         "task_id": task_id,
         "progress": progress_info["text"],
         "percent": progress_info["percent"],
+        "elapsed_time": progress_info['elapsed_time']
     }
     # logger.info(f"get_doc_process_info, {info}")
     return jsonify(info), 200
@@ -203,8 +204,8 @@ def clean_tasks():
         time.sleep(300)
 
 
-def process_document_with_template(uid: str, doc_type: str, doc_title: str, task_id: str,
-    file_name: str, is_include_prompt = False):
+def prs_doc_with_template(uid: str, doc_type: str, doc_title: str, task_id: str,
+                          file_name: str, is_include_prompt = False):
     """
     处理无模板的文档，三级目录自动生成，每个段落无写作要求
     :param uid: 用户ID
