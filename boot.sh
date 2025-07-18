@@ -1,9 +1,5 @@
 /bin/bash -c 'source ../llm_py_env/bin/activate'
 # for start application in docker container
-#MODULE=http_stream
-#MODULE=http_rag
-#MODULE=http_docx
-#MODULE=http_chat
 MODULE="${MODULE_NAME:-http_chat}"
 echo "start module: ${MODULE}"
 echo "current dir `pwd`"
