@@ -12,7 +12,7 @@ import cfg_util as cfg_utl
 from flask import Flask, render_template, Response, request, jsonify, redirect, url_for
 
 from bp_auth import auth_bp, auth_info, get_client_ip
-from my_enums import DataType, DBType
+from my_enums import DataType, DBType, AppType
 from sql_yield import SqlYield
 from sys_init import init_yml_cfg
 
@@ -33,7 +33,7 @@ SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 @app.route('/')
 def app_home():
     logger.info("redirect_auth_login_index")
-    return redirect(url_for('auth.login_index', app_source='stream'))
+    return redirect(url_for('auth.login_index', app_source=AppType.TXT2SQL.name.lower()))
 
 @app.route('/stream', methods=['POST', 'GET'])
 def stream():

@@ -34,7 +34,7 @@ class MsgType(Enum):
 class AppType(Enum):
     """应用类型枚举（英文键，汉字值）"""
     CHAT = "智能问答"
-    NL2SQL = "智能问数"
+    NL2SQL = "智能问数 "
     DOCX = "文档生成"
     CSM = "智能客服"
     TXT2SQL = "智能问数"

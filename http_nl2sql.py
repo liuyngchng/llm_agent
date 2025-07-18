@@ -13,7 +13,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, redirect, jsonify, render_template, Response, url_for
 
 import cfg_util as cfg_utl
-from my_enums import DataType, DBType
+from my_enums import DataType, DBType, AppType
 from sql_agent import SqlAgent
 from sys_init import init_yml_cfg
 from audio import transcribe_webm_audio_bytes
@@ -51,21 +51,8 @@ def before_request():
 @app.route('/')
 def app_home():
     logger.info("redirect_auth_login_index")
-    return redirect(url_for('auth.login_index', app_source='nl2sql'))
+    return redirect(url_for('auth.login_index', app_source=AppType.NL2SQL.name.lower()))
 
-@app.route('/gt/dt/idx', methods=['GET'])
-def query_data_index():
-    """
-     A index for static
-    curl -s --noproxy '*' http://127.0.0.1:19000 | jq
-    :return:
-    """
-    page = "nl2sql_index.html"
-    auth_result = authenticate(request)
-    if not auth_result:
-        page = "login.html"
-    logger.info(f"return_page {page}")
-    return render_template(page, uid ="my_uid_is_123")
 
 @app.route('/cfg/idx', methods=['GET'])
 def config_index():

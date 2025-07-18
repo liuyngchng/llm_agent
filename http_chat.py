@@ -13,6 +13,7 @@ from flask import Flask, request, redirect, url_for
 # from flask_cors import CORS
 
 from chat_agent import ChatAgent
+from my_enums import AppType
 from sys_init import init_yml_cfg
 from bp_auth import auth_bp, auth_info, get_client_ip
 from bp_vdb import vdb_bp
@@ -40,7 +41,7 @@ SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 @app.route('/')
 def app_home():
     logger.info("redirect_auth_login_index")
-    return redirect(url_for('auth.login_index', app_source='chat'))
+    return redirect(url_for('auth.login_index', app_source=AppType.CHAT.name.lower()))
 
 
 @app.route('/chat', methods=['POST'])

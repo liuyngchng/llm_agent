@@ -13,7 +13,7 @@ from flask import (Flask, request, jsonify, render_template, Response,
 from cfg_util import auth_user, get_user_role_by_uid
 from csm_service import CsmService
 from bp_auth import auth_bp
-from my_enums import ActorRole, AI_SERVICE_STATUS
+from my_enums import ActorRole, AI_SERVICE_STATUS, AppType
 from agt_util import classify_msg
 from sys_init import init_yml_cfg
 
@@ -32,7 +32,7 @@ csm_svc = CsmService()
 @app.route('/')
 def app_home():
     logger.info("redirect_auth_login_index")
-    return redirect(url_for('auth.login_index', app_source='rag'))
+    return redirect(url_for('auth.login_index', app_source=AppType.CSM.name.lower()))
 
 @app.route('/static/<file_name>', methods=['GET'])
 def get_file(file_name):

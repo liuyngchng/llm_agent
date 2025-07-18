@@ -39,7 +39,7 @@ thread_lock = threading.Lock()
 @app.route('/')
 def app_home():
     logger.info("redirect_auth_login_index")
-    return redirect(url_for('auth.login_index', app_source='docx'))
+    return redirect(url_for('auth.login_index', app_source=my_enums.AppType.DOCX.name.lower()))
 
 @app.route('/docx/generate/outline', methods=['POST'])
 def generate_outline():
