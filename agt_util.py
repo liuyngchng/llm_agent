@@ -392,6 +392,7 @@ class TextGenerator:
         :param max_workers: 最大线程数
         """
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        self.timeout = 30
 
     def batch_generate(self, tasks: List[Dict[str, Any]]) -> Dict[str, str]:
         """
@@ -409,15 +410,14 @@ class TextGenerator:
             future = self.executor.submit(TextGenerator.gen_txt_wrapper, **task)
             future_to_key[future] = unique_key
 
-        # 获取结果 （阻塞在这里
+        # 获取结果 (阻塞)
         for future in as_completed(future_to_key):
             key = future_to_key[future]
             try:
-                results[key] = future.result()
+                results[key] = future.result()      # block here
             except Exception as e:
                 logger.error(f"Task {key} failed: {str(e)}")
                 results[key] = None
-
         return results
 
     def __del__(self):
