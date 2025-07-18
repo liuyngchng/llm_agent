@@ -576,6 +576,31 @@ textarea {
     transform: translateY(-2px);
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
 }
+.my-btn {
+    position: absolute;
+    top: 20px;
+    right: 280px; /* 位于知识库和退出按钮之间 */
+    padding: 8px 16px;
+    background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+    color: white;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 10;
+}
+
+.my-btn:hover {
+    background: linear-gradient(to right, #3a5a9e, #2c487e);
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -687,6 +712,12 @@ textarea {
     .logout-btn {
         top: 10px;
         right: 10px;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+
+    .my-btn {
+        right: 80px;
         padding: 6px 12px;
         font-size: 0.8rem;
     }

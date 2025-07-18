@@ -283,7 +283,6 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
     gen_txt_count = 0
     current_heading = []
     total_paragraphs = len(doc.paragraphs)
-    txt_info = ""
     for index, my_para in enumerate(doc.paragraphs):
         percent = index / total_paragraphs * 100
         process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文本，"
@@ -312,16 +311,11 @@ def fill_doc_with_prompt_in_progress(task_id:str, progress_lock, thread_lock:dic
         red_run.font.color.rgb = RGBColor(0, 0, 0)
         my_para._p.addnext(new_para._p)
         doc.save(output_file_name)
-        if gen_txt_count > 0:
-            txt_info = (f"任务已完成，共处理 {total_paragraphs} 段文本，"
-                        f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(task_id)}，进度 100%")
-        else:
-            txt_info = (f"任务已完成，共处理 {total_paragraphs} 段文本，"
-                        f"{get_elapsed_time(task_id)}进度 100%，未检测到创作需求描述，"
-                        f"您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字")
-        update_process_info(progress_lock, task_id, thread_lock, txt_info, 100.0)
-    logger.info(f"{txt_info}, 所有内容已输出至文件 {output_file_name}")
+    txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，已生成 {gen_txt_count} 段文本，{get_elapsed_time(task_id)}，进度 100%"
+    if gen_txt_count == 0:
+        txt_info += f"未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
     update_process_info(progress_lock, task_id, thread_lock, txt_info, 100.0)
+    logger.info(f"{txt_info}, 所有内容已输出至文件 {output_file_name}")
 
 
 def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict) -> Document:

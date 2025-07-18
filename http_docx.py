@@ -9,7 +9,7 @@ import threading
 import time
 
 from flask import (Flask, request, jsonify, send_from_directory,
-                   abort, redirect, url_for, stream_with_context, Response)
+                   abort, redirect, url_for, stream_with_context, Response, render_template)
 
 import docx_util
 import my_enums
@@ -40,6 +40,24 @@ thread_lock = threading.Lock()
 def app_home():
     logger.info("redirect_auth_login_index")
     return redirect(url_for('auth.login_index', app_source=my_enums.AppType.DOCX.name.lower()))
+
+
+@app.route('/docx/task', methods=['GET'])
+def my_docx_task():
+    logger.info("my_docx_task")
+    uid = request.args.get('uid')
+    app_source = request.args.get('app_source')
+    warning_info = request.args.get('warning_info', "")
+    sys_name = my_enums.AppType.get_app_type(app_source)
+    ctx = {
+        "uid": uid,
+        "sys_name": sys_name,
+        "app_source": app_source,
+        "warning_info": warning_info,
+    }
+    dt_idx = "docx_my_task.html"
+    logger.info(f"return_page_with_no_auth {dt_idx}")
+    return render_template(dt_idx, **ctx)
 
 @app.route('/docx/generate/outline', methods=['POST'])
 def generate_outline():
