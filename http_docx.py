@@ -271,7 +271,8 @@ def prs_doc_with_template(uid: str, doc_type: str, doc_title: str, task_id: str,
     :param file_name: Word template 模板文件名, 其中包含三级目录，可能含有段落写作的提示词，也可能没有
     :param is_include_prompt: 各小节是否包含有写作提示词语
     """
-    logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, task_id: {task_id}, file_name: {file_name}, is_include_prompt = {is_include_prompt}")
+    logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, "
+                f"task_id: {task_id}, file_name: {file_name}, is_include_prompt = {is_include_prompt}")
     try:
         docx_util.update_process_info(thread_lock, task_id, task_progress, "开始解析文档结构...", 0.0)
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
