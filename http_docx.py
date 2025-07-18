@@ -33,6 +33,26 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
+# 数据结构
+"""
+task_progress = {
+   "uid1": {
+        "taskId1": {
+            "percent": 0.0,
+            "text": "目前的状况是个啥？",
+            "timestamp": time.time(),
+            "elapsed_time": "xxx分xxx秒",
+        }
+   },
+   "uid2": {
+        "taskId2": {
+            "percent": 0.0,
+            "text": "目前的状况是个啥？",
+            "timestamp": time.time(),
+            "elapsed_time": "xxx分xxx秒",
+        }
+   }
+"""
 task_progress = {}
 thread_lock = threading.Lock()
 
@@ -86,18 +106,19 @@ def upload_file():
     if 'file' not in request.files:
         return jsonify({"error": "未找到文件"}), 400
     file = request.files['file']
+    uid = request.args.get('uid')
     if file.filename == '':
         return jsonify({"error": "空文件名"}), 400
 
     # 生成任务ID和文件名
-    task_id = str(int(time.time()))
+    task_id = f"{uid}_{int(time.time())}"
     filename = f"{task_id}_{file.filename}"
     save_path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(save_path)
 
     # 初始化进度
     with thread_lock:
-        task_progress[task_id] = 0
+        task_progress[task_id] = {}
     logger.info(f"upload_file_saved_as {filename}, {task_id}")
     outline = docx_util.get_outline(save_path)
     logger.info(f"get_file_outline,task_id {task_id}, {outline}")
@@ -215,11 +236,28 @@ def clean_tasks():
     while True:
         with thread_lock:
             now = time.time()
-            expired = [k for k, v in task_progress.items()
-                      if now - v['timestamp'] > 3600]  # 1小时过期
-            for k in expired:
-                del task_progress[k]
-        time.sleep(300)
+            expired_uids = []  # 记录待删除的空uid
+
+            # 遍历所有用户
+            for uid, tasks in list(task_progress.items()):
+                expired_tasks = []  # 记录当前用户待删除的task_id
+
+                # 遍历用户的所有任务
+                for task_id, task_info in tasks.items():
+                    if now - task_info['timestamp'] > 7200:  # 2小时过期
+                        expired_tasks.append(task_id)
+                # 删除过期任务
+                for task_id in expired_tasks:
+                    del tasks[task_id]
+
+                # 如果用户无任务则标记删除
+                if not tasks:
+                    expired_uids.append(uid)
+
+            # 删除空用户
+            for uid in expired_uids:
+                del task_progress[uid]
+        time.sleep(1000)
 
 
 def prs_doc_with_template(uid: str, doc_type: str, doc_title: str, task_id: str,
@@ -235,14 +273,13 @@ def prs_doc_with_template(uid: str, doc_type: str, doc_title: str, task_id: str,
     """
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, task_id: {task_id}, file_name: {file_name}, is_include_prompt = {is_include_prompt}")
     try:
-        task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
+        docx_util.update_process_info(thread_lock, task_id, task_progress, "开始解析文档结构...", 0.0)
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
         catalogue = extract_catalogue(my_target_doc)
         output_file_name = f"output_{task_id}.docx"
         output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
         logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
-        with thread_lock:
-            task_progress[task_id] = {"text": "开始处理文档...","timestamp": time.time()}
+        docx_util.update_process_info(thread_lock, task_id, task_progress, "开始处理文档...", 0.0)
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
         para_comment_dict = get_para_comment_dict(my_target_doc)
         my_vdb_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
@@ -256,21 +293,17 @@ def prs_doc_with_template(uid: str, doc_type: str, doc_title: str, task_id: str,
         elif is_include_prompt:
             logger.info("fill_doc_with_prompt_in_progress")
             fill_doc_with_prompt_in_progress(
-                task_id, thread_lock, task_progress, doc_ctx,
+                uid, task_id, thread_lock, task_progress, doc_ctx,
                 my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
             )
         else:
             logger.info("fill_doc_without_prompt_in_progress")
             docx_util.fill_doc_without_prompt_in_progress(
-                task_id, thread_lock, task_progress, doc_ctx,
+                uid, task_id, thread_lock, task_progress, doc_ctx,
                 my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
             )
     except Exception as e:
-        with thread_lock:
-            task_progress[task_id] = {
-                "text": f"任务处理失败: {str(e)}",
-                "timestamp": time.time()
-            }
+        docx_util.update_process_info(thread_lock, task_id, task_progress, f"任务处理失败: {str(e)}")
         logger.exception("文档生成异常", e)
 
 
