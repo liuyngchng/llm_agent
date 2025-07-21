@@ -358,7 +358,7 @@ def test_del_doc():
 
 def test_update_doc():
     thread_lock = threading.Lock()
-    task_id =(str)(time.time())
+    task_id = str(time.time())
     task_progress = {}
     # file = "./llm.txt"
     file = "/home/rd/doc/文档生成/knowledge_base/1_pure.txt"
