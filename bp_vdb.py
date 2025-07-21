@@ -69,6 +69,12 @@ def vdb_index():
     logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
 
+@vdb_bp.route('/vdb/list', methods=['POST'])
+def list_knowledge_bases():
+    # 验证 uid/t 参数
+    # 返回 JSON 格式: {"knowledge_bases": [{id:1, name:"示例"}]}
+    return jsonify({"knowledge_bases": []})
+
 @vdb_bp.route('/vdb/upload', methods=['POST'])
 def upload_file():
     logger.info(f"start_upload_file, {request}")
