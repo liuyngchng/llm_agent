@@ -18,7 +18,7 @@ from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt
 from docx_util import extract_catalogue, fill_doc_with_prompt_in_progress
 from sys_init import init_yml_cfg
 from bp_auth import auth_bp
-from bp_vdb import vdb_bp
+from bp_vdb import vdb_bp, VDB_PREFIX
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -283,7 +283,7 @@ def prs_doc_with_template(uid: str, doc_type: str, doc_title: str, task_id: str,
         docx_util.update_process_info(thread_lock, task_id, task_progress, "开始处理文档...", 0.0)
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
         para_comment_dict = get_para_comment_dict(my_target_doc)
-        my_vdb_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
+        my_vdb_dir = os.path.join(UPLOAD_FOLDER, f"{VDB_PREFIX}{uid}")
         if para_comment_dict:
             logger.info("process_word_comment_doc")
             modify_para_with_comment_prompt_in_process(

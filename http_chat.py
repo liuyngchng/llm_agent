@@ -10,13 +10,12 @@ import time
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, redirect, url_for
-# from flask_cors import CORS
 
 from chat_agent import ChatAgent
 from my_enums import AppType
 from sys_init import init_yml_cfg
 from bp_auth import auth_bp, auth_info, get_client_ip
-from bp_vdb import vdb_bp
+from bp_vdb import vdb_bp, VDB_PREFIX
 from vdb_util import search_txt
 
 
@@ -62,7 +61,7 @@ def chat(catch=None):
         return waring_info
     logger.info(f"rcv_msg, {msg}, uid {uid}")
     auth_info[session_key] = time.time()
-    my_vector_db_dir = f"upload_doc/faiss_oa_idx_{uid}"
+    my_vector_db_dir = f"{VDB_PREFIX}{uid}"
 
     if not os.path.exists(my_vector_db_dir):  # 新增检查
         logger.info(f"vector_db_dir_not_exists_return_none, {my_vector_db_dir}")

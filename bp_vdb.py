@@ -21,8 +21,9 @@ logger = logging.getLogger(__name__)
 
 vdb_bp = Blueprint('vdb', __name__)
 
-UPLOAD_FOLDER = 'upload_doc'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # 确保上传目录存在
+
+VDB_PREFIX = "./vdb/vdb_idx_"
+
 
 my_cfg = init_yml_cfg()
 
@@ -53,7 +54,7 @@ def vdb_index():
         logger.error(f"err_in_vdb_index, {e}, url: {request.url}", exc_info=True)
         raise jsonify("err_in_vdb_index")
     vdb_status = ""
-    vdb_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
+    vdb_dir = f"{VDB_PREFIX}{uid}"
     if os.path.exists(vdb_dir):
         total_kb = get_dir_file_size_in_kb(vdb_dir)
         vdb_status = f"当前知识库大小: {total_kb}"
@@ -154,7 +155,7 @@ def delete_vdb_dir():
             msg = "未提供合法的用户信息"
             logger.error(msg)
             return jsonify({"success": del_result,"message": msg}), 200
-        vdb_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
+        vdb_dir = f"{VDB_PREFIX}{uid}"
         if os.path.exists(vdb_dir):
             shutil.rmtree(vdb_dir)
             msg = "成功删除知识库"
@@ -209,7 +210,7 @@ def search_vdb():
     t = data.get("t")
     if not search_input or not uid or not t:
         return jsonify({"error": "缺少参数"}), 400
-    my_vector_db_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
+    my_vector_db_dir = f"{VDB_PREFIX}{uid}"
 
     search_result = search_txt(search_input, my_vector_db_dir, 0.1, my_cfg['api'], 3)
     logger.info(f"search_result_for_[{search_input}], {search_result}")
@@ -234,7 +235,7 @@ def process_doc(task_id: str, file_name: str, uid: str):
     try:
         task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
-        output_vdb_dir = os.path.join(UPLOAD_FOLDER, f"faiss_oa_idx_{uid}")
+        output_vdb_dir = f"{VDB_PREFIX}{uid}"
         vector_file_in_progress(task_id, thread_lock, task_progress, my_target_doc,
             output_vdb_dir, my_cfg['api'],300, 80)
     except Exception as e:
