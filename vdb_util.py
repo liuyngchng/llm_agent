@@ -14,7 +14,7 @@ import httpx
 import chromadb
 import logging.config
 import numpy as np
-from typing import List, Dict, Any, Optional
+from typing import Any, Optional
 from langchain_community.document_loaders import (
     TextLoader, UnstructuredPDFLoader, UnstructuredWordDocumentLoader
 )
@@ -59,15 +59,15 @@ class RemoteChromaEmbedder(EmbeddingFunction):
         return f"RemoteChromaEmbedder({self.model_name})"
 
     @classmethod
-    def build_from_config(cls, config: Dict[str, Any]) -> "RemoteChromaEmbedder":
+    def build_from_config(cls, config: dict[str, Any]) -> "RemoteChromaEmbedder":
         return cls(client=config["client"], model_name=config["model_name"])
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         return {"client": self.client, "model_name": self.model_name}
 
 
-def process_doc(task_id: str, thread_lock, task_progress: Dict, documents: List[Document],
-                vector_db: str, llm_cfg: Dict, chunk_size=300, chunk_overlap=80, batch_size=10) -> None:
+def process_doc(task_id: str, thread_lock, task_progress: dict, documents: list[Document],
+                vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10) -> None:
     """处理文档并构建向量数据库"""
     pbar = None
     try:
@@ -101,13 +101,13 @@ def process_doc(task_id: str, thread_lock, task_progress: Dict, documents: List[
 
         # 准备文档数据
         all_doc_ids = []
-        all_metadatas = []
+        all_metadata = []
         all_documents = []
 
         for i, chunk in enumerate(doc_list):
             doc_id = f"{os.path.basename(chunk.metadata['source'])}_chunk_{i}"
             all_doc_ids.append(doc_id)
-            all_metadatas.append(chunk.metadata)
+            all_metadata.append(chunk.metadata)
             all_documents.append(chunk.page_content)
 
         # 批量添加文档
@@ -118,7 +118,7 @@ def process_doc(task_id: str, thread_lock, task_progress: Dict, documents: List[
         with tqdm(total=len(all_doc_ids), desc="文档向量化进度", unit="chunk") as pbar:
             for i in range(0, len(all_doc_ids), batch_size):
                 batch_ids = all_doc_ids[i:i+batch_size]
-                batch_metas = all_metadatas[i:i+batch_size]
+                batch_metas = all_metadata[i:i+batch_size]
                 batch_texts = all_documents[i:i+batch_size]
                 try:
                     collection.upsert(
@@ -166,8 +166,8 @@ def build_client(llm_cfg: dict) -> OpenAI:
     )
 
 
-def vector_file_in_progress(task_id: str, thread_lock, task_progress: Dict, file_name: str,
-                            vector_db: str, llm_cfg: Dict, chunk_size=300, chunk_overlap=80) -> None:
+def vector_file_in_progress(task_id: str, thread_lock, task_progress: dict, file_name: str,
+                            vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80) -> None:
     """处理单个文档文件并添加到向量数据库"""
     try:
         with thread_lock:
@@ -234,8 +234,8 @@ def del_doc(file_path: str, vector_db: str) -> bool:
         logger.error(f"删除文档时出错: {str(e)}", exc_info=True)
         return False
 
-def update_doc(task_id: str, thread_lock, task_progress: Dict, file_name: str,
-               vector_db: str, llm_cfg: Dict) -> None:
+def update_doc(task_id: str, thread_lock, task_progress: dict, file_name: str,
+               vector_db: str, llm_cfg: dict) -> None:
     """更新文档：先删除旧内容再添加新内容"""
     # 先删除旧内容
     if del_doc(file_name, vector_db):
@@ -245,7 +245,7 @@ def update_doc(task_id: str, thread_lock, task_progress: Dict, file_name: str,
     vector_file_in_progress(task_id, thread_lock, task_progress, file_name, vector_db, llm_cfg)
 
 
-def load_vdb(vector_db: str, llm_cfg: Dict) -> Optional[chromadb.Collection]:
+def load_vdb(vector_db: str, llm_cfg: dict) -> Optional[chromadb.Collection]:
     """加载Chroma矢量数据库集合"""
     if not os.path.exists(vector_db):
         logger.info(f"vector_db_dir_not_exists_return_none, {vector_db}")
@@ -265,7 +265,7 @@ def load_vdb(vector_db: str, llm_cfg: Dict) -> Optional[chromadb.Collection]:
         return None
 
 
-def search(query: str, score_threshold: float, vector_db: str,llm_cfg: Dict, top_k=3) -> list[dict]:
+def search(query: str, score_threshold: float, vector_db: str,llm_cfg: dict, top_k=3) -> list[dict]:
     """相似度搜索并返回格式化结果"""
     collection = load_vdb(vector_db, llm_cfg)
     if not collection:
@@ -370,5 +370,5 @@ def test_update_doc():
 if __name__ == "__main__":
     # test_vector_file_in_progress()
     test_search_txt()
-    test_update_doc()
-    test_search_txt()
+    # test_update_doc()
+    # test_search_txt()
