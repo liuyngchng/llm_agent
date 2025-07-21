@@ -37,7 +37,7 @@ class RemoteChromaEmbedder(EmbeddingFunction):
     def __init__(self, client: OpenAI, model_name: str, *args: Any, **kwargs: Any):
         self.client = client
         self.model_name = model_name
-        super().__init__(*args, **kwargs)
+        # super().__init__(*args, **kwargs)
 
     def __call__(self, doc: Documents) -> Embeddings:
         """批量获取文本嵌入向量"""
@@ -211,7 +211,7 @@ def vector_file_in_progress(task_id: str, thread_lock, task_progress: Dict, file
         logger.error(f"load_file_fail_err, {file_name}, {e}", exc_info=True)
 
 
-def del_doc(file_path: str, vector_db: str, llm_cfg: Dict) -> bool:
+def del_doc(file_path: str, vector_db: str) -> bool:
     """删除指定文档的所有向量片段"""
     try:
         chroma_client = chromadb.PersistentClient(path=vector_db)
@@ -238,7 +238,7 @@ def update_doc(task_id: str, thread_lock, task_progress: Dict, file_name: str,
                vector_db: str, llm_cfg: Dict) -> None:
     """更新文档：先删除旧内容再添加新内容"""
     # 先删除旧内容
-    if del_doc(file_name, vector_db, llm_cfg):
+    if del_doc(file_name, vector_db):
         with thread_lock:
             task_progress[task_id] = {"text": f"已删除旧版本文档", "timestamp": time.time()}
     # 再重新添加文档
@@ -325,12 +325,12 @@ def search_txt(txt: str, vector_db_dir: str, score_threshold: float,
     return all_txt
 
 def test_search_txt():
-    txt = 'devbox'
+    keywords = '生产运营管理一体化项目'
     vector_db_dir='./vdb/test_db'
     score_threshold = 0.1
     sys_cfg = init_yml_cfg()
     txt_num = 3
-    result = search_txt(txt, vector_db_dir, score_threshold, sys_cfg['api'], txt_num)
+    result = search_txt(keywords, vector_db_dir, score_threshold, sys_cfg['api'], txt_num)
     logger.info(f"search_result: {result}")
 
 def test_vector_file_in_progress():
@@ -339,12 +339,36 @@ def test_vector_file_in_progress():
     thread_lock = threading.Lock()
     task_id =(str)(time.time())
     task_progress = {}
-    file = "./llm.txt"
+    # file = "./llm.txt"
+    file = "/home/rd/doc/文档生成/knowledge_base/1_pure.txt"
     vdb = "./vdb/test_db"
     llm_cfg = my_cfg['api']
     logger.info(f"vector_file_in_progress({task_id}, {thread_lock}, {task_progress}, {file}, {vdb}, {llm_cfg})")
     vector_file_in_progress(task_id, thread_lock, {}, file, vdb, llm_cfg)
 
+def test_del_doc():
+    test_search_txt()
+
+    file = "/home/rd/doc/文档生成/knowledge_base/1_pure.txt"
+    vdb = "./vdb/test_db"
+    logger.info(f"start del_doc {file}")
+    del_doc(file, vdb)
+    logger.info(f"finish del_doc {file}")
+    test_search_txt()
+
+def test_update_doc():
+    thread_lock = threading.Lock()
+    task_id =(str)(time.time())
+    task_progress = {}
+    # file = "./llm.txt"
+    file = "/home/rd/doc/文档生成/knowledge_base/1_pure.txt"
+    vdb = "./vdb/test_db"
+    my_cfg = init_yml_cfg()
+    llm_cfg = my_cfg['api']
+    update_doc(task_id, thread_lock, task_progress, file, vdb, llm_cfg)
+
 if __name__ == "__main__":
     # test_vector_file_in_progress()
+    test_search_txt()
+    test_update_doc()
     test_search_txt()
