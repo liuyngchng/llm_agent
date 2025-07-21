@@ -265,15 +265,15 @@ def load_vdb(vector_db: str, llm_cfg: Dict) -> Optional[chromadb.Collection]:
         return None
 
 
-def search(query: str, score_threshold: float, vector_db: str,sys_cfg: Dict, top_k=3) -> List[Dict]:
+def search(query: str, score_threshold: float, vector_db: str,llm_cfg: Dict, top_k=3) -> list[dict]:
     """相似度搜索并返回格式化结果"""
-    collection = load_vdb(vector_db, sys_cfg)
+    collection = load_vdb(vector_db, llm_cfg)
     if not collection:
         return []
 
     # 使用远程embedding获取查询向量
-    openai_client = build_client(sys_cfg)
-    embedder = RemoteChromaEmbedder(openai_client, sys_cfg['embedding_model_name'])
+    openai_client = build_client(llm_cfg)
+    embedder = RemoteChromaEmbedder(openai_client, llm_cfg['embedding_model_name'])
     query_embedding = embedder([query])[0]
 
     # 执行查询
@@ -305,33 +305,46 @@ def search(query: str, score_threshold: float, vector_db: str,sys_cfg: Dict, top
     return sorted(formatted_results, key=lambda x: x["score"], reverse=True)
 
 def search_txt(txt: str, vector_db_dir: str, score_threshold: float,
-        sys_cfg: dict, txt_num: int) -> str:
+        llm_cfg: dict, txt_num: int) -> str:
     """
     :param txt: the query text
     :param vector_db_dir: the directory to save the vector db
     :param score_threshold: the score threshold
-    :param sys_cfg: system configuration info.
+    :param llm_cfg: llm configuration info in system config.
     :param txt_num: the number of txt to return
     :return: the results
     """
-    search_results = search(txt, score_threshold, vector_db_dir, sys_cfg, txt_num)
+    search_results = search(txt, score_threshold, vector_db_dir, llm_cfg, txt_num)
     all_txt = ""
     for s_r in search_results:
-        s_r_txt = s_r[0].page_content.replace("\n", "")
+        s_r_txt = s_r.get("content", "").replace("\n", "")
         if "......................." in s_r_txt:
             continue
         # logger.info(f"s_r_txt: {s_r_txt}, score: {s_r[1]}, from_file: {s_r[0].metadata['source']}")
         all_txt += s_r_txt + "\n"
     return all_txt
 
-if __name__ == "__main__":
+def test_search_txt():
+    txt = 'devbox'
+    vector_db_dir='./vdb/test_db'
+    score_threshold = 0.1
+    sys_cfg = init_yml_cfg()
+    txt_num = 3
+    result = search_txt(txt, vector_db_dir, score_threshold, sys_cfg['api'], txt_num)
+    logger.info(f"search_result: {result}")
+
+def test_vector_file_in_progress():
     os.environ["NO_PROXY"] = "*"  # 禁用代理
     my_cfg = init_yml_cfg()
     thread_lock = threading.Lock()
     task_id =(str)(time.time())
     task_progress = {}
     file = "./llm.txt"
-    vdb = "./chroma_db"
+    vdb = "./vdb/test_db"
     llm_cfg = my_cfg['api']
     logger.info(f"vector_file_in_progress({task_id}, {thread_lock}, {task_progress}, {file}, {vdb}, {llm_cfg})")
     vector_file_in_progress(task_id, thread_lock, {}, file, vdb, llm_cfg)
+
+if __name__ == "__main__":
+    # test_vector_file_in_progress()
+    test_search_txt()
