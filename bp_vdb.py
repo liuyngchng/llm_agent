@@ -24,6 +24,7 @@ vdb_bp = Blueprint('vdb', __name__)
 
 VDB_PREFIX = "./vdb/vdb_idx_"
 
+UPLOAD_FOLDER = "upload_doc"
 
 my_cfg = init_yml_cfg()
 
@@ -73,6 +74,10 @@ def vdb_index():
 def list_knowledge_bases():
     # 验证 uid/t 参数
     # 返回 JSON 格式: {"knowledge_bases": [{id:1, name:"示例"}]}
+    data = request.get_json()
+    uid = data.get("uid")
+    t = data.get("t")
+    DbUtl.
     return jsonify({"knowledge_bases": []})
 
 @vdb_bp.route('/vdb/upload', methods=['POST'])
