@@ -13,6 +13,7 @@ import time
 from flask import (request, jsonify, Blueprint, render_template)
 from werkzeug.utils import secure_filename
 
+from db_util import DbUtl
 from sys_init import init_yml_cfg
 from vdb_util import vector_file_in_progress, search_txt
 
@@ -77,8 +78,8 @@ def list_knowledge_bases():
     data = request.get_json()
     uid = data.get("uid")
     t = data.get("t")
-    DbUtl.
-    return jsonify({"knowledge_bases": []})
+    dt = DbUtl.get_my_vdb_info(uid)
+    return jsonify({"knowledge_bases": dt})
 
 @vdb_bp.route('/vdb/upload', methods=['POST'])
 def upload_file():

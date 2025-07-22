@@ -8,9 +8,9 @@ import logging.config
 import os
 import re
 
-from flask import (Flask, request, jsonify, render_template, Response,
+from flask import (Flask, request, Response,
                    send_from_directory, abort, make_response, redirect, url_for)
-from cfg_util import auth_user, get_user_role_by_uid
+from cfg_util import get_user_role_by_uid
 from csm_service import CsmService
 from bp_auth import auth_bp
 from my_enums import ActorRole, AI_SERVICE_STATUS, AppType

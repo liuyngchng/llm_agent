@@ -433,9 +433,9 @@ class DbUtl:
     @staticmethod
     def get_my_vdb_info(uid: str):
         db_uri = "sqlite:///cfg.db"
-        my_dt = DbUtl.sqlite_output(db_uri, "select * from schema_info where entity = 'dws_dw_ycb_day'", DataType.JSON.value)
+        my_dt = DbUtl.sqlite_output(db_uri, f"select * from vdb_info where uid = '{uid}'", DataType.JSON.value)
         logger.info(f"my_dt {my_dt}")
-
+        return my_dt
 
 
 def test_db():

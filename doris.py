@@ -12,7 +12,7 @@ import logging.config
 
 from my_enums import DataType
 from sys_init import init_yml_cfg
-from tabulate import tabulate
+# from tabulate import tabulate
 from db_util import DbUtl,DB_RW_TIMEOUT, DB_CONN_TIMEOUT
 
 
@@ -498,7 +498,7 @@ def print_data_table(result):
         # 处理None值为空字符串
         rows = [[str(v) if v is not None else "" for v in row] for row in rows]
         # 打印表格
-        print(tabulate(rows, headers=headers, tablefmt="grid"))
+        # print(tabulate(rows, headers=headers, tablefmt="grid"))
         # 显示记录数
         print(f"\n共 {len(data)} 条记录")
     else:

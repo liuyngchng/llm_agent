@@ -67,6 +67,7 @@ def login():
     logger.info(f"return_page {dt_idx}")
     ctx = {
         "uid": auth_result["uid"],
+        "role": auth_result["role"],
         "t": auth_result["t"],
         "sys_name": sys_name,
         "greeting": cfg_utl.get_const("greeting", app_source),

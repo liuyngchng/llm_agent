@@ -26,8 +26,8 @@ class CsmService:
     A customer service
     """
     def __init__(self):
-        self.human_customer_service_target_uid = "332987916"
-        self.human_being_uid = "332987919"
+        self.human_customer_service_target_uid = "332987902"
+        self.human_being_uid = "332987905"
         self.mail_outbox_list = {
             self.human_customer_service_target_uid: [],
             self.human_being_uid: []
