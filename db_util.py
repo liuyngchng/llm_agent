@@ -140,7 +140,7 @@ class DbUtl:
             return {"result":True, "affected_rows": cursor.rowcount}
         except Exception as e:
             db_con.rollback()
-            logger.error(f"save_data_err: {e}, sql {sql}")
+            logger.error(f"insert_delete_err: {e}, sql {sql}")
             return {"result":False, "error": "save data failed"}
 
     @staticmethod
@@ -447,6 +447,18 @@ class DbUtl:
     @staticmethod
     def create_vdb_info(kdb_name: str, uid: str, is_public=False):
         sql = f"insert into vdb_info (name, uid, is_public) values ('{kdb_name}', '{uid}', '{is_public}')"
+        with sqlite3.connect(CFG_DB_FILE) as my_conn:
+            logger.info(f"sql={sql}")
+            my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
+        logger.info(f"my_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
+    def delete_vdb_by_uid_and_kb_id(uid: str, kb_id: str):
+        if not uid or not kb_id:
+            logger.error(f"uid_or_kb_id_null_err, uid = {uid}, kb_id = {kb_id}")
+            raise RuntimeError("uid_or_kb_id_null_err")
+        sql = f"delete from vdb_info where uid = '{uid}' and id = '{kb_id}'"
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"sql={sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)

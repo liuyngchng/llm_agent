@@ -106,6 +106,35 @@ def create_vdb():
     dt = DbUtl.create_vdb_info(kb_name, uid, is_public)
     return jsonify({"success": True, "kb": dt})
 
+@vdb_bp.route('/vdb/delete', methods=['POST'])
+def delete_vdb_dir():
+    data = request.json
+    logger.info(f"vdb_delete, {data}")
+    uid = data.get("uid")
+    t = data.get("t")
+    kb_id = data.get("kb_id")
+    del_result = False
+    try:
+        if not uid or not t:
+            msg = "未提供合法的用户信息"
+            logger.error(msg)
+            return jsonify({"success": del_result,"message": msg}), 200
+        DbUtl.delete_vdb_by_uid_and_kb_id(uid, kb_id)
+        vdb_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
+        if os.path.exists(vdb_dir):
+            shutil.rmtree(vdb_dir)
+            msg = "成功删除知识库"
+            del_result = True
+        else:
+            del_result = True
+            msg = "知识库已删除"
+        logger.info(f"{msg}, {vdb_dir}")
+        return jsonify({"success": del_result, "message": msg}), 200
+    except Exception as e:
+        msg = f"删除知识库出现异常 {str(e)}"
+        logger.error(f"err_msg, {msg}", exc_info=True)
+        return jsonify({"success": del_result, "message": msg}), 200
+
 @vdb_bp.route('/vdb/upload', methods=['POST'])
 def upload_file():
     logger.info(f"start_upload_file, {request}")
@@ -178,34 +207,6 @@ def upload_file():
         info = {"success": False, "message": f"文件上传处理失败: {str(e)}"}
         logger.error(info)
         return jsonify(info), 500
-
-@vdb_bp.route('/vdb/delete', methods=['POST'])
-def delete_vdb_dir():
-    data = request.json
-    logger.info(f"vdb_delete, {data}")
-    uid = data.get("uid")
-    t = data.get("t")
-    del_result = False
-    msg = ""
-    try:
-        if not uid or not t:
-            msg = "未提供合法的用户信息"
-            logger.error(msg)
-            return jsonify({"success": del_result,"message": msg}), 200
-        vdb_dir = f"{VDB_PREFIX}{uid}"
-        if os.path.exists(vdb_dir):
-            shutil.rmtree(vdb_dir)
-            msg = "成功删除知识库"
-            del_result = True
-        else:
-            msg = "知识库不存在"
-        logger.info(f"{msg}, {vdb_dir}")
-        return jsonify({"success": del_result, "message": msg}), 200
-    except Exception as e:
-        msg = f"删除知识库出现异常 {str(e)}"
-        logger.error(f"err_msg, {msg}", exc_info=True)
-        return jsonify({"success": del_result, "message": msg}), 200
-
 
 @vdb_bp.route("/vdb/index/doc", methods=['POST'])
 def index_doc():
