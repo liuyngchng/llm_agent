@@ -72,14 +72,39 @@ def vdb_index():
     return render_template(dt_idx, **ctx)
 
 @vdb_bp.route('/vdb/list', methods=['POST'])
-def list_knowledge_bases():
-    # 验证 uid/t 参数
-    # 返回 JSON 格式: {"knowledge_bases": [{id:1, name:"示例"}]}
+def get_vdb_list():
+    """
+    获取知识库列表
+    """
     data = request.get_json()
+    logger.info(f"get_vdb_list {data}")
     uid = data.get("uid")
     t = data.get("t")
-    dt = DbUtl.get_my_vdb_info(uid)
-    return jsonify({"knowledge_bases": dt})
+    dt = DbUtl.get_vdb_info_by_uid(uid)
+    return jsonify({"kb_list": dt})
+
+@vdb_bp.route('/vdb/create', methods=['POST'])
+def create_vdb():
+    """
+    创建知识库
+    """
+    data = request.get_json()
+    logger.info(f"create_vdb {data}")
+    uid = data.get("uid")
+    kb_name = data.get("kb_name")
+    is_public = data.get("is_public")
+    t = data.get("t")
+    db_check = DbUtl.get_vdb_info_by_uid(uid, kb_name)
+    if db_check:
+        info = {"success": False, "message": f"知识库 {kb_name} 已存在"}
+        logger.error(info)
+        return jsonify(info), 200
+    if is_public:
+        is_public = 1
+    else:
+        is_public = 0
+    dt = DbUtl.create_vdb_info(kb_name, uid, is_public)
+    return jsonify({"success": True, "kb": dt})
 
 @vdb_bp.route('/vdb/upload', methods=['POST'])
 def upload_file():

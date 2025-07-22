@@ -39,12 +39,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 创建知识库请求
         const uid = document.getElementById('uid').value;
         const t = document.getElementById('t').value;
+        const isPublic = document.getElementById('public_checkbox').checked;
 
         try {
             const response = await fetch('/vdb/create', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ kb_name: kbName, uid, t })
+                body: JSON.stringify({ kb_name: kbName, uid, is_public:isPublic, t })
             });
 
             const result = await response.json();
@@ -230,8 +231,8 @@ async function loadKnowledgeBases() {
         }
 
         // 添加知识库选项
-        if (result.knowledge_bases && result.knowledge_bases.length > 0) {
-            result.knowledge_bases.forEach(kb => {
+        if (result.kb_list && result.kb_list.length > 0) {
+            result.kb_list.forEach(kb => {
                 const option = document.createElement('option');
                 option.value = kb.id;
                 option.textContent = kb.name;

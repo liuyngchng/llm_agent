@@ -396,6 +396,18 @@ footer {
     gap: 10px;
 }
 
+.visibility-option {
+    display: inline-block;
+    margin: 0 12px;
+    vertical-align: middle;
+}
+
+.visibility-option label {
+    margin-left: 6px;
+    cursor: pointer;
+    color: #555;
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }

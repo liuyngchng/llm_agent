@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 
 DB_CONN_TIMEOUT=5      # 连接超时(秒)
 DB_RW_TIMEOUT=20       # 数据读写超时(秒)
+CFG_DB_FILE = "cfg.db"
+CFG_DB_URI=f"sqlite:///{CFG_DB_FILE}"
 
 class DbUtl:
     """
@@ -431,9 +433,23 @@ class DbUtl:
         )
 
     @staticmethod
-    def get_my_vdb_info(uid: str):
-        db_uri = "sqlite:///cfg.db"
-        my_dt = DbUtl.sqlite_output(db_uri, f"select * from vdb_info where uid = '{uid}'", DataType.JSON.value)
+    def get_vdb_info_by_uid(uid: str, kdb_name=''):
+        if not uid and uid.strip() != '':
+            raise RuntimeError("uid_null_err")
+        sql = f"select * from vdb_info where uid = '{uid}'"
+        if kdb_name and kdb_name.strip() !='':
+            sql += f" and name = '{kdb_name}'"
+        logger.info(f"sql={sql}")
+        my_dt = DbUtl.sqlite_output(CFG_DB_URI,sql,DataType.JSON.value )
+        logger.info(f"my_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
+    def create_vdb_info(kdb_name: str, uid: str, is_public=False):
+        sql = f"insert into vdb_info (name, uid, is_public) values ('{kdb_name}', '{uid}', '{is_public}')"
+        with sqlite3.connect(CFG_DB_FILE) as my_conn:
+            logger.info(f"sql={sql}")
+            my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
         logger.info(f"my_dt {my_dt}")
         return my_dt
 
@@ -468,8 +484,7 @@ def test_url():
     logger.info(f"url_decode test:\n {decode_params}\n")
 
 def test_sqlite():
-    db_uri = "sqlite:///cfg.db"
-    my_dt = DbUtl.sqlite_output(db_uri, "select * from schema_info where entity = 'dws_dw_ycb_day'", DataType.JSON.value)
+    my_dt = DbUtl.sqlite_output(CFG_DB, "select * from schema_info where entity = 'dws_dw_ycb_day'", DataType.JSON.value)
     logger.info(f"my_dt {my_dt}")
 
 def test_add_ou_id_condition():
@@ -518,6 +533,7 @@ def test_get_count_sql():
 if __name__ == "__main__":
     # test_get_count_sql()
     test_add_ou_id_condition()
+
     # test_db()
     # sql1 = "select a from b where c=d limit 30"
     # new_sql1 = DbUtl.get_page_sql(sql1, 5)
