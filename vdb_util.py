@@ -187,7 +187,7 @@ def vector_file_in_progress(task_id: str, thread_lock, task_progress: dict, file
             raise ValueError(f"Unsupported_file_type: {file_type}")
 
         loader = loader_mapping[file_type](file_name)
-        documents: List[Document] = loader.load()
+        documents: list[Document] = loader.load()
 
         if not documents:
             logger.warning(f"no_txt_content_found_in_file: {file_name}")

@@ -212,16 +212,18 @@ def upload_file():
 def index_doc():
     logger.info(f"start_index_doc, {request}")
     data = request.json
+    logger.info(f"vdb_index_doc, {data}")
     task_id = data.get("task_id")
     file_name = data.get("file_name")
     uid = data.get("uid")
+    kb_id = data.get("kb_id")
 
-    if not task_id or not file_name:
+    if not task_id or not file_name or not kb_id:
         return jsonify({"error": "缺少参数"}), 400
 
     threading.Thread(
         target=process_doc,
-        args=(task_id, file_name, uid)
+        args=(task_id, file_name, uid, kb_id)
     ).start()
 
     return jsonify({"status": "started", "task_id": task_id}), 200
@@ -241,14 +243,16 @@ def get_doc_process_info():
 
 @vdb_bp.route('/vdb/search', methods=['POST'])
 def search_vdb():
-    logger.info(f"start_search_vdb, {request}")
+
     data = request.json
+    logger.info(f"vdb_search, {data}")
     search_input = data.get("search_input")
     uid = data.get("uid")
+    kb_id = data.get("kb_id")
     t = data.get("t")
     if not search_input or not uid or not t:
         return jsonify({"error": "缺少参数"}), 400
-    my_vector_db_dir = f"{VDB_PREFIX}{uid}"
+    my_vector_db_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
 
     search_result = search_txt(search_input, my_vector_db_dir, 0.1, my_cfg['api'], 3)
     logger.info(f"search_result_for_[{search_input}], {search_result}")
@@ -269,11 +273,11 @@ def clean_tasks():
         time.sleep(300)
 
 
-def process_doc(task_id: str, file_name: str, uid: str):
+def process_doc(task_id: str, file_name: str, uid: str, kb_id: str):
     try:
         task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
-        output_vdb_dir = f"{VDB_PREFIX}{uid}"
+        output_vdb_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
         vector_file_in_progress(task_id, thread_lock, task_progress, my_target_doc,
             output_vdb_dir, my_cfg['api'],300, 80)
     except Exception as e:
