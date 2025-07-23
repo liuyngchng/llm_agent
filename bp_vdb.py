@@ -13,6 +13,7 @@ import time
 from flask import (request, jsonify, Blueprint, render_template)
 from werkzeug.utils import secure_filename
 
+import vdb_util
 from db_util import DbUtl
 from sys_init import init_yml_cfg
 from vdb_util import vector_file_in_progress, search_txt
@@ -26,6 +27,8 @@ vdb_bp = Blueprint('vdb', __name__)
 VDB_PREFIX = "./vdb/vdb_idx_"
 
 UPLOAD_FOLDER = "upload_doc"
+# 确保上传目录存在
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 my_cfg = init_yml_cfg()
 
@@ -82,6 +85,54 @@ def get_vdb_list():
     t = data.get("t")
     dt = DbUtl.get_vdb_info_by_uid(uid)
     return jsonify({"kb_list": dt})
+
+@vdb_bp.route('/vdb/file/list', methods=['POST'])
+def get_vdb_file_list():
+    """
+    获取知识库内的文件列表
+    """
+    data = request.get_json()
+    logger.info(f"get_vdb_file_list {data}")
+    uid = data.get("uid")
+    t = data.get("t")
+    vdb_id = data.get("vdb_id")
+    dt = DbUtl.get_vdb_file_list(uid, vdb_id)
+    return jsonify({"files": dt, "success": True})
+
+@vdb_bp.route('/vdb/file/delete', methods=['POST'])
+def delete_file_from_vdb():
+    """
+    删除知识库内的文件
+    """
+    data = request.get_json()
+    logger.info(f"delete_file_from_vdb {data}")
+    uid = data.get("uid")
+    t = data.get("t")
+    vdb_id = data.get("vdb_id")
+    file_id = data.get("file_id")
+
+    vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_id}"
+    if not os.path.exists(vdb_dir):
+        info = {"success": False, "message": "知识库不存在，删除失败"}
+        logger.info(info)
+        return jsonify(info), 200
+    dt = DbUtl.get_vdb_file_list(uid, vdb_id)
+    if not dt or len(dt) == 0:
+        info = {"success": False, "message": "知识库中的文件不存在，删除失败"}
+        logger.info(info)
+        return jsonify(info), 200
+    disk_file_name = dt[0].get("file_path", None)
+    if not disk_file_name:
+        info = {"success": False, "message": "文件路径信息缺失，删除失败"}
+        logger.info(info)
+        return jsonify(info), 200
+    DbUtl.delete_file_by_uid_vbd_id_file_id(file_id, uid, vdb_id)
+    save_path = os.path.join(UPLOAD_FOLDER, disk_file_name)
+    result = vdb_util.del_doc(save_path, vdb_dir)
+    logger.info(f"delete_file_from_vdb, {result}, file_save_path {save_path}")
+    info = {"success": True, "message": "文件已成功从知识库中删除"}
+    logger.info(info)
+    return jsonify(info), 200
 
 @vdb_bp.route('/vdb/create', methods=['POST'])
 def create_vdb():
@@ -143,34 +194,34 @@ def upload_file():
         logger.error(info)
         return jsonify(info), 400
     file = request.files['file']
-
-    if file.filename == '':
-        info = {"success": False, "message": "空文件名"}
+    upload_file_name = file.filename
+    kb_id = request.form.get('kb_id')
+    uid = request.form.get('uid')
+    if not kb_id or not uid or not upload_file_name:
+        info = {"success": False, "message": f"缺少参数,文件名、知识库ID或用户ID为空, {upload_file_name}, {kb_id}, {uid}"}
         logger.error(info)
         return jsonify(info), 400
-    logger.info(f"request_filename: {file.filename}")
+    logger.info(f"vdb_upload_file, {upload_file_name}, {kb_id}, {uid}")
+
     try:
         # 安全检查和处理文件名
-        safe_filename = secure_filename(file.filename)
+        safe_filename = secure_filename(upload_file_name)
         if not safe_filename:  # 安全检查后文件名仍为空
-            info = {"success": False, "message": f"无效文件名, {file.filename}"}
+            info = {"success": False, "message": f"无效文件名, {upload_file_name}"}
             logger.error(info)
             return jsonify(info), 400
         # 检查文件类型
         logger.info(f"safe_filename: {safe_filename}")
         allowed_extensions = {'.docx', '.pdf', '.txt'}
-        original_filename = file.filename
+        original_filename = upload_file_name
         file_ext = os.path.splitext(original_filename)[1].lower()  # 提取扩展名并转为小写
         if file_ext not in allowed_extensions:
             info = {"success": False, "message": f"不支持的文件类型 {file_ext}，仅允许 docx/pdf/txt"}
             logger.error(info)
             return jsonify(info), 400
-
-
         # 读取文件头进行魔数验证
         file.seek(0)
         header = file.read(4)  # 读取前4字节
-
         # 特殊处理DOCX(PK\x03\x04)和PDF(%PDF)
         if file_ext in ['.docx', '.pdf']:
             valid_signatures = ALLOWED_TYPES[file_ext]
@@ -178,15 +229,15 @@ def upload_file():
                 info = {"success": False, "message": "文件内容与类型不符"}
                 logger.error(info)
                 return jsonify(info), 400
-
         file.seek(0)  # 重置文件指针
         # 生成唯一任务ID和文件名
         task_id = str(int(time.time() * 1000))  # 使用毫秒提高唯一性
-        filename = f"{task_id}_{original_filename}"
-        save_path = os.path.join(UPLOAD_FOLDER, filename)
-
-        # 确保上传目录存在
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        disk_file_name = f"{task_id}_{original_filename}"
+        save_path = os.path.join(UPLOAD_FOLDER, disk_file_name)
+        file_info = DbUtl.get_file_info(upload_file_name, uid, kb_id)
+        if not file_info:
+            logger.info(f"save_new_file_info_for_vdb, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
+            DbUtl.save_file_info(upload_file_name, disk_file_name, uid, kb_id)
 
         # 保存文件
         file.save(save_path)
@@ -195,11 +246,11 @@ def upload_file():
         with thread_lock:
             task_progress[task_id] = {
                 'progress': 0,
-                'filename': filename,
+                'filename': disk_file_name,
                 'timestamp': time.time()
             }
-        info = {"success": True,"task_id": task_id,"file_name": filename,"message": "文件上传成功"}
-        logger.info(f"文件上传成功: {filename}, 大小: {os.path.getsize(save_path)}字节, return {info}")
+        info = {"success": True,"task_id": task_id,"file_name": disk_file_name,"message": "文件上传成功"}
+        logger.info(f"文件上传成功: {disk_file_name}, 大小: {os.path.getsize(save_path)}字节, return {info}")
         return jsonify(info), 200
 
     except Exception as e:
@@ -210,7 +261,6 @@ def upload_file():
 
 @vdb_bp.route("/vdb/index/doc", methods=['POST'])
 def index_doc():
-    logger.info(f"start_index_doc, {request}")
     data = request.json
     logger.info(f"vdb_index_doc, {data}")
     task_id = data.get("task_id")
@@ -220,12 +270,10 @@ def index_doc():
 
     if not task_id or not file_name or not kb_id:
         return jsonify({"error": "缺少参数"}), 400
-
     threading.Thread(
         target=process_doc,
         args=(task_id, file_name, uid, kb_id)
     ).start()
-
     return jsonify({"status": "started", "task_id": task_id}), 200
 
 @vdb_bp.route('/vdb/process/info', methods=['POST'])

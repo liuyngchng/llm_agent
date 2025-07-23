@@ -408,6 +408,22 @@ footer {
     color: #555;
 }
 
+/* 添加在现有样式底部 */
+#fileListContainer {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+#fileListTable th:nth-child(1) { width: 20%; }
+#fileListTable th:nth-child(2) { width: 60%; }
+#fileListTable th:nth-child(3) { width: 20%; }
+
+.delete-file-btn {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }

@@ -21,10 +21,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusDesc.textContent = `已选择: ${this.options[this.selectedIndex].text}`;
             deleteBtn.style.display = 'block';
             step2.classList.remove('hidden');
+            loadFileList(currentKB);
         } else {
             step2.classList.add('hidden');
             deleteBtn.style.display = 'none';
             statusDesc.textContent = '未选择知识库';
+            document.getElementById('fileListContainer').style.display = 'none';
         }
     });
 
@@ -107,12 +109,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('textProgress').textContent = "开始处理...";
         document.getElementById('progressFill').style.width = '0%';
         document.getElementById('stream_output').innerHTML = '<div class="status-container">正在上传文档...</div>';
-
+        const uid = document.getElementById('uid').value;
         // 上传文件
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
         formData.append('kb_id', currentKB);
-
+        formData.append('uid', uid);
         try {
             const uploadRes = await fetch('/vdb/upload', {
                 method: 'POST',
@@ -274,6 +276,7 @@ async function fetchProgress() {
             document.getElementById('progressFill').style.width = '100%';
             document.getElementById('stream_output').innerHTML =
                 `<div class="status-container"><i class="fas fa-check-circle"></i> ${data.progress}</div>`;
+            await loadFileList(currentKB);
         }
 
         if (data.progress.includes("失败") || data.progress.includes("错误")) {
@@ -295,6 +298,113 @@ function formatFileSize(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+// 加载文件列表
+async function loadFileList(kb_id) {
+    const container = document.getElementById('fileListContainer');
+    const tbody = document.querySelector('#fileListTable tbody');
+    const uid = document.getElementById('uid').value;
+    const t = document.getElementById('t').value;
+
+    try {
+        const response = await fetch('/vdb/file/list', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                vdb_id: kb_id,
+                uid: uid,
+                t: t
+            })
+        });
+
+        if (!response.ok) throw new Error('获取文件列表失败');
+        const result = await response.json();
+        // 检查结果中是否有 files 属性
+        if (!result.files) {
+            throw new Error('返回数据格式错误，缺少 files 属性');
+        }
+        const files = result.files;
+        // 清空表格
+        tbody.innerHTML = '';
+
+        if (files.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+
+        // 填充文件列表
+        files.forEach(file => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${file.id}</td>
+                <td>${file.name}</td>
+                <td>
+                    <button class="btn btn-danger delete-file-btn"
+                            data-file-id="${file.id}">
+                        <i class="fas fa-trash"></i> 删除
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        container.style.display = 'block';
+
+        // 添加删除事件监听
+        document.querySelectorAll('.delete-file-btn').forEach(btn => {
+            btn.addEventListener('click', handleFileDelete);
+        });
+
+    } catch (error) {
+        console.error('加载文件列表失败:', error);
+        container.style.display = 'none';
+    }
+}
+
+// 处理文件删除
+async function handleFileDelete(e) {
+    const fileId = e.target.closest('button').dataset.fileId;
+    if (!confirm(`确定要删除这个文件吗？此操作不可恢复！`)) return;
+
+    const uid = document.getElementById('uid').value;
+    const t = document.getElementById('t').value;
+    const btn = e.target.closest('button');
+    const originalHTML = btn.innerHTML;
+
+    try {
+        // 显示加载状态
+        btn.innerHTML = '<div class="spinner"></div> 删除中...';
+        btn.disabled = true;
+
+        const response = await fetch('/vdb/file/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                uid,
+                vdb_id: currentKB,
+                file_id: fileId,
+                t
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message || '删除失败');
+
+        // 刷新文件列表
+        await loadFileList(currentKB);
+        alert('文件已成功删除！');
+
+    } catch (error) {
+        console.error('文件删除失败:', error);
+        alert(`删除失败: ${error.message}`);
+    } finally {
+        // 恢复按钮状态
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    }
+}
+
+
 
 // 检索功能
 document.addEventListener('DOMContentLoaded', async () => {

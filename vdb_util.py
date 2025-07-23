@@ -72,7 +72,7 @@ def process_doc(task_id: str, thread_lock, task_progress: dict, documents: list[
     pbar = None
     try:
         doc_sources = [doc.metadata['source'] for doc in documents]
-        logger.info(f"Loaded {len(documents)} documents:\n" + "\n".join(f"- {src}" for src in doc_sources))
+        logger.info(f"load_documents_size, {len(documents)}:\n" + "\n".join(f"- {src}" for src in doc_sources))
 
         # 文本分割
         logger.info("splitting_documents...")
@@ -169,12 +169,12 @@ def build_client(llm_cfg: dict) -> OpenAI:
 def vector_file_in_progress(task_id: str, thread_lock, task_progress: dict, file_name: str,
                             vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80) -> None:
     """处理单个文档文件并添加到向量数据库"""
+    abs_path = os.path.abspath(file_name)
     try:
         with thread_lock:
             task_progress[task_id] = {"text": "开始处理文档...", "timestamp": time.time()}
-
-        logger.info(f"start_process_doc, {file_name}")
-        file_type = os.path.splitext(file_name)[-1].lower().lstrip('.')
+        logger.info(f"start_process_doc, {abs_path}")
+        file_type = os.path.splitext(abs_path)[-1].lower().lstrip('.')
         loader_mapping = {
             "txt": lambda f: TextLoader(f, encoding='utf8'),
             "pdf": lambda f: UnstructuredPDFLoader(f, encoding='utf8'),
@@ -186,11 +186,11 @@ def vector_file_in_progress(task_id: str, thread_lock, task_progress: dict, file
                 task_progress[task_id] = {"text": f"文件类型 {file_type} 暂不支持", "timestamp": time.time()}
             raise ValueError(f"Unsupported_file_type: {file_type}")
 
-        loader = loader_mapping[file_type](file_name)
+        loader = loader_mapping[file_type](abs_path)
         documents: list[Document] = loader.load()
 
         if not documents:
-            logger.warning(f"no_txt_content_found_in_file: {file_name}")
+            logger.warning(f"no_txt_content_found_in_file: {abs_path}")
             with thread_lock:
                 task_progress[task_id] = {"text": "文件中未发现有效的文本内容", "timestamp": time.time()}
             return
@@ -198,7 +198,7 @@ def vector_file_in_progress(task_id: str, thread_lock, task_progress: dict, file
         # 确保有source元数据
         for doc in documents:
             if 'source' not in doc.metadata:
-                doc.metadata['source'] = file_name
+                doc.metadata['source'] = abs_path
 
         logger.info(f"load_success_txt_snippet: {len(documents)}")
         with thread_lock:
@@ -208,30 +208,28 @@ def vector_file_in_progress(task_id: str, thread_lock, task_progress: dict, file
         process_doc(task_id, thread_lock, task_progress, documents, vector_db, llm_cfg, chunk_size, chunk_overlap)
 
     except Exception as e:
-        logger.error(f"load_file_fail_err, {file_name}, {e}", exc_info=True)
+        logger.error(f"load_file_fail_err, {abs_path}, {e}", exc_info=True)
 
 
 def del_doc(file_path: str, vector_db: str) -> bool:
     """删除指定文档的所有向量片段"""
+    # 获取绝对路径用于匹配
+    abs_path = os.path.abspath(file_path)
     try:
         chroma_client = chromadb.PersistentClient(path=vector_db)
         collection = chroma_client.get_collection("knowledge_base")
-
-        # 获取绝对路径用于匹配
-        abs_path = os.path.abspath(file_path)
-
         # 先查询匹配文档
         results = collection.get(where={"source": abs_path})
 
         if not results['ids']:
-            logger.warning(f"No documents found for source: {abs_path}")
+            logger.warning(f"no_documents_found_for_source: {abs_path}")
             return False
         # 删除所有匹配项
         collection.delete(ids=results['ids'])
-        logger.info(f"Deleted {len(results['ids'])} chunks for document: {abs_path}")
+        logger.info(f"deleted_chunks_for_document, {abs_path}, collection_size {len(results['ids'])}")
         return True
     except Exception as e:
-        logger.error(f"删除文档时出错: {str(e)}", exc_info=True)
+        logger.error(f"delete_doc_err: {str(e)}, {abs_path}", exc_info=True)
         return False
 
 def update_doc(task_id: str, thread_lock, task_progress: dict, file_name: str,
@@ -340,7 +338,7 @@ def test_vector_file_in_progress():
     task_id =(str)(time.time())
     task_progress = {}
     # file = "./llm.txt"
-    file = "/home/rd/doc/文档生成/knowledge_base/1_pure.txt"
+    file = "./1_pure.txt"
     vdb = "./vdb/test_db"
     llm_cfg = my_cfg['api']
     logger.info(f"vector_file_in_progress({task_id}, {thread_lock}, {task_progress}, {file}, {vdb}, {llm_cfg})")
@@ -348,8 +346,7 @@ def test_vector_file_in_progress():
 
 def test_del_doc():
     test_search_txt()
-
-    file = "/home/rd/doc/文档生成/knowledge_base/1_pure.txt"
+    file = "./1_pure.txt"
     vdb = "./vdb/test_db"
     logger.info(f"start del_doc {file}")
     del_doc(file, vdb)
@@ -361,14 +358,15 @@ def test_update_doc():
     task_id = str(time.time())
     task_progress = {}
     # file = "./llm.txt"
-    file = "/home/rd/doc/文档生成/knowledge_base/1_pure.txt"
+    file = "./1_pure.txt"
     vdb = "./vdb/test_db"
     my_cfg = init_yml_cfg()
     llm_cfg = my_cfg['api']
     update_doc(task_id, thread_lock, task_progress, file, vdb, llm_cfg)
 
 if __name__ == "__main__":
-    # test_vector_file_in_progress()
+    test_vector_file_in_progress()
     test_search_txt()
+    test_del_doc()
     # test_update_doc()
-    # test_search_txt()
+    test_search_txt()

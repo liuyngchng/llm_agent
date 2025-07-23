@@ -439,7 +439,7 @@ class DbUtl:
         sql = f"select * from vdb_info where uid = '{uid}'"
         if kdb_name and kdb_name.strip() !='':
             sql += f" and name = '{kdb_name}'"
-        logger.info(f"sql={sql}")
+        logger.info(f"get_vdb_info_by_uid_sql, {sql}")
         my_dt = DbUtl.sqlite_output(CFG_DB_URI,sql,DataType.JSON.value )
         logger.info(f"my_dt {my_dt}")
         return my_dt
@@ -448,7 +448,7 @@ class DbUtl:
     def create_vdb_info(kdb_name: str, uid: str, is_public=False):
         sql = f"insert into vdb_info (name, uid, is_public) values ('{kdb_name}', '{uid}', '{is_public}')"
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
-            logger.info(f"sql={sql}")
+            logger.info(f"create_vdb_info_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
         logger.info(f"my_dt {my_dt}")
         return my_dt
@@ -460,11 +460,59 @@ class DbUtl:
             raise RuntimeError("uid_or_kb_id_null_err")
         sql = f"delete from vdb_info where uid = '{uid}' and id = '{kb_id}'"
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
-            logger.info(f"sql={sql}")
+            logger.info(f"delete_vdb_by_uid_and_kb_id_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
         logger.info(f"my_dt {my_dt}")
         return my_dt
 
+    @staticmethod
+    def get_vdb_file_list(uid: str, vdb_id: str):
+        if not uid or not vdb_id:
+            raise RuntimeError(f"param_null_err, {uid}, {vdb_id}")
+        sql = f"select * from file_info where uid = '{uid}' and vdb_id = '{vdb_id}'"
+        logger.info(f"get_vdb_file_list_sql, {sql}")
+        my_dt = DbUtl.sqlite_output(CFG_DB_URI,sql,DataType.JSON.value )
+        logger.info(f"my_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
+    def get_file_info(file_name: str, uid: str, vdb_id: str):
+        if not uid or not file_name or not vdb_id:
+            raise RuntimeError(f"param_null_err {file_name}, {uid}, {vdb_id}")
+        sql = f"select * from file_info where name = '{file_name}' and uid = '{uid}' and vdb_id = '{vdb_id}' limit 1"
+        logger.info(f"get_file_info_sql, {sql}")
+        my_dt = DbUtl.sqlite_output(CFG_DB_URI,sql,DataType.JSON.value )
+        logger.info(f"my_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
+    def delete_file_by_uid_vbd_id_file_name(file_name: str, uid: str, vdb_id: str):
+        sql = f"delete from file_info where name ='{file_name}' and uid='{uid}' and vdb_id='{vdb_id}' limit 1 "
+        with sqlite3.connect(CFG_DB_FILE) as my_conn:
+            logger.info(f"delete_file_by_uid_vbd_id_file_name_sql, {sql}")
+            my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
+        logger.info(f"my_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
+    def delete_file_by_uid_vbd_id_file_id(file_id: str, uid: str, vdb_id: str):
+        sql = f"delete from file_info where id ='{file_id}' and uid='{uid}' and vdb_id='{vdb_id}' limit 1 "
+        with sqlite3.connect(CFG_DB_FILE) as my_conn:
+            logger.info(f"delete_file_by_uid_vbd_id_file_id_sql, {sql}")
+            my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
+        logger.info(f"my_dt {my_dt}")
+        return my_dt
+
+
+    @staticmethod
+    def save_file_info(original_file_name: str, saved_file_name:str, uid: str, vdb_id: str):
+        sql = (f"insert into file_info (name, uid, vdb_id, file_path) values"
+               f" ('{original_file_name}', '{uid}', '{vdb_id}', '{saved_file_name}')")
+        with sqlite3.connect(CFG_DB_FILE) as my_conn:
+            logger.info(f"save_file_info_sql, {sql}")
+            my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
+        logger.info(f"my_dt {my_dt}")
+        return my_dt
 
 def test_db():
     my_sql = "SELECT * from order_info"
