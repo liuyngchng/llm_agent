@@ -236,14 +236,15 @@ def upload_file():
         task_id = str(int(time.time() * 1000))  # 使用毫秒提高唯一性
         disk_file_name = f"{task_id}_{original_filename}"
         save_path = os.path.join(UPLOAD_FOLDER, disk_file_name)
-        file_info = DbUtl.get_file_info(upload_file_name, uid, kb_id)
-        if not file_info:
-            logger.info(f"save_new_file_info_for_vdb, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
-            DbUtl.save_file_info(upload_file_name, disk_file_name, uid, kb_id)
-
         # 保存文件
         file.save(save_path)
-
+        file_info = DbUtl.get_file_info(upload_file_name, uid, kb_id)
+        if file_info:
+            logger.info(f"duplicate_upload_file, {upload_file_name}, {disk_file_name}, "
+                    f"{uid}, {kb_id}, previous_file {file_info[0].get('file_path')}")
+        else:
+            logger.info(f"save_new_file_info_for_vdb, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
+            DbUtl.save_file_info(upload_file_name, disk_file_name, uid, kb_id)
         # 初始化任务进度
         with thread_lock:
             task_progress[task_id] = {
@@ -327,18 +328,25 @@ def process_doc(task_id: str, file_name: str, uid: str, kb_id: str):
     try:
         upload_file_name =get_upload_file_name(file_name)
         file_info = DbUtl.get_file_info(upload_file_name, uid, kb_id)
-        my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
+        if not file_info:
+            raise Exception(f"no_upload_file_info_err, {upload_file_name}, {file_name}, {uid}, {kb_id}")
+        record_file_name = file_info[0]['file_path']
+        file_id = file_info[0]['id']
+        cur_file_path = os.path.join(UPLOAD_FOLDER, file_name)
+        prev_file_path = os.path.join(UPLOAD_FOLDER, record_file_name)
         output_vdb_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
-        if file_info:
-            logger.info(f"duplicate_file_in_vdb_to_be_update, {file_name}, vdb_id {kb_id}")
+        if upload_file_name != record_file_name:
+
+            logger.info(f"duplicate_file_in_vdb_to_be_update, prev={record_file_name}, cur={file_name}, vdb_id {kb_id}")
             with thread_lock:
                 task_progress[task_id] = {"text": "更新已有文档...", "timestamp": time.time()}
-            update_doc(task_id, thread_lock, task_progress, my_target_doc, output_vdb_dir, my_cfg['api'])
+            update_doc(task_id, thread_lock, task_progress, prev_file_path, cur_file_path, output_vdb_dir, my_cfg['api'])
+            DbUtl.update_file_info(file_id, file_name)
         else:
             logger.info(f"new_file_in_vdb_to_be_add, {file_name}, vdb_id {kb_id}")
             with thread_lock:
                 task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
-            vector_file(task_id, thread_lock, task_progress, my_target_doc,
+            vector_file(task_id, thread_lock, task_progress, cur_file_path,
                 output_vdb_dir, my_cfg['api'],300, 80)
     except Exception as e:
         with thread_lock:

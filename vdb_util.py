@@ -232,17 +232,17 @@ def del_doc(file_path: str, vector_db: str) -> bool:
         logger.error(f"delete_doc_err: {str(e)}, {abs_path}", exc_info=True)
         return False
 
-def update_doc(task_id: str, thread_lock, task_progress: dict, file_name: str,
+def update_doc(task_id: str, thread_lock, task_progress: dict, prev_file_path: str, cur_file_path: str,
                vector_db: str, llm_cfg: dict) -> None:
     """更新文档：先删除旧内容再添加新内容"""
     # 先删除旧内容
     with thread_lock:
         task_progress[task_id] = {"text": "开始删除旧版本文档", "timestamp": time.time()}
-    if del_doc(file_name, vector_db):
+    if del_doc(prev_file_path, vector_db):
         with thread_lock:
             task_progress[task_id] = {"text": "已删除旧版本文档", "timestamp": time.time()}
     # 再重新添加文档
-    vector_file(task_id, thread_lock, task_progress, file_name, vector_db, llm_cfg)
+    vector_file(task_id, thread_lock, task_progress, cur_file_path, vector_db, llm_cfg)
 
 
 def load_vdb(vector_db: str, llm_cfg: dict) -> Optional[chromadb.Collection]:

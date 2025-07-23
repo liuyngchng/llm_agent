@@ -400,6 +400,7 @@ async function handleFileDelete(e) {
 
 // 检索功能
 document.addEventListener('DOMContentLoaded', async () => {
+
     document.getElementById('search_btn').addEventListener('click', async () => {
         const search_input = document.getElementById('search_input').value;
         if (!search_input.trim()) {

@@ -194,6 +194,18 @@ h2 i {
     box-shadow: 0 5px 15px rgba(229, 57, 53, 0.3);
 }
 
+.btn-activate {
+    background: linear-gradient(to right, #28a745, #218838);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-activate:hover:not(:disabled) {
+    background: linear-gradient(to right, #218838, #1e7e34);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+}
+
 #fileName {
     flex: 1;
     padding: 14px;
@@ -480,7 +492,8 @@ footer {
     }
 
     .kb-status-area {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: wrap;
         align-items: flex-start;
         gap: 10px;
     }
@@ -488,5 +501,9 @@ footer {
     .kb-status-info {
         width: 100%;
         justify-content: space-between;
+    }
+    #activateBtn, #deleteBtn {
+        margin-top: 10px;
+        width: 100%;
     }
 }
