@@ -59,14 +59,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // 重新加载知识库列表
                 await loadKnowledgeBases();
-
-                // 选中新创建的知识库
-                document.getElementById('kb_selector').value = result.kb_id;
-                currentKB = result.kb_id;
-                statusDesc.textContent = `已选择: ${kbName}`;
-                deleteBtn.style.display = 'block';
-                step2.classList.remove('hidden');
-
                 // 清空输入框
                 document.getElementById('kb_name').value = '';
             } else {
