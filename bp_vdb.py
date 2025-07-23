@@ -13,10 +13,10 @@ import time
 from flask import (request, jsonify, Blueprint, render_template)
 from werkzeug.utils import secure_filename
 
-import vdb_util
+
 from db_util import DbUtl
 from sys_init import init_yml_cfg
-from vdb_util import vector_file_in_progress, search_txt
+from vdb_util import vector_file, search_txt, update_doc
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -170,7 +170,9 @@ def delete_vdb_dir():
             msg = "未提供合法的用户信息"
             logger.error(msg)
             return jsonify({"success": del_result,"message": msg}), 200
+        DbUtl.delete_file_by_uid_vbd_id(uid, kb_id)
         DbUtl.delete_vdb_by_uid_and_kb_id(uid, kb_id)
+
         vdb_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
         if os.path.exists(vdb_dir):
             shutil.rmtree(vdb_dir)
@@ -323,18 +325,32 @@ def clean_tasks():
 
 def process_doc(task_id: str, file_name: str, uid: str, kb_id: str):
     try:
-        task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
+        upload_file_name =get_upload_file_name(file_name)
+        file_info = DbUtl.get_file_info(upload_file_name, uid, kb_id)
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
         output_vdb_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
-        vector_file_in_progress(task_id, thread_lock, task_progress, my_target_doc,
-            output_vdb_dir, my_cfg['api'],300, 80)
+        if file_info:
+            logger.info(f"duplicate_file_in_vdb_to_be_update, {file_name}, vdb_id {kb_id}")
+            with thread_lock:
+                task_progress[task_id] = {"text": "更新已有文档...", "timestamp": time.time()}
+            update_doc(task_id, thread_lock, task_progress, my_target_doc, output_vdb_dir, my_cfg['api'])
+        else:
+            logger.info(f"new_file_in_vdb_to_be_add, {file_name}, vdb_id {kb_id}")
+            with thread_lock:
+                task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
+            vector_file(task_id, thread_lock, task_progress, my_target_doc,
+                output_vdb_dir, my_cfg['api'],300, 80)
     except Exception as e:
         with thread_lock:
             task_progress[task_id] = {
                 "text": f"任务处理失败: {str(e)}",
                 "timestamp": time.time()
             }
-        logger.exception("文档生成异常", e)
+        logger.exception(f"process_doc_err, {file_name}", e)
+
+def get_upload_file_name(disk_file_name):
+    parts = disk_file_name.split("_", 1)
+    return parts[1] if len(parts) > 1 else disk_file_name
 
 def get_dir_file_size_in_kb(file_dir: str):
     total_size = 0

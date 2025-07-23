@@ -166,7 +166,7 @@ def build_client(llm_cfg: dict) -> OpenAI:
     )
 
 
-def vector_file_in_progress(task_id: str, thread_lock, task_progress: dict, file_name: str,
+def vector_file(task_id: str, thread_lock, task_progress: dict, file_name: str,
                             vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80) -> None:
     """处理单个文档文件并添加到向量数据库"""
     abs_path = os.path.abspath(file_name)
@@ -236,11 +236,13 @@ def update_doc(task_id: str, thread_lock, task_progress: dict, file_name: str,
                vector_db: str, llm_cfg: dict) -> None:
     """更新文档：先删除旧内容再添加新内容"""
     # 先删除旧内容
+    with thread_lock:
+        task_progress[task_id] = {"text": "开始删除旧版本文档", "timestamp": time.time()}
     if del_doc(file_name, vector_db):
         with thread_lock:
-            task_progress[task_id] = {"text": f"已删除旧版本文档", "timestamp": time.time()}
+            task_progress[task_id] = {"text": "已删除旧版本文档", "timestamp": time.time()}
     # 再重新添加文档
-    vector_file_in_progress(task_id, thread_lock, task_progress, file_name, vector_db, llm_cfg)
+    vector_file(task_id, thread_lock, task_progress, file_name, vector_db, llm_cfg)
 
 
 def load_vdb(vector_db: str, llm_cfg: dict) -> Optional[chromadb.Collection]:
@@ -331,7 +333,7 @@ def test_search_txt():
     result = search_txt(keywords, vector_db_dir, score_threshold, sys_cfg['api'], txt_num)
     logger.info(f"search_result: {result}")
 
-def test_vector_file_in_progress():
+def test_vector_file():
     os.environ["NO_PROXY"] = "*"  # 禁用代理
     my_cfg = init_yml_cfg()
     thread_lock = threading.Lock()
@@ -341,8 +343,8 @@ def test_vector_file_in_progress():
     file = "./1_pure.txt"
     vdb = "./vdb/test_db"
     llm_cfg = my_cfg['api']
-    logger.info(f"vector_file_in_progress({task_id}, {thread_lock}, {task_progress}, {file}, {vdb}, {llm_cfg})")
-    vector_file_in_progress(task_id, thread_lock, {}, file, vdb, llm_cfg)
+    logger.info(f"vector_file({task_id}, {thread_lock}, {task_progress}, {file}, {vdb}, {llm_cfg})")
+    vector_file(task_id, thread_lock, {}, file, vdb, llm_cfg)
 
 def test_del_doc():
     test_search_txt()
@@ -365,7 +367,7 @@ def test_update_doc():
     update_doc(task_id, thread_lock, task_progress, file, vdb, llm_cfg)
 
 if __name__ == "__main__":
-    test_vector_file_in_progress()
+    test_vector_file()
     test_search_txt()
     test_del_doc()
     # test_update_doc()

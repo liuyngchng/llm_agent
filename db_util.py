@@ -502,7 +502,14 @@ class DbUtl:
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
         logger.info(f"my_dt {my_dt}")
         return my_dt
-
+    @staticmethod
+    def delete_file_by_uid_vbd_id(uid: str, vdb_id: str):
+        sql = f"delete from file_info where uid='{uid}' and vdb_id='{vdb_id}'"
+        with sqlite3.connect(CFG_DB_FILE) as my_conn:
+            logger.info(f"delete_file_by_uid_vbd_id_sql, {sql}")
+            my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
+        logger.info(f"my_dt {my_dt}")
+        return my_dt
 
     @staticmethod
     def save_file_info(original_file_name: str, saved_file_name:str, uid: str, vdb_id: str):
