@@ -78,6 +78,7 @@ def vdb_index():
 def get_vdb_list():
     """
     获取知识库列表
+    :return: {"kb_list": [{'id':id1, 'name':name1},{'id':id2, 'name':name2},]}
     """
     data = request.get_json()
     logger.info(f"get_vdb_list {data}")

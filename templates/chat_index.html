@@ -29,17 +29,31 @@
             <div class="message-container bot-message-container">
             </div>
         </div>
+
         <form id="query-form">
             <div class="input-container">
                 <input type="text" class="input-field" id="query-input" name="msg"
                        placeholder="输入你的问题，帮你深度解答..." required autocomplete="off">
-                <button type="submit" class="send-button" id="send-button">
-                    <i class="fas fa-paper-plane"></i> 发送
-                </button>
-                <button type="button" class="stop-button" id="stop-button" style="display:none;">
-                    <i class="fas fa-stop"></i> 停止
-                </button>
+                <div class="toolbar">
+                    <select id="kb_selector" class="kb-selector">
+                        <option value="" disabled selected>-- 选择知识库 --</option>
+                    </select>
+                    <select id="model_selector" class="kb-selector">
+                        <option value="" disabled selected>-- 选择模型 --</option>
+                        <option value="1">deepseek v3</option>
+                        <option value="2">通义千问</option>
+                    </select>
+                </div>
+                <div class="button-container">
+                    <button type="submit" class="send-button" id="send-button">
+                        <i class="fas fa-paper-plane"></i> 发送
+                    </button>
+                    <button type="button" class="stop-button" id="stop-button" style="display:none;">
+                        <i class="fas fa-stop"></i> 停止
+                    </button>
+                </div>
             </div>
+
             <input type="hidden" id ="uid" name="uid" value="{{uid}}">
             <input type="hidden" id ="t" name="t" value="{{t}}">
             <input type="hidden" id ="app_source" name="app_source" value="{{app_source}}">

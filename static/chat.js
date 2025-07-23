@@ -11,6 +11,7 @@ let currentBotMessage = null;
 
 // 页面加载时显示欢迎信息
 window.onload = function() {
+    loadKnowledgeBases();
     const greetingEl = document.getElementById('greeting');
     if (greetingEl && greetingEl.value) {
         addMessage(greetingEl.value, 'bot');
@@ -73,14 +74,15 @@ async function fetchQueryData(query) {
         const t = document.getElementById('t').value;
         const appSource = document.getElementById('app_source').value;
         const uid = document.getElementById('uid').value;
-
+        const kbId = document.getElementById('kb_selector').value || '';
+        const modelId = document.getElementById('model_selector').value || '';
         const response = await fetch('/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Accept': 'text/event-stream'
             },
-            body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&t=${t}&app_source=${appSource}`,
+            body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&t=${t}&app_source=${appSource}&kb_id=${kbId}&model_id=${modelId}`,
             signal: abortController.signal,
             credentials: 'include'
         });
@@ -123,6 +125,44 @@ async function fetchQueryData(query) {
         }
     } finally {
         resetUI();
+    }
+}
+
+// 加载知识库列表
+async function loadKnowledgeBases() {
+    const selector = document.getElementById('kb_selector');
+    const uid = document.getElementById('uid').value;
+    const t = document.getElementById('t').value;
+
+    try {
+        const response = await fetch('/vdb/list', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ uid, t })
+        });
+        // 添加状态码检查
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`API 错误 ${response.status}: ${errorText.slice(0, 100)}...`);
+        }
+        const result = await response.json();
+
+        // 清空选择器（保留第一个选项）
+        while (selector.options.length > 1) {
+            selector.remove(1);
+        }
+
+        // 添加知识库选项
+        if (result.kb_list && result.kb_list.length > 0) {
+            result.kb_list.forEach(kb => {
+                const option = document.createElement('option');
+                option.value = kb.id;
+                option.textContent = kb.name;
+                selector.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('加载知识库失败:', error);
     }
 }
 

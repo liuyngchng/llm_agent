@@ -7,6 +7,7 @@ from flask import (request, render_template)
 import time
 import cfg_util as cfg_utl
 import my_enums
+from db_util import DbUtl
 from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -65,13 +66,16 @@ def login():
         return redirect(url_for('auth.login_index', app_source=app_source, warning_info=warning_info, usr=user))
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")
+    uid = auth_result["uid"]
+    vdb_list = DbUtl.get_vdb_info_by_uid(uid)
     ctx = {
-        "uid": auth_result["uid"],
+        "uid": uid,
         "role": auth_result["role"],
         "t": auth_result["t"],
         "sys_name": sys_name,
         "greeting": cfg_utl.get_const("greeting", app_source),
         "app_source": app_source,
+        "vdb_list": vdb_list,
     }
     session_key = f"{auth_result['uid']}_{get_client_ip()}"
     auth_info[session_key] = time.time()

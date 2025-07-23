@@ -175,8 +175,12 @@ header h1 {
 
 .input-container {
     display: flex;
+    flex-wrap: wrap; /* 允许内容换行 */
     gap: 10px;
-    position: relative;
+    padding: 10px; /* 增加内边距 */
+    border: 1px solid #ddd; /* 添加外边框 */
+    border-radius: 10px;
+    background: white;
 }
 
 .input-field {
@@ -303,6 +307,33 @@ header h1 {
     color: #555;
 }
 
+/* 工具栏的样式 */
+.toolbar {
+    display: flex;
+    gap: 10px;
+    width: 100%; /* 占满整个宽度 */
+    order: 2; /* 调整显示顺序 */
+}
+
+.kb-selector {
+    flex: 1;
+    border: none; /* 移除边框 */
+    background: #f8f9fa;
+    padding: 12px 15px;
+}
+
+.kb-selector:focus {
+    outline: none;
+    border-color: #4b6cb7;
+    box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
+}
+
+.button-container {
+    display: flex;
+    gap: 10px;
+    order: 1; /* 调整显示顺序 */
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .container {
@@ -341,6 +372,10 @@ header h1 {
 
     .input-container {
         flex-direction: column;
+    }
+
+    .button-container {
+        width: 100%;
     }
 
     .send-button, .stop-button {

@@ -54,6 +54,11 @@ def chat(catch=None):
     logger.info(f"chat_request {request.form}")
     msg = request.form.get('msg', "").strip()
     uid = request.form.get('uid').strip()
+    kb_id = request.form.get('kb_id').strip()
+    if not msg or not uid or not kb_id:
+        waring_info = f"msg_or_uid_or_kb_id_is_empty, {msg}, {uid}, {kb_id}"
+        logger.error(waring_info)
+        return waring_info
     session_key = f"{uid}_{get_client_ip()}"
     if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
         waring_info = "登录信息已失效，请重新登录后再使用本系统"
@@ -61,7 +66,7 @@ def chat(catch=None):
         return waring_info
     logger.info(f"rcv_msg, {msg}, uid {uid}")
     auth_info[session_key] = time.time()
-    my_vector_db_dir = f"{VDB_PREFIX}{uid}"
+    my_vector_db_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
 
     if not os.path.exists(my_vector_db_dir):  # 新增检查
         logger.info(f"vector_db_dir_not_exists_return_none, {my_vector_db_dir}")
