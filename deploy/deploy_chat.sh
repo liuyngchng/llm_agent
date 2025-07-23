@@ -9,6 +9,7 @@ docker run -dit --name ${app}  \
   -v /data/nltk_data:/usr/share/nltk_data \
   -v /data/bge-large-zh-v1.5:/opt/bge-large-zh-v1.5 \
   -p 19002:19000 \
+  -e MODULE_NAME=${app} \
   llm_rag:1.1
 
 docker ps -a  | grep ${app} --color=always

@@ -7,6 +7,7 @@ pip install gunicorn flask concurrent-log-handler langchain_openai langchain_oll
 import logging.config
 import os
 import time
+import sys
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, redirect, url_for
@@ -36,6 +37,8 @@ os.system(
 
 SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 
+LLM_MODEL_DICT = {"1":"deepseek-v3", "2":"qwq-32b"}
+
 
 @app.route('/')
 def app_home():
@@ -53,15 +56,16 @@ def chat(catch=None):
     """
     logger.info(f"chat_request {request.form}")
     msg = request.form.get('msg', "").strip()
-    uid = request.form.get('uid').strip()
-    kb_id = request.form.get('kb_id').strip()
+    uid = request.form.get('uid')
+    kb_id = request.form.get('kb_id')
+    model_id = request.form.get('model_id')
     if not msg or not uid or not kb_id:
-        waring_info = f"msg_or_uid_or_kb_id_is_empty, {msg}, {uid}, {kb_id}"
-        logger.error(waring_info)
+        waring_info = f"缺少用户消息、用户身份信息、知识库信息"
+        logger.error(f"{waring_info}, {msg}, {uid}, {kb_id}, {model_id}")
         return waring_info
     session_key = f"{uid}_{get_client_ip()}"
     if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
-        waring_info = "登录信息已失效，请重新登录后再使用本系统"
+        waring_info = "用户登录信息已失效，请重新登录后再使用本系统"
         logger.error(f"{waring_info}, {uid}")
         return waring_info
     logger.info(f"rcv_msg, {msg}, uid {uid}")
@@ -69,21 +73,24 @@ def chat(catch=None):
     my_vector_db_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
 
     if not os.path.exists(my_vector_db_dir):  # 新增检查
-        logger.info(f"vector_db_dir_not_exists_return_none, {my_vector_db_dir}")
         answer = "暂时没有相关知识提供给您，请您先上传文档，创建知识库"
+        logger.info(f"vector_db_dir_not_exists_return_none, {answer}, {my_vector_db_dir}")
         return answer
-    else:
-        context = search_txt(msg, my_vector_db_dir, 0.1, my_cfg['api'], 3)
-        chat_agent = ChatAgent(my_cfg)
-        def generate_stream():
-            full_response = ""
-            stream_input = {"context": context, "question": msg}
-            logger.info(f"stream_input {stream_input}")
-            for chunk in chat_agent.get_chain().stream(stream_input):
-                full_response += chunk
-                yield chunk
-            logger.info(f"full_response: {full_response}")
-        return app.response_class(generate_stream(), mimetype='text/event-stream')
+    if model_id:
+        my_cfg['api']['model'] = LLM_MODEL_DICT.get(model_id)
+        logger.info(f"llm_cfg_customized_for_uid, {uid}, {my_cfg['api']['model']}")
+    context = search_txt(msg, my_vector_db_dir, 0.1, my_cfg['api'], 3)
+    chat_agent = ChatAgent(my_cfg)
+    def generate_stream():
+        full_response = ""
+        stream_input = {"context": context, "question": msg}
+        logger.info(f"stream_input {stream_input}")
+        for chunk in chat_agent.get_chain().stream(stream_input):
+            full_response += chunk
+            yield chunk
+        logger.info(f"full_response: {full_response}")
+    return app.response_class(generate_stream(), mimetype='text/event-stream')
+
 
 if __name__ == '__main__':
     """
@@ -93,5 +100,11 @@ if __name__ == '__main__':
     # test_query_data()
     app.config['ENV'] = 'dev'
     port = 19000
+    # 检查命令行参数
+    if len(sys.argv) > 1:
+        try:
+            port = int(sys.argv[1])  # 转换输入的端口参数
+        except ValueError:
+            logger.error(f"invalid_port: {sys.argv[1]}, using default {port}")
     logger.info(f"listening_port {port}")
     app.run(host='0.0.0.0', port=port)
