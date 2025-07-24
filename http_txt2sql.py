@@ -15,6 +15,7 @@ from bp_auth import auth_bp, auth_info, get_client_ip
 from my_enums import DataType, DBType, AppType
 from sql_yield import SqlYield
 from sys_init import init_yml_cfg
+from utils import get_console_arg1
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -165,4 +166,6 @@ if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
-    app.run(host='0.0.0.0', port=19000)
+    port = get_console_arg1()
+    logger.info(f"listening_port {port}")
+    app.run(host='0.0.0.0', port=port)

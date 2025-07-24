@@ -16,7 +16,7 @@ from bp_auth import auth_bp
 from my_enums import ActorRole, AI_SERVICE_STATUS, AppType
 from agt_util import classify_msg
 from sys_init import init_yml_cfg
-
+from utils import get_console_arg1
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -129,4 +129,6 @@ def submit_user_question():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=19000)
+    port = get_console_arg1()
+    logger.info(f"listening_port {port}")
+    app.run(host='0.0.0.0', port=port)

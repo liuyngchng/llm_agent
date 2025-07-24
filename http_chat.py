@@ -11,14 +11,13 @@ import sys
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, redirect, url_for
-
 from chat_agent import ChatAgent
 from my_enums import AppType
 from sys_init import init_yml_cfg
 from bp_auth import auth_bp, auth_info, get_client_ip
 from bp_vdb import vdb_bp, VDB_PREFIX
+from utils import get_console_arg1
 from vdb_util import search_txt
-
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -95,7 +94,6 @@ def chat(catch=None):
         logger.info(f"full_response: {full_response}")
     return app.response_class(generate_stream(), mimetype='text/event-stream')
 
-
 if __name__ == '__main__':
     """
     just for test, not for a production environment.
@@ -103,16 +101,6 @@ if __name__ == '__main__':
     logger.info(f"my_cfg {my_cfg.get('db')},\n{my_cfg.get('api')}")
     # test_query_data()
     app.config['ENV'] = 'dev'
-    port = 19000
-    # 检查命令行参数
-    MAX_PORT = 65535
-    if len(sys.argv) > 1:
-        try:
-            port = int(sys.argv[1])  # 转换输入的端口参数
-            if port < 1024 or port > 65535:
-                logger.error(f"port_out_of_range[1024, 65535]: {sys.argv[1]}, using MAX_PORT {MAX_PORT}")
-                port = MAX_PORT
-        except ValueError:
-            logger.error(f"invalid_port: {sys.argv[1]}, using default {port}")
+    port = get_console_arg1()
     logger.info(f"listening_port {port}")
     app.run(host='0.0.0.0', port=port)

@@ -19,6 +19,7 @@ from docx_util import extract_catalogue, fill_doc_with_prompt_in_progress
 from sys_init import init_yml_cfg
 from bp_auth import auth_bp
 from bp_vdb import vdb_bp, VDB_PREFIX
+from utils import get_console_arg1
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -311,4 +312,5 @@ def prs_doc_with_template(uid: str, doc_type: str, doc_title: str, task_id: str,
 
 if __name__ == '__main__':
     threading.Thread(target=clean_tasks, daemon=True).start()
-    app.run(host='0.0.0.0', port=19000)
+    port = get_console_arg1()
+    app.run(host='0.0.0.0', port=port)

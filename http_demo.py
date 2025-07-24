@@ -8,6 +8,8 @@ import logging.config
 
 from flask import Flask, Response
 
+from utils import get_console_arg1
+
 app = Flask(__name__)
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -32,7 +34,7 @@ if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
-    port = 19000
+    port = get_console_arg1()
     print(f"listening_port {port}")
     logger.info(f"listening_port {port}")
     app.run(host='0.0.0.0', port=port)

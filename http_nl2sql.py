@@ -18,6 +18,7 @@ from sql_agent import SqlAgent
 from sys_init import init_yml_cfg
 from audio import transcribe_webm_audio_bytes
 from bp_auth import auth_bp, auth_info, get_client_ip
+from utils import get_console_arg1
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -313,6 +314,6 @@ if __name__ == '__main__':
     logger.info(f"my_cfg {my_cfg.get('db')},\n{my_cfg.get('api')}")
     # test_query_data()
     app.config['ENV'] = 'dev'
-    port = 19000
+    port = get_console_arg1()
     logger.info(f"listening_port {port}")
     app.run(host='0.0.0.0', port=port)
