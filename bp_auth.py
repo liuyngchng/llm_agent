@@ -67,7 +67,6 @@ def login():
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")
     uid = auth_result["uid"]
-    vdb_list = DbUtl.get_vdb_info_by_uid(uid)
     ctx = {
         "uid": uid,
         "role": auth_result["role"],
@@ -75,10 +74,10 @@ def login():
         "sys_name": sys_name,
         "greeting": cfg_utl.get_const("greeting", app_source),
         "app_source": app_source,
-        "vdb_list": vdb_list,
     }
     session_key = f"{auth_result['uid']}_{get_client_ip()}"
     auth_info[session_key] = time.time()
+    logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
 
 

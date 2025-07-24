@@ -135,7 +135,7 @@ async function loadKnowledgeBases() {
     const t = document.getElementById('t').value;
 
     try {
-        const response = await fetch('/vdb/list', {
+        const response = await fetch('/vdb/pub/list', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ uid, t })

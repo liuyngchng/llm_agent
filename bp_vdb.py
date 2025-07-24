@@ -74,19 +74,33 @@ def vdb_index():
     logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
 
-@vdb_bp.route('/vdb/list', methods=['POST'])
-def get_vdb_list():
+@vdb_bp.route('/vdb/my/list', methods=['POST'])
+def get_my_vdb_list():
     """
     获取知识库列表
     :return: {"kb_list": [{'id':id1, 'name':name1},{'id':id2, 'name':name2},]}
     """
     data = request.get_json()
-    logger.info(f"get_vdb_list {data}")
+    logger.info(f"get_my_vdb_list {data}")
     uid = data.get("uid")
     t = data.get("t")
-    dt = DbUtl.get_vdb_info_by_uid(uid)
-    logger.info(f"get_vdb_list_dt {dt}")
-    return jsonify({"kb_list": dt})
+    my_vdb_list = DbUtl.get_vdb_info_by_uid(uid, '', False)
+    logger.info(f"get_my_vdb_list {my_vdb_list}")
+    return jsonify({"kb_list": my_vdb_list})
+
+@vdb_bp.route('/vdb/pub/list', methods=['POST'])
+def get_public_vdb_list():
+    """
+    获取知识库列表
+    :return: {"kb_list": [{'id':id1, 'name':name1},{'id':id2, 'name':name2},]}
+    """
+    data = request.get_json()
+    logger.info(f"get_public_vdb_list {data}")
+    uid = data.get("uid")
+    t = data.get("t")
+    my_vdb_list = DbUtl.get_vdb_info_by_uid(uid)
+    logger.info(f"get_public_vdb_list {my_vdb_list}")
+    return jsonify({"kb_list": my_vdb_list})
 
 @vdb_bp.route('/vdb/file/list', methods=['POST'])
 def get_vdb_file_list():

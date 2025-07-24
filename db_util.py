@@ -443,19 +443,20 @@ class DbUtl:
         return my_dt
 
     @staticmethod
-    def get_vdb_info_by_uid(uid: int, kdb_name='', include_public=True):
+    def get_vdb_info_by_uid(uid: int, kdb_name='', include_others_public=True):
         if not uid:
             raise RuntimeError("uid_null_err")
         sql = f"select * from vdb_info where uid = '{uid}'"
         if kdb_name and kdb_name.strip() !='':
             sql += f" and name = '{kdb_name}'"
-        logger.info(f"get_vdb_info_by_uid_sql, {sql}")
+        logger.info(f"get_my_vdb_info_by_uid_sql, {sql}")
         my_dt = DbUtl.sqlite_output(CFG_DB_URI,sql,DataType.JSON.value)
-        public_dt = []
-        if include_public:
-            sql = f"select * from vdb_info where uid != '{uid}' and is_public = '1'"
-            logger.info(f"get_vdb_info_by_not_uid_and_is_public_sql, {sql}")
-            public_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+        if not include_others_public:
+            logger.info(f"get_my_vdb_info_by_uid_dt {my_dt}")
+            return my_dt
+        sql = f"select * from vdb_info where uid != '{uid}' and is_public = '1'"
+        logger.info(f"get_vdb_info_by_not_uid_and_is_public_sql, {sql}")
+        public_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         merged_dt = my_dt  + public_dt
         for item in merged_dt:
             if str(item['uid']) == uid:  # 自己的知识库
