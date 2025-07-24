@@ -157,6 +157,13 @@ header h1 {
     transform: translateY(-2px);
 }
 
+.stop-notice {
+    color: #999;
+    font-size: 0.9em;
+    margin-top: 8px;
+    font-style: italic;
+}
+
 .copy-button {
     background: linear-gradient(to right, #4b6cb7, #3a5a9e);
     color: white;

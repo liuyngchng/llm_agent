@@ -48,12 +48,27 @@ queryForm.addEventListener('submit', async function(e) {
 });
 
 // 停止按钮事件
+// 停止按钮事件 - 修改后
 stopButton.addEventListener('click', function() {
     if (abortController) {
         abortController.abort();
     }
+
     if (currentBotMessage) {
-        updateBotMessage("回答生成已停止");
+        const messageBubble = currentBotMessage.querySelector('.bot-message-bubble');
+        if (messageBubble) {
+            // 保留现有内容，只移除加载动画
+            const typingIndicator = messageBubble.querySelector('.typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+
+                // 添加停止提示（不覆盖已有内容）
+                const stopNotice = document.createElement('div');
+                stopNotice.className = 'stop-notice';
+                stopNotice.textContent = '（生成已停止）';
+                messageBubble.appendChild(stopNotice);
+            }
+        }
     }
     resetUI();
 });
@@ -246,7 +261,6 @@ function resetUI() {
     stopButton.style.display = 'none';
     currentResponse = null;
     abortController = null;
-    currentBotMessage = null;
 }
 
 // 键盘快捷键支持
