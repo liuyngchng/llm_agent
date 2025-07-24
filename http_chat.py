@@ -12,6 +12,7 @@ import sys
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, redirect, url_for
 from chat_agent import ChatAgent
+from db_util import DbUtl
 from my_enums import AppType
 from sys_init import init_yml_cfg
 from bp_auth import auth_bp, auth_info, get_client_ip
@@ -69,8 +70,12 @@ def chat(catch=None):
         return waring_info
     logger.info(f"rcv_msg, {msg}, uid {uid}")
     auth_info[session_key] = time.time()
-    my_vector_db_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
-
+    vdb_info = DbUtl.get_vdb_info_by_id(kb_id)
+    if not vdb_info:
+        waring_info = f"所选择的知识库不存在，请您检查后再试"
+        logger.error(f"{waring_info}, {kb_id}")
+        return waring_info
+    my_vector_db_dir = f"{VDB_PREFIX}{vdb_info['uid']}_{kb_id}"
     if not os.path.exists(my_vector_db_dir):  # 新增检查
         answer = "暂时没有相关知识提供给您，请您先上传文档，创建知识库"
         logger.info(f"vector_db_dir_not_exists_return_none, {answer}, {my_vector_db_dir}")

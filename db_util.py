@@ -434,8 +434,17 @@ class DbUtl:
         )
 
     @staticmethod
-    def get_vdb_info_by_uid(uid: str, kdb_name='', include_public=True):
-        if not uid and uid.strip() != '':
+    def get_vdb_info_by_id(vdb_id: int):
+        if not vdb_id:
+            raise RuntimeError("uid_null_err")
+        sql = f"select * from vdb_info where id = '{vdb_id}' limit 1"
+        logger.info(f"get_vdb_info_by_id_sql, {sql}")
+        my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+        return my_dt
+
+    @staticmethod
+    def get_vdb_info_by_uid(uid: int, kdb_name='', include_public=True):
+        if not uid:
             raise RuntimeError("uid_null_err")
         sql = f"select * from vdb_info where uid = '{uid}'"
         if kdb_name and kdb_name.strip() !='':
@@ -496,7 +505,7 @@ class DbUtl:
         return my_dt
 
     @staticmethod
-    def get_vdb_file_list(uid: str, vdb_id: str):
+    def get_vdb_file_list(uid: int, vdb_id: int):
         if not uid or not vdb_id:
             raise RuntimeError(f"param_null_err, {uid}, {vdb_id}")
         sql = f"select * from file_info where uid = '{uid}' and vdb_id = '{vdb_id}'"
