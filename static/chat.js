@@ -48,7 +48,6 @@ queryForm.addEventListener('submit', async function(e) {
 });
 
 // 停止按钮事件
-// 停止按钮事件 - 修改后
 stopButton.addEventListener('click', function() {
     if (abortController) {
         abortController.abort();
