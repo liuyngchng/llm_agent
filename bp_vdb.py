@@ -161,7 +161,7 @@ def create_vdb():
     kb_name = data.get("kb_name")
     is_public = data.get("is_public")
     t = data.get("t")
-    db_check = DbUtl.get_vdb_info_by_uid(uid, kb_name)
+    db_check = DbUtl.get_vdb_info_by_uid(uid, kb_name, False)
     if db_check:
         info = {"success": False, "message": f"知识库 {kb_name} 已存在"}
         logger.error(info)

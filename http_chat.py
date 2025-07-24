@@ -75,7 +75,7 @@ def chat(catch=None):
         waring_info = f"所选择的知识库不存在，请您检查后再试"
         logger.error(f"{waring_info}, {kb_id}")
         return waring_info
-    my_vector_db_dir = f"{VDB_PREFIX}{vdb_info['uid']}_{kb_id}"
+    my_vector_db_dir = f"{VDB_PREFIX}{vdb_info[0]['uid']}_{kb_id}"
     if not os.path.exists(my_vector_db_dir):  # 新增检查
         answer = "暂时没有相关知识提供给您，请您先上传文档，创建知识库"
         logger.info(f"vector_db_dir_not_exists_return_none, {answer}, {my_vector_db_dir}")
