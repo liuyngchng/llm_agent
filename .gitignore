@@ -38,6 +38,7 @@ cfg.yml
 **/*.faiss
 **/*.doc
 **/*.docx
+**/*.pptx
 llm_py_env/*
 llm_py_env_whl.Python.3.12.3/*
 vdb/*
