@@ -49,7 +49,7 @@ class ChatAgent:
                 temperature=0,
                 disable_streaming= False,
             )
-        logger.debug(f"model, {model}")
+        logger.debug(f"chat_agent_model, {model}")
         return model
 
     def get_chain(self):

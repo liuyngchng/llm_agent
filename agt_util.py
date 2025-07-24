@@ -3,7 +3,6 @@
 import json
 import re
 
-from my_enums import DataType
 from sys_init import init_yml_cfg
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama

@@ -60,7 +60,7 @@ def chat(catch=None):
     kb_id = request.form.get('kb_id')
     model_id = request.form.get('model_id')
     if not msg or not uid or not kb_id:
-        waring_info = f"缺少用户消息、用户身份信息、知识库信息"
+        waring_info = f"缺少用户消息、用户身份信息、知识库信息中的一个或多个参数，请您检查后再试"
         logger.error(f"{waring_info}, {msg}, {uid}, {kb_id}, {model_id}")
         return waring_info
     session_key = f"{uid}_{get_client_ip()}"
@@ -77,9 +77,13 @@ def chat(catch=None):
         logger.info(f"vector_db_dir_not_exists_return_none, {answer}, {my_vector_db_dir}")
         return answer
     if model_id:
-        my_cfg['api']['model'] = LLM_MODEL_DICT.get(model_id)
-        logger.info(f"llm_cfg_customized_for_uid, {uid}, {my_cfg['api']['model']}")
+        my_cfg['api']['llm_model_name'] = LLM_MODEL_DICT.get(model_id)
+        logger.info(f"llm_cfg_customized_for_uid, {uid}, {my_cfg['api']['llm_model_name']}")
     context = search_txt(msg, my_vector_db_dir, 0.1, my_cfg['api'], 3)
+    if not context:
+        answer = "暂时没有相关内容提供给您，您可以尝试换一个问题试试"
+        logger.info(f"vector_db_search_return_none, {answer}, {my_vector_db_dir}")
+        return answer
     chat_agent = ChatAgent(my_cfg)
     def generate_stream():
         full_response = ""
@@ -101,9 +105,13 @@ if __name__ == '__main__':
     app.config['ENV'] = 'dev'
     port = 19000
     # 检查命令行参数
+    MAX_PORT = 65535
     if len(sys.argv) > 1:
         try:
             port = int(sys.argv[1])  # 转换输入的端口参数
+            if port < 1024 or port > 65535:
+                logger.error(f"port_out_of_range[1024, 65535]: {sys.argv[1]}, using MAX_PORT {MAX_PORT}")
+                port = MAX_PORT
         except ValueError:
             logger.error(f"invalid_port: {sys.argv[1]}, using default {port}")
     logger.info(f"listening_port {port}")
