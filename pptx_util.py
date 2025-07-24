@@ -81,7 +81,9 @@ def extract_text(ppt_path: str) -> list:
 if __name__ == '__main__':
     my_template_file = '/home/rd/doc/文档生成/pptx/template.pptx'
     my_pic_file = "/home/rd/doc/文档生成/pptx/1.png"
+    output_file = "/home/rd/doc/文档生成/pptx/output_report.pptx"
     # 加载模板
+    logger.info(f"start gen_pptx from template {my_template_file}")
     prs = Presentation(my_template_file)
     # 创建新PPT
     # prs = Presentation()
@@ -94,5 +96,5 @@ if __name__ == '__main__':
     set_text_format(content, size=18, color=RGBColor(59, 89, 152))
     # 添加图片
     add_image(slide, my_pic_file, left=7, top=2, width=Inches(4))
-
-    prs.save("output_report.pptx")
+    logger.info(f"output_file {output_file}")
+    prs.save(output_file)
