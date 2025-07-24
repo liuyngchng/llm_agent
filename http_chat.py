@@ -37,7 +37,7 @@ os.system(
 
 SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 
-LLM_MODEL_DICT = {"1":"deepseek-v3", "2":"qwq-32b"}
+LLM_MODEL_DICT = {"1":"deepseek-v3", "2":"qwen2dot5-7b-chat"}
 
 
 @app.route('/')
