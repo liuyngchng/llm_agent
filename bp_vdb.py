@@ -13,7 +13,7 @@ import time
 from flask import (request, jsonify, Blueprint, render_template)
 from werkzeug.utils import secure_filename
 
-
+import vdb_util
 from db_util import DbUtl
 from sys_init import init_yml_cfg
 from vdb_util import vector_file, search_txt, update_doc
@@ -85,6 +85,7 @@ def get_vdb_list():
     uid = data.get("uid")
     t = data.get("t")
     dt = DbUtl.get_vdb_info_by_uid(uid)
+    logger.info(f"get_vdb_list_dt {dt}")
     return jsonify({"kb_list": dt})
 
 @vdb_bp.route('/vdb/file/list', methods=['POST'])

@@ -47,14 +47,14 @@ def get_console_arg1() -> int:
     default_port = 19000
     max_port = 65535
     if len(sys.argv) <= 1:
-        logger.info(f"no_console_arg, using default {default_port}")
+        print(f"no_console_arg, using default {default_port}")
         return default_port
     try:
         console_port = int(sys.argv[1])  # 转换输入的端口参数
         if console_port < 1024 or console_port > 65535:
-            logger.error(f"port_out_of_range[1024, 65535]: {sys.argv[1]}, using max_port {max_port}")
+            print(f"port_out_of_range[1024, 65535]: {sys.argv[1]}, using max_port {max_port}")
             console_port = max_port
         return console_port
     except ValueError:
-        logger.error(f"invalid_port: {sys.argv[1]}, using default {default_port}")
+        print(f"invalid_port: {sys.argv[1]}, using default {default_port}")
     return default_port

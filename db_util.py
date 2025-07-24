@@ -11,6 +11,7 @@ import pandas as pd
 import logging.config
 import oracledb
 
+from cfg_util import get_user_name_by_uid
 from my_enums import DataType, DBType
 from urllib.parse import urlparse, unquote, urlencode, quote
 from sys_init import init_yml_cfg
@@ -433,16 +434,35 @@ class DbUtl:
         )
 
     @staticmethod
-    def get_vdb_info_by_uid(uid: str, kdb_name=''):
+    def get_vdb_info_by_uid(uid: str, kdb_name='', include_public=True):
         if not uid and uid.strip() != '':
             raise RuntimeError("uid_null_err")
         sql = f"select * from vdb_info where uid = '{uid}'"
         if kdb_name and kdb_name.strip() !='':
             sql += f" and name = '{kdb_name}'"
         logger.info(f"get_vdb_info_by_uid_sql, {sql}")
-        my_dt = DbUtl.sqlite_output(CFG_DB_URI,sql,DataType.JSON.value )
-        logger.info(f"get_vdb_info_by_uid_dt {my_dt}")
-        return my_dt
+        my_dt = DbUtl.sqlite_output(CFG_DB_URI,sql,DataType.JSON.value)
+        public_dt = []
+        if include_public:
+            sql = f"select * from vdb_info where uid != '{uid}' and is_public = '1'"
+            logger.info(f"get_vdb_info_by_not_uid_and_is_public_sql, {sql}")
+            public_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+        merged_dt = my_dt  + public_dt
+        for item in merged_dt:
+            if str(item['uid']) == uid:  # 自己的知识库
+                item['name'] = '我的_' + item['name']
+            else:  # 其他用户的知识库
+                uid = item["uid"]
+                user_name = uid
+                try:
+                    user_name = get_user_name_by_uid(uid)
+                    if not user_name:
+                        user_name = uid
+                except Exception as e:
+                    logger.error(f"get_user_name_by_uid_err, {str(e)}")
+                item['name'] = f'用户[{user_name}]的_' + item['name']
+        logger.info(f"get_vdb_info_by_uid_dt {merged_dt}")
+        return merged_dt
 
     @staticmethod
     def create_vdb_info(kdb_name: str, uid: str, is_public=False):

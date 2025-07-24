@@ -146,7 +146,7 @@ async function loadKnowledgeBases() {
             throw new Error(`API 错误 ${response.status}: ${errorText.slice(0, 100)}...`);
         }
         const result = await response.json();
-
+        console.log('vdb_list=' + result);
         // 清空选择器（保留第一个选项）
         while (selector.options.length > 1) {
             selector.remove(1);
