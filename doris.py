@@ -315,7 +315,7 @@ class Doris:
             df = pd.DataFrame(rows, columns=columns)
             dt_fmt = data_format.lower()
             if DataType.HTML.value in dt_fmt:
-                dt = df.to_html(index=False, border=0).replace(...)
+                dt = df.to_html(index=False, border=0).replace('\n', '')
             elif DataType.MARKDOWN.value in dt_fmt:
                 dt = DbUtl.get_md_dt_from_data_frame(df)
             elif DataType.JSON.value in dt_fmt:
