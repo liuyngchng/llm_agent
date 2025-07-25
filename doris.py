@@ -3,6 +3,7 @@
 import json
 import re
 import hashlib
+import time
 from decimal import Decimal
 from typing import LiteralString
 
@@ -22,6 +23,8 @@ PAGE_SIZE = 20
 cache_dict = {}
 
 table_schema_cache_dict = {}
+
+CACHE_EXPIRE_SECONDS = 3600  # 1小时
 
 class Doris:
     """
@@ -69,6 +72,27 @@ class Doris:
         self.table_list = self.get_table_list()
         self.comment_map = self.get_comment_map()
 
+    @staticmethod
+    def _clean_comment(comment: str) -> str:
+        if not comment:
+            return ""
+
+        # 更严格的标点符号处理
+        punctuations = "，。！？；："",.?!;:\"'[]{}()（）【】《》"
+        for i, c in enumerate(comment):
+            if c in punctuations:
+                comment = comment[:i]
+                break
+
+        allowed_symbols = ('_', '-', ' ', '(', ')', '%')
+        # 保留中文、字母、数字和常见连接符
+        cleaned = ''.join(filter(
+            lambda x: x.isalnum() or '\u4e00' <= x <= '\u9fff' or x in allowed_symbols,
+            comment
+        ))
+
+        return cleaned[:16].strip() if len(cleaned) > 16 else cleaned.strip()
+
     def build_dml(self, sql: str) -> dict:
         """
         build json body from DML SQL
@@ -98,8 +122,10 @@ class Doris:
 
         body_md5 = hashlib.md5(json.dumps(body).encode()).hexdigest()
         if body_md5 in cache_dict:
-            exec_json = cache_dict.get(body_md5)
-            logger.info(f"return_from_cache_for, {body}, cache_dt={exec_json}")
+            cached_time, exec_json = cache_dict[body_md5]
+            if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
+                logger.info(f"return_from_cache_for, {body}, cache_dt={exec_json}")
+                return exec_json
         else:
             escaped_body = json.dumps(body, ensure_ascii=False).replace("'", "'\"'\"'")
             logger.info(f"curl -X POST --noproxy '*' -s -w'\\n' '{self.url}' -H 'Content-Type:application/json' -H 'token:{self.token}' -d '{escaped_body}'")
@@ -110,7 +136,7 @@ class Doris:
             )
             exec_json = response.json()
             logger.info(f"http_req_return, {exec_json}")
-            cache_dict[body_md5] = exec_json
+            cache_dict[body_md5] = (time.time(), exec_json)
 
         if exec_json['code'] == 200:
             return exec_json['data']
@@ -140,17 +166,19 @@ class Doris:
         [{'COLUMN_NAME': 'a', 'COLUMN_COMMENT': 'comment_a'}, {'COLUMN_NAME': 'b', 'COLUMN_COMMENT': 'comment_b'}]
         """
         table_schema_cache_dict_key = f"{schema_name}.{table_name}"
-        table_schema = table_schema_cache_dict.get(table_schema_cache_dict_key)
+        cache_result = table_schema_cache_dict.get(table_schema_cache_dict_key)
         sql = f"SHOW CREATE TABLE {table_schema_cache_dict_key}"
-        if table_schema:
-            logger.info(f"return_table_schema_from_cache_for_sql\n{sql}, {table_schema}")
-            return table_schema
+        if cache_result:
+            cached_time, table_schema = cache_result
+            if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
+                logger.info(f"return_table_schema_from_cache_for_sql\n{sql}, {table_schema}")
+                return table_schema
         logger.info(f"get_col_comment_sql, {sql}")
         exe_result = self.request_dt(self.build_dml(sql))
         table_schema = exe_result[0].get('Create Table').split('ENGINE')[0]
         table_comment = self.get_table_comment_from_ddl(exe_result[0].get('Create Table').split('ENGINE')[1])
         table_schema_with_comment = f"{table_schema} COMMENT='{table_comment}'"
-        table_schema_cache_dict[table_schema_cache_dict_key] = table_schema_with_comment
+        table_schema_cache_dict[table_schema_cache_dict_key] = (time.time(), table_schema_with_comment)
         logger.info(f"return_table_schema_from_dt_source_for_sql\n{sql}, {table_schema}")
         return table_schema_with_comment
 
@@ -328,52 +356,87 @@ class Doris:
             logger.error(f"doris_output_error", e)
             return json.dumps({"error": str(e)})
 
-    def get_col_name_from_sql(self, raw_columns: list, sql):
+    def get_col_name_from_sql(self, raw_columns: list, sql: str) -> list:
+        """
+        获取更友好的中文列名（优化版）
+        :param raw_columns: 原始列名列表
+        :param sql: 执行的SQL语句
+        :return: 处理后的列名列表
+        """
         if not raw_columns:
             return raw_columns
-        table_match = re.search(r'(?i)FROM\s+([\w.]+)', sql)
+
+        # 1. 从SQL中提取表名
+        table_match = re.search(
+            r'(?i)(?:FROM|JOIN)\s+([`\w.]+)(?:\s+(?:AS\s+)?\w+)?(?:\s|$)',
+            sql
+        )
         table_name = table_match.group(1) if table_match else None
+
         if not table_name:
             return raw_columns
+
+        # 处理带schema的表名
         if '.' in table_name:
             schema_name, table_name = table_name.split('.')[:2]
             full_table_name = f"{schema_name}.{table_name}"
         else:
             full_table_name = table_name
-        columns = []
-        for col in raw_columns:
-            comment = self.get_comment(self.data_source, full_table_name, col)
-            if comment:
-                final_name = f"{comment}" if comment else col
-                columns.append(final_name)
-                continue
-            columns.append(
-                self.hack_col_name(col, full_table_name)
-            )
-        return columns
 
-    def hack_col_name(self, col: str, table_name: str):
-        suffix = ""
-        comment = ""
-        prefix_list = [
-            {"k":"AVG_",    "v":"的平均值"  },
-            {"k": "AVG(",   "v": "的平均值" },
-            {"k": "TOTAL_", "v": "的总和"   },
-            {"k": "SUM(",   "v": "的总和"   },
-            {"k": "MAX_",   "v": "的最大值" },
-            {"k": "MAX(",   "v": "的最大值" },
-            {"k": "MIN_",   "v": "的最小值" },
-            {"k": "MIN(",   "v": "的最小值" },
-        ]
-        for item in prefix_list:
-            if col.startswith(item["k"]):
-                comment = self.get_comment(
-                    self.data_source, table_name, col.replace(item["k"], "").strip(")")
-                )
-                suffix = item["v"]
-                break
-        final_name = f"{comment}{suffix}" if comment else col
-        return final_name
+        processed_columns = []
+        special_columns = {
+            "YEAR": "年",
+            "MONTH": "月",
+            "DAY": "日",
+            "QUARTER": "季度",
+            "WEEK": "周"
+        }
+
+        for col in raw_columns:
+            col_upper = col.upper()
+
+            # 先检查特殊字段
+            if col_upper in special_columns:
+                processed_columns.append(special_columns[col_upper])
+                continue
+
+            # 获取字段注释
+            comment = self.get_comment(self.data_source, full_table_name, col_upper)
+
+            # 处理聚合函数和计算字段
+            suffix, base_col = "", col
+            patterns = [
+                (r'^(AVG|SUM|MAX|MIN|COUNT|STDDEV|VAR)\(([\w`]+)\)$', lambda m: (f"{m[1]}的", m[2].replace('`', ''))),
+                (r'^(TOTAL|AVG|SUM|MAX|MIN|COUNT|STDDEV|VAR)_([\w`]+)$', lambda m: (f"{m[1]}的", m[2].replace('`', ''))),
+                (r'^([\w]+)_(RATE|RATIO|PERCENT)$', lambda m: (f"{m[1]}的", f"{m[2]}"))
+            ]
+
+            for pattern, handler in patterns:
+                match = re.match(pattern, col_upper)
+                if match:
+                    suffix_part, base_col = handler(match)
+                    suffix = {
+                        "AVG的": "平均值",
+                        "SUM的": "总和",
+                        "MAX的": "最大值",
+                        "MIN的": "最小值",
+                        "COUNT的": "计数",
+                        "TOTAL的": "总和"
+                    }.get(suffix_part, "")
+                    # 获取基础列的注释
+                    base_comment = self.get_comment(self.data_source, full_table_name, base_col.upper())
+                    break
+            else:
+                # 普通列名处理
+                base_comment = self._clean_comment(comment) if comment else ""
+
+            # 构建最终列名
+            final_name = f"{base_comment}{suffix}" if base_comment else col
+            processed_columns.append(final_name.strip())
+        logger.debug(f"processed_column_names,original: {raw_columns}, processed: {processed_columns}")
+        return processed_columns
+
+
 
     @staticmethod
     def get_col_comment_by_col_name(db_schema, db_name, table_name, column_name):
@@ -389,12 +452,34 @@ class Doris:
                         return comment[:10] if len(comment) > 10 else comment
         return column_name
 
-    def get_comment(self, db, table, col):
-        if (db_map := self.comment_map.get(db.upper())) \
-                and (table_map := db_map.get(table.upper())) \
-                and (comment := table_map.get(col.upper())):
-            return comment[:8]
-        return None
+    def get_comment(self, db: str, table: str, column: str) -> str:
+        """
+        获取字段注释（带缓存）
+        :param db: 数据库名
+        :param table: 表名
+        :param column: 字段名
+        :return: 字段注释
+        """
+        # 检查缓存
+        cache_key = f"{db.upper()}.{table.upper()}.{column.upper()}"
+        if cache_key in cache_dict:
+            cached_time, value = cache_dict[cache_key]
+            if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
+                return value
+
+        # 从数据库获取注释
+        try:
+            if (db_map := self.comment_map.get(db.upper())) \
+                    and (table_map := db_map.get(table.upper())) \
+                    and (comment := table_map.get(column.upper())):
+                # 清理注释并缓存
+                cleaned_comment = self._clean_comment(comment)
+                cache_dict[cache_key] = (time.time(), cleaned_comment)
+                return cleaned_comment
+        except Exception as e:
+            logger.error(f"获取注释失败: {e}")
+
+        return ""
 
     def get_comment_map(self):
         my_comment_map = {}
