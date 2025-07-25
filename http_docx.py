@@ -14,6 +14,7 @@ from flask import (Flask, request, jsonify, send_from_directory,
 import docx_util
 import my_enums
 from agt_util import generate_outline_stream
+from db_util import DbUtl
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
 from docx_util import extract_catalogue, fill_doc_with_prompt_in_progress
 from sys_init import init_yml_cfg
@@ -261,7 +262,7 @@ def clean_tasks():
         time.sleep(1000)
 
 
-def prs_doc_with_template(uid: str, doc_type: str, doc_title: str, task_id: str,
+def prs_doc_with_template(uid: int, doc_type: str, doc_title: str, task_id: str,
                           file_name: str, is_include_prompt = False):
     """
     处理无模板的文档，三级目录自动生成，每个段落无写作要求
@@ -284,7 +285,13 @@ def prs_doc_with_template(uid: str, doc_type: str, doc_title: str, task_id: str,
         docx_util.update_process_info(thread_lock, task_id, task_progress, "开始处理文档...", 0.0)
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
         para_comment_dict = get_para_comment_dict(my_target_doc)
-        my_vdb_dir = os.path.join(UPLOAD_FOLDER, f"{VDB_PREFIX}{uid}")
+        default_vdb = DbUtl.get_default_vdb(uid)
+        logger.info(f"my_default_vdb_dir_for_gen_doc: {default_vdb}")
+        if default_vdb:
+            my_vdb_dir = f"{VDB_PREFIX}{uid}_{default_vdb[0]['id']}"
+        else:
+            my_vdb_dir = ""
+        logger.info(f"my_vdb_dir_for_gen_doc: {my_vdb_dir}")
         if para_comment_dict:
             logger.info("process_word_comment_doc")
             modify_para_with_comment_prompt_in_process(

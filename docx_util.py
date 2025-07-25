@@ -38,10 +38,10 @@ def get_reference_from_vdb(keywords: str, vdb_dir: str, sys_cfg: dict) -> str:
     :param sys_cfg: 系统配置
     :return: 文本
     """
-    if os.path.exists(vdb_dir):
+    if "" != vdb_dir and os.path.exists(vdb_dir):
         reference = search_txt(keywords, vdb_dir, 0.2, sys_cfg, 2).strip()
     else:
-        logger.warn(f"vdb_dir_not_exist: {vdb_dir}, get no references")
+        logger.warning(f"vdb_dir_not_exist: {vdb_dir}, get no references")
         reference = ""
     # logging.info(f"vdb_get_txt:\n{reference}\nby_search_{keywords}")
     return reference
@@ -212,8 +212,8 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
     # logger.debug(f"classify={classify_result}, tile={current_heading}, para={para.text}")
     return True
 
-def fill_doc_without_prompt_in_progress(uid: str, task_id:str, thread_lock, progress_info:dict, doc_ctx: str, target_doc: str,
-    target_doc_catalogue: str, vdb_dir, sys_cfg: dict, output_file_name:str):
+def fill_doc_without_prompt_in_progress(uid: int, task_id:str, thread_lock, progress_info:dict, doc_ctx: str, target_doc: str,
+    target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict, output_file_name:str):
     """
     :param uid: 用户ID
     :param task_id: 执行任务的ID，时间戳的整数字符串
@@ -246,7 +246,7 @@ def fill_doc_without_prompt_in_progress(uid: str, task_id:str, thread_lock, prog
             gen_txt_count += 1
         except Exception as ex:
             logger.error("fill_doc_job_err_to_break", ex)
-            update_process_info(thread_lock, task_id, progress_info, f"在处理文档的过程中出现了异常，任务已中途退出")
+            update_process_info(thread_lock, uid, task_id, progress_info, f"在处理文档的过程中出现了异常，任务已中途退出")
             break
         new_para = doc.add_paragraph()
         new_para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
@@ -262,7 +262,7 @@ def fill_doc_without_prompt_in_progress(uid: str, task_id:str, thread_lock, prog
         update_process_info(thread_lock, uid, task_id, progress_info, txt_info, 100)
     logger.info(f"{txt_info}, 所有内容已输出至文件 {output_file_name}")
 
-def fill_doc_with_prompt_in_progress(uid: str, task_id:str, thread_lock, process_info:dict, doc_ctx: str, target_doc: str,
+def fill_doc_with_prompt_in_progress(uid: int, task_id:str, thread_lock, process_info:dict, doc_ctx: str, target_doc: str,
     target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict, output_file_name:str):
     """
     :param uid: 用户ID
@@ -357,7 +357,7 @@ def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_
         my_para._p.addnext(new_para._p)
     return doc
 
-def update_process_info(thread_lock, uid: str, task_id: str, process_info: dict, txt_info: str, percent: float):
+def update_process_info(thread_lock, uid: int, task_id: str, process_info: dict, txt_info: str, percent: float):
     """
     :param thread_lock: A thread lock
     :param uid： 用户ID
@@ -398,7 +398,7 @@ def update_process_info(thread_lock, uid: str, task_id: str, process_info: dict,
         process_info[uid][task_id]["timestamp"] = time.time()
         process_info[uid][task_id]["elapsed_time"] = get_elapsed_time(task_id)
 
-def get_process_info(uid: str, task_id: str, process_info: dict) -> dict:
+def get_process_info(uid: int, task_id: str, process_info: dict) -> dict:
     """
     获取文档当前处理进度信息
     :param task_id: 执行任务的ID
@@ -519,7 +519,7 @@ if __name__ == "__main__":
     my_doc_ctx = "我正在写一个可行性研究报告"
     doc_catalogue = get_catalogue(my_target_doc)
     logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
-    my_vdb_dir = "./faiss_oa_idx"
+    my_vdb_dir = "./vdb/vdb_idx_332987902_26"
     output_doc = fill_doc_with_prompt(my_doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_vdb_dir, my_cfg)
     output_file = 'doc_output.docx'
     output_doc.save(output_file)

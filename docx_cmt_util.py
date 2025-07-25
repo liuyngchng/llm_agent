@@ -177,7 +177,7 @@ def test_get_comment():
         para_txt = get_paragraph_by_id(my_file, para_id)
         logger.info(f"para_id:{para_id}, para_txt:{para_txt}")
 
-def modify_para_with_comment_prompt_in_process(uid:str, task_id:str, thread_lock, task_progress:dict,
+def modify_para_with_comment_prompt_in_process(uid:int, task_id:str, thread_lock, task_progress:dict,
     target_doc: str, doc_ctx: str, comments_dict: dict, vdb_dir:str, cfg: dict, output_file_name:str):
     """
     将批注内容替换到对应段落，并将新文本设为红色
