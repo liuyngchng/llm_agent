@@ -10,48 +10,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     const step2 = document.getElementById('step2');
     const statusDesc = document.getElementById('vdb_status_desc');
     const deleteBtn = document.getElementById('deleteBtn');
+    const setDefaultBtn = document.getElementById('setDefaultBtn');
+    const kbSelector = document.getElementById('kb_selector');
+    const createKB = document.getElementById('createKB');
+    const selectBtn = document.getElementById('selectBtn');
 
-    // 初始化知识库选择器
+    // 加载知识库列表
     await loadKnowledgeBases();
 
     // 知识库选择器事件
-    document.getElementById('kb_selector').addEventListener('change', function() {
+    kbSelector.addEventListener('change', function() {
         if (this.value) {
             currentKB = this.value;
+            const kbName = this.options[this.selectedIndex].text;
             statusDesc.textContent = `已选择: ${this.options[this.selectedIndex].text}`;
+            const isDefault = kbName.includes('(默认)');
             deleteBtn.style.display = 'block';
+            setDefaultBtn.style.display = isDefault ? 'none' : 'block';
             step2.classList.remove('hidden');
             loadFileList(currentKB);
         } else {
             step2.classList.add('hidden');
             deleteBtn.style.display = 'none';
+            setDefaultBtn.style.display = 'none';
             statusDesc.textContent = '未选择知识库';
             document.getElementById('fileListContainer').style.display = 'none';
         }
     });
 
     // 创建知识库事件
-    document.getElementById('createKB').addEventListener('click', async function() {
+    createKB.addEventListener('click', async function() {
         const kbName = document.getElementById('kb_name').value.trim();
         if (!kbName) {
             alert('请输入知识库名称');
             return;
         }
-
         // 创建知识库请求
         const uid = document.getElementById('uid').value;
         const t = document.getElementById('t').value;
         const isPublic = document.getElementById('public_checkbox').checked;
-
         try {
             const response = await fetch('/vdb/create', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ kb_name: kbName, uid, is_public:isPublic, t })
             });
-
             const result = await response.json();
-
             if (result.success) {
                 const kbStatus = document.getElementById('kb_status');
                 kbStatus.style.display = 'block';
@@ -71,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // 文件选择处理
-    document.getElementById('selectBtn').addEventListener('click', () => {
+    selectBtn.addEventListener('click', () => {
         document.getElementById('fileInput').click();
     });
 
@@ -84,19 +88,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // 开始生成处理
+    // 开始生成文档处理
     document.getElementById('startBtn').addEventListener('click', async () => {
         if (!currentKB) {
             alert('请先选择知识库');
             return;
         }
-
         const fileInput = document.getElementById('fileInput');
         if (!fileInput.files.length) {
             alert('请先选择 Word/PDF/TXT 文档');
             return;
         }
-
         // 重置界面
         document.getElementById('textProgress').textContent = "开始处理...";
         document.getElementById('progressFill').style.width = '0%';
@@ -112,23 +114,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 method: 'POST',
                 body: formData
             });
-
             if (!uploadRes.ok) {
                 const errorData = await uploadRes.json();
                 throw new Error(errorData.message || '文件上传失败');
             }
-
             const { task_id, file_name } = await uploadRes.json();
             currentTaskId = task_id;
-
             // 更新状态
             document.getElementById('stream_output').innerHTML = '<div class="status-container">文档上传成功，开始构建知识库...</div>';
             document.getElementById('textProgress').textContent = "构建中...";
-
             // 启动进度轮询
             clearInterval(progressInterval);
             progressInterval = setInterval(fetchProgress, 1000);
-
             // 启动文档索引生成
             const uid = document.getElementById('uid').value;
             await fetch('/vdb/index/doc', {
@@ -136,7 +133,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ task_id, file_name, uid, kb_id: currentKB })
             });
-
         } catch (error) {
             console.error('处理失败:', error);
             document.getElementById('textProgress').textContent = "处理失败";
@@ -148,7 +144,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 删除知识库功能
     document.getElementById('deleteBtn').addEventListener('click', async () => {
         if (!confirm('确定要删除整个知识库吗？此操作不可恢复！')) return;
-
         const deleteBtn = document.getElementById('deleteBtn');
         const statusDesc = document.getElementById('vdb_status_desc');
         const selector = document.getElementById('kb_selector');
@@ -198,6 +193,118 @@ document.addEventListener('DOMContentLoaded', async () => {
             deleteBtn.innerHTML = originalText;
         }
     });
+
+    document.getElementById('search_btn').addEventListener('click', async () => {
+        const search_input = document.getElementById('search_input').value;
+        if (!search_input.trim()) {
+            alert('请输入检索内容');
+            return;
+        }
+
+        if (!currentKB) {
+            alert('请先选择知识库');
+            return;
+        }
+        const uid = document.getElementById('uid').value;
+        const t = document.getElementById('t').value;
+        const statusEl = document.getElementById('search_status');
+        const searchBtn = document.getElementById('search_btn');
+        try {
+            statusEl.textContent = "检索中...";
+            searchBtn.disabled = true;
+
+            const search_res = await fetch('/vdb/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ search_input, uid, t, kb_id: currentKB })
+            });
+            const data = await search_res.json();
+            // 渲染表格
+            if (data.search_output) {
+                document.getElementById('search_result_table').innerHTML = `
+                    <table class="result-table">
+                        <thead>
+                            <tr>
+                                <th>来源文档</th>
+                                <th>相关度</th>
+                                <th>匹配内容</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.search_output}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                document.getElementById('search_result_table').innerHTML =
+                    `<div class="status-container">未找到相关结果</div>`;
+            }
+            statusEl.textContent = `找到 ${document.querySelectorAll('.result-table tbody tr').length} 条结果`;
+        } catch (error) {
+            console.error('检索失败:', error);
+            document.getElementById('search_result_table').innerHTML =
+                `<div class="error-container">检索失败: ${error.message}</div>`;
+        } finally {
+            searchBtn.disabled = false;
+        }
+    });
+     // 设置为默认知识库功能
+    document.getElementById('setDefaultBtn').addEventListener('click', async () => {
+        if (!currentKB) {
+            alert('请先选择知识库');
+            return;
+        }
+
+        const setDefaultBtn = document.getElementById('setDefaultBtn');
+        const originalText = setDefaultBtn.innerHTML;
+        const uid = document.getElementById('uid').value;
+        const t = document.getElementById('t').value;
+
+        try {
+            // 禁用按钮并显示加载状态
+            setDefaultBtn.disabled = true;
+            setDefaultBtn.innerHTML = '<div class="spinner"></div> 设置中...';
+
+            const response = await fetch('/vdb/set/default', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ uid, t, kb_id: currentKB })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('已设置为默认知识库！');
+                // 更新状态显示
+                document.getElementById('vdb_status_desc').textContent =
+                    `${result.kb_name} (默认)`;
+                // 刷新知识库下拉菜单
+                await loadKnowledgeBases();
+                // 重新选中当前知识库
+                const selector = document.getElementById('kb_selector');
+                selector.value = currentKB;
+
+                // 触发change事件更新界面状态
+                const event = new Event('change');
+                selector.dispatchEvent(event);
+            } else {
+                throw new Error(result.message || '设置失败');
+            }
+        } catch (error) {
+            console.error('设置默认知识库失败:', error);
+            alert(`设置失败: ${error.message}`);
+        } finally {
+            // 恢复按钮状态
+            setDefaultBtn.disabled = false;
+            setDefaultBtn.innerHTML = originalText;
+        }
+    });
+
+    // 加载知识库列表
+    loadKnowledgeBases();
+
+    // 加载文件列表
+    loadFileList(currentKB);
 });
 
 // 加载知识库列表
@@ -395,70 +502,3 @@ async function handleFileDelete(e) {
         btn.innerHTML = originalHTML;
     }
 }
-
-
-
-// 检索功能
-document.addEventListener('DOMContentLoaded', async () => {
-
-    document.getElementById('search_btn').addEventListener('click', async () => {
-        const search_input = document.getElementById('search_input').value;
-        if (!search_input.trim()) {
-            alert('请输入检索内容');
-            return;
-        }
-
-        if (!currentKB) {
-            alert('请先选择知识库');
-            return;
-        }
-
-        const uid = document.getElementById('uid').value;
-        const t = document.getElementById('t').value;
-        const statusEl = document.getElementById('search_status');
-        const searchBtn = document.getElementById('search_btn');
-
-        try {
-            statusEl.textContent = "检索中...";
-            searchBtn.disabled = true;
-
-            const search_res = await fetch('/vdb/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ search_input, uid, t, kb_id: currentKB })
-            });
-
-            const data = await search_res.json();
-
-            // 渲染表格
-            if (data.search_output) {
-                document.getElementById('search_result_table').innerHTML = `
-                    <table class="result-table">
-                        <thead>
-                            <tr>
-                                <th>来源文档</th>
-                                <th>相关度</th>
-                                <th>匹配内容</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${data.search_output}
-                        </tbody>
-                    </table>
-                `;
-            } else {
-                document.getElementById('search_result_table').innerHTML =
-                    `<div class="status-container">未找到相关结果</div>`;
-            }
-
-            statusEl.textContent = `找到 ${document.querySelectorAll('.result-table tbody tr').length} 条结果`;
-
-        } catch (error) {
-            console.error('检索失败:', error);
-            document.getElementById('search_result_table').innerHTML =
-                `<div class="error-container">检索失败: ${error.message}</div>`;
-        } finally {
-            searchBtn.disabled = false;
-        }
-    });
-});

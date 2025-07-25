@@ -22,7 +22,7 @@
                 <div class="kb-controls">
                     <div class="kb-select-container">
                         <select id="kb_selector">
-                            <option value="">请选择知识库</option>
+                            <option value="">--选择知识库--</option>
                             <!-- 知识库选项将通过JS动态加载 -->
                         </select>
                         <span class="or-divider">或</span>
@@ -47,6 +47,9 @@
                         <strong>当前知识库状态:</strong>
                         <span id="vdb_status_desc">{{vdb_status}}</span>
                     </div>
+                    <button class="btn btn-activate" id="setDefaultBtn" style="display: none;">
+                        <i class="fas fa-star"></i> 设置为默认
+                    </button>
                     <button class="btn btn-danger" id="deleteBtn" style="display: none;">
                         <i class="fas fa-trash-alt"></i> 删除知识库
                     </button>

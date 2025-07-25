@@ -452,6 +452,9 @@ class DbUtl:
         logger.info(f"get_my_vdb_info_by_uid_sql, {sql}")
         my_dt = DbUtl.sqlite_output(CFG_DB_URI,sql,DataType.JSON.value)
         if not include_others_public:
+            for item in my_dt:
+                if item['is_default'] == 1:  # 自己的知识库
+                    item['name'] += '(默认)'
             logger.info(f"get_my_vdb_info_by_uid_dt {my_dt}")
             return my_dt
         sql = f"select * from vdb_info where uid != '{uid}' and is_public = '1'"
@@ -508,11 +511,35 @@ class DbUtl:
     @staticmethod
     def get_vdb_file_list(uid: int, vdb_id: int):
         if not uid or not vdb_id:
-            raise RuntimeError(f"param_null_err, {uid}, {vdb_id}")
+            raise RuntimeError(f"get_vdb_file_list_param_null_err, {uid}, {vdb_id}")
         sql = f"select * from file_info where uid = '{uid}' and vdb_id = '{vdb_id}'"
         logger.info(f"get_vdb_file_list_sql, {sql}")
         my_dt = DbUtl.sqlite_output(CFG_DB_URI,sql,DataType.JSON.value )
         logger.info(f"get_vdb_file_list_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
+    def get_default_vdb(uid: int):
+        if not uid:
+            raise RuntimeError(f"get_default_vdb_param_null_err, {uid}")
+        sql = f"select id, name from vdb_info where uid = '{uid}' and is_default = 1 limit 1"
+        logger.info(f"get_default_vdb_sql, {sql}")
+        my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+        logger.info(f"get_default_vdb_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
+    def set_default_vdb(uid: int, vdb_id: int):
+        if not uid or not vdb_id:
+            raise RuntimeError(f"set_default_vdb_param_null_err, {uid}, {vdb_id}")
+        sql = f"update vdb_info set is_default = 1 where uid = '{uid}' and id = '{vdb_id}' limit 1"
+        logger.info(f"set_default_vdb_sql, {sql}")
+        my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+        logger.info(f"set_default_vdb_dt {my_dt}")
+        sql = f"update vdb_info set is_default = 0 where uid = '{uid}' and id != '{vdb_id}'"
+        logger.info(f"set_default_vdb_exclude_sql, {sql}")
+        my_dt1 = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+        logger.info(f"set_default_vdb_exclude_dt {my_dt1}")
         return my_dt
 
     @staticmethod

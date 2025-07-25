@@ -77,7 +77,7 @@ def vdb_index():
 @vdb_bp.route('/vdb/my/list', methods=['POST'])
 def get_my_vdb_list():
     """
-    获取知识库列表
+    获取我自己创建的知识库列表
     :return: {"kb_list": [{'id':id1, 'name':name1},{'id':id2, 'name':name2},]}
     """
     data = request.get_json()
@@ -91,7 +91,7 @@ def get_my_vdb_list():
 @vdb_bp.route('/vdb/pub/list', methods=['POST'])
 def get_public_vdb_list():
     """
-    获取知识库列表
+    获取可用的知识库列表
     :return: {"kb_list": [{'id':id1, 'name':name1},{'id':id2, 'name':name2},]}
     """
     data = request.get_json()
@@ -114,6 +114,26 @@ def get_vdb_file_list():
     vdb_id = data.get("vdb_id")
     dt = DbUtl.get_vdb_file_list(uid, vdb_id)
     return jsonify({"files": dt, "success": True})
+
+@vdb_bp.route('/vdb/set/default', methods=['POST'])
+def set_default_vdb():
+    """
+    设置默认知识库
+    """
+    data = request.get_json()
+    logger.info(f"set_default_vdb {data}")
+    uid = data.get("uid")
+    t = data.get("t")
+    vdb_id = data.get("kb_id")
+    dt = DbUtl.set_default_vdb(uid, vdb_id)
+    kb_name_info = DbUtl.get_default_vdb(uid)
+
+    if kb_name_info:
+        result = jsonify({"message": dt, "success": True, "kb_name":kb_name_info[0]['name']})
+    else:
+        result = jsonify({"message": "设置默认数据库失败", "success": False, "kb_name": ""})
+    logger.info(f"set_default_vdb_return, {dt}")
+    return result
 
 @vdb_bp.route('/vdb/file/delete', methods=['POST'])
 def delete_file_from_vdb():

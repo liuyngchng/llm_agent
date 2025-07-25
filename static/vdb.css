@@ -194,16 +194,16 @@ h2 i {
     box-shadow: 0 5px 15px rgba(229, 57, 53, 0.3);
 }
 
-.btn-activate {
-    background: linear-gradient(to right, #28a745, #218838);
+.btn-set-default {
+    background: linear-gradient(to right, #ff9800, #f57c00);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.btn-activate:hover:not(:disabled) {
-    background: linear-gradient(to right, #218838, #1e7e34);
+.btn-set-default:hover:not(:disabled) {
+    background: linear-gradient(to right, #f57c00, #e65100);
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 5px 15px rgba(245, 124, 0, 0.3);
 }
 
 #fileName {
@@ -502,7 +502,7 @@ footer {
         width: 100%;
         justify-content: space-between;
     }
-    #activateBtn, #deleteBtn {
+    #setDefaultBtn, #deleteBtn {
         margin-top: 10px;
         width: 100%;
     }
