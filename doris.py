@@ -119,26 +119,27 @@ class Doris:
         """
         exec sql in doris
         """
-
         body_md5 = hashlib.md5(json.dumps(body).encode()).hexdigest()
         if body_md5 in cache_dict:
             cached_time, exec_json = cache_dict[body_md5]
             if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
                 logger.info(f"return_from_cache_for, {body}, cache_dt={exec_json}")
                 return exec_json
-        else:
-            escaped_body = json.dumps(body, ensure_ascii=False).replace("'", "'\"'\"'")
-            logger.info(f"curl -X POST --noproxy '*' -s -w'\\n' '{self.url}' -H 'Content-Type:application/json' -H 'token:{self.token}' -d '{escaped_body}'")
-            response = requests.post(
-                self.url, json=body, headers=self.headers,
-                proxies={'http': None, 'https': None},
-                timeout=(DB_CONN_TIMEOUT, DB_RW_TIMEOUT)             #（连接5秒，读取10秒）
-            )
-            exec_json = response.json()
-            logger.info(f"http_req_return, {exec_json}")
-            cache_dict[body_md5] = (time.time(), exec_json)
-
+            else:
+                logger.info(f"cache_expired, del_cache_key_for {body}")
+                del cache_dict[body_md5]
+        escaped_body = json.dumps(body, ensure_ascii=False).replace("'", "'\"'\"'")
+        logger.info(f"curl -X POST --noproxy '*' -s -w'\\n' '{self.url}' -H 'Content-Type:application/json' -H 'token:{self.token}' -d '{escaped_body}'")
+        response = requests.post(
+            self.url, json=body, headers=self.headers,
+            proxies={'http': None, 'https': None},
+            timeout=(DB_CONN_TIMEOUT, DB_RW_TIMEOUT)             #（连接5秒，读取10秒）
+        )
+        exec_json = response.json()
+        logger.info(f"http_req_return, {exec_json}")
         if exec_json['code'] == 200:
+            cache_dict[body_md5] = (time.time(), exec_json['data'])
+            logger.info(f"request_dt_return, {exec_json['data']}")
             return exec_json['data']
         else:
             logger.error(f"request_dt_error, body[{body}], response, {exec_json}")
