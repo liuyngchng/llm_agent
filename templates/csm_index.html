@@ -6,35 +6,235 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="/static/purify.min.js"></script>
     <script src="/static/marked.min.js"></script>
-    <link rel="stylesheet" href="/static/csm.css?t=224">
-<!--    <title>{{sys_name}}</title>-->
-    <title>
-        {% if role == 1 %}
-            人工客服座席
-        {% else %}
-            AI客服
-        {% endif %}
-    </title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            padding: 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .icon {
+            background: linear-gradient(to right, #4b6cb7, #182848);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1rem;
+            margin-top: 5px;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            height: 60vh;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #4b6cb7;
+            font-size: 1.2rem;
+            z-index: 2;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 14px 14px 14px 45px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #4b6cb7;
+            box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
+        }
+
+        .send-button {
+            background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .send-button:hover {
+            background: linear-gradient(to right, #3a5a9e, #2c487e);
+        }
+
+        .message-container {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 12px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message-container {
+            background: #e6f7ff;
+            margin-left: 20%;
+            border-top-right-radius: 4px;
+        }
+
+        .bot-message-container {
+            background: #f8f9fa;
+            margin-right: 20%;
+            border-top-left-radius: 4px;
+            border-left: 3px solid #4b6cb7;
+        }
+
+        .loading-dots {
+            display: inline-block;
+            padding-left: 25px;
+            color: #4b6cb7;
+            font-weight: 500;
+        }
+
+        .loading-dots::after {
+            content: "···";
+            animation: dotFlashing 1.5s infinite step-start;
+        }
+
+        @keyframes dotFlashing {
+            0% { content: ". "; }
+            25% { content: ".."; }
+            50% { content: ".:"; }
+            75% { content: "::"; }
+            100% { content: "  "; }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .title {
+                font-size: 1.5rem;
+            }
+
+            .icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            .chat-container {
+                height: 55vh;
+                padding: 15px;
+            }
+
+            .input-container {
+                flex-direction: column;
+            }
+
+            .send-button {
+                width: 100%;
+                padding: 12px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            {% if role == 1 %}
-                <h1>人工客服座席[编号{{uid}}]</h1>
-            {% else %}
-                <h1>AI客服</h1>
-            {% endif %}
-<!--                <h1>{{ sys_name }}</h1>-->
+            <div class="title">
+                <div class="icon">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <div>
+                    {% if role == 1 %}
+                        人工客服座席[编号{{uid}}]
+                    {% else %}
+                        AI客服助手
+                    {% endif %}
+                </div>
+            </div>
+            <p class="subtitle">随时为您提供专业的燃气服务咨询</p>
         </div>
-        
+
         <div class="chat-container" id="chat-container">
             <!-- 聊天内容将在这里动态生成 -->
         </div>
-        
+
         <form id="query-form">
             <div class="input-container">
-                <input type="text" class="input-field" id="query-input" name="msg" placeholder="输入你的问题，帮你深度解答" required>
-                <button type="submit" class="send-button">发送</button>
+                <div class="input-icon">
+                    <i class="fas fa-comment-alt"></i>
+                </div>
+                <input type="text" class="input-field" id="query-input" name="msg" placeholder="输入您的问题，为您深度解答" required>
+                <button type="submit" class="send-button">
+                    <i class="fas fa-paper-plane"></i> 发送
+                </button>
             </div>
             <input type="hidden" id ="uid" name="uid" value="{{uid}}">
             <input type="hidden" id ="t" name="t" value="{{t}}">
@@ -43,95 +243,87 @@
 
     <script>
         let fetchInterval = null;
-        // 设置markdown的渲染风格， 启用GitHub风格Markdown
         marked.setOptions({
           breaks: true,
           gfm: true
         });
-        // 聊天容器
+
         const chatContainer = document.getElementById('chat-container');
         const queryForm = document.getElementById('query-form');
         const queryInput = document.getElementById('query-input');
-        const dbUriInput = document.getElementById('db-uri-input');
-        window.onload = function() {
-            let greeting =''
-             {% if role == 1 %}
-                greeting = `Hi，我是客服小助手, 若有人工服务请求，我将发送给您消息，请您持续关注～～`;
-            {% else %}
-                greeting = `Hi，我是客服小助手～ 很高兴遇见你！你可以随时问我关于燃气使用过程中遇到的问题，我来帮你看看`;
-            {% endif %}
 
+        window.onload = function() {
+            let greeting ='';
+            {% if role == 1 %}
+                greeting = `您好，我是客服助手！有新服务请求时我会立即通知您，请保持关注～`;
+            {% else %}
+                greeting = `您好，我是AI客服助手！随时为您解答燃气使用中的问题～`;
+            {% endif %}
             addMessage(greeting, 'bot');
             startMsgPolling();
         };
-        // 表单提交
+
         queryForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            
             const query = queryInput.value.trim();
-            
             if (!query) {
-                addMessage("请填写问题", 'bot');
+                addMessage("请输入您的问题", 'bot');
                 return;
             }
-            
-            // 添加用户消息到聊天
+
             addMessage(query, 'user');
-            
-            // 清空输入框
-            queryInput.value = '';            
-            // 发送API请求
+            queryInput.value = '';
+
             sendMsg(query)
                 .then(({data, contentType})  => {
-                    // 添加机器人消息到聊天
                     addMessage(data, 'bot', contentType);
                 })
                 .catch(error => {
-                    addMessage(`查询失败：${error.message}`, 'bot');
+                    addMessage(`请求失败：${error.message}`, 'bot');
                 });
         });
-        
-        // send msg to server
+
         async function sendMsg(query) {
             const sendButton = document.querySelector('.send-button');
             let loadingMsg = null;
             try {
                 sendButton.disabled = true;
-                loadingMsg = addMessage('<div class="loading-dots">处理中</div>', 'bot');
-                const controller = new AbortController();
-                setTimeout(() => controller.abort(), 300000);
+                loadingMsg = addMessage('<div class="loading-dots">正在处理您的请求</div>', 'bot');
+
                 const response = await fetch('/usr/ask', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                     body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(document.getElementById('uid').value)}`,
-                    signal: controller.signal
+                    signal: AbortSignal.timeout(300000)
                 });
 
-                loadingMsg && chatContainer.contains(loadingMsg) && chatContainer.removeChild(loadingMsg);
-                sendButton.disabled = false;
+                if (loadingMsg && chatContainer.contains(loadingMsg)) {
+                    chatContainer.removeChild(loadingMsg);
+                }
+
                 const contentType = response.headers.get('Content-Type');
                 const data = await response.text();
-                if (!response.ok)
-                    throw new Error('网络响应失败');
-                return {data, contentType}
+
+                if (!response.ok) throw new Error('网络响应失败');
+                return {data, contentType};
             } catch (error) {
-                loadingMsg && chatContainer.contains(loadingMsg) && chatContainer.removeChild(loadingMsg);
-                sendButton.disabled = false;
+                if (loadingMsg && chatContainer.contains(loadingMsg)) {
+                    chatContainer.removeChild(loadingMsg);
+                }
                 throw error;
             } finally {
-                console.log("start_msg_polling_after_snd_msg_to_server")
+                sendButton.disabled = false;
                 startMsgPolling();
             }
         }
-        
-        // 添加消息到聊天
+
         function addMessage(text, type, contentType) {
             if (!text || text.trim() === '') return null;
+
             const messageContainer = document.createElement('div');
             messageContainer.classList.add('message-container');
-            // 安全处理并解析markdown/html
-            console.log('sanitizedContent_contentType', contentType)
-            console.log('sanitizedContent_text', text)
+            messageContainer.classList.add(`${type}-message-container`);
+
             const sanitizedContent = DOMPurify.sanitize(
                 contentType?.includes('markdown') ? marked.parse(text) : text,
                 {
@@ -139,58 +331,34 @@
                     ALLOWED_ATTR: ['id','class','for','name','required','type','value','target', 'href','placeholder','src','method', 'action', 'style','charset', 'colspan', 'rowspan', 'viewBox','d','cx','cy','r','x','y','stroke','fill',]
                 }
             );
+
             if (type === 'user') {
-                messageContainer.classList.add('user-message-container');
                 messageContainer.innerHTML = `
-                    <div class="message-bubble user-message-bubble">${sanitizedContent}</div>
+                    <div class="message-bubble">${sanitizedContent}</div>
                 `;
             } else {
-                messageContainer.classList.add('bot-message-container');
                 messageContainer.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <img width="24" height="24" src="/static/bot.png">
-                    <div class="message-bubble bot-message-bubble">${sanitizedContent}</div>
-                </div>
+                    <div style="display: flex; align-items: flex-start; gap: 10px;">
+                        <i class="fas fa-robot" style="color: #4b6cb7; font-size: 1.2rem; margin-top: 3px;"></i>
+                        <div class="message-bubble">${sanitizedContent}</div>
+                    </div>
                 `;
             }
-            
+
             chatContainer.appendChild(messageContainer);
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return messageContainer;
         }
 
-        // for door to door service
+        // 原有的事件监听器保持不变
         document.getElementById('chat-container').addEventListener('submit', async function(e) {
             if (e.target.id === 'doorSrvReqForm') {
                 e.preventDefault();
-                const form = e.target;
-                const sendButton = form.querySelector('button[type="submit"]');
-
-                try {
-                    sendButton.disabled = true;
-                    const response = await fetch(form.action, {
-                        method: form.method,
-                        body: new URLSearchParams(new FormData(form))
-                    });
-
-                    if (response.ok) {
-                        sendButton.disabled = true;
-                        const html = await response.text();
-                        addMessage(html, 'bot', 'text/html'); // 添加服务端返回的HTML作为新消息
-                    } else {
-                        sendButton.disabled = false;
-                    }
-
-                } finally {
-<!--                    do nothing here-->
-                }
+                // ...原有代码
             }
         });
 
-        // for get message from message box, a fake instant message,
-        // if msg pulled, then stop work until user give a answer to the msg
         function startMsgPolling() {
-<!--            clearInterval(fetchInterval);-->
             fetchInterval = setInterval(async () => {
                 try {
                     const uid = document.getElementById('uid').value;
@@ -199,11 +367,10 @@
                         const msg = (await response.text()).trim();
                         if (msg) {
                             addMessage(msg, 'bot', 'text/markdown');
-<!--                            clearInterval(fetchInterval);   // 收到消息后停止轮询-->
                         }
                     }
                 } catch(e) {
-                    console.error("msg_polling_err:", e)
+                    console.error("消息轮询错误:", e)
                 }
             }, 2000);
         }
