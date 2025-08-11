@@ -675,13 +675,13 @@ if __name__ == "__main__":
     # logger.info(f"schema_for_llm {llm_schema_info}")
     # count = my_doris.count_dt()
     # logger.info(f"my_count {count}")
-    sql='''
+    my_sql='''
     SHOW CREATE TABLE a10analysis.ai_cust_info
 '''
     # sample_dt = my_doris.exec_sql(sql)
     # logger.info(f"sample_dt {sample_dt}")
 
-    ddl="""
+    my_ddl="""
     CREATE TABLE `ai_meter_info` (
   `id` bigint NOT NULL AUTO_INCREMENT(1) COMMENT '自增ID',
   `badge_nmb` varchar(64) NOT NULL COMMENT '燃气表号',
@@ -702,4 +702,4 @@ DISTRIBUTED BY HASH(`id`) BUCKETS AUTO
 PROPERTIES (
 
     """
-    my_doris.get_table_comment_from_ddl(ddl.split('ENGINE')[1])
+    my_doris.get_table_comment_from_ddl(my_ddl.split('ENGINE')[1])
