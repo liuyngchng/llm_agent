@@ -364,24 +364,18 @@ class Doris:
         """
         if not raw_columns:
             return raw_columns
-
-        # 1. 从SQL中提取表名
         table_match = re.search(
             r'(?i)(?:FROM|JOIN)\s+([`\w.]+)(?:\s+(?:AS\s+)?\w+)?(?:\s|$)',
             sql
         )
         table_name = table_match.group(1) if table_match else None
-
         if not table_name:
             return raw_columns
-
-        # 处理带schema的表名
         if '.' in table_name:
             schema_name, table_name = table_name.split('.')[:2]
             full_table_name = f"{schema_name}.{table_name}"
         else:
             full_table_name = table_name
-
         processed_columns = []
         special_columns = {
             "YEAR": "年",
@@ -390,26 +384,18 @@ class Doris:
             "QUARTER": "季度",
             "WEEK": "周"
         }
-
         for col in raw_columns:
             col_upper = col.upper()
-
-            # 先检查特殊字段
             if col_upper in special_columns:
                 processed_columns.append(special_columns[col_upper])
                 continue
-
-            # 获取字段注释
             comment = self.get_comment(self.data_source, full_table_name, col_upper)
-
-            # 处理聚合函数和计算字段
             suffix, base_col = "", col
             patterns = [
                 (r'^(AVG|SUM|MAX|MIN|COUNT|STDDEV|VAR)\(([\w`]+)\)$', lambda m: (f"{m[1]}的", m[2].replace('`', ''))),
                 (r'^(TOTAL|AVG|SUM|MAX|MIN|COUNT|STDDEV|VAR)_([\w`]+)$', lambda m: (f"{m[1]}的", m[2].replace('`', ''))),
                 (r'^([\w]+)_(RATE|RATIO|PERCENT)$', lambda m: (f"{m[1]}的", f"{m[2]}"))
             ]
-
             for pattern, handler in patterns:
                 match = re.match(pattern, col_upper)
                 if match:
@@ -422,17 +408,13 @@ class Doris:
                         "COUNT的": "计数",
                         "TOTAL的": "总和"
                     }.get(suffix_part, "")
-                    # 获取基础列的注释
                     base_comment = self.get_comment(self.data_source, full_table_name, base_col.upper())
                     break
             else:
-                # 普通列名处理
-                base_comment = self._clean_comment(comment) if comment else ""
-
-            # 构建最终列名
+                base_comment = comment if comment else ""
             final_name = f"{base_comment}{suffix}" if base_comment else col
             processed_columns.append(final_name.strip())
-        logger.debug(f"processed_column_names,original: {raw_columns}, processed: {processed_columns}")
+        logger.debug(f"processed_column_names, original: {raw_columns}, processed: {processed_columns}")
         return processed_columns
 
     @staticmethod
