@@ -9,12 +9,7 @@ const queryForm = document.getElementById('query-form');
 const queryInput = document.getElementById('query-input');
 
 window.onload = function() {
-    let greeting ='';
-    {% if role == 1 %}
-        greeting = `您好，我是客服助手！有新服务请求时我会立即通知您，请保持关注～`;
-    {% else %}
-        greeting = `您好，我是AI客服助手！随时为您解答燃气使用中的问题～`;
-    {% endif %}
+    const greeting = window.initialGreeting; // 从全局变量获取
     addMessage(greeting, 'bot');
     startMsgPolling();
 };

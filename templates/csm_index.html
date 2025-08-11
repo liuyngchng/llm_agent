@@ -52,6 +52,16 @@
             <input type="hidden" id ="t" name="t" value="{{t}}">
         </form>
     </div>
+    <script>
+        let my_greeting ='';
+        {% if role == 1 %}
+            my_greeting = `您好，我是客服助手！有新服务请求时我会立即通知您，请保持关注～`;
+        {% else %}
+            my_greeting = `您好，我是AI客服助手！随时为您解答燃气使用中的问题～`;
+        {% endif %}
+        // 将Jinja2变量转为JS全局变量
+        window.initialGreeting = my_greeting;
+    </script>
     <script src="/static/csm.js"></script>
 </body>
 </html>
