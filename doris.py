@@ -4,7 +4,6 @@ import json
 import re
 import hashlib
 import time
-from decimal import Decimal
 from typing import LiteralString
 
 import pandas as pd
@@ -13,7 +12,6 @@ import logging.config
 
 from my_enums import DataType
 from sys_init import init_yml_cfg
-# from tabulate import tabulate
 from db_util import DbUtl,DB_RW_TIMEOUT, DB_CONN_TIMEOUT
 
 
@@ -437,8 +435,6 @@ class Doris:
         logger.debug(f"processed_column_names,original: {raw_columns}, processed: {processed_columns}")
         return processed_columns
 
-
-
     @staticmethod
     def get_col_comment_by_col_name(db_schema, db_name, table_name, column_name):
         for db in db_schema:
@@ -461,22 +457,22 @@ class Doris:
         :param column: 字段名
         :return: 字段注释
         """
-        # 检查缓存
+
         cache_key = f"{db.upper()}.{table.upper()}.{column.upper()}"
         if cache_key in cache_dict:
             cached_time, value = cache_dict[cache_key]
             if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
                 return value
-
-        # 从数据库获取注释
+            else:
+                logger.info(f"cache_expired, {cache_key}")
+                cache_dict.pop(cache_key)
         try:
             if (db_map := self.comment_map.get(db.upper())) \
                     and (table_map := db_map.get(table.upper())) \
                     and (comment := table_map.get(column.upper())):
-                # 清理注释并缓存
-                cleaned_comment = self._clean_comment(comment)
-                cache_dict[cache_key] = (time.time(), cleaned_comment)
-                return cleaned_comment
+                cache_dict[cache_key] = (time.time(), comment)
+                logger.info(f"get_comment_from_comment_map, {cache_key}, {comment}")
+                return comment
         except Exception as e:
             logger.error(f"获取注释失败: {e}")
 
@@ -484,18 +480,29 @@ class Doris:
 
     def get_comment_map(self):
         my_comment_map = {}
+        punctuations = "，。！？；：,.?!;:\"'"
         for table in self.table_list:
             cmt_list = self.get_table_col_comment(self.data_source, table)
             logger.info(f"get_comment_list, {cmt_list}")
             for item in cmt_list:
                 col_name = item['COLUMN_NAME'].upper()
                 raw_comment = item['COLUMN_COMMENT'].strip()
-                processed = ''.join(filter(lambda c: c.isalnum(), raw_comment))
-                processed = processed[:10] if processed else col_name
-                my_comment_map.setdefault(self.data_source.upper(), {}).setdefault(table.upper(), {})[col_name] = processed
+                if raw_comment:
+                    first_punct_index = -1
+                    for i, char in enumerate(raw_comment):
+                        if char in punctuations:
+                            first_punct_index = i
+                            break
+                    if first_punct_index > 0:
+                        processed = raw_comment[:first_punct_index]
+                    else:
+                        processed = raw_comment[:10]
+                else:
+                    processed = col_name
+                my_comment_map.setdefault(self.data_source.upper(), {}) \
+                    .setdefault(table.upper(), {})[col_name] = processed
         logger.info(f"my_comment_map, {my_comment_map}")
         return my_comment_map
-
 
 def get_sql_from_terminal() -> str:
     """
