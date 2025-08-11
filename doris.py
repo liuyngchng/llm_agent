@@ -665,30 +665,30 @@ if __name__ == "__main__":
     # count = my_doris.count_dt()
     # logger.info(f"my_count {count}")
     my_sql='''
-    SHOW CREATE TABLE a10analysis.ai_cust_info
+     SELECT * FROM ai_gas_usage limit 10;
 '''
-    # sample_dt = my_doris.exec_sql(sql)
-    # logger.info(f"sample_dt {sample_dt}")
+    sample_dt = my_doris.exec_sql(my_sql)
+    logger.info(f"sample_dt {sample_dt}")
 
-    my_ddl="""
-    CREATE TABLE `ai_meter_info` (
-  `id` bigint NOT NULL AUTO_INCREMENT(1) COMMENT '自增ID',
-  `badge_nmb` varchar(64) NOT NULL COMMENT '燃气表号',
-  `meter_type` int NOT NULL COMMENT '燃气表类型, 0:基表/流量计,1:IC卡表/流量计,2:远传表/流量计',
-  `meter_manufacture` varchar(100) NOT NULL COMMENT '燃气表制造厂商',
-  `meter_base_num` decimal(12,3) NOT NULL COMMENT '燃气表基底数, 抄表、换表的起始读数，法定计量器具读数只能增加不能减少也不可人为认为修改，单位:立方米',
-  `province` varchar(20) NOT NULL COMMENT '燃气表所属省',
-  `city` varchar(20) NOT NULL COMMENT '燃气表所属市',
-  `district` varchar(20) NOT NULL COMMENT '燃气表所属区县',
-  `company` varchar(100) NOT NULL COMMENT '燃气表所属的燃气公司名称',
-  `user_type` int NOT NULL COMMENT '使用燃气表的用户类型, 0:居民用户, 1:非居民用户，一般有工业用户、商业用户、福利用户等',
-  `active_date` date NOT NULL COMMENT '启用时间， 燃气表在这一天开始提供给用户使用',
-  `expire_date` date NOT NULL COMMENT '过期时间，燃气表在这个日期不能再给用户使用了，需要进行更换，一般使用10年'
-) ENGINE=OLAP
-UNIQUE KEY(`id`, `badge_nmb`)
-COMMENT '燃气表信息表'
-DISTRIBUTED BY HASH(`id`) BUCKETS AUTO
-PROPERTIES (
-
-    """
-    my_doris.get_table_comment_from_ddl(my_ddl.split('ENGINE')[1])
+#     my_ddl="""
+#     CREATE TABLE `ai_meter_info` (
+#   `id` bigint NOT NULL AUTO_INCREMENT(1) COMMENT '自增ID',
+#   `badge_nmb` varchar(64) NOT NULL COMMENT '燃气表号',
+#   `meter_type` int NOT NULL COMMENT '燃气表类型, 0:基表/流量计,1:IC卡表/流量计,2:远传表/流量计',
+#   `meter_manufacture` varchar(100) NOT NULL COMMENT '燃气表制造厂商',
+#   `meter_base_num` decimal(12,3) NOT NULL COMMENT '燃气表基底数, 抄表、换表的起始读数，法定计量器具读数只能增加不能减少也不可人为认为修改，单位:立方米',
+#   `province` varchar(20) NOT NULL COMMENT '燃气表所属省',
+#   `city` varchar(20) NOT NULL COMMENT '燃气表所属市',
+#   `district` varchar(20) NOT NULL COMMENT '燃气表所属区县',
+#   `company` varchar(100) NOT NULL COMMENT '燃气表所属的燃气公司名称',
+#   `user_type` int NOT NULL COMMENT '使用燃气表的用户类型, 0:居民用户, 1:非居民用户，一般有工业用户、商业用户、福利用户等',
+#   `active_date` date NOT NULL COMMENT '启用时间， 燃气表在这一天开始提供给用户使用',
+#   `expire_date` date NOT NULL COMMENT '过期时间，燃气表在这个日期不能再给用户使用了，需要进行更换，一般使用10年'
+# ) ENGINE=OLAP
+# UNIQUE KEY(`id`, `badge_nmb`)
+# COMMENT '燃气表信息表'
+# DISTRIBUTED BY HASH(`id`) BUCKETS AUTO
+# PROPERTIES (
+#
+#     """
+#     my_doris.get_table_comment_from_ddl(my_ddl.split('ENGINE')[1])
