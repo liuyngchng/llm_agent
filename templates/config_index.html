@@ -1,116 +1,203 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <title>{{sys_name}}</title>
-	<meta charset="utf-8">
-    <meta id="adm">
-    <link rel="stylesheet" href="/static/nl2sql.css">
+    <meta charset="utf-8">
+    <meta id="config_index.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/txt2sql.css">
     <style>
-        body {
-            background-color: #f5f7fa;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-
-        /* 添加网格背景 */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
+        .main-container {
             width: 100%;
-            height: 100%;
-            background-image:
-                linear-gradient(rgba(245,247,250,0.2) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(245,247,250,0.2) 1px, transparent 1px);
-            background-size: 20px 20px;
-            z-index: -1;
-        }
-        input, select, textarea {
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
+            max-width: 900px;
             background: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        input:focus, select:focus {
-            border-color: #4ECDC4;
-            box-shadow: 0 0 0 2px rgba(78,205,196,0.2);
-        }
-
-        /* 下拉菜单优化 */
-        select {
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,...");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            padding: 40px;
+            margin: 20px auto;
         }
 
-        /* 按钮统一风格 */
-        button {
-            background: linear-gradient(135deg, #4ECDC4, #45B7D1);
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-size: 2.2rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .icon {
+            background: linear-gradient(to right, #4b6cb7, #182848);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s;
+            font-size: 1.8rem;
         }
 
-        button:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(78,205,196,0.3);
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            margin-top: 10px;
         }
+
+        .nav-links {
+            display: flex;
+            justify-content: flex-end;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .nav-link {
+            color: #4b6cb7;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+
+        .nav-link:hover {
+            color: #2c487e;
+            background-color: #f0f5ff;
+            text-decoration: none;
+        }
+
         .form-group {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
+            margin-bottom: 20px;
+            position: relative;
         }
 
-        label {
-            width: 120px;
+        .form-group label {
+            width: 150px;
             text-align: right;
+            margin-right: 15px;
+            color: #2c3e50;
+            font-weight: 500;
         }
+
+        .input-icon {
+            position: absolute;
+            left: 175px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #4b6cb7;
+            font-size: 1.2rem;
+            z-index: 2;
+        }
+
+        input, select, textarea {
+            flex: 1;
+            padding: 14px 14px 14px 45px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #4b6cb7;
+            box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
+        }
+
+        textarea {
+            min-height: 150px;
+            padding-top: 20px;
+        }
+
+        .input-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .send-button {
+            background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 35px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(52, 152, 219, 0.5);
+        }
+
+        .delete-btn {
+            background: linear-gradient(to right, #e74c3c, #c0392b);
+        }
+
+        footer {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            margin-top: 30px;
+        }
+
+        .warning-message {
+            text-align: center;
+            color: #e74c3c;
+            font-weight: 500;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #fef2f2;
+        }
+
         @media (max-width: 768px) {
+            .main-container {
+                padding: 25px;
+            }
+
             .form-group {
                 flex-direction: column;
                 align-items: stretch;
             }
 
-            label {
+            .form-group label {
                 text-align: left;
                 width: auto;
+                margin-bottom: 8px;
+                margin-right: 0;
             }
 
-            textarea {
-                width:95%;
-                cols: auto;
+            .input-icon {
+                left: 15px;
+                top: 62px;
             }
-            .chat-container {
-                margin:10px;
-                padding:15px;
+
+            .input-container {
+                flex-direction: column;
+                gap: 15px;
             }
-        }
-        #schema {
-            line-height: 1.6;
-            tab-size: 4;
-            white-space: pre-wrap;
-            border: 1px solid #eee;
-            background-color: #f8f9fa;
-        }
-        /* 添加代码高亮 */
-        #schema::before {
-            content: 'SQL Schema';
-            display: block;
-            color: #666;
-            margin-bottom: 10px;
         }
     </style>
     <script>
@@ -130,57 +217,132 @@
     </script>
 </head>
 <body>
-    <div class="header">{{sys_name}}_系统配置</div>
-    <form style="margin-top: 2%" action="/cfg/dt" method="post">
-        <div align="center" style="margin-bottom: 0.5%">
-            <span>数据库类型:</span>
-            <select id="db_type" name="db_type" required>
-                <option value="sqlite" {% if db_type =='sqlite' %}selected{% endif %}>Sqlite数据库</option>
-                <option value="mysql" {% if db_type =='mysql' %}selected{% endif %}>MySQL数据库</option>
-                <option value="oracle" {% if db_type =='oracle' %}selected{% endif %}>Oracle数据库</option>
-                <option value="doris" {% if db_type =='doris' %}selected{% endif %}>Doris数据源</option>
-            </select>
-        </div>
-        <div align="center" style="margin-bottom: 0.5%"><span>数据库名称:</span>
-            <input type="text" id="db_name" name="db_name" value="{{db_name}}" placeholder="your_db_instance"  required>
-        </div>
-        <div align="center" style="margin-bottom: 0.5%"><span>数据库主机:</span>
-            <input type="text" id="db_host" name="db_host" value="{{db_host}}" placeholder="192.168.1.1" >
-        </div>
-        <div align="center" style="margin-bottom: 0.5%"><span>数据库端口:</span>
-            <input type="text" id="db_port" name="db_port" value="{{db_port}}" placeholder="13306" >
-        </div>
-        <div align="center" style="margin-bottom: 0.5%"><span>数据库用户:</span>
-            <input type="text" id="db_usr"  name="db_usr" value="{{db_usr}}" placeholder="your_db_username" required>
-        </div>
-        <div align="center" style="margin-bottom: 0.5%"><span>数据库密码:</span>
-            <input type="password" id="db_psw"  name="db_psw" value="{{db_psw}}" placeholder="your_db_password" required>
-        </div>
-        <div align="center" style="margin-bottom: 0.5%"><span>数据表清单:</span>
-            <input type="text" id="tables"  name="tables" value="{{tables}}" title="填写后限定为填写的表清单，不填则默认使用当前DB下用户可见的所有表">
-        </div>
-        <div align="center" style="margin-bottom: 0.5%"><span>开启提示:</span>
-            <input type="number" max="1" min="0" id="is_strict"  name="is_strict" value="{{is_strict}}" title="0: 否[尽可能理解查询意图]; 1:是[提示用户提供查询条件]">
-        </div>
-        <div align="center" style="margin-bottom: 0.5%"><span>开启绘图:</span>
-            <input type="number" max="1" min="0" id="add_chart"  name="add_chart" value="{{add_chart}}" title="0: 否[不绘图];1:是[绘图]">
-        </div>
-        <div align="center" style="margin-bottom: 0.5%"><span>背景知识:</span>
-            <textarea id="llm_ctx" name="llm_ctx" cols="50" rows="10"
-                title="每条独立的知识写一行，用于系统理解相应的业务场景">{{llm_ctx}}</textarea>
+    <div class="main-container">
+        <div class="header">
+            <div class="title">
+                <div class="icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <div>{{sys_name}} 系统配置</div>
+            </div>
+            <p class="subtitle">设置您的数据库连接和查询参数</p>
         </div>
 
-        <div class="input-container" style="justify-content:center;gap:20px">
-            <button type="submit" class="send-button" id="save_button">保存配置</button>
-            <button type="button" class="send-button delete-btn" id="delete_button">删除配置</button>
+        <div class="nav-links">
+            <a href="/txt2sql?uid={{uid}}&app_source={{app_source}}" class="nav-link">
+                <i class="fas fa-arrow-left"></i> 返回查询
+            </a>
+            <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="nav-link">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </a>
         </div>
-        <input type="hidden" id="uid" name="uid" value="{{uid}}">
-        <div align="center"><span id="waring_info" style="color: red">{{waring_info}}</span></div>
-<!--            <div>数据源信息:</div>-->
-<!--            <div align="center" style="margin-bottom: 0.5%">-->
-<!--                <textarea id="schema" name = "schema" cols="100" rows="20" readonly="readonly">{{schema}}</textarea>-->
-<!--            </div>-->
-    </form>
+
+        <form action="/cfg/dt" method="post">
+            <div class="form-group">
+                <label for="db_type">数据库类型:</label>
+                <div class="input-icon">
+                    <i class="fas fa-database"></i>
+                </div>
+                <select id="db_type" name="db_type" required>
+                    <option value="sqlite" {% if db_type =='sqlite' %}selected{% endif %}>Sqlite数据库</option>
+                    <option value="mysql" {% if db_type =='mysql' %}selected{% endif %}>MySQL数据库</option>
+                    <option value="oracle" {% if db_type =='oracle' %}selected{% endif %}>Oracle数据库</option>
+                    <option value="doris" {% if db_type =='doris' %}selected{% endif %}>Doris数据源</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="db_name">数据库名称:</label>
+                <div class="input-icon">
+                    <i class="fas fa-signature"></i>
+                </div>
+                <input type="text" id="db_name" name="db_name" value="{{db_name}}" placeholder="your_db_instance" required>
+            </div>
+
+            <div class="form-group">
+                <label for="db_host">数据库主机:</label>
+                <div class="input-icon">
+                    <i class="fas fa-server"></i>
+                </div>
+                <input type="text" id="db_host" name="db_host" value="{{db_host}}" placeholder="192.168.1.1">
+            </div>
+
+            <div class="form-group">
+                <label for="db_port">数据库端口:</label>
+                <div class="input-icon">
+                    <i class="fas fa-plug"></i>
+                </div>
+                <input type="text" id="db_port" name="db_port" value="{{db_port}}" placeholder="13306">
+            </div>
+
+            <div class="form-group">
+                <label for="db_usr">数据库用户:</label>
+                <div class="input-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <input type="text" id="db_usr" name="db_usr" value="{{db_usr}}" placeholder="your_db_username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="db_psw">数据库密码:</label>
+                <div class="input-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <input type="password" id="db_psw" name="db_psw" value="{{db_psw}}" placeholder="your_db_password" required>
+            </div>
+
+            <div class="form-group">
+                <label for="tables">数据表清单:</label>
+                <div class="input-icon">
+                    <i class="fas fa-table"></i>
+                </div>
+                <input type="text" id="tables" name="tables" value="{{tables}}" title="填写后限定为填写的表清单，不填则默认使用当前DB下用户可见的所有表">
+            </div>
+
+            <div class="form-group">
+                <label for="is_strict">开启提示:</label>
+                <div class="input-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <input type="number" max="1" min="0" id="is_strict" name="is_strict" value="{{is_strict}}" title="0: 否[尽可能理解查询意图]; 1:是[提示用户提供查询条件]">
+            </div>
+
+            <div class="form-group">
+                <label for="add_chart">开启绘图:</label>
+                <div class="input-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <input type="number" max="1" min="0" id="add_chart" name="add_chart" value="{{add_chart}}" title="0: 否[不绘图];1:是[绘图]">
+            </div>
+
+            <div class="form-group">
+                <label for="llm_ctx">背景知识:</label>
+                <div class="input-icon" style="top: 20px;">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <textarea id="llm_ctx" name="llm_ctx" title="每条独立的知识写一行，用于系统理解相应的业务场景">{{llm_ctx}}</textarea>
+            </div>
+
+            <div class="input-container">
+                <button type="submit" class="send-button" id="save_button">
+                    <i class="fas fa-save"></i> 保存配置
+                </button>
+                <button type="button" class="send-button delete-btn" id="delete_button">
+                    <i class="fas fa-trash-alt"></i> 删除配置
+                </button>
+            </div>
+
+            <input type="hidden" id="uid" name="uid" value="{{uid}}">
+            <div class="warning-message" id="waring_info">{{waring_info}}</div>
+        </form>
+
+        <footer>
+            <p>© 2025 数据查询平台 | KLSZ</p>
+            <p class="subtitle" style="margin-top: 10px; font-size: 0.85rem;">
+                配置修改将实时生效，请谨慎操作
+            </p>
+        </footer>
+    </div>
     <script>
         function validateForm() {
             const fields = [
@@ -198,14 +360,19 @@
                 return true;
             });
         }
+
         document.getElementById("save_button").onclick = function(e) {
             e.preventDefault();
             if(validateForm()) document.forms[0].submit();
         }
+
         document.getElementById("delete_button").addEventListener("click", async function(e) {
-            e.preventDefault(); // 阻止表单默认提交
+            e.preventDefault();
             const uid = document.getElementById("uid").value;
             document.getElementById("waring_info").textContent = ""
+
+            if (!confirm('确定要删除当前配置吗？此操作不可恢复！')) return;
+
             try {
                 const response = await fetch('/cfg/delete', {
                     method: 'POST',
@@ -217,17 +384,20 @@
 
                 const result = await response.json();
                 if (result.success) {
-                    showStatus('删除成功', 1500);
-<!--                    window.location.reload(); // 成功后刷新页面-->
-                    document.getElementById("waring_info").textContent = ""
+                    document.getElementById("waring_info").textContent = "配置已删除";
+                    document.getElementById("waring_info").className = "warning-message";
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    showStatus('删除失败: ' + (result.message || ''), 3000);
+                    document.getElementById("waring_info").textContent = '删除失败: ' + (result.message || '');
+                    document.getElementById("waring_info").className = "warning-message";
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('请求失败');
+                document.getElementById("waring_info").textContent = '请求失败';
+                document.getElementById("waring_info").className = "warning-message";
             }
         });
+
         function showStatus(text, duration=1500) {
             const indicator = document.createElement('div');
             indicator.className = 'status-indicator';
@@ -238,4 +408,3 @@
     </script>
 </body>
 </html>
-
