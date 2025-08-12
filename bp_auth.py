@@ -34,7 +34,7 @@ def login_index():
     auth_flag = my_cfg['sys']['auth']
     if auth_flag:
         login_idx = "login.html"
-        logger.info(f"return page {login_idx} for app_source {app_source}")
+        logger.info(f"return_page_for_app_source {app_source}, {login_idx}")
         return render_template(login_idx, **ctx)
     else:
         dt_idx = f"{app_source}_index.html"

@@ -17,7 +17,7 @@ function validateForm() {
 
 document.getElementById("save_button").onclick = function(e) {
     e.preventDefault();
-    if(validateForm()) document.forms[0].submit();
+    if (validateForm()) document.forms[0].submit();
 }
 
 document.getElementById("delete_button").addEventListener("click", async function(e) {

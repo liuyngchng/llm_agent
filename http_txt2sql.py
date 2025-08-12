@@ -67,6 +67,7 @@ def config_index():
     :return:
     """
     logger.info(f"request_args_in_config_index {request.args}")
+    app_source = request.args.get('app_source', '')
     try:
         uid = request.args.get('uid').strip()
         if not uid:
@@ -76,6 +77,7 @@ def config_index():
         raise jsonify("err_in_config_index")
     ctx = cfg_utl.get_ds_cfg_by_uid(uid, my_cfg)
     ctx["uid"] = uid
+    ctx["app_source"] = app_source
     ctx['sys_name'] = my_cfg['sys']['name']
     ctx["waring_info"] = ""
     dt_idx = "config_index.html"
