@@ -526,7 +526,10 @@ def get_elapsed_time(start_timestamp: float) -> str:
             return "用时计算错误"
         minutes = int(elapsed_seconds // 60)
         seconds = int(elapsed_seconds % 60)
-        return f"用时 {minutes}分{seconds}秒"
+        if minutes == 0:
+            return f"用时 {seconds}秒"
+        else:
+            return f"用时 {minutes}分{seconds}秒"
     except Exception as e:
         logger.error(f"时间计算错误: {str(e)}")
         return "用时未知"
