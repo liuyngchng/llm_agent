@@ -25,10 +25,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 MIN_PROMPT_LEN = 20
-
-
 AI_GEN_TAG="[_AI生成_]"
-
 
 def get_reference_from_vdb(keywords: str, vdb_dir: str, sys_cfg: dict) -> str:
     """
@@ -75,13 +72,11 @@ def extract_catalogue(target_doc: str) -> str:
         level_counters[level_index] += 1
         for i in range(level_index + 1, 3):
             level_counters[i] = 0
-
         # 生成编号 (如 "2.1.1")
         number_parts = []
         for i in range(level):
             number_parts.append(str(level_counters[i]))
         number_str = '.'.join(number_parts)
-
         # 添加缩进和目录行
         indent = "  " * (level - 1)
         catalogue_lines.append(f"{indent}{number_str} {para.text}")
@@ -139,7 +134,6 @@ def get_outline(file_name: str) -> str:
 
     for para in doc.paragraphs:
         style_name = para.style.name.lower()
-
         # 跳过非标题段落
         if not style_name.startswith(('heading', '标题')):
             continue
@@ -157,7 +151,6 @@ def get_outline(file_name: str) -> str:
         text = para.text.strip()
         if not text:
             continue
-
         # 处理一级标题
         if level == 1:
             chapter_num += 1
@@ -233,10 +226,10 @@ def fill_doc_without_prompt_in_progress(start_time: float, uid: int, task_id:str
     txt_info = ""
     for index, my_para in enumerate(doc.paragraphs):
         percent = index / total_paragraphs * 100
-        process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文本，"
+        process_bar_info = (f"正在处理第 {index + 1}/{total_paragraphs} 段文本，"
             f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}，进度 {percent:.1f}%")
-        logger.info(process_percent_bar_info)
-        update_process_info(start_time, thread_lock, uid, task_id, progress_info, process_percent_bar_info, percent)
+        logger.info(process_bar_info)
+        update_process_info(start_time, thread_lock, uid, task_id, progress_info, process_bar_info, percent)
         try:
             hd_check = is_3rd_heading(my_para)
             if not hd_check:
@@ -286,10 +279,10 @@ def fill_doc_with_prompt_in_progress(start_time: float, uid: int, task_id:str, t
     total_paragraphs = len(doc.paragraphs)
     for index, my_para in enumerate(doc.paragraphs):
         percent = index / total_paragraphs * 100
-        process_percent_bar_info = (f"正在处理第 {index+1}/{total_paragraphs} 段文本，"
+        process_bar_info = (f"正在处理第 {index + 1}/{total_paragraphs} 段文本，"
             f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}, 进度 {percent:.1f}%")
-        logger.info(process_percent_bar_info)
-        update_process_info(start_time, thread_lock, uid, task_id, process_info, process_percent_bar_info, percent)
+        logger.info(process_bar_info)
+        update_process_info(start_time, thread_lock, uid, task_id, process_info, process_bar_info, percent)
         try:
             is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
             if not is_prompt:
@@ -334,8 +327,8 @@ def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_
     total_paragraphs = len(doc.paragraphs)
     for index, my_para in enumerate(doc.paragraphs):
         percent = (index + 1) / total_paragraphs * 100
-        process_percent_bar_info = f"正在处理第 {index+1}/{total_paragraphs} 段文本，进度 {percent:.1f}%"
-        logger.info(f"percent: {process_percent_bar_info}")
+        process_bar_info = f"正在处理第 {index + 1}/{total_paragraphs} 段文本，进度 {percent:.1f}%"
+        logger.info(f"percent: {process_bar_info}")
         try:
             is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
             if not is_prompt:
@@ -354,7 +347,6 @@ def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_
         except Exception as ex:
             logger.error("fill_doc_job_err_to_break", ex)
             break
-        # if len(my_txt) > 0:
         new_para = doc.add_paragraph()
         new_para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
         red_run = new_para.add_run(f"{AI_GEN_TAG}{llm_txt}")
