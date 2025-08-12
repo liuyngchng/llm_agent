@@ -150,6 +150,7 @@ function formatFileSize(bytes) {
 // 上传文件到后端
 async function uploadTemplateFile(file) {
     const outlineContainer = document.getElementById('outlineContainer');
+    const uid = document.getElementById('uid').value;
     outlineContainer.innerHTML = `
         <div class="loading">
             <div class="snake-loader"></div>
@@ -158,6 +159,7 @@ async function uploadTemplateFile(file) {
     `;
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('uid', uid);
     try {
         const response = await fetch('/docx/upload', {
             method: 'POST',
@@ -360,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function gen_doc() {
     document.getElementById('modifiedOutline').readOnly = true;
-    const uid = document.getElementById('uid').value;
+        const uid = document.getElementById('uid').value;
     const token = document.getElementById('t').value;
     const task_id = document.getElementById('taskId').value;
     const doc_outline = document.getElementById('modifiedOutline').value;
@@ -431,6 +433,7 @@ async function gen_doc() {
 }
 // 获取任务进度
 async function fetchTaskProgress(taskId, token) {
+    const uid = document.getElementById('uid').value;
     try {
         const response = await fetch('/docx/process/info', {
             method: 'POST',
@@ -438,7 +441,10 @@ async function fetchTaskProgress(taskId, token) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ task_id: taskId })
+            body: JSON.stringify({
+                task_id: taskId,
+                uid: uid
+            })
         });
 
         if (!response.ok) throw new Error('进度获取失败');

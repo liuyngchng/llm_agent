@@ -104,11 +104,11 @@ def generate_outline():
 
 @app.route('/docx/upload', methods=['POST'])  # 修正路由路径
 def upload_file():
-    logger.info(f"upload_file {request}")
+    logger.info(f"upload_file_req, {request}")
     if 'file' not in request.files:
         return jsonify({"error": "未找到文件"}), 400
     file = request.files['file']
-    uid = request.args.get('uid')
+    uid = request.form.get('uid')
     if file.filename == '':
         return jsonify({"error": "空文件名"}), 400
 
@@ -220,15 +220,23 @@ def download_file_by_task_id(task_id):
 def get_doc_process_info():
     # logger.info(f"get_doc_process_info {request}")
     task_id = request.json.get("task_id")
-    if not task_id:
-        return jsonify({"error": "缺少任务ID"}), 400
+    uid = request.json.get("uid")
+    if not task_id or not uid:
+        return jsonify({"error": "缺少任务ID或用户ID"}), 400
+    uid_str = str(uid)
     with thread_lock:
-        progress_info = task_progress.get(task_id, {"text": "未知状态", "percent": 0, "timestamp": time.time(), "elapsed_time":""})
+        user_tasks = task_progress.get(uid_str, {})
+        task_info = user_tasks.get(task_id, {
+            "text": "任务不存在或已过期",
+            "percent": 0,
+            "timestamp": time.time(),
+            "elapsed_time": "0秒"
+        })
     info = {
         "task_id": task_id,
-        "progress": progress_info.get("text", ""),
-        "percent": progress_info.get("percent", ""),
-        "elapsed_time": progress_info.get("elapsed_time", "")
+        "progress": task_info.get("text", ""),
+        "percent": task_info.get("percent", 0),
+        "elapsed_time": task_info.get("elapsed_time", "")
     }
     # logger.info(f"get_doc_process_info, {info}")
     return jsonify(info), 200
@@ -275,14 +283,15 @@ def prs_doc_with_template(uid: int, doc_type: str, doc_title: str, task_id: str,
     """
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, "
                 f"task_id: {task_id}, file_name: {file_name}, is_include_prompt = {is_include_prompt}")
+    start_time = time.time()
     try:
-        docx_util.update_process_info(thread_lock, task_id, task_progress, "开始解析文档结构...", 0.0)
+        docx_util.update_process_info(start_time, thread_lock, uid, task_id, task_progress, "开始解析文档结构...", 0.0)
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
         catalogue = extract_catalogue(my_target_doc)
         output_file_name = f"output_{task_id}.docx"
         output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
         logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
-        docx_util.update_process_info(thread_lock, task_id, task_progress, "开始处理文档...", 0.0)
+        docx_util.update_process_info(start_time, thread_lock, uid, task_id, task_progress, "开始处理文档...", 0.0)
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
         para_comment_dict = get_para_comment_dict(my_target_doc)
         default_vdb = DbUtl.get_default_vdb(uid)
@@ -302,17 +311,17 @@ def prs_doc_with_template(uid: int, doc_type: str, doc_title: str, task_id: str,
         elif is_include_prompt:
             logger.info("fill_doc_with_prompt_in_progress")
             fill_doc_with_prompt_in_progress(
-                uid, task_id, thread_lock, task_progress, doc_ctx,
+                start_time, uid, task_id, thread_lock, task_progress, doc_ctx,
                 my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
             )
         else:
             logger.info("fill_doc_without_prompt_in_progress")
             docx_util.fill_doc_without_prompt_in_progress(
-                uid, task_id, thread_lock, task_progress, doc_ctx,
+                start_time, uid, task_id, thread_lock, task_progress, doc_ctx,
                 my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
             )
     except Exception as e:
-        docx_util.update_process_info(thread_lock, task_id, task_progress, f"任务处理失败: {str(e)}")
+        docx_util.update_process_info(thread_lock, uid, task_id, task_progress, f"任务处理失败: {str(e)}", 0.0)
         logger.exception("文档生成异常", e)
 
 
