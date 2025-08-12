@@ -94,8 +94,7 @@ def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str:
 
             model = get_model(cfg, is_remote)
             chain = prompt | model
-            # logger.info(f"submit_msg_to_llm, txt[{txt}], llm[{cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}]")
-
+            logger.info(f"submit_msg_to_llm, txt[{txt}], llm[{cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}]")
             response = chain.invoke({"txt": txt})
             output_txt = extract_md_content(rmv_think_block(response.content), "json")
             del model
