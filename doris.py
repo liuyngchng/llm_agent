@@ -127,7 +127,7 @@ class Doris:
                 logger.info(f"cache_expired, del_cache_key_for {body}")
                 del cache_dict[body_md5]
         escaped_body = json.dumps(body, ensure_ascii=False).replace("'", "'\"'\"'")
-        logger.info(f"curl -X POST --noproxy '*' -s -w'\\n' '{self.url}' -H 'Content-Type:application/json' -H 'token:{self.token}' -d '{escaped_body}'")
+        logger.info(f"curl -X POST --noproxy '*' -s -w'\\n' '{self.url}' -H 'Content-Type:application/json; charset=utf-8' -H 'token:{self.token}' -d '{escaped_body}'")
         response = requests.post(
             self.url, json=body, headers=self.headers,
             proxies={'http': None, 'https': None},
