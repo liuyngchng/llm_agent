@@ -1,3 +1,4 @@
+#!/bin/bash
 API='https://aiproxy.petrotech.cnpc/v1/chat/completions'
 TOKEN=$(head -n 1 llm_token.txt)
 MODEL='deepseek-v3'

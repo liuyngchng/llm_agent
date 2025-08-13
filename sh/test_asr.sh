@@ -1,3 +1,4 @@
+#!/bin/bash
 curl -s http://127.0.0.1:8000/v1/models | jq
 
 curl -ks --noproxy '*' -w'\n' --tlsv1 -X POST  'http://127.0.0.1:8000/v1/audio/transcriptions' \
