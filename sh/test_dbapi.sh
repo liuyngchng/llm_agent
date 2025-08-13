@@ -1,7 +1,7 @@
-API=$(head -n 1 dbapi_token.txt)      # 第一行作为API
+API=$(head -n 1 dbapi_token.txt)                # 第一行作为API
 TOKEN=$(head -n 2 dbapi_token.txt | tail -n 1)  # 第二行作为TOKEN
 SQL='select count(1) from a10analysis.ai_gas_pay'
-curl -ks --noproxy '*' \
+curl -ks --noproxy "*" \
     -H "Content-Type: application/json" \
     -H "token: ${TOKEN}" \
     -d '{
