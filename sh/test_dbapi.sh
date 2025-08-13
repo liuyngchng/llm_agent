@@ -10,6 +10,7 @@ echo 'TOKEN: '${TOKEN}
 echo 'NAME: '${NAME}
 echo 'UID: '${USER_ID}
 echo 'TENANT: '${TENANT}
+
 SQL='select count(1) from a10analysis.ai_meter_info'
 curl -ks --noproxy "*" \
     -H "Content-Type: application/json" \
