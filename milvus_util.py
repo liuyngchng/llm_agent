@@ -8,7 +8,7 @@ pip install -U pymilvus
 pip install "pymilvus[model]"
 """
 
-from pymilvus import MilvusClient, FieldSchema, DataType, CollectionSchema
+from pymilvus import MilvusClient, FieldSchema, DataType, CollectionSchema, connections
 from pymilvus import model
 from pymilvus.milvus_client import IndexParams
 from sentence_transformers import SentenceTransformer
@@ -21,14 +21,36 @@ embedding_model = "../bge-large-zh-v1.5"
 
 my_collection_name = "demo_collection"
 
+def test_connection():
+    # 使用默认用户名和密码连接Milvus
+    connections.connect(alias='default', host='localhost', port='19530', user='root', password='Milvus1')
 
-if __name__=="__main__":
+    con_list = connections.list_connections()
+    logger.info(f"con_list, {con_list}")
+
+
+def test_crud():
+
     # init milvus client
     local_model = SentenceTransformer(embedding_model)
     # init a milvus client from local file, local file will be created automatically if not exist
     # client = MilvusClient("milvus_demo.db")
     # init a milvus client from a remote milvus host with or without authentication
+    # client = MilvusClient(uri="http://localhost:19530", user="root", password="Milvus")
     client = MilvusClient(uri="http://localhost:19530", token="root:Milvus")
+    # client = MilvusClient(uri="http://localhost:19530", token="foo:123456")
+    logger.info(f"milvus_client_init_done, {client}")
+    # create a user
+    # client.create_user(
+    #     user_name="foo",
+    #     password="P@123456",
+    # )
+    # drop user
+    client.drop_user(user_name="foo")
+    users = client.list_users()
+    logger.info(f"users, {users}")
+    # if client:
+    #     exit(-1)
     if client.has_collection(collection_name=my_collection_name):
         client.drop_collection(collection_name=my_collection_name)
     # 使用默认的 schema
@@ -179,3 +201,7 @@ if __name__=="__main__":
 
     # close the client after all work done
     client.close()
+
+if __name__=="__main__":
+    # test_connection()
+    test_crud()
