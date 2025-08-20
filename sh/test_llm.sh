@@ -1,11 +1,8 @@
 #!/bin/bash
-API='https://aiproxy.petrotech.cnpc/v1/chat/completions'
-TOKEN=$(head -n 1 llm_token.txt)
-#MODEL='deepseek-v3'  # 可切换其他模型测试
-#MODEL='deepseek-r1'
-MODEL='qwen2dot5-7b-chat'
-#MODEL='qwen2dot5-72b-chat'
-#MODEL='kunlunllm-13b'
+API=$(sed -n '1p' llm_token.txt)
+TOKEN=$(sed -n '2p' llm_token.txt)
+MODEL=$(sed -n '3p' llm_token.txt)
+echo "API: ${API}"
 echo "TOKEN: ${TOKEN}"
 echo "MODEL: ${MODEL}"
 # 其中的 tools 部分对于支持 tools 函数调用的模型是必须的
