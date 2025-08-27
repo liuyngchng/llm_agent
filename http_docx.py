@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+在线文档生成工具
 pip install flask
 """
 import logging.config

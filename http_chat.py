@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+知识库问答系统
 pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama \
  langchain_core langchain_community pandas tabulate pymysql cx_Oracle pycryptodome
 """

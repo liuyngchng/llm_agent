@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+早期的NL2SQL demo，通过非stream 模式提供服务，作为技术可行性验证
 pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama \
  langchain_core langchain_community pandas tabulate pymysql cx_Oracle pycryptodome
 """

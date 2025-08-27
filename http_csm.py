@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+包含一定业务逻辑的客服系统
 pip install flask
+
 """
 import json
 import logging.config
