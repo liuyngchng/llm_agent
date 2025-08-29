@@ -38,6 +38,7 @@ class AppType(Enum):
     DOCX = "文档生成"
     CSM = "智能客服"
     TXT2SQL = "智能问数"
+    OPEN = "开放平台"
 
     @staticmethod
     def get_app_type(app_str: str) -> str:
