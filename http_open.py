@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
-my_cfg = init_yml_cfg()
+db_cfg = init_yml_cfg()['db']
 
 @app.route('/')
 def app_home():
@@ -29,36 +29,36 @@ def app_home():
 
 @app.route('/app/list')
 def list_available_app():
-    logger.info(f"trigger list_available_app")
+    logger.info(f"trigger_list_available_app")
     return json.dumps(AppType.get_app_list(), ensure_ascii=False)
 
 @app.route('/data_source/list')
 def list_available_db_source():
-    logger.info(f"trigger list_available_db_source")
+    logger.info(f"trigger_list_available_db_source")
     data_source_list = [
-        {"name": my_cfg.get("db")["name"], "desc": my_cfg.get("db")["desc"]}
+        {"name": db_cfg["name"], "desc": db_cfg["desc"], "dialect":db_cfg["type"]}
     ]
     return json.dumps(data_source_list, ensure_ascii=False)
 
 @app.route('/<db_source>/table/list')
 def list_available_tables(db_source):
     logger.info(f"trigger list_available_tables")
-    doris = Doris(my_cfg)
+    doris = Doris(db_cfg)
     table_list = doris.get_schema_info()
     return json.dumps(table_list, ensure_ascii=False)
 
 @app.route('/<db_source>/<table_name>/schema')
 def get_table_schema(db_source, table_name):
     logger.info(f"trigger get_table_schema")
-    doris = Doris(my_cfg)
+    doris = Doris(db_cfg)
     table_list = doris.get_schema_info()
     return json.dumps(table_list, ensure_ascii=False)
 
-@app.route('/exec/task', METHODS=['POST'])
+@app.route('/exec/task', methods=['POST'])
 def execute_sql_query():
     logger.info(f"trigger execute_sql_query")
     sql = request.json.get('sql')
-    doris = Doris(my_cfg)
+    doris = Doris(db_cfg)
     result = doris.exec_sql(sql)
     return json.dumps(result, ensure_ascii=False)
 
