@@ -113,7 +113,7 @@ class Doris:
             "script": sql
         }
 
-    def request_dt(self, body: dict) -> json:
+    def request_dt(self, body: dict) -> list:
         """
         exec sql in doris
         """

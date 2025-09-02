@@ -41,6 +41,11 @@ class AppType(Enum):
     OPEN = "开放平台"
 
     @staticmethod
+    def get_app_list() -> list:
+        """获取应用类型列表"""
+        return [{"name":app_type.name, "value":app_type.value} for app_type in AppType]
+
+    @staticmethod
     def get_app_type(app_str: str) -> str:
         """根据输入字符串获取对应的应用类型"""
         app_upper = app_str.upper()  # 转换为大写匹配枚举键

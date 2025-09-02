@@ -33,7 +33,7 @@ CFG_DB_URI=f"sqlite:///{CFG_DB_FILE}"
 
 class DbUtl:
     """
-    database util class, for process data output, database coneection etc.
+    database util class, for process data output, database connection etc.
     """
     @staticmethod
     def mysql_query_tool(db_con, query: str) -> dict:
