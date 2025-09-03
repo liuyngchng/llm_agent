@@ -229,7 +229,7 @@ class Doris:
                     table_schema_json = {"name": table, "schema": table_schema}
                     schema_table.append(table_schema_json)
                     continue
-            db_cache_result = get_cache(cache_key, my_cfg)
+            db_cache_result = get_cache(cache_key, self.cypher_key)
             if db_cache_result:
                 logger.info(f"return_table_schema_from_db_cache_for_sql\n{sql}, {db_cache_result}")
                 table_schema_json = {"name": table, "schema": db_cache_result}
