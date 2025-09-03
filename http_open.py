@@ -38,6 +38,7 @@ def list_available_db_source():
     data_source_list = [
         {"name": db_cfg["name"], "desc": db_cfg["desc"], "dialect":db_cfg["type"]}
     ]
+    logger.info(f"list_available_db_source_return, {data_source_list}")
     return json.dumps(data_source_list, ensure_ascii=False)
 
 @app.route('/<db_source>/table/list')
@@ -45,6 +46,7 @@ def list_available_tables(db_source):
     logger.info(f"trigger list_available_tables")
     doris = Doris(db_cfg)
     table_list = doris.get_schema_info()
+    logger.info(f"list_available_tables_return, {table_list}")
     return json.dumps(table_list, ensure_ascii=False)
 
 @app.route('/<db_source>/<table_name>/schema')
@@ -52,6 +54,7 @@ def get_table_schema(db_source, table_name):
     logger.info(f"trigger get_table_schema")
     doris = Doris(db_cfg)
     table_list = doris.get_schema_info()
+    logger.info(f"get_table_schema_return, {table_list}")
     return json.dumps(table_list, ensure_ascii=False)
 
 @app.route('/exec/task', methods=['POST'])
@@ -60,6 +63,7 @@ def execute_sql_query():
     sql = request.json.get('sql')
     doris = Doris(db_cfg)
     result = doris.exec_sql(sql)
+    logger.info(f"execute_sql_query_return, {result}")
     return json.dumps(result, ensure_ascii=False)
 
 
