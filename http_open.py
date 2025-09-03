@@ -69,5 +69,5 @@ if __name__ == '__main__':
     just for test, not for a production environment.
     """
     port = get_console_arg1()
-    logger.info(f"listening_port {port}")
+    logger.info(f"listening_port {port}， db_cfg {db_cfg}")
     app.run(host='0.0.0.0', port=port)

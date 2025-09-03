@@ -10,6 +10,7 @@ import pandas as pd
 import requests
 import logging.config
 
+from cfg_util import set_cache, get_cache
 from my_enums import DataType
 from sys_init import init_yml_cfg
 from db_util import DbUtl,DB_RW_TIMEOUT, DB_CONN_TIMEOUT
@@ -36,6 +37,7 @@ class Doris:
         self.data_source = cfg['data_source']
         self.tables = cfg.get('tables')
         self.uid = cfg['uid']
+        self.cypher_key = cfg['cypher_key']
         self.headers = {
             "Content-Type": "application/json",
             "token": self.token,
@@ -164,21 +166,27 @@ class Doris:
         """
         [{'COLUMN_NAME': 'a', 'COLUMN_COMMENT': 'comment_a'}, {'COLUMN_NAME': 'b', 'COLUMN_COMMENT': 'comment_b'}]
         """
-        table_schema_cache_dict_key = f"{schema_name}.{table_name}"
-        cache_result = table_schema_cache_dict.get(table_schema_cache_dict_key)
-        sql = f"SHOW CREATE TABLE {table_schema_cache_dict_key}"
+        full_table_name = f"{schema_name}.{table_name}"
+        cache_key = f"{full_table_name}.schema_with_comment"
+        cache_result = table_schema_cache_dict.get(cache_key)
+        sql = f"SHOW CREATE TABLE {full_table_name}"
         if cache_result:
             cached_time, table_schema = cache_result
             if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
-                logger.info(f"return_table_schema_from_cache_for_sql\n{sql}, {table_schema}")
+                logger.info(f"return_table_schema_with_comment_from_cache_for_sql\n{sql}, {table_schema}")
                 return table_schema
+        db_cache_result = get_cache(cache_key, self.cypher_key)
+        if db_cache_result:
+            logger.info(f"return_table_schema_with_comment_from_db_cache_for_sql\n{sql}, {db_cache_result}")
+            return db_cache_result
         logger.info(f"get_col_comment_sql, {sql}")
         exe_result = self.request_dt(self.build_dml(sql))
         table_schema = exe_result[0].get('Create Table').split('ENGINE')[0]
         table_comment = self.get_table_comment_from_ddl(exe_result[0].get('Create Table').split('ENGINE')[1])
         table_schema_with_comment = f"{table_schema} COMMENT='{table_comment}'"
-        table_schema_cache_dict[table_schema_cache_dict_key] = (time.time(), table_schema_with_comment)
-        logger.info(f"return_table_schema_from_dt_source_for_sql\n{sql}, {table_schema}")
+        table_schema_cache_dict[cache_key] = (time.time(), table_schema_with_comment)
+        set_cache(cache_key, table_schema_with_comment, str(time.time()), self.cypher_key)
+        logger.info(f"return_table_schema_with_comment_from_dt_source_for_sql\n{sql}, {table_schema}")
         return table_schema_with_comment
 
     @staticmethod
@@ -210,10 +218,28 @@ class Doris:
         """
         schema_table = []
         for table in self.get_table_list():
-            get_schema_sql = f"show create table {self.data_source}.{table}"
-            logger.info(f"get_schema_sql, {get_schema_sql}")
-            my_json = self.request_dt(self.build_dml(get_schema_sql))
-            table_schema_json = {"name": table, "schema": my_json[0].get('Create Table').split('ENGINE')[0]}
+            full_table_name = f"{self.data_source}.{table}"
+            cache_key = f"{full_table_name}.schema"
+            cache_result = table_schema_cache_dict.get(cache_key)
+            sql = f"show create table {full_table_name}"
+            if cache_result:
+                cached_time, table_schema = cache_result
+                if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
+                    logger.info(f"return_table_schema_from_cache_for_sql\n{sql}, {table_schema}")
+                    table_schema_json = {"name": table, "schema": table_schema}
+                    schema_table.append(table_schema_json)
+                    continue
+            db_cache_result = get_cache(cache_key, my_cfg)
+            if db_cache_result:
+                logger.info(f"return_table_schema_from_db_cache_for_sql\n{sql}, {db_cache_result}")
+                table_schema_json = {"name": table, "schema": db_cache_result}
+                schema_table.append(table_schema_json)
+                continue
+            logger.info(f"start_request_get_schema_sql, {sql}")
+            my_json = self.request_dt(self.build_dml(sql))
+            schema_dt = my_json[0].get('Create Table').split('ENGINE')[0]
+            table_schema_json = {"name": table, "schema": schema_dt}
+            table_schema_cache_dict[cache_key] = (time.time(), schema_dt)
             schema_table.append(table_schema_json)
             logger.info(f"response {my_json}")
         return schema_table
@@ -646,10 +672,10 @@ def print_show_create_table(result):
 
 
 if __name__ == "__main__":
-    # console_simulator()
-    my_cfg = init_yml_cfg()['db']
-    logger.info(f"my_cfg: {my_cfg}")
-    my_doris = Doris(my_cfg)
+    console_simulator()
+    # my_cfg = init_yml_cfg()['db']
+    # logger.info(f"my_cfg: {my_cfg}")
+    # my_doris = Doris(my_cfg)
     # my_comment_list = my_doris.get_table_col_comment("a10analysis", "dws_dw_ycb_day")
     # logger.info(f"my_comment_list {my_comment_list}")
     # tables = my_doris.get_table_list()
@@ -664,11 +690,11 @@ if __name__ == "__main__":
     # logger.info(f"schema_for_llm {llm_schema_info}")
     # count = my_doris.count_dt()
     # logger.info(f"my_count {count}")
-    my_sql='''
-     SELECT * FROM ai_gas_usage limit 10;
-'''
-    sample_dt = my_doris.exec_sql(my_sql)
-    logger.info(f"sample_dt {sample_dt}")
+#     my_sql='''
+#      SELECT * FROM ai_gas_usage limit 10;
+# '''
+#     sample_dt = my_doris.exec_sql(my_sql)
+#     logger.info(f"sample_dt {sample_dt}")
 
 #     my_ddl="""
 #     CREATE TABLE `ai_meter_info` (

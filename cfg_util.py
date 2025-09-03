@@ -207,6 +207,50 @@ def save_usr(user_name: str, token: str) -> bool:
             logger.exception(f"err_in_exec_sql, {exec_sql}")
     return save_result
 
+def set_cache(key: str, value: str, timestamp: str, cypher_key: str) -> bool:
+    """
+    :param key: cache key
+    :param value: cache value
+    :param timestamp: cache timestamp
+    :param cypher_key: key used to encrypt data
+    """
+    save_result = False
+    if not cypher_key:
+        raise Exception("cypher_key_null_err")
+    encrypt_value = encrypt(value, cypher_key)
+    exec_sql = f"INSERT INTO cache_info (key, value, timestamp) values ('{key}','{encrypt_value}', '{timestamp}')"
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            exec_sql = exec_sql.replace('\n', ' ')
+            exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
+            result = insert_del_sqlite(my_conn, exec_sql)
+            logger.info(f"exec_sql_success {exec_sql}")
+            if result.get('result'):
+                save_result = True
+        except Exception as e:
+            logger.exception(f"err_in_exec_sql, {exec_sql}")
+    return save_result
+
+def get_cache(key:str, cypher_key: str)->str | None:
+    """
+    :param key: cache key
+    :param cypher_key: key used to encrypt data
+    """
+    if not cypher_key:
+        raise Exception("cypher_key_null_err")
+    decrypt_value = None
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            sql = f"select value from cache_info where key='{key}' limit 1"
+            cache_info = query_sqlite(my_conn, sql)
+            value_dt = cache_info['data']
+            value = value_dt[0][0]
+            decrypt_value = decrypt(value, cypher_key)
+            logger.info(f"get_cache_with_key {key}, {decrypt_value}")
+        except Exception as e:
+            logger.info(f"no_cache_info_found_for_key, {key}")
+    return decrypt_value
+
 def delete_data_source_config(uid: str, cfg: dict) -> bool:
     delete_result = False
     if not uid:
