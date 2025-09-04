@@ -70,14 +70,15 @@ def get_table_schema(db_source, table_name):
     logger.info(f"trigger get_table_schema")
     db_cfg = get_db_cfg()
     doris = Doris(db_cfg)
-    table_list = doris.get_schema_info()
-    logger.info(f"get_table_schema_return, {table_list}")
-    return json.dumps(table_list, ensure_ascii=False)
+    create_table_sql = doris.get_table_schema(db_source, table_name)
+    table_schema = {"db_name":db_source, "table_name": table_name, "schema": create_table_sql}
+    logger.info(f"get_table_schema_return, {table_schema}")
+    return json.dumps(table_schema, ensure_ascii=False)
 
 @app.route('/exec/task', methods=['POST'])
 def execute_sql_query():
-    logger.info(f"trigger execute_sql_query")
     sql = request.json.get('sql')
+    logger.info(f"trigger_execute_sql_query, {sql}")
     db_cfg = get_db_cfg()
     doris = Doris(db_cfg)
     result = doris.exec_sql(sql)
