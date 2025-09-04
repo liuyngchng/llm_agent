@@ -46,8 +46,11 @@ def list_available_tables(db_source):
     logger.info(f"trigger list_available_tables")
     doris = Doris(db_cfg)
     table_list = doris.get_schema_info()
-    logger.info(f"list_available_tables_return, {table_list}")
-    return json.dumps(table_list, ensure_ascii=False)
+    table_desc_list = []
+    for item in table_list:
+        table_desc_list.append({"name": item["name"], "desc": item['schema'].split('COMMENT=')[1].replace("'", "")})
+    logger.info(f"list_available_tables_return, {table_desc_list}")
+    return json.dumps(table_desc_list, ensure_ascii=False)
 
 @app.route('/<db_source>/<table_name>/schema')
 def get_table_schema(db_source, table_name):

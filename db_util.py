@@ -26,8 +26,8 @@ oracle+oracledb://user:pass@hostname:port[/dbname][?service_name=<service>[&key=
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-DB_CONN_TIMEOUT=5      # 连接超时(秒)
-DB_RW_TIMEOUT=20       # 数据读写超时(秒)
+DB_CONN_TIMEOUT=20      # 连接超时(秒)
+DB_RW_TIMEOUT=50       # 数据读写超时(秒)
 CFG_DB_FILE = "cfg.db"
 CFG_DB_URI=f"sqlite:///{CFG_DB_FILE}"
 

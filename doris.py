@@ -167,17 +167,17 @@ class Doris:
         [{'COLUMN_NAME': 'a', 'COLUMN_COMMENT': 'comment_a'}, {'COLUMN_NAME': 'b', 'COLUMN_COMMENT': 'comment_b'}]
         """
         full_table_name = f"{schema_name}.{table_name}"
-        cache_key = f"{full_table_name}.schema_with_comment"
+        cache_key = f"{full_table_name}.schema"
         cache_result = table_schema_cache_dict.get(cache_key)
-        sql = f"SHOW CREATE TABLE {full_table_name}"
+        sql = f"show create table {full_table_name}"
         if cache_result:
             cached_time, table_schema = cache_result
             if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
-                logger.info(f"return_table_schema_with_comment_from_cache_for_sql\n{sql}, {table_schema}")
+                logger.info(f"return_table_schema_from_cache_for_sql\n{sql}, {table_schema}")
                 return table_schema
         db_cache_result = get_cache(cache_key, self.cypher_key)
         if db_cache_result:
-            logger.info(f"return_table_schema_with_comment_from_db_cache_for_sql\n{sql}, {db_cache_result}")
+            logger.info(f"return_table_schema_from_db_cache_for_sql\n{sql}, {db_cache_result}")
             return db_cache_result
         logger.info(f"get_col_comment_sql, {sql}")
         exe_result = self.request_dt(self.build_dml(sql))
@@ -186,7 +186,7 @@ class Doris:
         table_schema_with_comment = f"{table_schema} COMMENT='{table_comment}'"
         table_schema_cache_dict[cache_key] = (time.time(), table_schema_with_comment)
         set_cache(cache_key, table_schema_with_comment, str(time.time()), self.cypher_key)
-        logger.info(f"return_table_schema_with_comment_from_dt_source_for_sql\n{sql}, {table_schema}")
+        logger.info(f"return_table_schema_from_dt_source_for_sql\n{sql}, {table_schema}")
         return table_schema_with_comment
 
     @staticmethod
