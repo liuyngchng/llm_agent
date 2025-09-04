@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+
 """
 pip install python-docx
 通过zipfile组件处理 docx 文档的批注信息，根据段落ID获取段落内容等

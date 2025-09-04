@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+
 """
 作为数据库连接的代理，用于获取配置数据库相关的信息
 其他所有服务如果需要操作DB，则通过这个代理进行，屏蔽一切DB操作细节，方便其他服务进行横向扩展

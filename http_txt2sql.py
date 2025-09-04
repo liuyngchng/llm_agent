@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+
 """
 通过文本转换为SQL语句，提供数据库数据查询服务，通过 stream 模式提供数据
 pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama \

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+
 """
 用于测试服务是否正常运行的demo服务
 pip install gunicorn flask
