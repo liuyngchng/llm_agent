@@ -8,7 +8,7 @@
 import json
 import logging.config
 
-from flask import Flask, request
+from flask import Flask, request, g
 
 from doris import Doris
 from my_enums import AppType
@@ -21,7 +21,16 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
-db_cfg = init_yml_cfg()['db']
+
+def get_db_cfg():
+    if 'db_cfg' not in g:
+        g.db_cfg = init_yml_cfg()['db']  # 首次请求时加载并缓存
+        logger.info(f"g_db_cfg_inited, {g.db_cfg}")
+    return g.db_cfg
+
+@app.teardown_appcontext
+def teardown_db_cfg(exception):
+    g.pop('db_cfg', None)
 
 @app.route('/')
 def app_home():
@@ -34,11 +43,12 @@ def list_available_app():
     logger.info(f"trigger_list_available_app")
     return json.dumps(AppType.get_app_list(), ensure_ascii=False)
 
-@app.route('/data_source/list')
+@app.route('/ds/list')
 def list_available_db_source():
     logger.info(f"trigger_list_available_db_source")
+    db_cfg = get_db_cfg()
     data_source_list = [
-        {"name": db_cfg["name"], "desc": db_cfg["desc"], "dialect":db_cfg["type"]}
+        {"name": db_cfg.get('name', db_cfg.get('data_source')), "desc": db_cfg["desc"], "dialect":db_cfg["type"]}
     ]
     logger.info(f"list_available_db_source_return, {data_source_list}")
     return json.dumps(data_source_list, ensure_ascii=False)
@@ -46,6 +56,7 @@ def list_available_db_source():
 @app.route('/<db_source>/table/list')
 def list_available_tables(db_source):
     logger.info(f"trigger list_available_tables")
+    db_cfg = get_db_cfg()
     doris = Doris(db_cfg)
     table_list = doris.get_schema_info()
     table_desc_list = []
@@ -57,6 +68,7 @@ def list_available_tables(db_source):
 @app.route('/<db_source>/<table_name>/schema')
 def get_table_schema(db_source, table_name):
     logger.info(f"trigger get_table_schema")
+    db_cfg = get_db_cfg()
     doris = Doris(db_cfg)
     table_list = doris.get_schema_info()
     logger.info(f"get_table_schema_return, {table_list}")
@@ -66,17 +78,16 @@ def get_table_schema(db_source, table_name):
 def execute_sql_query():
     logger.info(f"trigger execute_sql_query")
     sql = request.json.get('sql')
+    db_cfg = get_db_cfg()
     doris = Doris(db_cfg)
     result = doris.exec_sql(sql)
     logger.info(f"execute_sql_query_return, {result}")
     return json.dumps(result, ensure_ascii=False)
-
-
 
 if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
     port = get_console_arg1()
-    logger.info(f"listening_port {port}， db_cfg {db_cfg}")
+    logger.info(f"listening_port {port}")
     app.run(host='0.0.0.0', port=port)
