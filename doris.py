@@ -175,11 +175,11 @@ class Doris:
         if cache_result:
             cached_time, table_schema = cache_result
             if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
-                logger.info(f"return_table_schema_from_cache_for_sql\n{sql}, {table_schema}")
+                logger.info(f"return_table_schema_from_cache_for_sql, {sql}")
                 return table_schema
         db_cache_result = get_cache(cache_key, self.cypher_key)
         if db_cache_result:
-            logger.info(f"return_table_schema_from_db_cache_for_sql\n{sql}")
+            logger.info(f"return_table_schema_from_db_cache_for_sql, {sql}")
             return db_cache_result
         logger.info(f"get_col_comment_sql, {sql}")
         exe_result = self.request_dt(self.build_dml(sql))
@@ -227,13 +227,13 @@ class Doris:
             if cache_result:
                 cached_time, table_schema = cache_result
                 if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
-                    logger.info(f"return_table_schema_from_cache_for_sql\n{sql}, {table_schema}")
+                    logger.info(f"return_table_schema_from_cache_for_sql, {sql}")
                     table_schema_json = {"name": table, "schema": table_schema}
                     schema_table.append(table_schema_json)
                     continue
             db_cache_result = get_cache(cache_key, self.cypher_key)
             if db_cache_result:
-                logger.info(f"return_table_schema_from_db_cache_for_sql\n{sql}")
+                logger.info(f"return_table_schema_from_db_cache_for_sql, {sql}")
                 table_schema_json = {"name": table, "schema": db_cache_result}
                 schema_table.append(table_schema_json)
                 continue
