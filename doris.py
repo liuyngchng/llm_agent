@@ -675,9 +675,9 @@ def print_show_create_table(result):
 
 if __name__ == "__main__":
     console_simulator()
-    # my_cfg = init_yml_cfg()['db']
-    # logger.info(f"my_cfg: {my_cfg}")
-    # my_doris = Doris(my_cfg)
+    my_cfg = init_yml_cfg()['db']
+    logger.info(f"my_cfg: {my_cfg}")
+    my_doris = Doris(my_cfg)
     # my_comment_list = my_doris.get_table_col_comment("a10analysis", "dws_dw_ycb_day")
     # logger.info(f"my_comment_list {my_comment_list}")
     # tables = my_doris.get_table_list()
@@ -692,11 +692,11 @@ if __name__ == "__main__":
     # logger.info(f"schema_for_llm {llm_schema_info}")
     # count = my_doris.count_dt()
     # logger.info(f"my_count {count}")
-#     my_sql='''
-#      SELECT * FROM ai_gas_usage limit 10;
-# '''
-#     sample_dt = my_doris.exec_sql(my_sql)
-#     logger.info(f"sample_dt {sample_dt}")
+    my_sql='''
+     SELECT      province,      city,      company_name,      COUNT(*) AS total_checks,     SUM(CASE WHEN GAS_SAFETY_ENTRY_SUCCESS = '正常入户' THEN 1 ELSE 0 END) AS success_checks,     ROUND(SUM(CASE WHEN GAS_SAFETY_ENTRY_SUCCESS = '正常入户' THEN 1 ELSE 0 END) / COUNT(*) * 100, 2) AS entry_rate FROM      ai_sc WHERE      city = '聊城市'     AND record_time >= '2025-06-05' GROUP BY      province, city, company_name ORDER BY      entry_rate DESC LIMIT 20;;
+'''
+    sample_dt = my_doris.exec_sql(my_sql)
+    logger.info(f"sample_dt {sample_dt}")
 
 #     my_ddl="""
 #     CREATE TABLE `ai_meter_info` (

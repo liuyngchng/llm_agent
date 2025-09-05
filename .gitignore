@@ -44,3 +44,4 @@ llm_py_env_whl.Python.3.12.3/*
 vdb/*
 __pycache__
 upload_doc/*
+schema/*
