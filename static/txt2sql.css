@@ -22,15 +22,27 @@ body {
 
 .dataframe th,
 .dataframe td {
-    border: 1px solid #e0e0e0; /* 单元格边框 */
-    padding: 12px 15px;
-    text-align: left;
+    padding: 10px 15px;
+    border: 1px solid #e0e0e0;
+    transition: background-color 0.2s;
 }
 
 .dataframe th {
-    background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+    background: linear-gradient(to right, #3a5795, #2c3e50) !important;
     color: white;
-    font-weight: 600;
+    font-weight: 700;
+    padding: 12px 15px;
+    border-bottom: 3px solid #1a2530;
+    text-align: left;
+    white-space: nowrap;
+    font-size: 1.05rem;
+    position: sticky;
+    top: 0;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+}
+
+.dataframe tr:hover td {
+    background-color: #f5f9ff;
 }
 
 .dataframe tr:nth-child(even) {
@@ -117,6 +129,13 @@ body {
     transform: translateY(-50%);
     color: #4b6cb7;
     font-size: 1.2rem;
+}
+
+.response-card table {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 15px 0;
 }
 
 #dialog {

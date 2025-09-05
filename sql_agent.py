@@ -242,6 +242,10 @@ class SqlAgent(DbUtl):
             table_list = self.doris_dt_source.get_table_list()
         else:
             table_list = self.db_dt_source.get_usable_table_names()
+            if self.cfg['db'].get('tables'):
+                table_list = self.cfg['db'].get('tables')
+                logger.warning(f"get_all_tables, return {table_list}")
+
         return table_list
 
     def get_table_list(self)-> list:
