@@ -179,7 +179,7 @@ class Doris:
                 return table_schema
         db_cache_result = get_cache(cache_key, self.cypher_key)
         if db_cache_result:
-            logger.info(f"return_table_schema_from_db_cache_for_sql\n{sql}, {db_cache_result}")
+            logger.info(f"return_table_schema_from_db_cache_for_sql\n{sql}")
             return db_cache_result
         logger.info(f"get_col_comment_sql, {sql}")
         exe_result = self.request_dt(self.build_dml(sql))
@@ -233,7 +233,7 @@ class Doris:
                     continue
             db_cache_result = get_cache(cache_key, self.cypher_key)
             if db_cache_result:
-                logger.info(f"return_table_schema_from_db_cache_for_sql\n{sql}, {db_cache_result}")
+                logger.info(f"return_table_schema_from_db_cache_for_sql\n{sql}")
                 table_schema_json = {"name": table, "schema": db_cache_result}
                 schema_table.append(table_schema_json)
                 continue

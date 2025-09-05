@@ -247,7 +247,7 @@ def get_cache(key:str, cypher_key: str)->str | None:
             value_dt = cache_info['data']
             value = value_dt[0][0]
             decrypt_value = decrypt(value, cypher_key)
-            logger.info(f"get_cache_with_key {key}, {decrypt_value}")
+            # logger.info(f"get_cache_with_key {key}, {decrypt_value}")
         except Exception as e:
             logger.info(f"no_cache_info_found_for_key, {key}")
     return decrypt_value
@@ -304,7 +304,7 @@ def decrypt(dt: str, key: str) -> str:
     encrypted_data = base64.b64decode(dt)
     decrypted = cipher.decrypt(encrypted_data)
     pln_txt = unpad(decrypted, AES.block_size).decode()
-    logger.info(f"get_pln_txt_for_cypher_txt, {pln_txt}, {dt}")
+    # logger.info(f"get_pln_txt_for_cypher_txt, {pln_txt}, {dt}")
     return pln_txt
 
 def get_const(key:str, app: str)->str | None:
