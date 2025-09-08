@@ -14,80 +14,40 @@ let isFetching = false;                                     //是否正在请求
 window.onload = function() {
     const greetingEl = document.getElementById('greeting');
     if (greetingEl && greetingEl.value) {
-        addMessage(greetingEl.value, '', '', 'bot');
+        addMessage(greetingEl.value, 'bot'); // 改为2个参数
     }
 };
 // 表单提交
 queryForm.addEventListener('submit', function(e) {
     e.preventDefault();
     const query = queryInput.value.trim();
-    const nextPage = queryForm.elements.next_page.value
-    if (!query && !nextPage) {
-        console.log('query=' + query + ',nextPage=' + nextPage)
-        addMessage("请填写您想问的问题", '', '', 'bot');
+    if (!query) {
+        addMessage("请填写您想问的问题", 'bot');
         return;
     }
-    // 添加用户消息到聊天
-    addMessage(query, '', '', 'user');
 
-    // 清空输入框
+    addMessage(query, 'user');
     queryInput.value = '';
-    // 发送API请求
-    // 返回的 data 数据格式 {"chart": {}, "raw_dt": "markdown格式数据表格", "unit": "数据物理量的量纲", "sql": "my_sql", "cur_page": 1, "total_page": 2, "total_count": 0}
+
     fetchQueryData(query).then(({response, data}) => {
         if (!response.ok) {
+            // 添加错误消息定义
             let errorMessage = '查询失败，请稍后再试';
             switch(response.status) {
-                case 400:
-                    errorMessage = '请求参数错误，请检查您的输入';
-                    break;
-                case 401:
-                    errorMessage = '未授权，请重新登录';
-                    break;
-                case 404:
-                    errorMessage = '请求的资源不存在';
-                    break;
-                case 500:
-                    errorMessage = '服务器内部错误，请联系管理员';
-                    break;
-                case 503:
-                    errorMessage = '服务暂时不可用，请稍后再试';
-                    break;
+                case 400: errorMessage = '请求参数错误'; break;
+                case 401: errorMessage = '未授权，请重新登录'; break;
+                case 404: errorMessage = '请求的资源不存在'; break;
+                case 500: errorMessage = '服务器内部错误'; break;
+                case 503: errorMessage = '服务暂时不可用'; break;
             }
-            addMessage(errorMessage, '', '', 'bot');
+            addMessage(errorMessage, 'bot');
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-            document.getElementById('cur_page').value = data.cur_page;
-            document.getElementById('total_page').value = data.total_page;
-            if (data.chart && data.chart.labels?.length && data.chart.values?.length) {
-                const msgElement = addMessage(' ', '', '', 'bot', true);
-                const chartType = detectChartType(query); // 新增类型判断
-                renderChart(
-                    msgElement.querySelector('canvas'),
-                    data,
-                    chartType);
-            } else {
-                const msgElement =addMessage(
-                    data.raw_dt || '暂无符合条件的数据，您可以扩大查询范围试试',
-                    data.sql,
-                    data.explain_sql,
-                    'bot'
-                );
-                const container = msgElement.querySelector('.chart-container');
-                if (data.total_page > 1) {
-                    const pagination = document.createElement('div');
-                    pagination.className = 'pagination';
-                    if (data.cur_page < data.total_page) {
-                        pagination.innerHTML = `<div><span class="page-info">当前页:${data.cur_page}, 总页数:${data.total_page}, 总记录数 ${data.total_count}</span>${data.cur_page < data.total_page ? `<a href="#" onclick="loadNextPage(event)">下一页</a></div>` : ''}`;
-                    }
-                    container.appendChild(pagination);
-                }
-            }
-        })
-        .catch(error => {
-            console.log("error_occurred", error.message)
-        });
+        addMessage(data || '暂无数据', 'bot');
+    }).catch(error => {
+        console.log("error_occurred", error.message);
+    });
 });
 
 
@@ -127,175 +87,18 @@ async function fetchQueryData(query) {
     }
 }
 
-window.loadNextPage = function(e) {
-    e.preventDefault();
-    const curPage = parseInt(document.getElementById('cur_page').value);
-    const totalPage = parseInt(document.getElementById('total_page').value);
-    if(curPage >= totalPage) return;
-    document.getElementById('next_page').value = curPage + 1;
-    queryForm.dispatchEvent(new Event('submit'));
-}
-
 // 添加消息到聊天
-function addMessage(text, sql, explain_sql, type, isChart = false) {
-    console.log("log_addMessage(text=" + text +", sql="+ sql + ", type="+ type +", isChart="+ isChart + ")")
-    const messageContainer = document.createElement('div');
-    messageContainer.querySelector('.pagination')?.remove();
-    messageContainer.classList.add('message-container');
-    if (isChart) {
-        console.log('in_chart')
-        messageContainer.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <img width="24" height="24" src="/static/bot.png">
-                <div class="chart-container">
-                    <div class="tab-bar">
-                        <button class="tab-btn active" onclick="toggleTab(this, 'chart')">图表</button>
-                        <button class="tab-btn" onclick="toggleTab(this, 'data')">数据</button>
-                        <button class="tab-btn" onclick="toggleTab(this, 'sql')">备注</button>
-                    </div>
-                    <div class="tab-content chart-tab" style="display: block;">
-                        <canvas></canvas>
-                    </div>
-                    <div class="tab-content data-tab" style="display: none;">
-                        <pre class="raw-data"></pre>
-                    </div>
-                    <div class="tab-content sql-tab" style="display: none;">
-                        <div class="explain-sql"></div>
-                        <pre class="sql-code"></pre>
-                    </div>
-                </div>
-            </div>
-        `;
-        chatContainer.appendChild(messageContainer);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-        return messageContainer;
-    }
-    // 安全处理并解析markdown/html
-    const sanitizedContent = DOMPurify.sanitize(
-        type === 'bot' ? marked.parse(text) : text,
-        {
-            ADD_TAGS: ['canvas'],
-            ADD_ATTR: ['id']
-        }
+function addMessage(content, type) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}-message`;
+    messageDiv.innerHTML = DOMPurify.sanitize(
+        type === 'bot' ? marked.parse(content) : content
     );
-
-    if (type === 'user') {
-        messageContainer.classList.add('user-message-container');
-        messageContainer.innerHTML = `
-            <div class="message-bubble bot-message-bubble">${sanitizedContent}</div>
-        `;
-    } else if (!!sql && sql !== "") {
-        console.log('in_sql_and_raw_dt')
-        messageContainer.classList.add('bot-message-container');
-        messageContainer.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <img width="24" height="24" src="/static/bot.png">
-                <div class="chart-container">
-                    <div class="tab-bar">
-                        <button class="tab-btn active" onclick="toggleTab(this, 'data')">数据</button>
-                        <button class="tab-btn" onclick="toggleTab(this, 'sql')">备注</button>
-                    </div>
-                    <div class="tab-content data-tab" style="display: block;">
-                        <pre class="raw-data">${DOMPurify.sanitize(marked.parse(text))}</pre>
-                    </div>
-                    <div class="tab-content sql-tab" style="display: none;">
-                        <div class="explain-sql">${DOMPurify.sanitize(marked.parse(explain_sql || '暂无解释信息'))}</div>
-                        <pre class="sql-code">${DOMPurify.sanitize(marked.parse('```sql\n' + sql + '\n```'))}</pre>
-                    </div>
-                </div>
-            </div>
-        `;
-    } else {
-        messageContainer.classList.add('bot-message-container');
-        messageContainer.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px;">
-                <img width="24" height="24" src="/static/bot.png">
-            <div class="message-bubble bot-message-bubble">${sanitizedContent}</div>
-        </div>
-        `;
-    }
-
-    chatContainer.appendChild(messageContainer);
+    chatContainer.appendChild(messageDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
-    return messageContainer;
 }
 
-const chartRules = [
-    {pattern: /(趋势|变化|增长|下降)/, type: 'line'},
-    {pattern: /(对比|比较|差异|不同|排名|排序)/, type: 'bar'},
-    {pattern: /(占比|比例|分布)/, type: 'pie'}
-];
 
-function detectChartType(query) {
-    return chartRules.find(rule => rule.pattern.test(query))?.type || 'pie';
-}
-function renderChart(canvasElement,data,chartType) {
-    const colors = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEEAD','#D4A5A5','#99B898','#FECEA8'];
-    chartData = data.chart
-    rawData = data.raw_dt
-    sqlData = data.sql
-    unit = data.chart.unit
-    const config = {
-        type: chartType,
-        data: {
-            labels: chartData.labels,
-            datasets: [{
-                label: '数据',
-                data: chartData.values,
-                backgroundColor: colors.slice(0, chartData.labels.length),
-                borderColor: chartType === 'line' ? '#45B7D1' : undefined,
-                borderWidth: chartType === 'line' ? 2 : 1,
-                tension: 0.4,
-                fill: chartType === 'line' ? false : true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            aspectRatio: 2.5,
-            plugins: {
-                legend: {
-                    position: chartType === 'pie' ? 'right' : 'top',
-                    align: 'center',
-                    labels: { padding: 20 }
-                },
-                title: {
-                    display: !!unit,
-                    text: `数值${unit ? ` (单位:${unit})` : ''}`,
-                    position: 'bottom'
-                }
-            },
-            scales: chartType !== 'pie' ? {
-                x: { title: { display: true, text: '类别' } },
-                y: { title: { display: true, text: `数值${unit ? ` (单位:${unit})` : ''}` }, beginAtZero: true }
-            } : {},
-        }
-    };
-    new Chart(canvasElement, config);
-    const tableHtml = DOMPurify.sanitize(marked.parse(rawData.replace(/\\n/g, '\n')));
-    container = canvasElement.closest('.chart-container');
-    container.querySelector(`.data-tab pre`).innerHTML = tableHtml;
-    const formattedSql = DOMPurify.sanitize(marked.parse('```sql\n' + sqlData + '\n```'));
-    const formattedExplain = DOMPurify.sanitize(marked.parse(data.explain_sql || '暂无解释信息'));
-    container.querySelector(`.sql-tab pre`).innerHTML = formattedSql;
-    container.querySelector(`.sql-tab .explain-sql`).innerHTML = formattedExplain;
-    if (data.total_page > 1) {
-        const pagination = document.createElement('div');
-        pagination.className = 'pagination';
-        if (data.cur_page < data.total_page) {
-            pagination.innerHTML = `<div><span class="page-info">当前页:${data.cur_page}, 总页数:${data.total_page}, 总记录数 ${data.total_count}</span>${data.cur_page < data.total_page ? `<a href="#" onclick="loadNextPage(event)">下一页</a></div>` : ''}`;
-        }
-        container.parentNode.insertBefore(pagination, container.nextSibling);
-    }
-}
-function toggleTab(btn, tabName) {
-    const container = btn.closest('.chart-container');
-    container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    container.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-
-    btn.classList.add('active');
-    container.querySelector(`.${tabName}-tab`).style.display = 'block';
-}
 
 // 语音识别功能
 const voiceBtn = document.getElementById('voice-btn');
