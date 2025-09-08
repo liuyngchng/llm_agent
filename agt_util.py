@@ -318,6 +318,35 @@ def extract_session_info(chat_log: str, cfg: dict, is_remote=True) -> str:
         logger.error(f"json_loads_err_for {response.content}")
     return final_result
 
+def extract_lpg_order_info(chat_log: str, cfg: dict, is_remote=True) -> str:
+    """
+    extract lpg order  from chat log
+    """
+    logger.info(f"chat_log [{chat_log}]")
+    template = '''
+        基于以下文本：
+        {context}
+        请输出涉及到液化气、液化天然气(简称LPG)订单信息的文本
+        (1)直接返回填写好的纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
+        (2)若没有液化气，则输出空字符串
+        '''
+    prompt = ChatPromptTemplate.from_template(template)
+    logger.info(f"prompt {prompt}")
+    model = get_model(cfg, is_remote)
+    chain = prompt | model
+    logger.info(f"submit chat_log[{chat_log}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
+    response = chain.invoke({
+        "context": chat_log
+    })
+    del model
+    torch.cuda.empty_cache()
+    final_result = chat_log
+    try:
+        final_result = rmv_think_block(response.content)
+    except Exception as ex:
+        logger.error(f"json_loads_err_for {response.content}")
+    return final_result
+
 def get_abs_of_chat(txt: list, cfg: dict, is_remote=True) -> str:
     """
     get abstract of a long text

@@ -89,7 +89,8 @@ def submit_user_question():
     lpg_svc.refresh_session_info(msg, uid, my_cfg)
     answer = ""
     for classify_result in  classify_results:
-        if labels[1] in classify_result:
+        if labels[1] in str(classify_result):
+            logger.info("a_door_to_door_service_info")
             content_type = 'text/html; charset=utf-8'
             answer = lpg_svc.process_door_to_door_service(uid, labels[1], my_cfg)
             response = make_response(answer)
@@ -97,16 +98,20 @@ def submit_user_question():
             response.status_code = 200
             return response
          # for online pay service
-        if labels[0] in classify_result:
+        if labels[0] in str(classify_result):
+            logger.info("a_online_pay_info")
             answer = lpg_svc.process_online_pay_service(answer, labels[0])
         # for submit personal information
-        elif labels[2] in classify_result:
+        elif labels[2] in str(classify_result):
+            logger.info("a_personal_info")
             answer = lpg_svc.process_personal_info_msg(answer, labels[2], uid)
         # for information retrieval
-        elif labels[3] in classify_result:
+        elif labels[3] in str(classify_result):
+            logger.info("a_retrieval_data_info")
             answer = lpg_svc.retrieval_data(answer, labels[3], msg, uid, my_cfg)
         # for redirect to human talk
-        elif labels[4] in classify_result:
+        elif labels[4] in str(classify_result):
+            logger.info("a_talk_to_human_info")
             answer = lpg_svc.talk_with_human(answer, labels, uid, my_cfg)
         # for other labels
         else:
