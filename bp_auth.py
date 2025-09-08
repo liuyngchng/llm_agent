@@ -8,7 +8,6 @@ from flask import (request, render_template)
 import time
 import cfg_util as cfg_utl
 import my_enums
-from db_util import DbUtl
 from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")

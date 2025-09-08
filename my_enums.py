@@ -39,6 +39,7 @@ class AppType(Enum):
     NL2SQL = "智能问数 "
     DOCX = "文档生成"
     CSM = "智能客服"
+    LPG = "智能液化气服务"
     TXT2SQL = "智能问数"
     OPEN = "开放平台"
 
