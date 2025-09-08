@@ -133,7 +133,7 @@ class LpgService:
         return answer
 
 
-    def refresh_session_info(self, msg: str, msg_uid: str, sys_cfg: dict):
+    def refresh_lpg_order_info(self, msg: str, msg_uid: str, sys_cfg: dict):
         """
         extract important entity from msg, and update the global info session info
         :param msg: msg which user send to system
@@ -174,6 +174,33 @@ class LpgService:
             logger.info(f"msg_outbox_list: {self.get_mail_outbox_list()}")
             answer = f"消息已经发至用户[{self.get_human_customer_service_target_uid()}]"
         return answer
+
+    def auto_fill_lpg_order_info(self, uid: str, classify_label: str, sys_cfg: dict) -> str:
+        """
+        :param uid: user id of whom ask for door service
+        :param classify_label: the service type label
+        :param sys_cfg: the system configuration dict
+        """
+        user_dict = json.loads(self.get_const_dict().get("label1"))
+        # mock get user info from user info in db
+        user_dict["uid"] = uid
+        user_dict["客户姓名"] = "张三"
+        user_dict["联系电话"] = "13022345678"
+        user_dict["用户类新"] = "非居民用户"
+
+        if uid in self.get_session_info_dict() and self.get_session_info_dict()[uid]:
+            user_dict = fill_dict(self.get_session_info_dict()[uid], user_dict, sys_cfg, True)
+            logger.info(f"order_info_auto_filled_in for {classify_label}")
+            if not user_dict["配送地址"]:
+                user_dict["配送地址"] = "广西南宁市青秀区民族大道100号右转100米xxxx大院3号楼底商xxxx大排档"
+            if not user_dict["期望送达时间"]:
+                user_dict["期望送达时间"] = "2小时内"
+        else:
+            logger.info(f"{uid},current_id_not_in_person_info, {self.get_session_info_dict()}")
+        self.refresh_msg_history(self.get_const_dict().get("label11"))
+        logger.info(f"answer_for_classify {classify_label}:\nuser_dict: {user_dict}")
+        result = render_template("lpg_order_info.html", **user_dict)
+        return result
 
 
     def process_door_to_door_service(self, uid: str, classify_label: str, sys_cfg: dict) -> str:

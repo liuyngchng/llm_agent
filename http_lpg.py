@@ -86,7 +86,7 @@ def submit_user_question():
     classify_results = classify_msg(labels, msg, my_cfg, True)
     logger.info(f"classify_result: {classify_results}")
 
-    lpg_svc.refresh_session_info(msg, uid, my_cfg)
+    lpg_svc.refresh_lpg_order_info(msg, uid, my_cfg)
     answer = ""
     for classify_result in  classify_results:
         if labels[1] in str(classify_result):
@@ -100,17 +100,18 @@ def submit_user_question():
          # for online pay service
         if labels[0] in str(classify_result):
             logger.info("a_online_pay_info")
-            answer = lpg_svc.process_online_pay_service(answer, labels[0])
-        # for submit personal information
-        elif labels[2] in str(classify_result):
-            logger.info("a_personal_info")
-            answer = lpg_svc.process_personal_info_msg(answer, labels[2], uid)
+            lpg_svc.process_online_pay_service(answer, labels[0])
+            answer = lpg_svc.auto_fill_lpg_order_info(uid, labels[0], my_cfg)
+            response = make_response(answer)
+            response.headers['Content-Type'] = content_type
+            response.status_code = 200
+            return response
         # for information retrieval
-        elif labels[3] in str(classify_result):
+        elif labels[2] in str(classify_result):
             logger.info("a_retrieval_data_info")
             answer = lpg_svc.retrieval_data(answer, labels[3], msg, uid, my_cfg)
         # for redirect to human talk
-        elif labels[4] in str(classify_result):
+        elif labels[3] in str(classify_result):
             logger.info("a_talk_to_human_info")
             answer = lpg_svc.talk_with_human(answer, labels, uid, my_cfg)
         # for other labels

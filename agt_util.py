@@ -120,7 +120,7 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
     """
     logger.info(f"user_info [{user_info}] , user_dict {user_dict}")
     template = '''
-        基于用户提供的个人信息：
+        基于用户提供的信息：
         {context}
         填写 JSON 体中的相应内容：{user_dict}
         (1) 上下文中没有的信息，请不要自行编造
@@ -326,7 +326,7 @@ def extract_lpg_order_info(chat_log: str, cfg: dict, is_remote=True) -> str:
     template = '''
         基于以下文本：
         {context}
-        请输出涉及到液化气、液化天然气(简称LPG)订单信息的文本
+        请输出涉及到液化气、液化天然气(简称LPG)订单信息的文本，订单信息包含液化气的重量、气瓶数量
         (1)直接返回填写好的纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
         (2)若没有液化气，则输出空字符串
         '''
