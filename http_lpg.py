@@ -3,7 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 """
-包含一定业务逻辑的客服系统
+LGP订单管理系统
 pip install flask
 
 """
@@ -12,8 +12,7 @@ import logging.config
 import os
 import re
 
-from flask import (Flask, request, Response,
-                   send_from_directory, abort, make_response, redirect, url_for)
+from flask import (Flask, request, Response, make_response, redirect, url_for)
 from cfg_util import get_user_role_by_uid
 from bp_auth import auth_bp
 from my_enums import ActorRole, AI_SERVICE_STATUS, AppType
