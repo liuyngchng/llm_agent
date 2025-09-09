@@ -106,20 +106,35 @@ async function fetchQueryData(query) {
 // 添加消息到聊天
 function addMessage(content, type) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type}-message`;
-
+    messageDiv.classList.add('message-container');
     // 根据消息类型决定如何处理内容
     if (type === 'bot') {
         // 检查内容是否是 HTML（包含标签）
         if (/<[a-z][\s\S]*>/i.test(content)) {
-            messageDiv.innerHTML = DOMPurify.sanitize(content);
+//            messageDiv.innerHTML = DOMPurify.sanitize(content);
+            messageDiv.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                    <img width="24" height="24" src="/static/bot.png">
+                <div class="message-bubble bot-message-bubble">DOMPurify.sanitize(content)</div>
+            </div>
+            `;
         } else {
             // 否则按 Markdown 处理
             messageDiv.innerHTML = DOMPurify.sanitize(marked.parse(content));
+            messageDiv.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                    <img width="24" height="24" src="/static/bot.png">
+                <div class="message-bubble bot-message-bubble">DOMPurify.sanitize(marked.parse(content))</div>
+            </div>
+            `;
         }
     } else {
         // 用户消息直接显示文本
         messageDiv.textContent = content;
+        messageDiv.classList.add('user-message-container');
+        messageDiv.innerHTML = `
+            <div class="message-bubble bot-message-bubble">content</div>
+        `;
     }
 
     chatContainer.appendChild(messageDiv);
