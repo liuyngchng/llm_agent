@@ -134,7 +134,7 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
     logger.info(f"submit user_info[{user_info}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     response = chain.invoke({
         "context": user_info,
-        "user_dict": user_dict,
+        "user_dict": json.dumps(user_dict, ensure_ascii=False),
     })
     del model
     torch.cuda.empty_cache()

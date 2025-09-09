@@ -43,6 +43,7 @@ queryForm.addEventListener('submit', function(e) {
             addMessage(errorMessage, 'bot');
             throw new Error(`HTTP error! status: ${response.status}`);
         }
+        console.log('response=' + response +', data=' + data)
 
         addMessage(data || '暂无数据', 'bot');
     }).catch(error => {
@@ -52,15 +53,15 @@ queryForm.addEventListener('submit', function(e) {
 
 
 
-// 发送API请求
 async function fetchQueryData(query) {
     let loadingMsg;
     try {
         sendButton.disabled = true;
-        isFetching = true;      // 表示正在请求数据
-        loadingMsg = addMessage('<div class="loading-dots">处理中</div>', '', '', 'bot');
+        isFetching = true;
+        loadingMsg = addMessage('<div class="loading-dots">处理中</div>', 'bot');
         const controller = new AbortController();
         setTimeout(() => controller.abort(), 300000);
+
         const response = await fetch('/usr/ask', {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -72,17 +73,32 @@ async function fetchQueryData(query) {
             chatContainer.removeChild(loadingMsg);
         }
         sendButton.disabled = false;
-        isFetching = true;              // 数据请求完成
+        isFetching = false;
+
         if (!response.ok) throw new Error('网络响应失败');
+
+        // 根据Content-Type决定如何解析响应
+        const contentType = response.headers.get('content-type');
+        let data;
+
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else if (contentType && contentType.includes('text/html')) {
+            data = await response.text(); // 获取HTML文本
+        } else {
+            data = await response.text();
+        }
+
         return {
             response: response,
-            data: await response.json().catch(() => null) // 如果json解析失败，返回null
+            data: data
         };
     } catch (error) {
         if (loadingMsg && chatContainer.contains(loadingMsg)) {
             chatContainer.removeChild(loadingMsg);
         }
         sendButton.disabled = false;
+        isFetching = false;
         throw error;
     }
 }
@@ -91,13 +107,24 @@ async function fetchQueryData(query) {
 function addMessage(content, type) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}-message`;
-    messageDiv.innerHTML = DOMPurify.sanitize(
-        type === 'bot' ? marked.parse(content) : content
-    );
+
+    // 根据消息类型决定如何处理内容
+    if (type === 'bot') {
+        // 检查内容是否是 HTML（包含标签）
+        if (/<[a-z][\s\S]*>/i.test(content)) {
+            messageDiv.innerHTML = DOMPurify.sanitize(content);
+        } else {
+            // 否则按 Markdown 处理
+            messageDiv.innerHTML = DOMPurify.sanitize(marked.parse(content));
+        }
+    } else {
+        // 用户消息直接显示文本
+        messageDiv.textContent = content;
+    }
+
     chatContainer.appendChild(messageDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
-
 
 
 // 语音识别功能

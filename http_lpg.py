@@ -65,7 +65,7 @@ def submit_user_question():
     msg = request.form.get('msg')
     uid = request.form.get('uid')
     logger.info(f"rcv_msg: {msg}")
-    content_type = 'text/markdown; charset=utf-8'
+    content_type = 'text/html; charset=utf-8'
     usr_role = get_user_role_by_uid(uid)
     # human being customer service msg should be sent to the customer directly
     # no AI interfere
@@ -103,6 +103,7 @@ def submit_user_question():
             lpg_svc.process_online_pay_service(answer, labels[0])
             answer = lpg_svc.auto_fill_lpg_order_info(uid, labels[0], my_cfg)
             response = make_response(answer)
+            logger.info(f"answer_for_online_pay_info :\n{answer}")
             response.headers['Content-Type'] = content_type
             response.status_code = 200
             return response

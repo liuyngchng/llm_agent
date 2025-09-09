@@ -186,7 +186,7 @@ class LpgService:
         user_dict["uid"] = uid
         user_dict["客户姓名"] = "张三"
         user_dict["联系电话"] = "13022345678"
-        user_dict["用户类新"] = "非居民用户"
+        user_dict["客户类型"] = "非居民用户"
 
         if uid in self.get_session_info_dict() and self.get_session_info_dict()[uid]:
             user_dict = fill_dict(self.get_session_info_dict()[uid], user_dict, sys_cfg, True)
