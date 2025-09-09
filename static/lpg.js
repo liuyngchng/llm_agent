@@ -115,16 +115,16 @@ function addMessage(content, type) {
             messageDiv.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px;">
                     <img width="24" height="24" src="/static/bot.png">
-                <div class="message-bubble bot-message-bubble">DOMPurify.sanitize(content)</div>
+                <div class="message-bubble bot-message-bubble">${DOMPurify.sanitize(content)}</div>
             </div>
             `;
         } else {
             // 否则按 Markdown 处理
-            messageDiv.innerHTML = DOMPurify.sanitize(marked.parse(content));
+//            messageDiv.innerHTML = DOMPurify.sanitize(marked.parse(content));
             messageDiv.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px;">
                     <img width="24" height="24" src="/static/bot.png">
-                <div class="message-bubble bot-message-bubble">DOMPurify.sanitize(marked.parse(content))</div>
+                <div class="message-bubble bot-message-bubble">${DOMPurify.sanitize(marked.parse(content))}</div>
             </div>
             `;
         }
@@ -133,7 +133,7 @@ function addMessage(content, type) {
         messageDiv.textContent = content;
         messageDiv.classList.add('user-message-container');
         messageDiv.innerHTML = `
-            <div class="message-bubble bot-message-bubble">content</div>
+            <div class="message-bubble bot-message-bubble">${content}</div>
         `;
     }
 
