@@ -259,6 +259,62 @@ def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,
             logger.error(f"all_retries_exhausted_task_gen_txt_failed, {instruction}")
             raise last_exception
 
+def txt2sql(schema: str, txt: str, dialect:str, cfg: dict, max_retries=6) -> str:
+    """
+    根据提供的数据库schama, 以及用户的自然语言文本，输出SQL
+    :param schema:          数据库schema
+    :param txt:             自然语言文本
+    :param dialect:         数据库sql方言
+    :param cfg:             系统配置
+    :param max_retries:     最大尝试次数， 需处于集合 [1, 7]
+    """
+    template = (
+        "你是一个专业的 {dialect} 数据库的 SQL生成助手。数据库表结构及样例数据如下所示：\n"
+        "{schema}\n"
+        "请根据用户当前提问以及历史消息记录，严格按以下要求生成数据库查询 SQL：\n"
+        "(1) 仅输出标准SQL代码块，不要任何解释\n"
+        "(2) 使用与表结构完全一致的英文字段名\n"
+        "(3) WHERE条件需限制最多返回 20 条数据\n"
+        "(4) 禁止包含分析过程或思考步骤\n"
+        "(5) 查询语句中禁止用 * 表示全部字段， 需列出详细的字段名称清单\n"
+        "(6) 禁止生成 update、delete 等任何对数据修改的语句\n"
+        "(7) 每次只能查询1张表，禁止生成 join 的SQL;\n"
+        "(8) 对于含有关键词 '趋势'、'形势' 的问题，需要生成在时间维度上进行汇总的SQL语句\n"
+        "(9) 如果数据库是 oracle ， 最终输出的SQL限制数据条数使用 'ROWNUM <=' 替代 'limit'\n"
+        "(10) 如果只提供了月份，那么用户指的是当前年的月份\n"
+        "(11) 最近指的是从当前时间算起的3个月内\n"
+        "(12) 除非用户指定，默认的时间、数字类均按倒序排序\n"
+    )
+    prompt = ChatPromptTemplate.from_template(template)
+    backoff_times = [5, 10, 20, 40, 80, 160]
+    if max_retries < 1:
+        max_retries = 1
+    if max_retries > len(backoff_times):
+        max_retries = len(backoff_times)
+    for attempt in range(max_retries + 1):
+        try:
+            if attempt > 0:
+                time.sleep(backoff_times[attempt - 1])
+                logger.info(f"retry #{attempt} times after wait {backoff_times[attempt - 1]}s")
+            model = get_model(cfg)
+            chain = prompt | model
+            logger.info(f"req_llm, schema[{schema}], dialect[{dialect}], txt[{txt}], ")
+            response = chain.invoke({
+                "dialect": dialect,
+                "schema": schema,
+                "txt": txt
+            })
+            output_txt = rmv_think_block(response.content)
+            output_txt = extract_md_content(output_txt, "sql")
+            return output_txt
+        except Exception as ex:
+            last_exception = ex
+            logger.error(f"retry_failed_in_gen_txt, retry_time={attempt}, {str(ex)}")
+            if attempt < max_retries:
+                continue
+            logger.exception(f"all_retries_exhausted_task_txt2sql_failed, schema={schema}, dialect={dialect}, txt={txt}")
+            raise last_exception
+
 def update_session_info(user_info: str, append_info: str, cfg: dict, is_remote=True) -> str:
     """
     search user questions in knowledge base,

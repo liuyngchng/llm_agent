@@ -10,8 +10,10 @@ import logging.config
 
 from flask import Flask, request, g
 
+import agt_util
 from doris import Doris
 from my_enums import AppType
+from sql_agent import SqlAgent
 from sys_init import init_yml_cfg
 from utils import get_console_arg1
 
@@ -84,6 +86,25 @@ def execute_sql_query():
     result = doris.exec_sql(sql)
     logger.info(f"execute_sql_query_return, {result}")
     return json.dumps(result, ensure_ascii=False)
+
+@app.route('/txt/to/sql', methods=['POST', 'GET'])
+def get_sql_from_txt_and_schema():
+    if request.method == 'GET':
+        return json.dumps({"status": 502, "sql": "GET method not support, you should post with json data with key schema, dialect, sql"})
+    json_dt = request.json
+    if not json_dt:
+        return json.dumps({"status": 400, "sql": "json data is empty"})
+    logger.info(f"trigger_txt_to_sql, {json_dt}")
+    schema = json_dt.get('schema')
+    txt = json_dt.get('txt')
+    dialect = json_dt.get('dialect')
+    if not schema or not txt or not dialect:
+        return json.dumps({"status": 401, "sql": "key schema, txt, dialect is required in your json data"})
+    my_cfg = init_yml_cfg()
+    sql = agt_util.txt2sql(schema, txt, dialect, my_cfg)
+    logger.info(f"txt_to_sql_return, {sql}")
+    dt = {"status":200, "sql":sql}
+    return json.dumps(dt, ensure_ascii=False)
 
 if __name__ == '__main__':
     """
