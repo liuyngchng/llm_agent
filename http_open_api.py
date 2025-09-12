@@ -88,7 +88,7 @@ def execute_sql_query():
 
 @app.route('/txt/to/sql', methods=['POST', 'GET'])
 def get_sql_from_txt_and_schema():
-    curl_cmd = '''curl -ks --noproxy '*' --tlsv1 -w'\n' -X POST -H "Content-Type: application/json" "http://your_host:your_port/txt/to/sql" -d '{"schema":"your_schema", "txt":"your_question", "dialect":"mysql"}'''
+    curl_cmd = '''curl -ks --noproxy '*' --tlsv1 -w'\n' -X POST -H "Content-Type: application/json" "http://your_host:your_port/txt/to/sql" -d '{"schema":"your_schema", "txt":"your_question", "dialect":"your_sql_dialect"}'''
 
     prompt = {"status": 200, "msg": f"需要通过POST 方法请求该接口，示例 {curl_cmd}"}
     if request.method == 'GET':
