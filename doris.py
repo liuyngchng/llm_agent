@@ -180,7 +180,9 @@ class Doris:
         db_cache_result = get_cache(cache_key, self.cypher_key)
         if db_cache_result:
             logger.info(f"return_table_schema_from_db_cache_for_sql, {sql}")
-            return db_cache_result
+            cache_value, cached_time = db_cache_result
+            if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
+                return cache_value
         logger.info(f"get_col_comment_sql, {sql}")
         exe_result = self.request_dt(self.build_dml(sql))
         table_schema = exe_result[0].get('Create Table').split('ENGINE')[0]
@@ -234,9 +236,11 @@ class Doris:
             db_cache_result = get_cache(cache_key, self.cypher_key)
             if db_cache_result:
                 logger.info(f"return_table_schema_from_db_cache_for_sql, {sql}")
-                table_schema_json = {"name": table, "schema": db_cache_result}
-                schema_table.append(table_schema_json)
-                continue
+                cache_value, cached_time  = db_cache_result
+                if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
+                    table_schema_json = {"name": table, "schema": cache_value}
+                    schema_table.append(table_schema_json)
+                    continue
             logger.info(f"start_request_get_schema_sql, {sql}")
             my_json = self.request_dt(self.build_dml(sql))
             schema_dt = my_json[0].get('Create Table').split('ENGINE')[0]

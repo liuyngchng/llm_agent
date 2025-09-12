@@ -232,7 +232,7 @@ def set_cache(key: str, value: str, timestamp: str, cypher_key: str) -> bool:
             logger.exception(f"err_in_exec_sql, {exec_sql}")
     return save_result
 
-def get_cache(key:str, cypher_key: str)->str | None:
+def get_cache(key:str, cypher_key: str)->set | None:
     """
     :param key: cache key
     :param cypher_key: key used to encrypt data
@@ -240,17 +240,19 @@ def get_cache(key:str, cypher_key: str)->str | None:
     if not cypher_key:
         raise Exception("cypher_key_null_err")
     decrypt_value = None
+    timestamp = time.time()
     with sqlite3.connect(config_db) as my_conn:
         try:
-            sql = f"select value from cache_info where key='{key}' limit 1"
+            sql = f"select value ,timestamp from cache_info where key='{key}' limit 1"
             cache_info = query_sqlite(my_conn, sql)
             value_dt = cache_info['data']
             value = value_dt[0][0]
+            timestamp = value_dt[0][1]
             decrypt_value = decrypt(value, cypher_key)
             # logger.info(f"get_cache_with_key {key}, {decrypt_value}")
         except Exception as e:
             logger.info(f"no_cache_info_found_for_key, {key}")
-    return decrypt_value
+    return decrypt_value, timestamp
 
 def delete_data_source_config(uid: str, cfg: dict) -> bool:
     delete_result = False
