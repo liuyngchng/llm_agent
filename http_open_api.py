@@ -89,21 +89,24 @@ def execute_sql_query():
 
 @app.route('/txt/to/sql', methods=['POST', 'GET'])
 def get_sql_from_txt_and_schema():
+    curl_cmd = '''curl -s --noproxy '*' -w'\n' -X POST -H "Content-Type: application/json" "http://your_host:your_port/txt/to/sql" -d '{"schema":"your_schema", "txt":"your_question", "dialect":"mysql"}'''
+
+    prompt = {"status": 200, "msg": f"需要通过POST 方法请求该接口，示例 {curl_cmd}"}
     if request.method == 'GET':
-        return json.dumps({"status": 502, "sql": "GET method not support, you should post with json data with key schema, dialect, sql"})
+        return json.dumps(prompt, ensure_ascii=False)
     json_dt = request.json
     if not json_dt:
-        return json.dumps({"status": 400, "sql": "json data is empty"})
+        return json.dumps({"status": 400, "msg": "提交的数据为空"})
     logger.info(f"trigger_txt_to_sql, {json_dt}")
     schema = json_dt.get('schema')
     txt = json_dt.get('txt')
     dialect = json_dt.get('dialect')
     if not schema or not txt or not dialect:
-        return json.dumps({"status": 401, "sql": "key schema, txt, dialect is required in your json data"})
+        return json.dumps({"status": 401, "msg": "提交的json数据中缺少数据 schema, txt, dialect中的一项或者多项"})
     my_cfg = init_yml_cfg()
     sql = agt_util.txt2sql(schema, txt, dialect, my_cfg)
     logger.info(f"txt_to_sql_return, {sql}")
-    dt = {"status":200, "sql":sql}
+    dt = {"status":200, "msg":"SQL转换成功", "sql":sql}
     return json.dumps(dt, ensure_ascii=False)
 
 if __name__ == '__main__':
