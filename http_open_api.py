@@ -13,7 +13,6 @@ from flask import Flask, request, g
 import agt_util
 from doris import Doris
 from my_enums import AppType
-from sql_agent import SqlAgent
 from sys_init import init_yml_cfg
 from utils import get_console_arg1
 
