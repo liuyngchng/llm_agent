@@ -12,6 +12,7 @@ import pandas as pd
 import requests
 import logging.config
 
+import utils
 from cfg_util import set_db_cache, get_db_cache, del_db_cache
 from my_enums import DataType
 from sys_init import init_yml_cfg
@@ -389,6 +390,9 @@ class Doris:
             dt_fmt = data_format.lower()
             if DataType.HTML.value in dt_fmt:
                 dt = df.to_html(index=False, border=0).replace('\n', '')
+                logger.info("adjust_html_table_columns")
+                dt = utils.adjust_html_table_columns(dt)
+                logger.info(f"adjust_html_table_columns_returned, {dt}")
             elif DataType.MARKDOWN.value in dt_fmt:
                 dt = DbUtl.get_md_dt_from_data_frame(df)
             elif DataType.JSON.value in dt_fmt:
