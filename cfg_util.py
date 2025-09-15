@@ -208,7 +208,7 @@ def save_usr(user_name: str, token: str) -> bool:
             logger.exception(f"err_in_exec_sql, {exec_sql}")
     return save_result
 
-def set_cache(key: str, value: str, timestamp: str, cypher_key: str) -> bool:
+def set_db_cache(key: str, value: str, timestamp: str, cypher_key: str) -> bool:
     """
     :param key: cache key
     :param value: cache value
@@ -232,7 +232,28 @@ def set_cache(key: str, value: str, timestamp: str, cypher_key: str) -> bool:
             logger.exception(f"err_in_exec_sql, {exec_sql}")
     return save_result
 
-def get_cache(key:str, cypher_key: str)->tuple | None:
+def del_db_cache(key: str) -> bool:
+    """
+    :param key: cache key
+    :param value: cache value
+    :param timestamp: cache timestamp
+    :param cypher_key: key used to encrypt data
+    """
+    del_result = False
+    exec_sql = f"delete from cache_info where key='{key}' limit 1;"
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            exec_sql = exec_sql.replace('\n', ' ')
+            exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
+            result = insert_del_sqlite(my_conn, exec_sql)
+            logger.info(f"exec_sql_success {exec_sql}")
+            if result.get('result'):
+                del_result = True
+        except Exception as e:
+            logger.exception(f"err_in_exec_sql, {exec_sql}")
+    return del_result
+
+def get_db_cache(key:str, cypher_key: str)->tuple | None:
     """
     :param key: cache key
     :param cypher_key: key used to encrypt data

@@ -12,7 +12,7 @@ import pandas as pd
 import requests
 import logging.config
 
-from cfg_util import set_cache, get_cache
+from cfg_util import set_db_cache, get_db_cache, del_db_cache
 from my_enums import DataType
 from sys_init import init_yml_cfg
 from db_util import DbUtl,DB_RW_TIMEOUT, DB_CONN_TIMEOUT
@@ -179,19 +179,25 @@ class Doris:
             if time.time() - cached_time < CACHE_EXPIRE_SECONDS:
                 logger.info(f"return_table_schema_from_cache_for_sql, {sql}")
                 return table_schema
-        db_cache_result = get_cache(cache_key, self.cypher_key)
+            else:
+                logger.info(f"cache_info_expired, del_cache_key, {cache_key}, {sql}")
+                del table_schema_cache_dict[cache_key]
+        db_cache_result = get_db_cache(cache_key, self.cypher_key)
         if db_cache_result:
-            logger.info(f"return_table_schema_from_db_cache_for_sql, {sql}")
             cache_value, cached_time = db_cache_result
             if time.time() - float(cached_time) < CACHE_EXPIRE_SECONDS:
+                logger.info(f"return_table_schema_from_db_cache_for_sql, {sql}")
                 return cache_value
+            else:
+                logger.info(f"db_cache_info_expired, del_db_cache_key, {cache_key}, {sql}")
+                del_db_cache(cache_key)
         logger.info(f"get_col_comment_sql, {sql}")
         exe_result = self.request_dt(self.build_dml(sql))
         table_schema = exe_result[0].get('Create Table').split('ENGINE')[0]
         table_comment = self.get_table_comment_from_ddl(exe_result[0].get('Create Table').split('ENGINE')[1])
         table_schema_with_comment = f"{table_schema} COMMENT='{table_comment}'"
         table_schema_cache_dict[cache_key] = (time.time(), table_schema_with_comment)
-        set_cache(cache_key, table_schema_with_comment, str(time.time()), self.cypher_key)
+        set_db_cache(cache_key, table_schema_with_comment, str(time.time()), self.cypher_key)
         logger.info(f"return_table_schema_from_dt_source_for_sql\n{sql}, {table_schema}")
         return table_schema_with_comment
 
@@ -235,14 +241,20 @@ class Doris:
                     table_schema_json = {"name": table, "schema": table_schema}
                     schema_table.append(table_schema_json)
                     continue
-            db_cache_result = get_cache(cache_key, self.cypher_key)
+                else:
+                    logger.info(f"cache_info_expired, del_cache_key, {cache_key}, {sql}")
+                    del table_schema_cache_dict[cache_key]
+            db_cache_result = get_db_cache(cache_key, self.cypher_key)
             if db_cache_result:
-                logger.info(f"return_table_schema_from_db_cache_for_sql, {sql}")
                 cache_value, cached_time  = db_cache_result
                 if time.time() - float(cached_time) < CACHE_EXPIRE_SECONDS:
                     table_schema_json = {"name": table, "schema": cache_value}
                     schema_table.append(table_schema_json)
+                    logger.info(f"return_table_schema_from_db_cache_for_sql, {sql}")
                     continue
+                else:
+                    logger.info(f"db_cache_info_expired, del_db_cache_key, {cache_key}, {sql}")
+                    del_db_cache(cache_key)
             logger.info(f"start_request_get_schema_sql, {sql}")
             my_json = self.request_dt(self.build_dml(sql))
             schema_dt = my_json[0].get('Create Table').split('ENGINE')[0]
