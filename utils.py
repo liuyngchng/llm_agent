@@ -65,40 +65,81 @@ def get_console_arg1() -> int:
 
 def adjust_html_table_columns(html_content: str) -> str:
     """
-    保证输出的html table 的内容，第一列和第二列为省和公司名称
+    保证输出的html table 的内容，第一列和第二列为省和公司名称（如果存在）
     """
+    from bs4 import BeautifulSoup
+
     soup = BeautifulSoup(html_content, 'html.parser')
     table = soup.find('table')
-    thead = table.find('thead')
-    header_row = thead.find('tr')
-    headers = [th.text for th in header_row.find_all('th')]
-    province_idx = headers.index('客户(用户)所属省')
-    company_idx = headers.index('燃气公司名称')
+    if not table:
+        return html_content
 
-    # 创建新的表头顺序
-    new_headers = [headers[province_idx], headers[company_idx]]
+    thead = table.find('thead')
+    if not thead:
+        return html_content
+
+    header_row = thead.find('tr')
+    if not header_row:
+        return html_content
+
+    headers = [th.text.strip() for th in header_row.find_all('th')]
+
+    # 检查目标列是否存在
+    province_exists = '客户(用户)所属省' in headers
+    company_exists = '燃气公司名称' in headers
+
+    # 如果没有这两个列，直接返回原内容
+    if not province_exists and not company_exists:
+        return html_content
+
+    # 获取列索引（如果存在）
+    province_idx = headers.index('客户(用户)所属省') if province_exists else -1
+    company_idx = headers.index('燃气公司名称') if company_exists else -1
+
+    # 构建新的表头顺序
+    new_headers = []
+    if province_exists:
+        new_headers.append(headers[province_idx])
+    if company_exists:
+        new_headers.append(headers[company_idx])
+
+    # 添加其他列
     for i, header in enumerate(headers):
         if i not in [province_idx, company_idx]:
             new_headers.append(header)
-    # 清空原表头行并添加新表头
+
+    # 更新表头
     header_row.clear()
     for header in new_headers:
         th = soup.new_tag('th')
         th.string = header
         header_row.append(th)
-    # 调整表格数据
+
+    # 调整表格数据行
     tbody = table.find('tbody')
+    if not tbody:
+        return str(soup)
+
     for tr in tbody.find_all('tr'):
         tds = tr.find_all('td')
-        province = tds[province_idx]
-        company = tds[company_idx]
-        # 创建新的单元格顺序
-        new_tds = [province, company]
+        if len(tds) != len(headers):
+            continue
+
+        # 收集需要优先显示的单元格
+        priority_cells = []
+        if province_exists:
+            priority_cells.append(tds[province_idx])
+        if company_exists:
+            priority_cells.append(tds[company_idx])
+
+        # 收集其他单元格
+        other_cells = []
         for i, td in enumerate(tds):
             if i not in [province_idx, company_idx]:
-                new_tds.append(td)
-        # 清空原行并添加新顺序
+                other_cells.append(td)
+
+        # 更新行内容
         tr.clear()
-        for td in new_tds:
-            tr.append(td)
+        for cell in priority_cells + other_cells:
+            tr.append(cell)
     return str(soup)
