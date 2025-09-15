@@ -27,6 +27,8 @@ table_schema_cache_dict = {}
 
 CACHE_EXPIRE_SECONDS = 3600  # 1小时
 
+pd.set_option('display.float_format', '{:.0f}'.format)  # 设置pandas显示整数
+
 class Doris:
     """
     A doris data source class

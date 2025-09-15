@@ -33,6 +33,7 @@ DB_RW_TIMEOUT=50       # 数据读写超时(秒)
 CFG_DB_FILE = "cfg.db"
 CFG_DB_URI=f"sqlite:///{CFG_DB_FILE}"
 
+pd.set_option('display.float_format', '{:.0f}'.format)  # 设置pandas显示整数
 class DbUtl:
     """
     database util class, for process data output, database connection etc.
