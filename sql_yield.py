@@ -40,6 +40,8 @@ usr_msg_list = {}
 
 PAGE_SIZE = 20
 
+SQL_REVIEW_TIME = 3
+
 
 def get_usr_msgs(uid: str):
     """
@@ -84,6 +86,7 @@ class SqlYield(DbUtl):
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         refine_q_msg = f"""{cfg['prompts']['refine_q_msg']}\n当前时间是 {current_time}"""
         sql_gen_msg = f"""{cfg['prompts']['sql_gen_msg']}\n当前时间是 {current_time}"""
+        sql_review_msg = f"""{cfg['prompts']['sql_review_msg']}\n当前时间是 {current_time}"""
         count_sql_gen_msg = cfg['prompts']['count_sql_gen_msg']
         explain_sql_msg = cfg['prompts']['explain_sql_msg']
         intercept_q_msg = f"""{cfg['prompts']['intercept_q_msg']}\n当前时间是 {current_time}"""
@@ -101,6 +104,10 @@ class SqlYield(DbUtl):
         self.sql_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", f"{sql_gen_msg}, {prompt_padding}"),
             ("human", "用户问题：{msg}")
+        ])
+
+        self.sql_review_prompt_template = ChatPromptTemplate.from_messages([
+            ("system", f"{sql_review_msg}, {prompt_padding}")
         ])
 
         self.count_sql_gen_prompt_template = ChatPromptTemplate.from_messages([
@@ -162,6 +169,20 @@ class SqlYield(DbUtl):
         gen_sql_dict = self.build_invoke_json(uid, question)
         logger.info(f"gen_sql_by_txt: {gen_sql_dict}")
         response = chain.invoke(gen_sql_dict)
+        return response.content
+
+    def review_sql(self, current_sql: str) -> str:
+        """
+        generate sql
+        """
+        chain = self.sql_review_prompt_template | self.llm
+        review_sql_dict = {
+            "current_sql": current_sql,
+            "schema": self.get_schema_info(),
+            "sql_dialect": self.db_type
+        }
+        logger.info(f"review_sql_dict: {review_sql_dict}")
+        response = chain.invoke(review_sql_dict)
         return response.content
 
     def gen_count_sql_by_sql(self, uid: str, sql: str) -> str:
@@ -365,7 +386,22 @@ class SqlYield(DbUtl):
             yield SqlYield.build_yield_dt("用户问题转换为数据查询条件时发生异常")
             return
         try:
-            raw_dt = self.get_dt_with_sql(extract_sql, dt_fmt)
+            raw_dt = ""
+            sql_review_time = 1
+            while sql_review_time < SQL_REVIEW_TIME:
+                raw_dt = self.get_dt_with_sql(extract_sql, dt_fmt)
+                if raw_dt.find('request_dt_status_not_200_exception_') > 0:
+                    logger.info(f"{sql_review_time} time to_start_to_review_sql, {extract_sql}")
+                    yield SqlYield.build_yield_dt(f"第{sql_review_time}次开始重新生成SQL...")
+                    review_sql = self.review_sql(extract_sql)
+                    sql_review_time += 1
+                    extract_sql = extract_md_content(review_sql, "sql")
+                    sql_dt = f"查询条件： {extract_sql}"
+                    user_page_dt[uid] = {"sql": extract_sql, "cur_page": 1}
+                    yield SqlYield.build_yield_dt(sql_dt)
+                else:
+                    break
+
             raw_dt1 = raw_dt.replace('\n', ' ')
             yield SqlYield.build_yield_dt(f"<div>查询到的数据如下:</div><br>{raw_dt1}", YieldType.HTML.value)
             yield SqlYield.build_yield_dt("查询符合条件的数据数量...")

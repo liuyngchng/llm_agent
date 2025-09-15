@@ -148,7 +148,7 @@ class Doris:
             return exec_json['data']
         else:
             logger.error(f"request_dt_error, body[{body}], response, {exec_json}")
-            raise RuntimeError(f"request_dt_exception_{body}")
+            raise RuntimeError(f"request_dt_status_not_200_exception_{body}")
 
     def doris_output(self, sql: str, data_format: str):
         """
