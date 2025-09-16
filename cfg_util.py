@@ -318,7 +318,7 @@ def encrypt(dt: str, key:str) -> str:
     data = pad(dt.encode(), AES.block_size)
     encrypted = cipher.encrypt(data)
     dt_rt = base64.b64encode(encrypted).decode()
-    logger.info(f"return {dt_rt} for pln_txt {dt}")
+    # logger.info(f"return {dt_rt} for pln_txt {dt}")
     return dt_rt
 
 def decrypt(dt: str, key: str) -> str:
