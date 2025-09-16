@@ -10,6 +10,7 @@ from typing import Dict
 from datetime import datetime
 
 import cfg_util
+import utils
 from doris import Doris
 from utils import extract_md_content, rmv_think_block, extract_json
 
@@ -81,6 +82,7 @@ class SqlYield(DbUtl):
         self.llm_model_name = cfg['api']['llm_model_name']
         self.is_remote_model = is_remote_model
         self.llm = self.get_llm()
+        self.db_name = self.cfg['db'].get('name', self.cfg['db'].get('data_source'))
 
         # 带数据库结构的提示模板
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
@@ -178,7 +180,7 @@ class SqlYield(DbUtl):
         chain = self.sql_review_prompt_template | self.llm
         review_sql_dict = {
             "current_sql": current_sql,
-            "schema": self.get_schema_info(),
+            "schema": self.get_table_schema_info(utils.get_table_name_from_sql(current_sql)),
             "sql_dialect": self.db_type
         }
         logger.info(f"review_sql_dict: {review_sql_dict}")
@@ -229,7 +231,7 @@ class SqlYield(DbUtl):
     def get_chart_dt(self, md_dt: str):
         """
         build chart.js data from source data
-        :param md_dt： data table in markdown format
+        :param md_dt： data table in mark down format
         """
         chain = self.chart_dt_gen_prompt_template | self.llm
         response = chain.invoke({
@@ -273,6 +275,33 @@ class SqlYield(DbUtl):
         else:
             table_list = self.get_all_tables()
         return table_list
+
+    def get_table_schema_info(self, table_name: str) -> str:
+        if DBType.DORIS.value == self.db_type:
+            doris_schema = self.doris_dt_source.get_table_schema(self.doris_dt_source.data_source, table_name)
+            # logger.info(f"doris_schema\n {doris_schema}")
+            return doris_schema
+
+        if DBType.ORACLE.value == self.db_type:
+            table_name = table_name.upper()
+        columns = self.db_dt_source._inspector.get_columns(table_name)
+        table_header = "| 字段名 | 字段类型 | 字段注释 |\n|--------|----------|----------|"
+        table_rows = []
+        for col in columns:
+            name = col["name"]
+            col_type = str(col.get("type", "N/A"))
+            comment = col.get("comment", "")
+            table_rows.append(f"| {name} | {col_type} | {comment} |")
+
+        column_table = "\n".join([table_header] + table_rows)
+        if DBType.ORACLE.value in self.db_type:
+            limit = "WHERE ROWNUM <= 3"
+        else:
+            limit = "LIMIT 3"
+        sample_dt_sql = f'SELECT * FROM {table_name} {limit}'
+        schema_info =f'''表名：{table_name}\n 字段信息：\n{column_table}\n"示例数据：\n{self.db_dt_source.run(sample_dt_sql)}'''
+        # logger.debug(f"schema_info:\n{schema_info}")
+        return schema_info
 
     def get_schema_info(self) -> str:
         if DBType.DORIS.value == self.db_type:
@@ -361,12 +390,18 @@ class SqlYield(DbUtl):
                 yield SqlYield.build_yield_dt(f"需要您进一步确认，{intercept}")
 
         try:
-            logger.info(f"start_gen_sql_from_txt：{q}")
+            logger.info(f"start_to_gen_sql_from_txt：{q}")
             yield SqlYield.build_yield_dt("正在生成查询条件...")
             sql = self.gen_sql_by_txt(uid, q)
             save_usr_msg(uid, q)
             # logger.debug(f"gen_sql\n{sql}")
             extract_sql = extract_md_content(sql, "sql")
+
+            logger.info(f"start_to_review_sql, {extract_sql}")
+            yield SqlYield.build_yield_dt(f"SQL 已生成，开始核对 ...")
+            review_sql = self.review_sql(extract_sql)
+            extract_sql = extract_md_content(review_sql, "sql")
+
             area = cfg_util.get_user_info_by_uid(uid)['area']
             if area:
                 ou_id_list = area.split(',')
@@ -379,7 +414,7 @@ class SqlYield(DbUtl):
             yield SqlYield.build_yield_dt(sql_dt)
             # for line in extract_sql.split("\n"):
             #     yield SqlYield.build_yield_dt(line)
-            yield SqlYield.build_yield_dt("查询数据...")
+            yield SqlYield.build_yield_dt("开始查询数据...")
             logger.info(f"gen_sql_from_txt {q}, {extract_sql}")
         except Exception as e:
             logger.error(f"gen_sql_err, {e}, txt: {q}", exc_info=True)
@@ -392,7 +427,7 @@ class SqlYield(DbUtl):
                 raw_dt = self.get_dt_with_sql(extract_sql, dt_fmt)
                 if raw_dt.find('request_dt_status_not_200_exception_') > 0:
                     logger.info(f"{sql_review_time} time to_start_to_review_sql, {extract_sql}")
-                    yield SqlYield.build_yield_dt(f"第{sql_review_time}次开始重新生成SQL...")
+                    yield SqlYield.build_yield_dt(f"查询出错，第{sql_review_time}次开始重新生成SQL...")
                     review_sql = self.review_sql(extract_sql)
                     sql_review_time += 1
                     extract_sql = extract_md_content(review_sql, "sql")

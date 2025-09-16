@@ -143,3 +143,25 @@ def adjust_html_table_columns(html_content: str) -> str:
         for cell in priority_cells + other_cells:
             tr.append(cell)
     return str(soup)
+
+
+
+
+def get_table_name_from_sql(sql:str) -> str | None:
+    """
+    从SQL语句中获取表名
+    :param sql: SQL语句
+    :return: 表名
+    """
+    sql = re.sub(r'\s+', ' ', sql.strip())
+    patterns = [
+        r'(?:FROM|JOIN)\s+(\w+)',
+        r'UPDATE\s+(\w+)',
+        r'INSERT\s+INTO\s+(\w+)',
+        r'DELETE\s+FROM\s+(\w+)'
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, sql, re.IGNORECASE | re.DOTALL)
+        if match:
+            return match.group(1)
+    return None
