@@ -398,7 +398,7 @@ class SqlYield(DbUtl):
             extract_sql = extract_md_content(sql, "sql")
 
             logger.info(f"start_to_review_sql, {extract_sql}")
-            yield SqlYield.build_yield_dt(f"SQL 已生成，开始核对 ...")
+            yield SqlYield.build_yield_dt(f"SQL 已生成，开始校对 ...")
             review_sql = self.review_sql(extract_sql)
             extract_sql = extract_md_content(review_sql, "sql")
 
