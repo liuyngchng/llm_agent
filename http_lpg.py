@@ -10,7 +10,6 @@ pip install flask
 import json
 import logging.config
 import os
-import re
 
 from flask import (Flask, request, Response, make_response, redirect, url_for)
 from cfg_util import get_user_role_by_uid
