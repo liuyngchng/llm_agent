@@ -452,7 +452,7 @@ class SqlYield(DbUtl):
             count_sql = DbUtl.gen_count_sql(extract_sql)
             count_sql1 = count_sql.replace('\n', ' ')
             extract_sql1 = extract_sql.replace('\n', ' ')
-            logger.info(f"gen_count_sql_by_get_dt_sql, result {count_sql1}, get_dt_sql {extract_sql1}")
+            logger.info(f"gen_count_sql_by_get_dt_sql, result {count_sql1}, origin_get_dt_sql {extract_sql1}")
             count_dt_json = self.get_dt_with_sql(count_sql, DataType.JSON.value)
             total_count = SqlYield.get_count_num_from_json(count_dt_json)
             user_page_dt[uid]["total_count"] = total_count
@@ -526,8 +526,10 @@ class SqlYield(DbUtl):
 
     @staticmethod
     def get_count_num_from_json(count_dt: json) -> int:
+
         try:
-            return next(iter(count_dt[0].values()))
+            my_json = json.loads(count_dt)
+            return next(iter(my_json[0].values()))
         except Exception as e:
             logger.error(f"get_count_num_err, {count_dt}")
             return 0
