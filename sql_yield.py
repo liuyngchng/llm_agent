@@ -444,42 +444,46 @@ class SqlYield(DbUtl):
             logger.error(f"get_dt_with_sql_err, {e}, sql: {extract_sql}", exc_info=True)
             yield SqlYield.build_yield_dt("从数据源查询数据时发生异常")
             return
-        count_sql = ''
-        total_count = 0
-        try:
-            # count_sql_txt = self.gen_count_sql_by_sql(uid, nl_dt_dict["sql"])
-            # count_sql = extract_md_content(count_sql_txt, "sql")
-            count_sql = DbUtl.gen_count_sql(extract_sql)
-            count_sql1 = count_sql.replace('\n', ' ')
-            extract_sql1 = extract_sql.replace('\n', ' ')
-            logger.info(f"gen_count_sql_by_get_dt_sql, result {count_sql1}, origin_get_dt_sql {extract_sql1}")
-            count_dt_json = self.get_dt_with_sql(count_sql, DataType.JSON.value)
-            total_count = SqlYield.get_count_num_from_json(count_dt_json)
-            user_page_dt[uid]["total_count"] = total_count
-            logger.info(f"dt_total_count, {total_count}")
-            yield SqlYield.build_yield_dt("开始计算总页数...")
-        except Exception as e:
-            logger.error(f"get_dt_count_with_count_sql_err, {e}, count_sql: {count_sql}", exc_info=True)
-            yield SqlYield.build_yield_dt("获取总数据条数发生异常")
-        total_page = 1
-        try:
-            logger.info(f"get_total_page {total_count} / {PAGE_SIZE}")
-            if isinstance(total_count, (int, float, complex)):
-                total_page = math.ceil(total_count / PAGE_SIZE)
-            else:
-                logger.error(f"total_count_type_err_for {total_count}")
+        if SqlYield.is_valid_dt(raw_dt):
+            count_sql = ''
+            total_count = 0
+            try:
+                # count_sql_txt = self.gen_count_sql_by_sql(uid, nl_dt_dict["sql"])
+                # count_sql = extract_md_content(count_sql_txt, "sql")
+                count_sql = DbUtl.gen_count_sql(extract_sql)
+                count_sql1 = count_sql.replace('\n', ' ')
+                extract_sql1 = extract_sql.replace('\n', ' ')
+                logger.info(f"gen_count_sql_by_get_dt_sql, result {count_sql1}, origin_get_dt_sql {extract_sql1}")
+                count_dt_json = self.get_dt_with_sql(count_sql, DataType.JSON.value)
+                total_count = SqlYield.get_count_num_from_json(count_dt_json)
+                user_page_dt[uid]["total_count"] = total_count
+                logger.info(f"dt_total_count, {total_count}")
+                yield SqlYield.build_yield_dt("开始计算总页数...")
+            except Exception as e:
+                logger.error(f"get_dt_count_with_count_sql_err, {e}, count_sql: {count_sql}", exc_info=True)
+                yield SqlYield.build_yield_dt("获取总数据条数发生异常")
+            total_page = 1
+            try:
+                logger.info(f"get_total_page {total_count} / {PAGE_SIZE}")
+                if isinstance(total_count, (int, float, complex)):
+                    total_page = math.ceil(total_count / PAGE_SIZE)
+                else:
+                    logger.error(f"total_count_type_err_for {total_count}")
 
-            user_page_dt[uid]["total_page"] = total_page
+                user_page_dt[uid]["total_page"] = total_page
 
-            yield_test = SqlYield.build_yield_dt(json.dumps(user_page_dt[uid]), YieldType.MSG.value)
-            logger.info(f"yield_test {yield_test}")
-            yield yield_test
-            dt =f"<span>共 {total_count} 条数据, 总页数为 {total_page}, 每页 {PAGE_SIZE} 条数据</span>"
+                yield_test = SqlYield.build_yield_dt(json.dumps(user_page_dt[uid]), YieldType.MSG.value)
+                logger.info(f"yield_test {yield_test}")
+                yield yield_test
+                dt =f"<span>共 {total_count} 条数据, 总页数为 {total_page}, 每页 {PAGE_SIZE} 条数据</span>"
+                yield SqlYield.build_yield_dt(dt, YieldType.HTML.value)
+                yield SqlYield.build_yield_dt("生成查询条件说明...")
+            except Exception as e:
+                logger.error(f"get_total_count_or_total_page_err, {e}", exc_info=True)
+        else:
+            dt = f"<span>共 0 条数据, 总页数为 0, 每页 {PAGE_SIZE} 条数据</span>"
             yield SqlYield.build_yield_dt(dt, YieldType.HTML.value)
             yield SqlYield.build_yield_dt("生成查询条件说明...")
-        except Exception as e:
-            logger.error(f"get_total_count_or_total_page_err, {e}", exc_info=True)
-
         try:
             logger.info("get_explain_sql_txt_start")
             explain_sql_txt = self.get_explain_sql_txt(uid, extract_sql)
@@ -490,7 +494,10 @@ class SqlYield(DbUtl):
         except Exception as e:
             logger.error(f"get_explain_sql_txt_err, {e}, sql: {extract_sql}", exc_info=True)
             yield SqlYield.build_yield_dt("暂时无法给您提供数据查询的相关解释")
-        logger.info("start_build_chart_dt")
+        logger.info(f"start_build_chart_dt, {raw_dt}")
+        if not SqlYield.is_valid_dt(raw_dt):
+            yield SqlYield.build_yield_dt("任务执行完毕")
+            return
         yield SqlYield.build_yield_dt("准备绘图...")
         chart_dt = self.yield_chart_dt(uid, raw_dt)
         if chart_dt:
@@ -499,7 +506,11 @@ class SqlYield(DbUtl):
             next_page_html = f"<div>数据已输出完毕， 查看&nbsp;&nbsp;<a href='#' onclick='loadNextPage(event)'>下一页</a></div>"
             yield SqlYield.build_yield_dt(next_page_html, YieldType.HTML.value)
         else:
-            yield SqlYield.build_yield_dt("数据已输出完毕")
+            yield SqlYield.build_yield_dt("任务执行完毕")
+
+    @staticmethod
+    def is_valid_dt(raw_dt: str) -> bool:
+        return raw_dt and raw_dt.find('</table>') > 0
 
 
     @staticmethod
@@ -590,7 +601,7 @@ class SqlYield(DbUtl):
         """
         add chart data to raw dt
         """
-        logger.info("start_add_chart_to_raw_dt")
+        logger.info(f"start_add_chart_to_raw_dt， {raw_dt}")
         try:
             chart_dt = self.get_chart_dt(raw_dt)
             chart_dt1 = chart_dt.replace('\n', ' ')
