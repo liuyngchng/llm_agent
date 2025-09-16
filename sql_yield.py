@@ -438,13 +438,17 @@ class SqlYield(DbUtl):
                     break
 
             raw_dt1 = raw_dt.replace('\n', ' ')
-            yield SqlYield.build_yield_dt(f"<div>查询到的数据如下:</div><br>{raw_dt1}", YieldType.HTML.value)
+            if SqlYield.is_valid_dt(raw_dt1):
+                yield SqlYield.build_yield_dt(f"<div>查询到的数据如下:</div><br>{raw_dt1}", YieldType.HTML.value)
+            else:
+                yield SqlYield.build_yield_dt(f"<div>{raw_dt1}</div>", YieldType.HTML.value)
             yield SqlYield.build_yield_dt("查询符合条件的数据数量...")
         except Exception as e:
             logger.error(f"get_dt_with_sql_err, {e}, sql: {extract_sql}", exc_info=True)
             yield SqlYield.build_yield_dt("从数据源查询数据时发生异常")
             return
-        if SqlYield.is_valid_dt(raw_dt):
+        total_page = 0
+        if SqlYield.is_valid_dt(raw_dt1):
             count_sql = ''
             total_count = 0
             try:
@@ -495,7 +499,7 @@ class SqlYield(DbUtl):
             logger.error(f"get_explain_sql_txt_err, {e}, sql: {extract_sql}", exc_info=True)
             yield SqlYield.build_yield_dt("暂时无法给您提供数据查询的相关解释")
         logger.info(f"start_build_chart_dt, {raw_dt}")
-        if not SqlYield.is_valid_dt(raw_dt):
+        if not SqlYield.is_valid_dt(raw_dt1):
             yield SqlYield.build_yield_dt("任务执行完毕")
             return
         yield SqlYield.build_yield_dt("准备绘图...")
