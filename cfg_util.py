@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 config_db = "cfg.db"
 user_sample_data_db = "user_info.db"
 
+DORIS_HTTP_REQ_NOT_200_ERR = "http_request_to_doris_return_status_not_200_exception"
+
 
 def auth_user(user:str, t: str, cfg: dict) -> dict:
     auth_result ={"pass": False, "uid": ""}

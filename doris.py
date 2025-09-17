@@ -12,6 +12,7 @@ import pandas as pd
 import requests
 import logging.config
 
+import cfg_util
 import utils
 from cfg_util import set_db_cache, get_db_cache, del_db_cache
 from my_enums import DataType
@@ -148,7 +149,7 @@ class Doris:
             return exec_json['data']
         else:
             logger.error(f"request_dt_error, body[{body}], response, {exec_json}")
-            raise RuntimeError(f"request_dt_status_not_200_exception, 具体出错原因如下:{exec_json}")
+            raise RuntimeError(f"{cfg_util.DORIS_HTTP_REQ_NOT_200_ERR}, 具体出错原因如下:{exec_json}")
 
     def doris_output(self, sql: str, data_format: str):
         """

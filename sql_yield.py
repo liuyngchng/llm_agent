@@ -427,7 +427,7 @@ class SqlYield(DbUtl):
             sql_review_time = 1
             while sql_review_time < SQL_REVIEW_TIME:
                 raw_dt = self.get_dt_with_sql(extract_sql, dt_fmt)
-                if raw_dt.find('request_dt_status_not_200_exception_') > 0:
+                if raw_dt.find(cfg_util.DORIS_HTTP_REQ_NOT_200_ERR) > 0:
                     logger.info(f"{sql_review_time} time to_start_to_review_sql, {extract_sql}")
                     yield SqlYield.build_yield_dt(f"查询出错，第{sql_review_time}次开始重新生成SQL...")
                     logger.info(f"start_to_review_sql_after_sql_executed, {extract_sql}, {raw_dt}")
