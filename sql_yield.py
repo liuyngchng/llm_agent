@@ -39,7 +39,7 @@ MAX_MSG_COUNT = 20
 # limit msg_history size to MAX_MSG_COUNT
 usr_msg_list = {}
 
-PAGE_SIZE = 20
+PAGE_SIZE = 100
 
 SQL_REVIEW_TIME = 3
 
@@ -143,6 +143,7 @@ class SqlYield(DbUtl):
             "msg": q,
             "schema": self.get_schema_info(),
             "sql_dialect": self.db_type,
+            "max_record_per_page": PAGE_SIZE,
             "chat_history": get_usr_msgs(uid)
         }
 

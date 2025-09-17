@@ -65,7 +65,7 @@ def get_console_arg1() -> int:
 
 def adjust_html_table_columns(html_content: str) -> str:
     """
-    保证输出的html table 的内容，第一列和第二列为省和公司名称（如果存在）
+    保证输出的html table 的内容，第一列和第二列为地理区域（省、市、区县）和组织机构(公司、团体)名称（如果存在）
     """
     from bs4 import BeautifulSoup
 
@@ -83,29 +83,32 @@ def adjust_html_table_columns(html_content: str) -> str:
         return html_content
 
     headers = [th.text.strip() for th in header_row.find_all('th')]
-
+    # 地理区域(省、市、区县)名称
+    area_name_list = ['客户(用户)所属省', '客户(用户)所属市', '客户(用户)所属区县']
+    # 组织机构(公司、团体)名称
+    organization_list = ['燃气公司名称', '公司名称', '机构名称']
     # 检查目标列是否存在
-    province_exists = '客户(用户)所属省' in headers
-    company_exists = '燃气公司名称' in headers
+    area_exists = '客户(用户)所属省' in headers
+    organization_exists = '燃气公司名称' in headers
 
     # 如果没有这两个列，直接返回原内容
-    if not province_exists and not company_exists:
+    if not area_exists and not organization_exists:
         return html_content
 
     # 获取列索引（如果存在）
-    province_idx = headers.index('客户(用户)所属省') if province_exists else -1
-    company_idx = headers.index('燃气公司名称') if company_exists else -1
+    area_header_idx = headers.index('客户(用户)所属省') if area_exists else -1
+    organization_header_idx = headers.index('燃气公司名称') if organization_exists else -1
 
     # 构建新的表头顺序
     new_headers = []
-    if province_exists:
-        new_headers.append(headers[province_idx])
-    if company_exists:
-        new_headers.append(headers[company_idx])
+    if area_exists:
+        new_headers.append(headers[area_header_idx])
+    if organization_exists:
+        new_headers.append(headers[organization_header_idx])
 
     # 添加其他列
     for i, header in enumerate(headers):
-        if i not in [province_idx, company_idx]:
+        if i not in [area_header_idx, organization_header_idx]:
             new_headers.append(header)
 
     # 更新表头
@@ -127,15 +130,15 @@ def adjust_html_table_columns(html_content: str) -> str:
 
         # 收集需要优先显示的单元格
         priority_cells = []
-        if province_exists:
-            priority_cells.append(tds[province_idx])
-        if company_exists:
-            priority_cells.append(tds[company_idx])
+        if area_exists:
+            priority_cells.append(tds[area_header_idx])
+        if organization_exists:
+            priority_cells.append(tds[organization_header_idx])
 
         # 收集其他单元格
         other_cells = []
         for i, td in enumerate(tds):
-            if i not in [province_idx, company_idx]:
+            if i not in [area_header_idx, organization_header_idx]:
                 other_cells.append(td)
 
         # 更新行内容
