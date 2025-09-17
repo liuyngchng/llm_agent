@@ -148,8 +148,8 @@ class Doris:
             logger.info(f"request_dt_return, {exec_json['data']}")
             return exec_json['data']
         else:
-            logger.error(f"request_dt_error, body[{body}], response, {exec_json}")
-            raise RuntimeError(f"{cfg_util.DORIS_HTTP_REQ_NOT_200_ERR}, 具体出错原因如下:{exec_json}")
+            logger.error(f"{cfg_util.DORIS_HTTP_REQ_NOT_200_ERR}, body[{body}], response, {exec_json}")
+            raise RuntimeError(f"{cfg_util.DORIS_HTTP_REQ_NOT_200_ERR}, 执行 SQL 出错原因如下:{exec_json}")
 
     def doris_output(self, sql: str, data_format: str):
         """
