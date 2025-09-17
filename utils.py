@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
-
+import json
 import re
 import sys
+
+import cfg_util
+from my_enums import AppType
 
 
 def extract_json(dt: str) -> str:
@@ -83,10 +86,16 @@ def adjust_html_table_columns(html_content: str) -> str:
 
     headers = [th.text.strip() for th in header_row.find_all('th')]
     # 地理区域(省、市、区县)名称
-    area_name_list = ['客户(用户)所属省', '客户(用户)所属市', '客户(用户)所属区县', '区县']
+    area_name_str = cfg_util.get_const('area_name_list', AppType.TXT2SQL.name.lower())
     # 组织机构(公司、团体)名称
-    organization_list = ['燃气公司名称', '公司名称', '机构名称']
-
+    org_str = cfg_util.get_const('organization_name_list', AppType.TXT2SQL.name.lower())
+    if not area_name_str or not org_str:
+        raise RuntimeError("no area_name_list or organization_name_list in cfg file")
+    try:
+        area_name_list = json.loads(area_name_str)
+        organization_list = json.loads(org_str)
+    except Exception as e:
+        raise RuntimeError(f"invalid json config for area_name_list or organization_name_list in cfg file {e}")
     # 找出所有存在的地理表头和组织机构表头
     area_indices = [i for i, h in enumerate(headers) if h in area_name_list]
     org_indices = [i for i, h in enumerate(headers) if h in organization_list]
