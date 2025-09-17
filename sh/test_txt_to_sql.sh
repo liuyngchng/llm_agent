@@ -5,8 +5,8 @@ API="http://127.0.0.1:19000/txt/to/sql"
 # 构建数据
 DATA=$(cat <<EOF
 {
-  "schema": "$(cat db_schema/mysql.test.order_info.sql | sed 's/"/\\"/g' | tr '\n' ' ')",
-  "txt": "查询去年通过微信支付的天然气销售订单的总金额。",
+  "schema": "$(cat db_schema/ai_meter_read_info.sql | sed 's/"/\\"/g' | tr '\n' ' ')",
+  "txt": "提出查询数据的要求",
   "dialect": "mysql"
 }
 EOF
