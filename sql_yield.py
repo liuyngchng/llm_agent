@@ -482,13 +482,13 @@ class SqlYield(DbUtl):
                 yield_test = SqlYield.build_yield_dt(json.dumps(user_page_dt[uid]), YieldType.MSG.value)
                 logger.info(f"yield_test {yield_test}")
                 yield yield_test
-                dt =f"<span>共 {total_count} 条数据, 总页数为 {total_page}, 每页 {PAGE_SIZE} 条数据</span>"
+                dt =f"<span>共 {total_count} 条数据, {total_page} 页, 每页 {PAGE_SIZE} 条数据</span>"
                 yield SqlYield.build_yield_dt(dt, YieldType.HTML.value)
                 yield SqlYield.build_yield_dt("生成查询条件说明...")
             except Exception as e:
                 logger.error(f"get_total_count_or_total_page_err, {e}", exc_info=True)
         else:
-            dt = f"<span>共 0 条数据, 总页数为 0, 每页 {PAGE_SIZE} 条数据</span>"
+            dt = f"<span>共 0 条数据, 0 页, 每页 {PAGE_SIZE} 条数据</span>"
             yield SqlYield.build_yield_dt(dt, YieldType.HTML.value)
             yield SqlYield.build_yield_dt("生成查询条件说明...")
         try:
