@@ -174,13 +174,14 @@ class SqlYield(DbUtl):
         response = chain.invoke(gen_sql_dict)
         return response.content
 
-    def review_sql(self, current_sql: str) -> str:
+    def review_sql(self, current_sql: str, error_reason="") -> str:
         """
         generate sql
         """
         chain = self.sql_review_prompt_template | self.llm
         review_sql_dict = {
             "current_sql": current_sql,
+            "error_reason": error_reason,
             "schema": self.get_table_schema_info(utils.get_table_name_from_sql(current_sql)),
             "sql_dialect": self.db_type
         }
@@ -429,7 +430,8 @@ class SqlYield(DbUtl):
                 if raw_dt.find('request_dt_status_not_200_exception_') > 0:
                     logger.info(f"{sql_review_time} time to_start_to_review_sql, {extract_sql}")
                     yield SqlYield.build_yield_dt(f"查询出错，第{sql_review_time}次开始重新生成SQL...")
-                    review_sql = self.review_sql(extract_sql)
+                    logger.info(f"start_to_review_sql_after_sql_executed, {extract_sql}, {raw_dt}")
+                    review_sql = self.review_sql(extract_sql, raw_dt)
                     sql_review_time += 1
                     extract_sql = extract_md_content(review_sql, "sql")
                     sql_dt = f"查询条件： {extract_sql}"
