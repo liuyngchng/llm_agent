@@ -4,7 +4,6 @@
 
 import re
 import sys
-from bs4 import BeautifulSoup
 
 
 def extract_json(dt: str) -> str:
@@ -84,31 +83,29 @@ def adjust_html_table_columns(html_content: str) -> str:
 
     headers = [th.text.strip() for th in header_row.find_all('th')]
     # 地理区域(省、市、区县)名称
-    area_name_list = ['客户(用户)所属省', '客户(用户)所属市', '客户(用户)所属区县']
+    area_name_list = ['客户(用户)所属省', '客户(用户)所属市', '客户(用户)所属区县', '区县']
     # 组织机构(公司、团体)名称
     organization_list = ['燃气公司名称', '公司名称', '机构名称']
-    # 检查目标列是否存在
-    area_exists = '客户(用户)所属省' in headers
-    organization_exists = '燃气公司名称' in headers
+
+    # 找出所有存在的地理表头和组织机构表头
+    area_indices = [i for i, h in enumerate(headers) if h in area_name_list]
+    org_indices = [i for i, h in enumerate(headers) if h in organization_list]
 
     # 如果没有这两个列，直接返回原内容
-    if not area_exists and not organization_exists:
+    if not area_indices and not org_indices:
         return html_content
 
-    # 获取列索引（如果存在）
-    area_header_idx = headers.index('客户(用户)所属省') if area_exists else -1
-    organization_header_idx = headers.index('燃气公司名称') if organization_exists else -1
-
-    # 构建新的表头顺序
+    # 构建新的表头顺序：先地理区域，再组织机构，最后其他列
     new_headers = []
-    if area_exists:
-        new_headers.append(headers[area_header_idx])
-    if organization_exists:
-        new_headers.append(headers[organization_header_idx])
-
+    # 添加地理区域列
+    for i in area_indices:
+        new_headers.append(headers[i])
+    # 添加组织机构列
+    for i in org_indices:
+        new_headers.append(headers[i])
     # 添加其他列
     for i, header in enumerate(headers):
-        if i not in [area_header_idx, organization_header_idx]:
+        if i not in area_indices and i not in org_indices:
             new_headers.append(header)
 
     # 更新表头
@@ -130,15 +127,15 @@ def adjust_html_table_columns(html_content: str) -> str:
 
         # 收集需要优先显示的单元格
         priority_cells = []
-        if area_exists:
-            priority_cells.append(tds[area_header_idx])
-        if organization_exists:
-            priority_cells.append(tds[organization_header_idx])
+        for i in area_indices:
+            priority_cells.append(tds[i])
+        for i in org_indices:
+            priority_cells.append(tds[i])
 
         # 收集其他单元格
         other_cells = []
         for i, td in enumerate(tds):
-            if i not in [area_header_idx, organization_header_idx]:
+            if i not in area_indices and i not in org_indices:
                 other_cells.append(td)
 
         # 更新行内容
