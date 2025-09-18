@@ -5,6 +5,9 @@
 import json
 import math
 import ast
+import os
+import threading
+import time
 
 from typing import Dict
 from datetime import datetime
@@ -26,6 +29,7 @@ from my_enums import DBType, DataType, YieldType
 
 from db_util import DbUtl
 from sys_init import init_yml_cfg
+from vdb_util import vector_file, load_vdb, search_txt
 
 """
 pip install langchain_openai langchain_ollama \
@@ -151,18 +155,48 @@ class SqlYield(DbUtl):
         """
         generate sql
         """
-        hack_q_list = cfg_util.get_hack_file(uid)
-        if hack_q_list:
-            hack_q = hack_q_list.get(question)
+        hack_q_dict = cfg_util.get_hack_dict(uid)
+        if hack_q_dict:
+            hack_q = hack_q_dict.get(question)
             if hack_q:
                 logger.info(f"get_hack_q {hack_q} for {question}")
                 return hack_q
+            else:
+                logger.info(f"get_hack_q_from_hack_vdb for {question}")
+                self.get_hack_vdb(uid)
+                hack_q = self.search_vdb(question,uid)
+                if hack_q:
+                    logger.info(f"get_hack_q_from_hack_vdb {hack_q} for {question}")
+                    return hack_q.strip()
         chain = self.refine_q_prompt_template | self.llm
         gen_sql_dict = self.build_invoke_json(uid, question)
         logger.info(f"refine_q, {gen_sql_dict}")
         response = chain.invoke(gen_sql_dict)
         logger.info(f"return_refine_q, {response.content}, origin_q {question}")
         return response.content
+
+    def get_hack_vdb(self, uid: str):
+        """
+        1. 如果vdb不存在，则创建vdb
+        2. 如果vdb存在，则加载vdb
+        """
+        hack_vdb_file = f"./vdb/{uid}_q_hack_desc_vdb"
+        if not os.path.exists(hack_vdb_file):
+            thread_lock = threading.Lock()
+            task_id = (str)(time.time())
+            file = f"./hack/{uid}_q_desc.txt"
+            logger.info(f"vector_file({file}, {hack_vdb_file})")
+            vector_file(task_id, thread_lock, {}, file, hack_vdb_file, self.cfg['api'],
+            80, 10, 10, ["\n"])
+        hack_vdb = load_vdb(hack_vdb_file, self.cfg['api'])
+        if not hack_vdb:
+            raise RuntimeError(f"load_vdb {hack_vdb_file} failed, hack_vdb_collection_is_null")
+
+    def search_vdb(self, user_q: str, uid: str) -> str:
+        hack_vdb_file = f"./vdb/{uid}_q_hack_desc_vdb"
+        result = search_txt(user_q, hack_vdb_file, 0.5, self.cfg['api'], 1)
+        logger.info(f"search_result: {result}")
+        return result
 
     def gen_sql_by_txt(self, uid: str, question: str) -> str:
         """

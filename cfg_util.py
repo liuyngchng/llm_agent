@@ -12,6 +12,7 @@ import time
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 import base64
+import functools
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -369,11 +370,15 @@ def get_hack_info(uid: str)-> dict:
             logger.exception(f"err_occur_in_get_hack_q_dict_for_db {config_db}, sql {sql}")
     return {}
 
-def get_hack_file(uid: str) -> dict:
+@functools.lru_cache(maxsize=128)
+def get_hack_dict(uid: str) -> dict:
+    """
+    返回一个用户问题->可执行的问题对应关系的字典
+    """
     file_full_path = f'./hack/{uid}.txt'
     try:
-        with open(file_full_path) as f:
-            hack_dict = dict(line.rstrip('\n').split('\t', 1) for line in f)
+        with open(file_full_path, 'r', encoding='utf-8') as f:
+            hack_dict = dict(re.split(r'\t| +', line.rstrip('\n'), 1) for line in f)
             logger.info(f"return_hack_dict_for_uid_{uid}, {json.dumps(hack_dict, ensure_ascii=False)}, hack_file {file_full_path}")
             return hack_dict
     except FileNotFoundError:

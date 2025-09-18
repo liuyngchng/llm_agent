@@ -68,19 +68,22 @@ class RemoteChromaEmbedder(EmbeddingFunction):
 
 
 def process_doc(task_id: str, thread_lock, task_progress: dict, documents: list[Document],
-                vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10) -> None:
+                vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10, separators=None) -> None:
     """处理文档并构建向量数据库"""
+    if separators is None:
+        separators = ['。', '！', '？', '；', '...', '、', '，']
     pbar = None
     try:
         doc_sources = [doc.metadata['source'] for doc in documents]
         logger.info(f"load_documents_size, {len(documents)}:\n" + "\n".join(f"- {src}" for src in doc_sources))
 
         # 文本分割
-        logger.info("splitting_documents...")
+
         with thread_lock:
             task_progress[task_id] = {"text": "启动文本分片", "timestamp": time.time()}
-
-        separators = ['。', '！', '？', '；', '...', '、', '，']
+        if not separators:
+            separators = ['。', '！', '？', '；', '...', '、', '，']
+        logger.info(f"splitting_documents_with_separators {separators}...")
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
@@ -168,9 +171,13 @@ def build_client(llm_cfg: dict) -> OpenAI:
 
 
 def vector_file(task_id: str, thread_lock, task_progress: dict, file_name: str,
-                            vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80) -> None:
+        vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80,
+        batch_size=10, separators = None) -> None:
     """处理单个文档文件并添加到向量数据库"""
     abs_path = os.path.abspath(file_name)
+    if not os.path.exists(abs_path):
+        info = f"文件不存在: {abs_path}"
+        raise FileNotFoundError(info)
     try:
         with thread_lock:
             task_progress[task_id] = {"text": "开始处理文档...", "timestamp": time.time()}
@@ -206,7 +213,7 @@ def vector_file(task_id: str, thread_lock, task_progress: dict, file_name: str,
             task_progress[task_id] = {"text": f"已检测到 {len(documents)} 个文本片段", "timestamp": time.time()}
 
         # 处理文档
-        process_doc(task_id, thread_lock, task_progress, documents, vector_db, llm_cfg, chunk_size, chunk_overlap)
+        process_doc(task_id, thread_lock, task_progress, documents, vector_db, llm_cfg, chunk_size, chunk_overlap, batch_size, separators)
 
     except Exception as e:
         logger.error(f"load_file_fail_err, {abs_path}, {e}", exc_info=True)
@@ -270,6 +277,7 @@ def search(query: str, score_threshold: float, vector_db: str,llm_cfg: dict, top
     """相似度搜索并返回格式化结果"""
     collection = load_vdb(vector_db, llm_cfg)
     if not collection:
+        logger.info(f"vdb_collection_null_return_empty_list_for_q, {query}")
         return []
 
     # 使用远程embedding获取查询向量
@@ -326,11 +334,11 @@ def search_txt(txt: str, vector_db_dir: str, score_threshold: float,
     return all_txt
 
 def test_search_txt():
-    keywords = '生产运营管理一体化项目'
-    vector_db_dir='./vdb/test_db'
+    keywords = '安检率怎么样？'
+    vector_db_dir="./vdb/332987902_q_desc_vdb"
     score_threshold = 0.1
     sys_cfg = init_yml_cfg()
-    txt_num = 3
+    txt_num = 1
     result = search_txt(keywords, vector_db_dir, score_threshold, sys_cfg['api'], txt_num)
     logger.info(f"search_result: {result}")
 
@@ -341,11 +349,11 @@ def test_vector_file():
     task_id =(str)(time.time())
     task_progress = {}
     # file = "./llm.txt"
-    file = "./1_pure.txt"
-    vdb = "./vdb/test_db"
+    file = "./hack/332987902_q_desc.txt"
+    vdb = "./vdb/332987902_q_desc_vdb"
     llm_cfg = my_cfg['api']
     logger.info(f"vector_file({task_id}, {thread_lock}, {task_progress}, {file}, {vdb}, {llm_cfg})")
-    vector_file(task_id, thread_lock, {}, file, vdb, llm_cfg)
+    vector_file(task_id, thread_lock, {}, file, vdb, llm_cfg, 80, 10, 10,["\n"])
 
 def test_del_doc():
     test_search_txt()
@@ -370,6 +378,6 @@ def test_update_doc():
 if __name__ == "__main__":
     test_vector_file()
     test_search_txt()
-    test_del_doc()
-    # test_update_doc()
-    test_search_txt()
+    # test_del_doc()
+    # # test_update_doc()
+    # test_search_txt()
