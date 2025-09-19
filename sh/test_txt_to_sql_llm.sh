@@ -3,9 +3,10 @@
 API="https://aiproxy.petrotech.cnpc/v1/chat/completions"
 AUTH_TOKEN="sk-8rfeNuXkbyydz3cx5f7bEc5d778040Fc9374E056Df1c2fFe"
 
-API=$(sed -n '1p' llm_token.txt)
-AUTH_TOKEN=$(sed -n '2p' llm_token.txt)
-MODEL=$(sed -n '3p' llm_token.txt)
+API=$(sed -n '1p' sh/llm_token.txt)
+AUTH_TOKEN=$(sed -n '2p' sh/llm_token.txt)
+MODEL=$(sed -n '3p' sh/llm_token.txt)
+QUESTION=$(sed -n '1p' sh/user_question.txt)
 
 # 读取表结构文件，并进行适当的转义
 SCHEMA_CONTENT=$(cat db_schema/ai_meter_read_info.sql | sed 's/"/\\"/g' | sed 's/\\n/\\\\n/g' | tr -d '\n' | sed 's/\\$/\\\\/g')
@@ -16,7 +17,7 @@ DATA=$(cat <<EOF
   "model": "${MODEL}",
   "messages": [
     {"role": "system", "content": "你是一名MySQL 数据库专家."},
-    {"role": "user", "content": "用户提出的问题是：查询去年的抄表率\n数据库的表结构如下所示：\n${SCHEMA_CONTENT}\n请输出查询数据的SQL语句"}
+    {"role": "user", "content": "用户提出的问题是：${QUESTION}\n数据库的表结构如下所示：\n${SCHEMA_CONTENT}\n请输出查询数据的SQL语句"}
   ],
   "stream": false
 }
