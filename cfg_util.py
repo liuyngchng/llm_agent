@@ -4,6 +4,7 @@
 
 import json
 import copy
+import os
 import re
 import sqlite3
 import logging.config
@@ -376,6 +377,9 @@ def get_hack_dict(uid: str) -> dict:
     返回一个用户问题->可执行的问题对应关系的字典
     """
     file_full_path = f'./hack/{uid}.txt'
+    if not os.path.exists(file_full_path):
+        logger.error(f"file_not_found_return_empty_dict, {file_full_path}")
+        return {}
     try:
         with open(file_full_path, 'r', encoding='utf-8') as f:
             hack_dict = dict(re.split(r'\t| +', line.rstrip('\n'), 1) for line in f)
@@ -384,6 +388,24 @@ def get_hack_dict(uid: str) -> dict:
     except FileNotFoundError:
         logger.error(f"file_not_found, file_full_path={file_full_path}")
         return {}
+
+@functools.lru_cache(maxsize=128)
+def get_hack_q_file_content(uid: str) -> str:
+    """
+    返回对应文件的文本
+    """
+    file_full_path = f'./hack/{uid}.txt'
+    if not os.path.exists(file_full_path):
+        logger.error(f"file_not_found_return_empty_str, {file_full_path}")
+        return ""
+    try:
+        with open(file_full_path, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+            logger.info(f"return_hack_q_file_content_for_uid_{uid}, {file_content}, hack_file {file_full_path}")
+            return file_content
+    except FileNotFoundError:
+        logger.error(f"file_not_found, {file_full_path}")
+        return ""
 
 def get_user_sample_data(sql: str)-> dict:
     """

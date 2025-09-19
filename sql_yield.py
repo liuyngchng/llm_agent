@@ -151,27 +151,23 @@ class SqlYield(DbUtl):
             "chat_history": get_usr_msgs(uid)
         }
 
+    def build_refine_invoke_json(self, q: str, hack_content: str) -> dict:
+        return {
+            "msg": q,
+            "schema": self.get_schema_info(),
+            "sql_dialect": self.db_type,
+            "user_short_q_desc": hack_content
+        }
+
     def refine_q(self, uid: str, question: str) -> str:
         """
-        generate sql
+        refine user question to let it can be understood by llm in a normal way.
         """
-        hack_q_dict = cfg_util.get_hack_dict(uid)
-        if hack_q_dict:
-            hack_q = hack_q_dict.get(question)
-            if hack_q:
-                logger.info(f"get_hack_q {hack_q} for {question}")
-                return hack_q
-            else:
-                logger.info(f"get_hack_q_from_hack_vdb for {question}")
-                self.get_hack_vdb(uid)
-                hack_q = self.search_vdb(question,uid)
-                if hack_q:
-                    logger.info(f"get_hack_q_from_hack_vdb {hack_q} for {question}")
-                    return hack_q.strip()
+        hack_content = cfg_util.get_hack_q_file_content(uid)
         chain = self.refine_q_prompt_template | self.llm
-        gen_sql_dict = self.build_invoke_json(uid, question)
-        logger.info(f"refine_q, {gen_sql_dict}")
-        response = chain.invoke(gen_sql_dict)
+        refine_q_dict = self.build_refine_invoke_json(question, hack_content)
+        logger.info(f"refine_q_dict_for_{uid}, {refine_q_dict}")
+        response = chain.invoke(refine_q_dict)
         logger.info(f"return_refine_q, {response.content}, origin_q {question}")
         return response.content
 
