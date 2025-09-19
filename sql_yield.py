@@ -25,7 +25,7 @@ from langchain_ollama import ChatOllama
 import logging.config
 import httpx
 from pydantic import SecretStr
-from my_enums import DBType, DataType, YieldType
+from my_enums import DBType, DataType, YieldType, AppType
 
 from db_util import DbUtl
 from sys_init import init_yml_cfg
@@ -151,11 +151,11 @@ class SqlYield(DbUtl):
             "chat_history": get_usr_msgs(uid)
         }
 
-    def build_refine_invoke_json(self, q: str, hack_content: str) -> dict:
+    @staticmethod
+    def build_refine_invoke_json(q: str, hack_content: str, data_source_info: str) -> dict:
         return {
             "msg": q,
-            "schema": self.get_schema_info(),
-            "sql_dialect": self.db_type,
+            "data_source_info": data_source_info,
             "user_short_q_desc": hack_content
         }
 
@@ -164,11 +164,12 @@ class SqlYield(DbUtl):
         refine user question to let it can be understood by llm in a normal way.
         """
         hack_content = cfg_util.get_hack_q_file_content(uid)
+        data_source_info = cfg_util.get_const("data_source_info", AppType.TXT2SQL.name.lower())
         chain = self.refine_q_prompt_template | self.llm
-        refine_q_dict = self.build_refine_invoke_json(question, hack_content)
-        logger.info(f"refine_q_dict_for_{uid}, {refine_q_dict}")
+        refine_q_dict = SqlYield.build_refine_invoke_json(question, hack_content, data_source_info)
+        logger.info(f"start_refine_user_q, {uid}, {refine_q_dict}")
         response = chain.invoke(refine_q_dict)
-        logger.info(f"return_refine_q, {response.content}, origin_q {question}")
+        logger.info(f"return_from_refine_user_q, {response.content}, origin_q {question}")
         return response.content
 
     def get_hack_vdb(self, uid: str):
