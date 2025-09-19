@@ -94,12 +94,12 @@ def generate_outline():
     ### 1.1.1 三级标题
     ### 1.1.2 三级标题
     """
-    logger.info(f"gen_doc_outline {request}")
+    logger.info(f"gen_doc_outline {request.json}")
     doc_type = request.json.get("doc_type")
     doc_type_chinese = my_enums.WriteDocType.get_doc_type(doc_type)
     doc_title = request.json.get("doc_title")
     if not doc_type_chinese or not doc_title:
-        return jsonify({"error": "缺少参数"}), 400
+        return jsonify({"error": "未提交待写作文档的标题或文档类型，请补充"}), 400
     return Response(
         stream_with_context(generate_outline_stream(doc_type_chinese, doc_title, my_cfg)),
         mimetype='text/event-stream'

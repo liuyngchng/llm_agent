@@ -66,6 +66,8 @@ class WriteDocType(Enum):
     YEAR_SUMMARY = "年度工作总结"
     RESEARCH = "可行性研究报告"
     MARKETING = "营销策划方案"
+    DETAILED_DESIGN_DOCUMENT = "详细设计文档"
+    PRELIMINARY_DESIGN_DOCUMENT = "概要设计文档"
 
     @staticmethod
     def get_doc_type(input_str: str) -> str:
