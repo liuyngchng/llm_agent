@@ -289,22 +289,34 @@ function renderOutline(markdown) {
                 display: block !important;
                 text-align: left !important;
                 justify-content: flex-start !important;
-                font-size: 1.2rem;  /* 一级目录使用原三级目录大小 */
+                font-size: 1.4rem;  /* 一级目录使用原三级目录大小 */
                 margin: 12px 0 8px 0;
                 font-weight: 600;
                 color: #2c3e50;
             }
             #outlineContainer h2 {
-                font-size: 1.1rem;  /* 二级目录缩小 */
+                font-size: 1.3rem;  /* 二级目录缩小 */
                 margin: 10px 0 6px 15px;
                 font-weight: 500;
                 color: #34495e;
             }
             #outlineContainer h3 {
-                font-size: 1.0rem;  /* 三级目录最小 */
+                font-size: 1.2rem;
                 margin: 8px 0 5px 30px;
                 font-weight: 400;
                 color: #4b6cb7;
+            }
+            #outlineContainer h4 {
+                font-size: 1.1rem;
+                margin: 6px 0 4px 45px;
+                font-weight: 400;
+                color: #7e8c8d;
+            }
+            #outlineContainer h5 {
+                font-size: 1.0rem;
+                margin: 5px 0 3px 60px;
+                font-weight: 400;
+                color: #7e8c8d;
             }
             #outlineContainer ul {
                 padding-left: 25px;

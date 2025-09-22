@@ -464,7 +464,7 @@ def gen_docx_template_with_outline_txt(task_id: str, os_dir:str, title: str, out
     :param task_id: 执行任务的ID
     :param os_dir: 输出的本地文件目录
     :param title: 文档标题
-    :param outline: 三级目录文本信息，结构如下\n1. 一级标题\n  1.1 二级标题\n    1.1.1 三级标题\n
+    :param outline: 目录文本信息，结构如下，至多支持5级\n1. 一级标题\n  1.1 二级标题\n    1.1.1 三级标题\n
     即outline中的各行文本中，一级标题前没有空格，二级标题前有2个空格，三级标题前有4个空格
     :return: 包含三级目录的Word docx 文档文件名称，只是文件名，不是fullpath
     """
@@ -492,11 +492,18 @@ def gen_docx_template_with_outline_txt(task_id: str, os_dir:str, title: str, out
                 break
         # 添加标题并获取段落对象
         if indent_level == 0:
-            p = doc.add_heading(stripped, level=1)
+            level = 1
         elif indent_level == 2:
-            p = doc.add_heading(stripped, level=2)
+            level = 2
+        elif indent_level == 4:
+            level = 3
+        elif indent_level == 6:
+            level = 4
+        elif indent_level >= 8:
+            level = 5
         else:
-            p = doc.add_heading(stripped, level=3)
+            level = 5
+        p = doc.add_heading(stripped, level=level)
         # 统一设置格式：黑体、黑色
         for run in p.runs:
             run.font.color.rgb = RGBColor(0, 0, 0)  # 黑色
