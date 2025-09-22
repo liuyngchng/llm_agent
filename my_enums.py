@@ -70,7 +70,7 @@ class WriteDocType(Enum):
     PRELIMINARY_DESIGN_DOCUMENT = "概要设计文档"
 
     @staticmethod
-    def get_doc_type(input_str: str) -> str:
+    def get_doc_type_desc(input_str: str) -> str:
         """根据输入字符串获取对应的文档类型"""
         input_upper = input_str.upper()  # 转换为大写匹配枚举键
         try:

@@ -293,7 +293,7 @@ def fill_doc_with_prompt_in_progress(start_time: float, uid: int, task_id:str, t
             reference = get_reference_from_vdb(my_para.text, vdb_dir, sys_cfg['api'])
             # with thread_lock:
             #     thread_lock[task_id] = f"正在处理文本[{my_para.text}]"
-            llm_txt = gen_txt(doc_ctx, reference, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg, )
+            llm_txt = gen_txt(doc_ctx, reference, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg )
             gen_txt_count += 1
             # with thread_lock:
             #     thread_lock[task_id] = f"生成文本：{llm_txt}"
@@ -458,8 +458,9 @@ def get_catalogue(target_doc: str) -> str:
     return my_catalogue
 
 
-def gen_docx_template_with_outline(task_id: str, os_dir:str, title: str, outline: str) -> str:
+def gen_docx_template_with_outline_txt(task_id: str, os_dir:str, title: str, outline: str) -> str:
     """
+    生成Word docx 文档文件，并返回文件名称
     :param task_id: 执行任务的ID
     :param os_dir: 输出的本地文件目录
     :param title: 文档标题

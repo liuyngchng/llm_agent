@@ -16,7 +16,7 @@ from flask import (Flask, request, jsonify, send_from_directory,
 
 import docx_util
 import my_enums
-from agt_util import generate_outline_stream
+from agt_util import gen_docx_outline_stream
 from db_util import DbUtl
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
 from docx_util import extract_catalogue, fill_doc_with_prompt_in_progress
@@ -96,12 +96,13 @@ def generate_outline():
     """
     logger.info(f"gen_doc_outline {request.json}")
     doc_type = request.json.get("doc_type")
-    doc_type_chinese = my_enums.WriteDocType.get_doc_type(doc_type)
+    doc_type_chinese = my_enums.WriteDocType.get_doc_type_desc(doc_type)
     doc_title = request.json.get("doc_title")
+    keywords = request.json.get("keywords")
     if not doc_type_chinese or not doc_title:
         return jsonify({"error": "未提交待写作文档的标题或文档类型，请补充"}), 400
     return Response(
-        stream_with_context(generate_outline_stream(doc_type_chinese, doc_title, my_cfg)),
+        stream_with_context(gen_docx_outline_stream(doc_type_chinese, doc_title, keywords, my_cfg)),
         mimetype='text/event-stream'
     )
 
@@ -138,7 +139,7 @@ def upload_file():
 @app.route("/docx/write/outline", methods=['POST'])
 def write_doc_with_outline_txt():
     """
-    按照提供的三级目录文本,生成文档，这里的文档模板只有三级目录，具体的段落中没有写作要求
+    按照提供的三级目录文本,生成docx 文档模板，这里的文档模板只有目录（默认三级），具体的段落中没有写作要求
     文档目录参数 doc_outline 传递的文本格式如下： 1.标题1 \n1.1 标题1.1 \n1.2 标题1.2
     """
     data = request.json
@@ -147,17 +148,18 @@ def write_doc_with_outline_txt():
     doc_title = data.get("doc_title")
     doc_outline = data.get("doc_outline")
     doc_type = data.get("doc_type")
-    doc_type_chinese = my_enums.WriteDocType.get_doc_type(doc_type)
-    if not doc_type_chinese or not doc_title or not doc_outline:
+    keywords = data.get("keywords")
+    doc_type_desc = my_enums.WriteDocType.get_doc_type_desc(doc_type)
+    if not doc_type_desc or not doc_title or not doc_outline:
         err_info = {"error": "缺少参数"}
         logger.error(f"err_occurred, {err_info}")
         return jsonify(err_info), 400
     task_id = str(int(time.time()))
-    file_name = docx_util.gen_docx_template_with_outline(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
-    logger.info(f"gen_docx_template_file_name, {file_name}")
+    docx_file_name = docx_util.gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
+    logger.info(f"docx_template_file_generated_with_name, {docx_file_name}")
     threading.Thread(
-        target=prs_doc_with_template,
-        args=(uid,  doc_type, doc_title, task_id, file_name, False)
+        target=fill_docx_with_template,
+        args=(uid, doc_type_desc, doc_title, keywords, task_id, docx_file_name, False)
     ).start()
     info = {"status": "started", "task_id": task_id}
     logger.info(f"write_doc_with_outline_txt, {info}")
@@ -173,21 +175,22 @@ def write_doc_with_docx_template():
     logger.info(f"write_doc_with_docx_template, {data}")
     task_id = data.get("task_id")
     doc_type = data.get("doc_type")
-    doc_type_chinese = my_enums.WriteDocType.get_doc_type(doc_type)
+    doc_type_desc = my_enums.WriteDocType.get_doc_type_desc(doc_type)
     doc_title = data.get("doc_title")
-    if not doc_type_chinese or not doc_title:
+    if not doc_type_desc or not doc_title:
         err_info = {"error": "缺少参数"}
         logger.error(f"err_occurred, {err_info}")
         return jsonify(err_info), 400
     template_file_name = data.get("file_name")
     uid = data.get("uid")
+    keywords = data.get("keywords")
     if not task_id or not template_file_name or not uid:
         err_info = {"error": "缺少参数"}
         logger.error(f"err_occurred, {err_info}")
         return jsonify(err_info), 400
     threading.Thread(
-        target=prs_doc_with_template,
-        args=(uid, doc_type_chinese, doc_title, task_id, template_file_name, True)
+        target=fill_docx_with_template,
+        args=(uid, doc_type_desc, doc_title, keywords, task_id, template_file_name, True)
     ).start()
 
     info = {"status": "started", "task_id": task_id}
@@ -273,18 +276,19 @@ def clean_tasks():
         time.sleep(1000)
 
 
-def prs_doc_with_template(uid: int, doc_type: str, doc_title: str, task_id: str,
-                          file_name: str, is_include_prompt = False):
+def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: str, task_id: str,
+                            file_name: str, is_include_prompt = False):
     """
     处理无模板的文档，三级目录自动生成，每个段落无写作要求
     :param uid: 用户ID
-    :param doc_type: 文档类型
-    :param doc_title: 文档标题
+    :param doc_type: docx文档内容类型
+    :param doc_title: docx文档的标题
+    :param keywords: 其他的写作要求
     :param task_id: 任务ID
     :param file_name: Word template 模板文件名, 其中包含三级目录，可能含有段落写作的提示词，也可能没有
     :param is_include_prompt: 各小节是否包含有写作提示词语
     """
-    logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, "
+    logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "
                 f"task_id: {task_id}, file_name: {file_name}, is_include_prompt = {is_include_prompt}")
     start_time = time.time()
     try:
@@ -295,7 +299,7 @@ def prs_doc_with_template(uid: int, doc_type: str, doc_title: str, task_id: str,
         output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
         logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
         docx_util.update_process_info(start_time, thread_lock, uid, task_id, task_progress, "开始处理文档...", 0.0)
-        doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
+        doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}, 其他写作要求是 {keywords}"
         para_comment_dict = get_para_comment_dict(my_target_doc)
         default_vdb = DbUtl.get_default_vdb(uid)
         logger.info(f"my_default_vdb_dir_for_gen_doc: {default_vdb}")

@@ -145,27 +145,35 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
         logger.error(f"json_loads_err_for {response.content}")
     return fill_result
 
-def generate_outline_stream(doc_type: str, doc_title: str, cfg: dict, is_remote=True):
+def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: dict, is_remote=True):
     """
-    流式生成文档目录
+    流式生成docx文档目录
+    :doc_type: docx 文档的内容类型，详见:class:`my_enums`WriteDocType
+    :doc_title: 文档标题
+    :keywords: 文档写作的其他要求关键词
+    :cfg: 系统配置
+    :is_remote: 是否调用远端LLM
     """
     logger.info(f"doc_type[{doc_type}] , doc_title[{doc_title}], cfg[{cfg}]")
     template = '''
         目前我正在写一个文档，当前的任务是生成文档的三级目录，已知文档类型和文档的标题如下，
         文档类型：{doc_type}
         文档标题：{doc_title}
-        请输出以下格式的文档三级目录，数据格式举例如下：
+        请输出以下格式的文档目录，若无其他要求则默认为三级目录，数据格式举例如下：
         # 1.一级标题
         ## 1.1 二级标题
         ### 1.1.1 三级标题
         ### 1.1.2 三级标题
 
+        其他的要求如下：
+        {keywords}
+        
         输出纯文本格式
         '''
     prompt = ChatPromptTemplate.from_template(replace_spaces(template))
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
-    logger.info(f"submit doc_type[{doc_type}], doc_title[{doc_title}] to llm_api {cfg['api']}")
+    logger.info(f"submit doc_type[{doc_type}], doc_title[{doc_title}, keywords[{keywords}]] to llm_api {cfg['api']}")
     try:
         # 流式调用模型
         for chunk in model.stream(prompt.format(doc_type=doc_type, doc_title=doc_title)):
@@ -183,29 +191,29 @@ def generate_outline_stream(doc_type: str, doc_title: str, cfg: dict, is_remote=
         torch.cuda.empty_cache()
 
 
-def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,
-        current_sub_title: str, cfg: dict, is_remote=True, max_retries=6) -> str:
+def gen_txt(write_context: str, demo_txt: str, paragraph_prompt: str, catalogue: str,
+            current_sub_title: str, cfg: dict, is_remote=True, max_retries=6) -> str:
     """
     根据提供的三级目录、文本的写作风格，以及每个章节的具体文本写作要求，输出文本
-    :param doc_context:     整体的写作背景
-    :param demo_txt:        写作风格样例子文本
-    :param instruction:     局部章节文本的写作要求
-    :param catalogue:       要求输出的文档的三级目录
-    :param current_sub_title: 当前章节文本的目录标题
-    :param cfg:             系统配置
-    :param is_remote:       是否调用远端LLM
-    :param max_retries:     最大尝试次数， 需处于集合 [1, 7]
+    :param write_context:       整体的写作背景
+    :param demo_txt:            可供参考的写作风格样例子文本
+    :param paragraph_prompt:    局部章节文本的写作要求
+    :param catalogue:           整个文档的三级目录
+    :param current_sub_title:   当前写作章节的目录标题
+    :param cfg:                 系统配置
+    :param is_remote:           是否调用远端LLM
+    :param max_retries:         最大尝试次数， 需处于集合 [1, 7]
     """
     # logger.info(
     #     f"catalogue[{catalogue}], "
-    #     f"user_instruction[{instruction}], "
+    #     f"user_instruction[{paragraph_prompt}], "
     #     f"demo_txt[{demo_txt}], "
     #     f"current_sub_title[{current_sub_title}]"
     # )
     template = (
-        "写作背景如下：\n{doc_context}\n整个报告的三级目录如下:\n{catalogue}\n"
-        "目前需要要写的目录标题为\n{current_sub_title}\n"
-        "文本写作要求如下：\n{instruction}\n可参考的语言风格如下：\n{demo_txt}\n"
+        "整体写作背景如下：\n{write_context}\n整个报告的目录(默认三级)如下:\n{catalogue}\n"
+        "当前写作的部分章节目录标题为\n{current_sub_title}\n"
+        "当前需写作的文本的写作要求如下：\n{paragraph_prompt}\n可参考的语言风格如下：\n{demo_txt}\n"
         "(1)直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式\n"
         "(2)调整输出文本的格式，需适合添加在Word文档中\n"
         "(3)若写作要求没有明确字数要求，则生成不超过300字的文本\n"
@@ -232,16 +240,16 @@ def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,
                 f"req_llm, "
                 # f"catalogue[{catalogue}], "
                 f"sub_title[{current_sub_title}], "
-                f"cmd[{instruction}], "
+                f"cmd[{paragraph_prompt}], "
                 # f"demo_txt[{demo_txt}], "
                 # f"{cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}"
                 f"")
             response = chain.invoke({
-                "doc_context": doc_context,
+                "write_context": write_context,
                 "catalogue": catalogue,
                 "current_sub_title": current_sub_title,
                 "demo_txt": demo_txt,
-                "instruction": instruction,
+                "paragraph_prompt": paragraph_prompt,
             })
             output_txt = rmv_think_block(response.content)
             del model
@@ -256,7 +264,7 @@ def gen_txt(doc_context: str, demo_txt: str, instruction: str, catalogue: str,
             if 'model' in locals():
                 del model
                 torch.cuda.empty_cache()
-            logger.error(f"all_retries_exhausted_task_gen_txt_failed, {instruction}")
+            logger.error(f"all_retries_exhausted_task_gen_txt_failed, {paragraph_prompt}")
             raise last_exception
 
 def txt2sql(schema: str, txt: str, dialect:str, cfg: dict, max_retries=6) -> str:
@@ -525,9 +533,9 @@ def test_txt_generator():
     tasks = [
         {
             'unique_key': 'task1',
-            'doc_context': '背景1...',
+            'write_context': '背景1...',
             'demo_txt': '示例1...',
-            'instruction': '要求1...',
+            'paragraph_prompt': '要求1...',
             'catalogue': '目录1...',
             'current_sub_title': '标题1...',
             'cfg': {...},

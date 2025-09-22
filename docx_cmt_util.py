@@ -188,7 +188,7 @@ def modify_para_with_comment_prompt_in_process(uid:int, task_id:str, thread_lock
     :param thread_lock: A thread lock
     :param task_progress: task process information dict with task_id as key
     :param target_doc: 需要修改的文档路径
-    :param doc_ctx: 文档写作的大背景信息
+    :param doc_ctx: 文档写作的背景信息
     :param comments_dict: 段落ID和段落批注的对应关系字典
     :param vdb_dir: 向量数据库的目录
     :param cfg: 系统配置，用于使用大模型的能力

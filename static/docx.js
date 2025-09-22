@@ -206,6 +206,7 @@ async function uploadTemplateFile(file) {
 function generateOutline() {
     const docType = document.getElementById('docType').value;
     const docTitle = document.getElementById('docTitle').value;
+    const keywords = document.getElementById('keywords').value;
     const uid = document.getElementById('uid').value;
     const token = document.getElementById('t').value;
     // 显示加载状态
@@ -228,6 +229,7 @@ function generateOutline() {
         body: JSON.stringify({
             doc_type: docType,
             doc_title: docTitle,
+            keywords: keywords,
             uid: uid
         })
     })
@@ -368,6 +370,7 @@ async function gen_doc() {
     const doc_outline = document.getElementById('modifiedOutline').value;
     const doc_title = document.getElementById('docTitle').value;
     const doc_type = document.getElementById('docType').value;
+    const keywords = document.getElementById('keywords').value;
     const generateBtn = document.getElementById('generateBtn');
     const progressDisplay = document.getElementById('progressDisplay');
     const progressText = document.getElementById('progressText');
@@ -387,6 +390,7 @@ async function gen_doc() {
             uid: uid,
             doc_type: doc_type,
             doc_title: doc_title,
+            keywords: keywords,
             doc_outline: doc_outline
         };
     } else {
@@ -395,6 +399,7 @@ async function gen_doc() {
             uid: uid,
             doc_type: doc_type,
             doc_title: doc_title,
+            keywords: keywords,
             task_id: task_id,
             file_name: file_name
         };
