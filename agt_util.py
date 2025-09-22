@@ -477,5 +477,5 @@ def test_txt_generator():
 
 if __name__ == "__main__":
 
-    test_classify()
-    # test_complete_user_info()
+    # test_classify()
+    test_complete_user_info()
