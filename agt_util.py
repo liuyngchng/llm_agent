@@ -49,20 +49,16 @@ def classify_msg(labels: list, msg: str, cfg: dict, is_remote=True) -> dict:
     :param is_remote: is the LLM is deployed in remote endpoint
     """
 
-    label_str = ';\n'.join(map(str, labels))
+    classify_label = ';\n'.join(map(str, labels))
     logger.info(f"classify_question: {msg}")
-    template = f'''
-          根据以下问题的内容，将用户问题分为以下几类\n{label_str}\n
-          问题：{msg}\n分类结果输出为 JSONArray\n当文本涉及多个分类时，请同时输出多个分类
-          '''
+    template = cfg['prompts']['csm_cls_msg']
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit msg[{msg}] to llm {cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}")
-    response = chain.invoke({
-        "msg": msg
-    })
+    arg_dict = {"msg": msg, "classify_label": classify_label}
+    logger.info(f"submit_arg_dict[{arg_dict}] to llm {cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}")
+    response = chain.invoke(arg_dict)
     del model
     torch.cuda.empty_cache()
     return json.loads(
@@ -72,7 +68,7 @@ def classify_msg(labels: list, msg: str, cfg: dict, is_remote=True) -> dict:
         )
     )
 
-def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str:
+def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str | None:
     """
     classify txt, multi-label can be obtained
     """
@@ -87,16 +83,17 @@ def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str:
                 logger.info(f"retry #{attempt} times after {wait_time}s")
                 time.sleep(wait_time)
 
-            label_str = ';\n'.join(map(str, labels))
+            classify_label = ';\n'.join(map(str, labels))
             # logger.debug(f"classify_txt: {txt}")
-            template = f'''对以下文本进行分类\n{label_str}\n文本：{txt}\n分类结果输出为单一分类标签文本，不要输出任何额外信息'''
+            template = cfg['prompts']['txt_cls_msg']
             prompt = ChatPromptTemplate.from_template(template)
             # logger.info(f"prompt {prompt}")
 
             model = get_model(cfg, is_remote)
             chain = prompt | model
-            logger.info(f"submit_msg_to_llm, txt[{txt}], llm[{cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}]")
-            response = chain.invoke({"txt": txt})
+            arg_dict = {"txt": txt, "classify_label": classify_label}
+            logger.info(f"submit_arg_dict_to_llm, [{arg_dict}], llm[{cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}]")
+            response = chain.invoke(arg_dict)
             output_txt = extract_md_content(rmv_think_block(response.content), "json")
             del model
             torch.cuda.empty_cache()
@@ -119,30 +116,24 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
     submit the search result and user msg to LLM, return the answer
     """
     logger.info(f"user_info [{user_info}] , user_dict {user_dict}")
-    template = '''
-        基于用户提供的信息：
-        {context}
-        填写 JSON 体中的相应内容：{user_dict}
-        (1) 上下文中没有的信息，请不要自行编造
-        (2) 不要破坏 JSON 本身的结构
-        (3) 直接返回填写好的纯文本的 JSON 内容，不要有任何其他额外内容，不要输出Markdown格式
-        '''
+    template = cfg['prompts']['fill_dict_msg']
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit user_info[{user_info}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
-    response = chain.invoke({
+    arg_dict = {
         "context": user_info,
         "user_dict": json.dumps(user_dict, ensure_ascii=False),
-    })
+    }
+    logger.info(f"submit_arg_dict_to_llm,[{arg_dict}], {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
+    response = chain.invoke(arg_dict)
     del model
     torch.cuda.empty_cache()
     fill_result = user_dict
     try:
         fill_result =  json.loads(rmv_think_block(response.content))
     except Exception as es:
-        logger.error(f"json_loads_err_for {response.content}")
+        logger.exception(f"json_loads_err_for {response.content}")
     return fill_result
 
 def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: dict, is_remote=True):
@@ -155,44 +146,28 @@ def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: d
     :is_remote: 是否调用远端LLM
     """
     logger.info(f"doc_type[{doc_type}] , doc_title[{doc_title}], cfg[{cfg}]")
-    template = '''
-        目前我正在写一个文档，当前的任务是生成文档的三级目录，已知文档类型和文档的标题如下，
-        文档类型：{doc_type}
-        文档标题：{doc_title}
-        请输出以下格式的文档目录，若无其他要求则默认为三级目录，数据格式举例如下：
-        # 1.一级标题
-        ## 1.1 二级标题
-        ### 1.1.1 三级标题
-        ### 1.1.2 三级标题
-
-        其他的要求如下：
-        {keywords}
-        
-        输出纯文本格式
-        '''
+    template = cfg['prompts']['gen_docx_outline_msg']
     prompt = ChatPromptTemplate.from_template(replace_spaces(template))
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     logger.info(f"submit doc_type[{doc_type}], doc_title[{doc_title}, keywords[{keywords}]] to llm_api {cfg['api']}")
     try:
         # 流式调用模型
-        for chunk in model.stream(prompt.format(doc_type=doc_type, doc_title=doc_title)):
+        for chunk in model.stream(prompt.format(doc_type=doc_type, doc_title=doc_title, keywords=keywords)):
             if hasattr(chunk, 'content'):
-                # 直接输出内容块
                 yield chunk.content
             elif hasattr(chunk, 'text'):
-                # 兼容不同模型输出
                 yield chunk.text
 
     finally:
         # 清理资源
-        logger.info("outline_gen_finish，dispose resources")
+        logger.info("gen_outline_finish, dispose resources")
         del model
         torch.cuda.empty_cache()
 
 
 def gen_txt(write_context: str, demo_txt: str, paragraph_prompt: str, catalogue: str,
-            current_sub_title: str, cfg: dict, is_remote=True, max_retries=6) -> str:
+            current_sub_title: str, cfg: dict, is_remote=True, max_retries=6) -> str | None:
     """
     根据提供的三级目录、文本的写作风格，以及每个章节的具体文本写作要求，输出文本
     :param write_context:       整体的写作背景
@@ -210,17 +185,7 @@ def gen_txt(write_context: str, demo_txt: str, paragraph_prompt: str, catalogue:
     #     f"demo_txt[{demo_txt}], "
     #     f"current_sub_title[{current_sub_title}]"
     # )
-    template = (
-        "整体写作背景如下：\n{write_context}\n整个报告的目录(默认三级)如下:\n{catalogue}\n"
-        "当前写作的部分章节目录标题为\n{current_sub_title}\n"
-        "当前需写作的文本的写作要求如下：\n{paragraph_prompt}\n可参考的语言风格如下：\n{demo_txt}\n"
-        "(1)直接返回纯文本内容，不要有任何其他额外内容，不要输出Markdown格式\n"
-        "(2)调整输出文本的格式，需适合添加在Word文档中\n"
-        "(3)若写作要求没有明确字数要求，则生成不超过300字的文本\n"
-        "(4)语言风格文本仅作为输出文本风格参考材料，禁止直接将其输出\n"
-        "(5)禁止输出空行\n"
-        "(6)输出内容中禁止包含当前目录标题\n"
-    )
+    template = cfg['prompts']['gen_txt_msg']
     prompt = ChatPromptTemplate.from_template(template)
     # logger.debug(f"prompt {prompt}")
     backoff_times = [5, 10, 20, 40, 80, 160]
@@ -236,21 +201,15 @@ def gen_txt(write_context: str, demo_txt: str, paragraph_prompt: str, catalogue:
                 logger.info(f"retry #{attempt} times after wait {backoff_times[attempt - 1]}s")
             model = get_model(cfg)
             chain = prompt | model
-            logger.info(
-                f"req_llm, "
-                # f"catalogue[{catalogue}], "
-                f"sub_title[{current_sub_title}], "
-                f"cmd[{paragraph_prompt}], "
-                # f"demo_txt[{demo_txt}], "
-                # f"{cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}"
-                f"")
-            response = chain.invoke({
+            arg_dict = {
                 "write_context": write_context,
                 "catalogue": catalogue,
                 "current_sub_title": current_sub_title,
                 "demo_txt": demo_txt,
-                "paragraph_prompt": paragraph_prompt,
-            })
+                "paragraph_prompt": paragraph_prompt
+            }
+            logger.info(f"submit_arg_dict_to_llm, {arg_dict}, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
+            response = chain.invoke(arg_dict)
             output_txt = rmv_think_block(response.content)
             del model
             torch.cuda.empty_cache()
@@ -267,7 +226,7 @@ def gen_txt(write_context: str, demo_txt: str, paragraph_prompt: str, catalogue:
             logger.error(f"all_retries_exhausted_task_gen_txt_failed, {paragraph_prompt}")
             raise last_exception
 
-def txt2sql(schema: str, txt: str, dialect:str, cfg: dict, max_retries=6) -> str:
+def txt2sql(schema: str, txt: str, dialect:str, cfg: dict, max_retries=6) -> str | None:
     """
     根据提供的数据库schama, 以及用户的自然语言文本，输出SQL
     :param schema:          数据库schema
@@ -276,23 +235,7 @@ def txt2sql(schema: str, txt: str, dialect:str, cfg: dict, max_retries=6) -> str
     :param cfg:             系统配置
     :param max_retries:     最大尝试次数， 需处于集合 [1, 7]
     """
-    template = (
-        "你是一个专业的 {dialect} 数据库的 SQL生成助手。数据库表结构及样例数据如下所示：\n"
-        "{schema}\n"
-        "请根据用户当前提问以及历史消息记录，严格按以下要求生成数据库查询 SQL：\n"
-        "(1) 仅输出标准SQL代码块，不要任何解释\n"
-        "(2) 使用与表结构完全一致的英文字段名\n"
-        "(3) WHERE条件需限制最多返回 20 条数据\n"
-        "(4) 禁止包含分析过程或思考步骤\n"
-        "(5) 查询语句中禁止用 * 表示全部字段， 需列出详细的字段名称清单\n"
-        "(6) 禁止生成 update、delete 等任何对数据修改的语句\n"
-        "(7) 每次只能查询1张表，禁止生成 join 的SQL;\n"
-        "(8) 对于含有关键词 '趋势'、'形势' 的问题，需要生成在时间维度上进行汇总的SQL语句\n"
-        "(9) 如果数据库是 oracle ， 最终输出的SQL限制数据条数使用 'ROWNUM <=' 替代 'limit'\n"
-        "(10) 如果只提供了月份，那么用户指的是当前年的月份\n"
-        "(11) 最近指的是从当前时间算起的3个月内\n"
-        "(12) 除非用户指定，默认的时间、数字类均按倒序排序\n"
-    )
+    template = cfg['prompts']['txt_to_sql_msg']
     prompt = ChatPromptTemplate.from_template(template)
     backoff_times = [5, 10, 20, 40, 80, 160]
     if max_retries < 1:
@@ -306,12 +249,14 @@ def txt2sql(schema: str, txt: str, dialect:str, cfg: dict, max_retries=6) -> str
                 logger.info(f"retry #{attempt} times after wait {backoff_times[attempt - 1]}s")
             model = get_model(cfg)
             chain = prompt | model
-            logger.info(f"req_llm, schema[{schema}], dialect[{dialect}], txt[{txt}], ")
-            response = chain.invoke({
+            arg_dict = {
                 "dialect": dialect,
                 "schema": schema,
-                "txt": txt
-            })
+                "txt": txt,
+                "max_record_count": 20,
+            }
+            logger.info(f"submit_arg_dict_to_llm {arg_dict}")
+            response = chain.invoke(arg_dict)
             output_txt = rmv_think_block(response.content)
             output_txt = extract_md_content(output_txt, "sql")
             return output_txt
@@ -329,21 +274,14 @@ def update_session_info(user_info: str, append_info: str, cfg: dict, is_remote=T
     submit the search result and user msg to LLM, return the answer
     """
     logger.info(f"user_info [{user_info}], append_info {append_info}")
-    template = """
-        基于已知的个人信息：{context}，以及新提供的个人信息 {append_info}, 输出更新后个人信息
-        (1) 如果同类的信息有冲突，以新提供的信息为准
-        (2) 直接返回填写好的纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
-        """
+    template = cfg['prompts']['pad_dict_info_msg']
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit user_info[{user_info}], append_info[{append_info}] "
-                f"to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
-    response = chain.invoke({
-        "context": user_info,
-        "append_info": append_info,
-    })
+    arg_dict = {"context": user_info, "append_info": append_info}
+    logger.info(f"submit_arg_dict_to_llm {arg_dict}, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
+    response = chain.invoke(arg_dict)
     del model
     torch.cuda.empty_cache()
     fill_result = user_info
@@ -358,21 +296,14 @@ def extract_session_info(chat_log: str, cfg: dict, is_remote=True) -> str:
     extract_session_info from chat log
     """
     logger.info(f"chat_log [{chat_log}]")
-    template = '''
-        基于以下文本：
-        {context}
-        请输出涉及到个人信息的部分文本
-        (1)直接返回填写好的纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
-        (2)若没有个人信息，则输出空字符串
-        '''
+    template = cfg['prompts']['extract_person_info_msg']
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
-    logger.info(f"submit chat_log[{chat_log}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
-    response = chain.invoke({
-        "context": chat_log
-    })
+    arg_dict = {"context": chat_log}
+    logger.info(f"submit_arg_dict_to_llm[{arg_dict}], {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
+    response = chain.invoke(arg_dict)
     del model
     torch.cuda.empty_cache()
     final_result = chat_log
@@ -387,21 +318,13 @@ def extract_lpg_order_info(chat_log: str, cfg: dict, is_remote=True) -> str:
     extract lpg order  from chat log
     """
     logger.info(f"chat_log [{chat_log}]")
-    template = '''
-        基于以下文本：
-        {context}
-        请输出涉及到液化气、液化天然气(简称LPG)订单信息的文本，订单信息包含液化气的重量、气瓶数量
-        (1)直接返回填写好的纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
-        (2)若没有液化气，则输出空字符串
-        '''
+    template = cfg['prompts']['get_lpg_order_info_msg']
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
     logger.info(f"submit chat_log[{chat_log}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
-    response = chain.invoke({
-        "context": chat_log
-    })
+    response = chain.invoke({"context": chat_log})
     del model
     torch.cuda.empty_cache()
     final_result = chat_log
@@ -416,19 +339,13 @@ def get_abs_of_chat(txt: list, cfg: dict, is_remote=True) -> str:
     get abstract of a long text
     """
     logger.info(f"start_extract_abstract_of_txt [{txt}]")
-    template = '''
-        基于用户和机器人客服的对话文本
-        {context}
-        抽取重要内容，以便于提供给人工客服进行后续的客户服务
-        '''
+    template = cfg['prompts']['get_chat_abs_msg']
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     chain = prompt | model
     logger.info(f"submit user_info[{txt}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
-    response = chain.invoke({
-        "context": txt,
-    })
+    response = chain.invoke({"context": txt,})
     del model
     torch.cuda.empty_cache()
     abstract = ""
