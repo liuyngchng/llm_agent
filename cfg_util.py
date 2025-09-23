@@ -95,6 +95,44 @@ def get_user_role_by_uid(uid:str)-> str | None:
             logger.info(f"no_user_info_found_for_uid, {uid}")
     return role
 
+def get_user_hack_info(uid: str, cfg: dict)-> str | None:
+    role = None
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            sql = f"select hack_info from user where id='{uid}' limit 1"
+            check_info = query_sqlite(my_conn, sql)
+            user_dt = check_info['data']
+            decrypt_dt = decrypt(user_dt[0][0], cfg['sys']['cypher_key'])
+            logger.info(f"user_hack_info {decrypt_dt}, uid {uid}")
+        except Exception as e:
+            logger.exception(f"no_user_hack_info_found_for_uid, {uid}")
+    return role
+
+def save_user_hack_info(uid: str, user_hack_info: str, cfg: dict) -> bool:
+    """
+    :param uid: user id
+    :param user_hack_info: user_hack_info for txt to SQL
+    :param cfg: system config
+    """
+    save_result = False
+    if not user_hack_info or not uid:
+        logger.error("user_hack_info_or_uid_is_null")
+        return save_result
+    logger.info("start_encrypt_user_hack_info")
+    user_hack_info1 = encrypt(user_hack_info, cfg['sys']['cypher_key'])
+    exec_sql = f"update user set hack_info ='{user_hack_info1}' where uid = '{uid}'"
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
+            result = insert_del_sqlite(my_conn, exec_sql)
+            logger.info(f"exec_sql_success {exec_sql}")
+            if result.get('result'):
+                save_result = True
+                logger.info("save_user_hack_info_success")
+        except Exception as e:
+            logger.exception(f"err_in_exec_sql, {exec_sql}")
+    return save_result
+
 def get_ds_cfg_by_uid(uid:str, cfg: dict) -> dict:
     config = {}
     with sqlite3.connect(config_db) as my_conn:

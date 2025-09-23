@@ -96,6 +96,14 @@ class AI_SERVICE_STATUS(Enum):
     OPEN    = 1
     ClOSE   = 0
 
+class Const(Enum):
+    """
+    the status of AI service provided to human customers
+    """
+    BILL_ADDR_SVG   = "bill_addr_svg"
+    CSM_SERVICE     = "csm_service"
+
+
 
 if __name__ == "__main__":
     print(MsgType.ERROR.value)
