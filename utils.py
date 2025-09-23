@@ -154,6 +154,8 @@ def adjust_html_table_columns(html_content: str) -> str:
     return str(soup)
 
 
+def replace_spaces(text):
+    return re.sub(r'[ \t]+', ' ', text)
 
 
 def get_table_name_from_sql(sql:str) -> str | None:

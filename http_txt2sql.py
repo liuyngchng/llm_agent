@@ -14,6 +14,7 @@ import cfg_util as cfg_utl
 
 from flask import Flask, render_template, Response, request, jsonify, redirect, url_for
 
+import utils
 from bp_auth import auth_bp, auth_info, get_client_ip
 from my_enums import DataType, DBType, AppType
 from sql_yield import SqlYield
@@ -173,6 +174,7 @@ def user_hack_info():
     else:
         uid = request.form.get("user_list").strip()
         hack_info = request.form.get("hack_user_config").strip()
+        hack_info = utils.replace_spaces(hack_info)
         logger.info(f"user_hack_info_for_uid_{uid}, hack_info: {hack_info}")
         save_cfg_result = cfg_utl.save_user_hack_info(uid, hack_info, my_cfg)
         user_list = cfg_utl.get_user_list()

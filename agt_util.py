@@ -4,6 +4,7 @@
 import json
 import re
 
+import utils
 from sys_init import init_yml_cfg
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
@@ -147,7 +148,7 @@ def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: d
     """
     logger.info(f"doc_type[{doc_type}] , doc_title[{doc_title}], cfg[{cfg}]")
     template = cfg['prompts']['gen_docx_outline_msg']
-    prompt = ChatPromptTemplate.from_template(replace_spaces(template))
+    prompt = ChatPromptTemplate.from_template(utils.replace_spaces(template))
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
     logger.info(f"submit doc_type[{doc_type}], doc_title[{doc_title}, keywords[{keywords}]] to llm_api {cfg['api']}")
@@ -373,8 +374,7 @@ def test_complete_user_info():
     complete_user_info_result = update_session_info(user_info1, user_info2, my_cfg, True)
     logger.info(f"complete_user_info_result2={complete_user_info_result}")
 
-def replace_spaces(text):
-    return re.sub(r'[ \t]+', ' ', text)
+
 
 def test_classify():
      my_cfg = init_yml_cfg()
