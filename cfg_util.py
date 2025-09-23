@@ -397,6 +397,19 @@ def get_consts(app: str)-> dict:
             logger.exception(f"err_occurred_for_db {config_db}, sql {sql}")
     return const
 
+def get_user_list():
+    user_list = []
+    with sqlite3.connect(config_db) as my_conn:
+        sql = f"select id, name from user limit 100"
+        try:
+            check_info = query_sqlite(my_conn, sql)
+            value_dt = check_info['data']
+            for id, name in value_dt:
+                user_list.append({"id": id, "name": name})
+        except Exception as e:
+            logger.exception(f"err_occurred_for_db {config_db}, sql {sql}")
+    return user_list
+
 def get_hack_info(uid: str)-> dict:
     with sqlite3.connect(config_db) as my_conn:
         sql = f"select hack_q_dict from hack_list where uid = '{uid}' limit 1"
@@ -514,3 +527,5 @@ if __name__ == '__main__':
     uid = '332987921'
     user = get_user_info_by_uid(uid)
     logger.info(f"user {user}")
+
+

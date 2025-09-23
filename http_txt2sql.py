@@ -153,6 +153,20 @@ def delete_config():
     logger.info(f"del_cfg_info_for_uid_{uid}, return {waring_info}")
     return waring_info
 
+
+@app.route('/user/hack/info', methods=['GET', 'POST'])
+def user_hack_info():
+    if request.method == 'GET':
+        user_list = cfg_utl.get_user_list()
+        ctx = {
+            "uid": request.args.get("uid").strip(),
+            "sys_name": my_cfg['sys']['name'],
+            "app_source": AppType.TXT2SQL.name.lower(),
+            "warning_info": "",
+            "user_list": user_list,
+        }
+        return render_template('hack_info_index.html',  **ctx)
+
 def illegal_access(uid):
     waring_info = "登录信息已失效，请重新登录后再使用本系统"
     logger.error(f"{waring_info}, {uid}")

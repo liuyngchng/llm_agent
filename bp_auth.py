@@ -67,6 +67,10 @@ def login():
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")
     uid = auth_result["uid"]
+    if auth_result["role"] == 2:
+        hack_admin = "1"
+    else:
+        hack_admin = "0"
     ctx = {
         "uid": uid,
         "role": auth_result["role"],
@@ -74,6 +78,7 @@ def login():
         "sys_name": sys_name,
         "greeting": cfg_utl.get_const("greeting", app_source),
         "app_source": app_source,
+        "hack_admin": hack_admin,
     }
     session_key = f"{auth_result['uid']}_{get_client_ip()}"
     auth_info[session_key] = time.time()

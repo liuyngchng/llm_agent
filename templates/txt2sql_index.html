@@ -28,6 +28,11 @@
             <a href="/cfg/idx?uid={{uid}}&app_source={{app_source}}" class="nav-link" target="_blank">
                 <i class="fas fa-cog"></i> 系统配置
             </a>
+            {% if hack_admin =='1' %}
+            <a href="/user/hack/info?uid={{uid}}&app_source={{app_source}}" class="nav-link" target="_blank">
+                <i class="fas fa-cog"></i> 提问配置
+            </a>
+            {% endif %}
         </div>
 
         <div class="input-group">
