@@ -155,7 +155,22 @@ def adjust_html_table_columns(html_content: str) -> str:
 
 
 def replace_spaces(text):
+    """
+    将文本中的多个连续空格或制表符替换为一个空格
+    """
     return re.sub(r'[ \t]+', ' ', text)
+
+def check_contain_spaces_in_every_line(text):
+    """
+    检查一段文本中是否每行都有一个或多个空格或制表符
+    """
+    lines = text.splitlines()
+    for line in lines:
+        if line.strip():  # 忽略空行
+            parts = re.split(r'[ \t]+', line.strip())
+            if len(parts) < 2:
+                return False
+    return True
 
 
 def get_table_name_from_sql(sql:str) -> str | None:

@@ -158,35 +158,36 @@ def delete_config():
 @app.route('/user/hack/info', methods=['GET', 'POST'])
 def user_hack_info():
     dt_idx = 'hack_info_index.html'
+    ctx = {
+        "sys_name": my_cfg['sys']['name'],
+        "app_source": AppType.TXT2SQL.name.lower(),
+        "warning_info": "",
+    }
     if request.method == 'GET':
         uid = request.args.get("uid").strip()
         user_list = cfg_utl.get_user_list()
         hack_user_config = cfg_utl.get_user_hack_info(uid, my_cfg)
-        ctx = {
-            "uid": uid,
-            "sys_name": my_cfg['sys']['name'],
-            "app_source": AppType.TXT2SQL.name.lower(),
-            "warning_info": "",
-            "user_list": user_list,
-            "hack_user_config": hack_user_config,
-        }
+        ctx['uid'] = uid
+        ctx['user_list'] = user_list
+        ctx['hack_user_config'] = hack_user_config
         return render_template(dt_idx,  **ctx)
     else:
         uid = request.form.get("user_list").strip()
         hack_info = request.form.get("hack_user_config").strip()
+        user_list = cfg_utl.get_user_list()
+        ctx['uid'] = uid
+        ctx['hack_user_config'] = hack_info
+        ctx['user_list'] = user_list
+        is_ok = utils.check_contain_spaces_in_every_line(hack_info)
+        if not is_ok:
+            ctx['waring_info'] = '保存失败，数据格式有误，每行需含有至少一个空格或制表符[TAB]'
+            return render_template(dt_idx, **ctx)
         hack_info = utils.replace_spaces(hack_info)
         logger.info(f"user_hack_info_for_uid_{uid}, hack_info: {hack_info}")
         save_cfg_result = cfg_utl.save_user_hack_info(uid, hack_info, my_cfg)
-        user_list = cfg_utl.get_user_list()
+
         hack_user_config = cfg_utl.get_user_hack_info(uid, my_cfg)
-        ctx = {
-            "uid": uid,
-            "sys_name": my_cfg['sys']['name'],
-            "app_source": AppType.TXT2SQL.name.lower(),
-            "warning_info": "",
-            "user_list": user_list,
-            "hack_user_config": hack_user_config,
-        }
+        ctx['hack_user_config'] = hack_user_config
         if save_cfg_result:
             ctx['waring_info'] = '保存成功'
         else:
@@ -194,6 +195,21 @@ def user_hack_info():
             # sql_agent = SqlAgent(cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg))
             # data_source_cfg["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
         return render_template(dt_idx, **ctx)
+
+@app.route('/<uid>/my/hack/info', methods=['GET'])
+def get_my_hack_info(uid: str):
+    """
+    获取某个用户的 hack info
+    """
+    hack_user_config = cfg_utl.get_user_hack_info(uid, my_cfg)
+    logger.info(f"get_user_hack_info {uid}, {hack_user_config}")
+    response = {
+        "status": 200,
+        "data":hack_user_config,
+        "msg": "成功获取用户配置信息"
+    }
+    return json.dumps(response, ensure_ascii=False)
+
 
 def illegal_access(uid):
     waring_info = "登录信息已失效，请重新登录后再使用本系统"
