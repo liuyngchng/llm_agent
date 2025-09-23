@@ -33,8 +33,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 my_cfg = init_yml_cfg()
 
-task_progress = {}  # 存储文本进度信息
-thread_lock = threading.Lock()
+# task_progress = {}  # 存储文本进度信息
+# thread_lock = threading.Lock()
 
 # 定义允许的文件类型及其魔数签名
 ALLOWED_TYPES = {
@@ -227,7 +227,7 @@ def delete_vdb_dir():
 
 @vdb_bp.route('/vdb/upload', methods=['POST'])
 def upload_file():
-    logger.info(f"start_upload_file, {request}")
+    logger.info(f"start_process_uploaded_file, {request}")
     if 'file' not in request.files:
         info = {"success": False, "message": "未找到文件"}
         logger.error(info)
@@ -270,8 +270,8 @@ def upload_file():
                 return jsonify(info), 400
         file.seek(0)  # 重置文件指针
         # 生成唯一任务ID和文件名
-        task_id = str(int(time.time() * 1000))  # 使用毫秒提高唯一性
-        disk_file_name = f"{task_id}_{original_filename}"
+        vdb_task_id = str(int(time.time() * 1000))  # 使用毫秒提高唯一性
+        disk_file_name = f"{vdb_task_id}_{original_filename}"
         save_path = os.path.join(UPLOAD_FOLDER, disk_file_name)
         # 保存文件
         file.save(save_path)
@@ -281,15 +281,8 @@ def upload_file():
                     f"{uid}, {kb_id}, previous_file {file_info[0].get('file_path')}")
         else:
             logger.info(f"save_new_file_info_for_vdb, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
-            DbUtl.save_file_info(upload_file_name, disk_file_name, uid, kb_id)
-        # 初始化任务进度
-        with thread_lock:
-            task_progress[task_id] = {
-                'progress': 0,
-                'filename': disk_file_name,
-                'timestamp': time.time()
-            }
-        info = {"success": True,"task_id": task_id,"file_name": disk_file_name,"message": "文件上传成功"}
+            DbUtl.save_file_info(upload_file_name, disk_file_name, uid, kb_id, vdb_task_id)
+        info = {"success": True,"vdb_task_id": vdb_task_id,"file_name": disk_file_name,"message": "文件上传成功"}
         logger.info(f"文件上传成功: {disk_file_name}, 大小: {os.path.getsize(save_path)}字节, return {info}")
         return jsonify(info), 200
 

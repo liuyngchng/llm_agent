@@ -584,13 +584,13 @@ class DbUtl:
         return my_dt
 
     @staticmethod
-    def save_file_info(original_file_name: str, saved_file_name:str, uid: str, vdb_id: str):
-        sql = (f"insert into file_info (name, uid, vdb_id, file_path) values"
-               f" ('{original_file_name}', '{uid}', '{vdb_id}', '{saved_file_name}')")
+    def save_file_info(original_file_name: str, saved_file_name:str, uid: str, vdb_id: str, vdb_task_id: str):
+        sql = (f"insert into file_info (name, uid, vdb_id, file_path, vdb_task_id) values"
+               f" ('{original_file_name}', '{uid}', '{vdb_id}', '{saved_file_name}', '{vdb_task_id}')")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"save_file_info_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
-        logger.info(f"save_file_info_dt {my_dt}")
+        logger.info(f"save_file_info_dt, {my_dt}")
         return my_dt
 
     @staticmethod
