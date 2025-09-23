@@ -163,7 +163,8 @@ class SqlYield(DbUtl):
         """
         refine user question to let it can be understood by llm in a normal way.
         """
-        hack_content = cfg_util.get_hack_q_file_content(uid)
+        # hack_content = cfg_util.get_hack_q_file_content(uid)
+        hack_content = cfg_util.get_user_hack_info(uid, self.cfg)
         data_source_info = cfg_util.get_const("data_source_info", AppType.TXT2SQL.name.lower())
         chain = self.refine_q_prompt_template | self.llm
         refine_q_dict = SqlYield.build_refine_invoke_json(question, hack_content, data_source_info)
