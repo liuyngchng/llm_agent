@@ -96,17 +96,20 @@ def get_user_role_by_uid(uid:str)-> str | None:
     return role
 
 def get_user_hack_info(uid: str, cfg: dict)-> str | None:
-    role = None
+    user_hack_info = None
     with sqlite3.connect(config_db) as my_conn:
         try:
             sql = f"select hack_info from user where id='{uid}' limit 1"
             check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
-            decrypt_dt = decrypt(user_dt[0][0], cfg['sys']['cypher_key'])
-            logger.info(f"user_hack_info {decrypt_dt}, uid {uid}")
+            if user_dt and user_dt[0] and user_dt[0][0]:
+                user_hack_info = decrypt(user_dt[0][0], cfg['sys']['cypher_key'])
+            else:
+                user_hack_info = ""
+            logger.info(f"user_hack_info {user_hack_info}, uid {uid}")
         except Exception as e:
             logger.exception(f"no_user_hack_info_found_for_uid, {uid}")
-    return role
+    return user_hack_info
 
 def save_user_hack_info(uid: str, user_hack_info: str, cfg: dict) -> bool:
     """
@@ -120,7 +123,7 @@ def save_user_hack_info(uid: str, user_hack_info: str, cfg: dict) -> bool:
         return save_result
     logger.info("start_encrypt_user_hack_info")
     user_hack_info1 = encrypt(user_hack_info, cfg['sys']['cypher_key'])
-    exec_sql = f"update user set hack_info ='{user_hack_info1}' where uid = '{uid}'"
+    exec_sql = f"update user set hack_info ='{user_hack_info1}' where id = '{uid}'"
     with sqlite3.connect(config_db) as my_conn:
         try:
             exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
