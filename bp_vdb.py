@@ -28,6 +28,8 @@ vdb_bp = Blueprint('vdb', __name__)
 VDB_PREFIX = "./vdb/vdb_idx_"
 
 UPLOAD_FOLDER = "upload_doc"
+
+FILE_PROCESS_EXPIRE_MS = 7200000  # 文件处理超时毫秒数，默认2小时
 # 确保上传目录存在
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -270,20 +272,30 @@ def upload_file():
                 return jsonify(info), 400
         file.seek(0)  # 重置文件指针
         # 生成唯一任务ID和文件名
-        vdb_task_id = str(int(time.time() * 1000))  # 使用毫秒提高唯一性
+        vdb_task_id = int(time.time() * 1000)  # 使用毫秒提高唯一性
         disk_file_name = f"{vdb_task_id}_{original_filename}"
-        save_path = os.path.join(UPLOAD_FOLDER, disk_file_name)
+        disk_file_save_path = os.path.join(UPLOAD_FOLDER, disk_file_name)
         # 保存文件
-        file.save(save_path)
+        file.save(disk_file_save_path)
         file_info = DbUtl.get_file_info(upload_file_name, uid, kb_id)
+        is_duplicate_file = False
         if file_info:
+            old_file = file_info[0].get('file_path')
             logger.info(f"duplicate_upload_file, {upload_file_name}, {disk_file_name}, "
-                    f"{uid}, {kb_id}, previous_file {file_info[0].get('file_path')}")
+                    f"{uid}, {kb_id}, previous_file_will_be_deleted, {old_file}")
+            is_duplicate_file = True
+            DbUtl.delete_file_by_uid_vbd_id_file_id(file_info[0]['id'], uid, kb_id)
+            old_file_full_path = os.path.join(UPLOAD_FOLDER, old_file)
+            os.remove(old_file_full_path)
+            logger.info(f"previous_file_deleted_from_disk, {old_file_full_path}")
+        DbUtl.save_file_info(upload_file_name, disk_file_name, uid, kb_id, vdb_task_id)
+        logger.info(f"save_new_file_info_in_db_for_vdb, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
+        if is_duplicate_file:
+            msg = "文件已存在，已更新"
         else:
-            logger.info(f"save_new_file_info_for_vdb, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
-            DbUtl.save_file_info(upload_file_name, disk_file_name, uid, kb_id, vdb_task_id)
-        info = {"success": True,"vdb_task_id": vdb_task_id,"file_name": disk_file_name,"message": "文件上传成功"}
-        logger.info(f"文件上传成功: {disk_file_name}, 大小: {os.path.getsize(save_path)}字节, return {info}")
+            msg = "文件上传成功"
+        info = {"success": True,"vdb_task_id": vdb_task_id,"file_name": disk_file_name,"message": msg}
+        logger.info(f"{msg}: {disk_file_name}, 大小: {os.path.getsize(disk_file_save_path)}字节, return {info}")
         return jsonify(info), 200
 
     except Exception as e:
@@ -314,11 +326,10 @@ def get_doc_process_info():
     task_id = request.json.get("task_id")
     if not task_id:
         return jsonify({"error": "缺少任务ID"}), 400
-    with thread_lock:
-        progress_info = task_progress.get(task_id, {"text": "未知状态"})
+    progress_info = DbUtl.get_file_info_by_task_id(task_id)
     return jsonify({
         "task_id": task_id,
-        "progress": progress_info["text"]
+        "data": progress_info
     }), 200
 
 
@@ -344,13 +355,18 @@ def search_vdb():
         return jsonify({"search_output": "未检索到有效内容"}), 200
 
 def clean_tasks():
+    """
+    周期性地清理在2小时内未完成的任务，系统存储时间戳create_time为毫秒
+    """
     while True:
-        with thread_lock:
-            now = time.time()
-            expired = [k for k, v in task_progress.items()
-                      if now - v['timestamp'] > 3600]  # 1小时过期
-            for k in expired:
-                del task_progress[k]
+        file_list = DbUtl.get_vdb_processing_file_list()
+        now = int(time.time()*1000)  # 当前时间毫秒数
+        vdb_task_id_list = []
+        for file in file_list:
+            if now - file['vdb_task_id'] > FILE_PROCESS_EXPIRE_MS:
+                vdb_task_id_list.append(file['vdb_task_id'])
+        for id in vdb_task_id_list:
+            DbUtl.delete_file_by_vbd_task_id(id)
         time.sleep(300)
 
 
