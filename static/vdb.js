@@ -101,8 +101,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         // 重置界面
         document.getElementById('fileUploadResult').textContent = "开始处理...";
-        document.getElementById('progressFill').style.width = '0%';
-        document.getElementById('stream_output').innerHTML = '<div class="status-container">正在上传文档...</div>';
         const uid = document.getElementById('uid').value;
         // 上传文件
         const formData = new FormData();
@@ -110,19 +108,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         formData.append('kb_id', currentKB);
         formData.append('uid', uid);
         try {
+            console.log('start_form_req, ' + formData)
             const uploadRes = await fetch('/vdb/upload', {
                 method: 'POST',
                 body: formData
             });
-            if (!uploadRes.ok) {
-                const errorData = await uploadRes.json();
-                throw new Error(errorData.message || '文件上传失败');
-            }
-            const response = await uploadRes.json();
+            const responseData = await uploadRes.json();
             // 更新状态
-            document.getElementById('stream_output').innerHTML =
-                '<div class="status-container">' + response.message +'文件名：'+ response.file_name + '</div>';
-            document.getElementById('fileUploadResult').textContent = "知识库构建中...";
+            document.getElementById('fileUploadResult').textContent = responseData.message;
         } catch (error) {
             console.error('处理失败:', error);
             document.getElementById('fileUploadResult').textContent = "处理失败";
@@ -427,6 +420,8 @@ async function loadFileList(kb_id) {
             row.innerHTML = `
                 <td>${file.id}</td>
                 <td>${file.name}</td>
+                <td>${file.vdb_finish_percent}%</td>
+                <td>${file.process_info}</td>
                 <td>
                     <button class="btn btn-danger delete-file-btn"
                             data-file-id="${file.id}">

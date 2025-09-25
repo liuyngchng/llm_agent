@@ -117,8 +117,14 @@ def get_vdb_file_list():
     uid = data.get("uid")
     t = data.get("t")
     vdb_id = data.get("vdb_id")
+    if not uid or not vdb_id:
+        msg = {"success":False, "msg":"提交的参数为空"}
+        logger.error(f"err_msg, {msg}")
+        return json.dumps(msg,ensure_ascii=False), 502
     dt = DbUtl.get_vdb_file_list(uid, vdb_id)
-    return json.dumps({"files": dt, "success": True}, ensure_ascii=False)
+    return_dt = {"files": dt, "success": True}
+    logger.info(f"get_vdb_file_list_return, {return_dt}")
+    return json.dumps(return_dt, ensure_ascii=False), 200
 
 @vdb_bp.route('/vdb/set/default', methods=['POST'])
 def set_default_vdb():
@@ -292,7 +298,8 @@ def upload_file():
             is_duplicate_file = True
             DbUtl.delete_file_by_uid_vbd_id_file_id(file_info[0]['id'], uid, kb_id)
             old_file_full_path = os.path.join(UPLOAD_FOLDER, old_file)
-            os.remove(old_file_full_path)
+            if os.path.exists(old_file_full_path):
+                os.remove(old_file_full_path)
             logger.info(f"previous_file_deleted_from_disk, {old_file_full_path}")
         DbUtl.save_file_info(upload_file_name, disk_file_name, uid, kb_id, vdb_task_id, file_md5)
         logger.info(f"save_new_file_info_in_db_for_vdb, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
