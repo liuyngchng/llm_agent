@@ -4,6 +4,7 @@ let progressInterval = null;
 let currentKB = null;
 const spinnerChars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 let spinCounter = 0;
+let refreshInterval = null;
 
 // 页面加载时初始化知识库管理
 document.addEventListener('DOMContentLoaded', async () => {
@@ -14,6 +15,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const kbSelector = document.getElementById('kb_selector');
     const createKB = document.getElementById('createKB');
     const selectBtn = document.getElementById('selectBtn');
+
+    refreshInterval = setInterval(() => {
+        if (currentKB) {
+            loadFileList(currentKB);
+        }
+    }, 2000);
 
     // 加载知识库列表
     await loadKnowledgeBases();
@@ -174,61 +181,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 恢复按钮状态
             deleteBtn.disabled = false;
             deleteBtn.innerHTML = originalText;
-        }
-    });
-
-    document.getElementById('search_btn').addEventListener('click', async () => {
-        const search_input = document.getElementById('search_input').value;
-        if (!search_input.trim()) {
-            alert('请输入检索内容');
-            return;
-        }
-
-        if (!currentKB) {
-            alert('请先选择知识库');
-            return;
-        }
-        const uid = document.getElementById('uid').value;
-        const t = document.getElementById('t').value;
-        const statusEl = document.getElementById('search_status');
-        const searchBtn = document.getElementById('search_btn');
-        try {
-            statusEl.textContent = "检索中...";
-            searchBtn.disabled = true;
-
-            const search_res = await fetch('/vdb/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ search_input, uid, t, kb_id: currentKB })
-            });
-            const data = await search_res.json();
-            // 渲染表格
-            if (data.search_output) {
-                document.getElementById('search_result_table').innerHTML = `
-                    <table class="result-table">
-                        <thead>
-                            <tr>
-                                <th>来源文档</th>
-                                <th>相关度</th>
-                                <th>匹配内容</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${data.search_output}
-                        </tbody>
-                    </table>
-                `;
-            } else {
-                document.getElementById('search_result_table').innerHTML =
-                    `<div class="status-container">未找到相关结果</div>`;
-            }
-            statusEl.textContent = `找到 ${document.querySelectorAll('.result-table tbody tr').length} 条结果`;
-        } catch (error) {
-            console.error('检索失败:', error);
-            document.getElementById('search_result_table').innerHTML =
-                `<div class="error-container">检索失败: ${error.message}</div>`;
-        } finally {
-            searchBtn.disabled = false;
         }
     });
      // 设置为默认知识库功能
@@ -487,3 +439,10 @@ async function handleFileDelete(e) {
         btn.innerHTML = originalHTML;
     }
 }
+
+
+window.addEventListener('beforeunload', () => {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+});
