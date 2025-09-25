@@ -118,21 +118,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const errorData = await uploadRes.json();
                 throw new Error(errorData.message || '文件上传失败');
             }
-            const { task_id, file_name } = await uploadRes.json();
+//            const { task_id, file_name } =
+            const response = await uploadRes.json();
             currentTaskId = task_id;
             // 更新状态
-            document.getElementById('stream_output').innerHTML = '<div class="status-container">文档上传成功，开始构建知识库...</div>';
-            document.getElementById('textProgress').textContent = "构建中...";
+            document.getElementById('stream_output').innerHTML =
+                '<div class="status-container">' + response.message +'文件名：'+ response.file_name + '</div>';
+            document.getElementById('textProgress').textContent = "知识库构建中...";
             // 启动进度轮询
-            clearInterval(progressInterval);
-            progressInterval = setInterval(fetchProgress, 1000);
+//            clearInterval(progressInterval);
+//            progressInterval = setInterval(fetchProgress, 1000);
             // 启动文档索引生成
-            const uid = document.getElementById('uid').value;
-            await fetch('/vdb/index/doc', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ task_id, file_name, uid, kb_id: currentKB })
-            });
+//            const uid = document.getElementById('uid').value;
+//            await fetch('/vdb/index/doc', {
+//                method: 'POST',
+//                headers: { 'Content-Type': 'application/json' },
+//                body: JSON.stringify({ task_id, file_name, uid, kb_id: currentKB })
+//            });
         } catch (error) {
             console.error('处理失败:', error);
             document.getElementById('textProgress').textContent = "处理失败";

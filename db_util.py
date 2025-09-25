@@ -565,6 +565,16 @@ class DbUtl:
         return my_dt
 
     @staticmethod
+    def get_file_info_by_md5(file_md5: str, uid: str, vdb_id: str) -> list:
+        if not uid or not file_md5 or not vdb_id:
+            raise RuntimeError(f"param_null_err {file_md5}, {uid}, {vdb_id}")
+        sql = f"select * from file_info where file_md5 = '{file_md5}' and uid = '{uid}' and vdb_id = '{vdb_id}' limit 1"
+        logger.info(f"get_file_info_sql, {sql}")
+        my_dt = DbUtl.sqlite_output(CFG_DB_URI,sql,DataType.JSON.value )
+        logger.info(f"get_file_info_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
     def get_file_info_by_task_id(vdb_task_id: str):
         if not vdb_task_id:
             raise RuntimeError(f"param_null_err {vdb_task_id}")
@@ -611,9 +621,9 @@ class DbUtl:
         return my_dt
 
     @staticmethod
-    def save_file_info(original_file_name: str, saved_file_name:str, uid: str, vdb_id: str, vdb_task_id: int):
-        sql = (f"insert into file_info (name, uid, vdb_id, file_path, vdb_task_id) values"
-               f" ('{original_file_name}', '{uid}', '{vdb_id}', '{saved_file_name}', '{vdb_task_id}')")
+    def save_file_info(original_file_name: str, saved_file_name:str, uid: str, vdb_id: str, vdb_task_id: int, file_md5: str):
+        sql = (f"insert into file_info (name, uid, vdb_id, file_path, vdb_task_id, file_md5) values"
+               f" ('{original_file_name}', '{uid}', '{vdb_id}', '{saved_file_name}', '{vdb_task_id}', '{file_md5}')")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"save_file_info_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
