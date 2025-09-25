@@ -6,6 +6,7 @@
 在线文档生成工具
 pip install flask
 """
+import json
 import logging.config
 import os
 import threading
@@ -103,18 +104,19 @@ def generate_outline():
         return jsonify({"error": "未提交待写作文档的标题或文档类型，请补充"}), 400
     return Response(
         stream_with_context(gen_docx_outline_stream(doc_type_chinese, doc_title, keywords, my_cfg)),
-        mimetype='text/event-stream'
+        mimetype='text/event-stream',
+        status=200,
     )
 
 @app.route('/docx/upload', methods=['POST'])  # 修正路由路径
 def upload_file():
     logger.info(f"upload_file_req, {request}")
     if 'file' not in request.files:
-        return jsonify({"error": "未找到文件"}), 400
+        return json.dumps({"error": "未找到文件"}, ensure_ascii=False), 400
     file = request.files['file']
     uid = request.form.get('uid')
     if file.filename == '':
-        return jsonify({"error": "空文件名"}), 400
+        return json.dumps({"error": "空文件名"}, ensure_ascii=False), 400
 
     # 生成任务ID和文件名
     task_id = f"{uid}_{int(time.time())}"
@@ -134,7 +136,7 @@ def upload_file():
         "outline": outline
     }
     logger.info(f"upload_file, {info}")
-    return jsonify(info), 200
+    return json.dumps(info, ensure_ascii=False), 200
 
 @app.route("/docx/write/outline", methods=['POST'])
 def write_doc_with_outline_txt():
@@ -153,7 +155,7 @@ def write_doc_with_outline_txt():
     if not doc_type_desc or not doc_title or not doc_outline:
         err_info = {"error": "缺少参数"}
         logger.error(f"err_occurred, {err_info}")
-        return jsonify(err_info), 400
+        return json.dumps(err_info, ensure_ascii=False), 400
     task_id = str(int(time.time()))
     docx_file_name = docx_util.gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
     logger.info(f"docx_template_file_generated_with_name, {docx_file_name}")
@@ -163,7 +165,7 @@ def write_doc_with_outline_txt():
     ).start()
     info = {"status": "started", "task_id": task_id}
     logger.info(f"write_doc_with_outline_txt, {info}")
-    return jsonify(info), 200
+    return json.dumps(info, ensure_ascii=False), 200
 
 @app.route("/docx/write/template", methods=['POST'])
 def write_doc_with_docx_template():
@@ -180,7 +182,7 @@ def write_doc_with_docx_template():
     if not doc_type_desc or not doc_title:
         err_info = {"error": "缺少参数"}
         logger.error(f"err_occurred, {err_info}")
-        return jsonify(err_info), 400
+        return json.dumps(err_info, ensure_ascii=False), 400
     template_file_name = data.get("file_name")
     uid = data.get("uid")
     keywords = data.get("keywords")
@@ -195,7 +197,7 @@ def write_doc_with_docx_template():
 
     info = {"status": "started", "task_id": task_id}
     logger.info(f"write_doc_with_docx_template, {info}")
-    return jsonify(info), 200
+    return json.dumps(info, ensure_ascii=False), 200
 
 @app.route('/docx/download/<filename>', methods=['GET'])
 def download_file_by_filename(filename):
@@ -245,7 +247,7 @@ def get_doc_process_info():
         "elapsed_time": task_info.get("elapsed_time", "")
     }
     # logger.info(f"get_doc_process_info, {info}")
-    return jsonify(info), 200
+    return json.dumps(info, ensure_ascii=False), 200
 
 
 def clean_tasks():
