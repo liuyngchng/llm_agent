@@ -301,8 +301,11 @@ def upload_file():
             if os.path.exists(old_file_full_path):
                 os.remove(old_file_full_path)
             logger.info(f"previous_file_deleted_from_disk, {old_file_full_path}")
+            vdb = f"{VDB_PREFIX}{uid}_{kb_id}"
+            vdb_util.del_doc(old_file_full_path, vdb)
+            logger.info(f"previous_file_deleted_from_vdb, {old_file_full_path}, {vdb}")
         DbUtl.save_file_info(upload_file_name, disk_file_name, uid, kb_id, vdb_task_id, file_md5)
-        logger.info(f"save_new_file_info_in_db_for_vdb, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
+        logger.info(f"save_new_file_info_in_db, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
         if is_duplicate_file:
             msg = "文件已存在，已更新"
         else:
@@ -382,38 +385,40 @@ def clean_tasks():
             DbUtl.delete_file_by_vbd_task_id(id)
         time.sleep(300)
 
+def process_file_tasks():
+    """
+    周期性地对已经上传的文件进行向量化处理
+    """
+    while True:
+        process_doc()
+        time.sleep(5)
 
-def process_doc(task_id: str, file_name: str, uid: str, kb_id: str):
-    try:
-        upload_file_name =get_upload_file_name(file_name)
-        file_info = DbUtl.get_file_info(upload_file_name, uid, kb_id)
-        if not file_info:
-            raise Exception(f"no_upload_file_info_err, {upload_file_name}, {file_name}, {uid}, {kb_id}")
-        record_file_name = file_info[0]['file_path']
-        file_id = file_info[0]['id']
-        cur_file_path = os.path.join(UPLOAD_FOLDER, file_name)
-        prev_file_path = os.path.join(UPLOAD_FOLDER, record_file_name)
-        output_vdb_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
-        if upload_file_name != record_file_name:
 
-            logger.info(f"duplicate_file_in_vdb_to_be_update, prev={record_file_name}, cur={file_name}, vdb_id {kb_id}")
-            with thread_lock:
-                task_progress[task_id] = {"text": "更新已有文档...", "timestamp": time.time()}
-            update_doc(task_id, thread_lock, task_progress, prev_file_path, cur_file_path, output_vdb_dir, my_cfg['api'])
-            DbUtl.update_file_info(file_id, file_name)
-        else:
-            logger.info(f"new_file_in_vdb_to_be_add, {file_name}, vdb_id {kb_id}")
-            with thread_lock:
-                task_progress[task_id] = {"text": "开始解析文档结构...", "timestamp": time.time()}
-            vector_file(task_id, thread_lock, task_progress, cur_file_path,
-                output_vdb_dir, my_cfg['api'],300, 80)
-    except Exception as e:
-        with thread_lock:
-            task_progress[task_id] = {
-                "text": f"任务处理失败: {str(e)}",
-                "timestamp": time.time()
-            }
-        logger.exception(f"process_doc_err, {file_name}", e)
+def process_doc():
+    file_list = DbUtl.get_file_list_wait_to_process()
+    if not file_list or len(file_list) == 0:
+        logger.info(f"no_upload_file_need_process")
+        return
+    for file in file_list:
+        file_id = file['id']
+        record_file_name = file['file_path']
+        try:
+            uid = file['uid']
+            vdb_id = file['vdb_id']
+            output_vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_id}"
+            cur_file_path = os.path.join(UPLOAD_FOLDER, record_file_name)
+            if not os.path.exists(cur_file_path):
+                logger.warning(f"file_have_been_deleted_from_disk, {cur_file_path}")
+                DbUtl.delete_file_by_id(file_id)
+                continue
+            info = "开始解析文档结构..."
+            DbUtl.update_file_path(file_id, info)
+            vdb_util.vector_file_with_id(file_id, cur_file_path,
+                output_vdb_dir, my_cfg['api'], 300, 80)
+        except Exception as e:
+            msg = f"任务处理失败,失败原因： {str(e)}"
+            DbUtl.update_file_path(file_id, msg)
+            logger.exception(f"process_doc_err, {record_file_name}", e)
 
 def get_upload_file_name(disk_file_name):
     parts = disk_file_name.split("_", 1)

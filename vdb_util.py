@@ -23,6 +23,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from openai import OpenAI
 
+from db_util import DbUtl
 from sys_init import init_yml_cfg
 from tqdm import tqdm
 from chromadb import Documents, EmbeddingFunction, Embeddings
@@ -157,6 +158,83 @@ def process_doc(task_id: str, thread_lock, task_progress: dict, documents: list[
         if pbar and not pbar.disable:
             pbar.close()
 
+def process_doc_with_id(file_id: int, documents: list[Document], vector_db: str,
+        llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10, separators=None) -> None:
+    """处理文档并构建向量数据库"""
+    if separators is None:
+        separators = ['。', '！', '？', '；', '...', '、', '，']
+    pbar = None
+    try:
+        doc_sources = [doc.metadata['source'] for doc in documents]
+        logger.info(f"load_documents_size, {len(documents)}:\n" + "\n".join(f"- {src}" for src in doc_sources))
+        DbUtl.update_file_process_info(file_id, "开始对文本进行分片")
+        if not separators:
+            separators = ['。', '！', '？', '；', '...', '、', '，']
+        logger.info(f"splitting_documents_with_separators {separators}...")
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            separators=separators,
+            keep_separator=False
+        )
+        doc_list = text_splitter.split_documents(documents)
+        # 创建Chroma客户端
+        chroma_client = chromadb.PersistentClient(path=vector_db)
+        openai_client = build_client(llm_cfg)
+        embed_model = RemoteChromaEmbedder(openai_client, llm_cfg['embedding_model_name'])
+
+        collection = chroma_client.get_or_create_collection(
+            name="knowledge_base",
+            embedding_function=embed_model,
+            metadata={"hnsw:space": "cosine"}  # 使用余弦相似度
+        )
+
+        # 准备文档数据
+        all_doc_ids = []
+        all_metadata = []
+        all_documents = []
+
+        for i, chunk in enumerate(doc_list):
+            doc_id = f"{os.path.basename(chunk.metadata['source'])}_chunk_{i}"
+            all_doc_ids.append(doc_id)
+            all_metadata.append(chunk.metadata)
+            all_documents.append(chunk.page_content)
+
+        # 批量添加文档
+        logger.info(f"开始向量化 {len(all_doc_ids)} chunks (batch_size={batch_size})")
+        DbUtl.update_file_process_info(file_id, "开始对文本片段进行向量化")
+        with tqdm(total=len(all_doc_ids), desc="文档向量化进度", unit="chunk") as pbar:
+            for i in range(0, len(all_doc_ids), batch_size):
+                batch_ids = all_doc_ids[i:i+batch_size]
+                batch_metas = all_metadata[i:i+batch_size]
+                batch_texts = all_documents[i:i+batch_size]
+                try:
+                    collection.upsert(
+                        ids=batch_ids,
+                        documents=batch_texts,
+                        metadatas=batch_metas
+                    )
+                    pbar.update(len(batch_ids))
+                    DbUtl.update_file_process_info(
+                        file_id,
+                        f"已处理 {min(i+batch_size, len(all_doc_ids))}/{len(all_doc_ids)} 个分块"
+                    )
+                except Exception as e:
+                    info = f"处理批次 {i}-{i+batch_size} 时出错: {str(e)}"
+                    DbUtl.update_file_process_info(file_id, info)
+                    logger.error(info)
+                    continue
+
+        logger.info(f"向量数据库构建完成，保存到 {vector_db}")
+        DbUtl.update_file_process_info(file_id, "向量化已完成，保存至个人知识空间")
+    except Exception as e:
+        info = f"处理文档时发生错误: {str(e)}"
+        DbUtl.update_file_process_info(file_id, info)
+        logger.error(info, exc_info=True)
+        raise
+    finally:
+        if pbar and not pbar.disable:
+            pbar.close()
 
 def build_client(llm_cfg: dict) -> OpenAI:
     """创建OpenAI兼容客户端"""
@@ -218,9 +296,61 @@ def vector_file(task_id: str, thread_lock, task_progress: dict, file_name: str,
     except Exception as e:
         logger.error(f"load_file_fail_err, {abs_path}, {e}", exc_info=True)
 
+def vector_file_with_id(file_id: int, file_name: str, vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80,
+        batch_size=10, separators = None) -> None:
+    """
+    处理单个文档文件并添加到向量数据库
+    :param file_id: 待处理文档在数据库中的唯一标识
+    :param file_name: 文档的绝对路径
+    :param vector_db: 向量数据库的绝对路径
+    :param llm_cfg: 语言模型配置
+    :param chunk_size: 文本分割的最大长度
+    :param chunk_overlap: 文本分割的重叠长度
+    :param batch_size: 批量处理的文档数量
+    :param separators: 文本分割的分隔符
+    """
+    abs_path = os.path.abspath(file_name)
+    if not os.path.exists(abs_path):
+        info = f"文件在文件系统中不存在"
+        DbUtl.update_file_process_info(file_id, info)
+        return
+    try:
+        logger.info(f"start_process_doc, {abs_path}")
+        DbUtl.update_file_process_info(file_id, "开始处理文档")
+        file_type = os.path.splitext(abs_path)[-1].lower().lstrip('.')
+        loader_mapping = {
+            "txt": lambda f: TextLoader(f, encoding='utf8'),
+            "pdf": lambda f: UnstructuredPDFLoader(f, encoding='utf8'),
+            "docx": lambda f: UnstructuredWordDocumentLoader(f),
+        }
+        if file_type not in loader_mapping:
+            logger.error(f"Unsupported_file_type: {file_type}")
+            DbUtl.update_file_process_info(file_id, "该文档的文件类型暂不支持")
+            return
+        loader = loader_mapping[file_type](abs_path)
+        documents: list[Document] = loader.load()
+        if not documents:
+            logger.warning(f"no_txt_content_found_in_file: {abs_path}")
+            DbUtl.update_file_process_info(file_id, "该文档中未发现有效的文本内容")
+            return
+        # 确保有source元数据
+        for doc in documents:
+            if 'source' not in doc.metadata:
+                doc.metadata['source'] = abs_path
+        logger.info(f"load_success_txt_snippet: {len(documents)}")
+        DbUtl.update_file_process_info(file_id, f"已经检测到 {len(documents)} 个文本片段")
+        process_doc_with_id(file_id, documents, vector_db, llm_cfg, chunk_size, chunk_overlap, batch_size, separators)
+
+    except Exception as e:
+        logger.error(f"load_file_fail_err, {abs_path}, {e}", exc_info=True)
+
 
 def del_doc(file_path: str, vector_db: str) -> bool:
-    """删除指定文档的所有向量片段"""
+    """
+    删除指定文档的所有向量片段
+    :param file_path: 文档的绝对路径
+    :param vector_db: 向量数据库的绝对路径
+    """
     # 获取绝对路径用于匹配
     abs_path = os.path.abspath(file_path)
     try:

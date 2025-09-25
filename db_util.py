@@ -585,6 +585,24 @@ class DbUtl:
         return my_dt
 
     @staticmethod
+    def get_file_info_by_id(file_id: int):
+        if not file_id:
+            raise RuntimeError(f"file_id_param_null_err {file_id}")
+        sql = f"select * from file_info where id = {file_id} limit 1"
+        logger.info(f"get_file_sql, {sql}")
+        my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+        logger.info(f"get_file_info_by_id_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
+    def get_file_list_wait_to_process():
+        sql = "select * from file_info where vdb_finish_percent != 100 limit 100"
+        logger.info(f"get_file_info_by_task_id, {sql}")
+        my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+        logger.info(f"get_file_info_by_task_id_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
     def delete_file_by_uid_vbd_id_file_name(file_name: str, uid: str, vdb_id: str):
         sql = f"delete from file_info where name ='{file_name}' and uid='{uid}' and vdb_id='{vdb_id}' limit 1 "
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
@@ -600,6 +618,18 @@ class DbUtl:
             logger.info(f"delete_file_by_vbd_task_id_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
         logger.info(f"delete_file_by_vbd_task_id_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
+    def delete_file_by_id(file_id: int):
+        if not file_id:
+            logger.error(f"file_id_null_err, {file_id}")
+            return
+        sql = f"delete from file_info where id={file_id} limit 1 "
+        with sqlite3.connect(CFG_DB_FILE) as my_conn:
+            logger.info(f"delete_file_sql, {sql}")
+            my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
+        logger.info(f"delete_file_dt {my_dt}")
         return my_dt
 
     @staticmethod
@@ -631,12 +661,22 @@ class DbUtl:
         return my_dt
 
     @staticmethod
-    def update_file_info(file_id: int, file_path: str):
+    def update_file_path(file_id: int, file_path: str):
         if not file_id or not file_path:
             raise RuntimeError(f"param_null_err, {file_id}, {file_path}")
         sql = f"update file_info set file_path = '{file_path}' where id = '{file_id}' limit 1"
         logger.info(f"update_file_info_sql, {sql}")
         my_dt = DbUtl.sqlite_output(CFG_DB_URI,sql,DataType.JSON.value )
+        logger.info(f"update_file_info_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
+    def update_file_process_info(file_id: int, process_info: str):
+        if not file_id or not process_info:
+            raise RuntimeError(f"param_null_err, {file_id}, {process_info}")
+        sql = f"update file_info set process_info = '{process_info}' where id = '{file_id}' limit 1"
+        logger.info(f"update_file_info_sql, {sql}")
+        my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         logger.info(f"update_file_info_dt {my_dt}")
         return my_dt
 def test_db():
