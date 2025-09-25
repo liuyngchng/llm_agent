@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         // 重置界面
-        document.getElementById('textProgress').textContent = "开始处理...";
+        document.getElementById('fileUploadResult').textContent = "开始处理...";
         document.getElementById('progressFill').style.width = '0%';
         document.getElementById('stream_output').innerHTML = '<div class="status-container">正在上传文档...</div>';
         const uid = document.getElementById('uid').value;
@@ -118,26 +118,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const errorData = await uploadRes.json();
                 throw new Error(errorData.message || '文件上传失败');
             }
-//            const { task_id, file_name } =
             const response = await uploadRes.json();
-            currentTaskId = task_id;
             // 更新状态
             document.getElementById('stream_output').innerHTML =
                 '<div class="status-container">' + response.message +'文件名：'+ response.file_name + '</div>';
-            document.getElementById('textProgress').textContent = "知识库构建中...";
-            // 启动进度轮询
-//            clearInterval(progressInterval);
-//            progressInterval = setInterval(fetchProgress, 1000);
-            // 启动文档索引生成
-//            const uid = document.getElementById('uid').value;
-//            await fetch('/vdb/index/doc', {
-//                method: 'POST',
-//                headers: { 'Content-Type': 'application/json' },
-//                body: JSON.stringify({ task_id, file_name, uid, kb_id: currentKB })
-//            });
+            document.getElementById('fileUploadResult').textContent = "知识库构建中...";
         } catch (error) {
             console.error('处理失败:', error);
-            document.getElementById('textProgress').textContent = "处理失败";
+            document.getElementById('fileUploadResult').textContent = "处理失败";
             document.getElementById('stream_output').innerHTML =
                 `<div class="error-container">错误: ${error.message}</div>`;
         }
@@ -361,7 +349,7 @@ async function fetchProgress() {
         const data = await res.json();
 
         // 更新文本进度
-        document.getElementById('textProgress').textContent =
+        document.getElementById('fileUploadResult').textContent =
             spinnerChars[spinCounter % spinnerChars.length] + ' ' + data.progress;
         spinCounter++;
 
@@ -373,7 +361,7 @@ async function fetchProgress() {
         // 完成检测
         if (data.progress.includes("完成") || data.progress.includes("成功")) {
             clearInterval(progressInterval);
-            document.getElementById('textProgress').textContent = "知识库构建完成!";
+            document.getElementById('fileUploadResult').textContent = "知识库构建完成!";
             document.getElementById('progressFill').style.width = '100%';
             document.getElementById('stream_output').innerHTML =
                 `<div class="status-container"><i class="fas fa-check-circle"></i> ${data.progress}</div>`;
@@ -387,7 +375,7 @@ async function fetchProgress() {
         }
     } catch (error) {
         console.error('进度获取失败:', error);
-        document.getElementById('textProgress').textContent = "进度获取失败";
+        document.getElementById('fileUploadResult').textContent = "进度获取失败";
     }
 }
 

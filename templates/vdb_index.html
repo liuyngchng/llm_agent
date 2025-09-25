@@ -84,27 +84,16 @@
                     </button>
                     <div id="fileName">未选择文件</div>
                     <button class="btn btn-primary" id="startBtn">
-                        <i class="fas fa-cloud-upload-alt"></i> 上传构建
+                        <i class="fas fa-cloud-upload-alt"></i> 上传
                     </button>
                 </div>
 
                 <div class="progress-display">
                     <div class="progress-text">
                         <i class="fas fa-info-circle"></i>
-                        <span id="textProgress">请选择文档并点击上传按钮开始构建知识库</span>
-                    </div>
-                    <div class="progress-bar-container">
-                        <div class="progress-bar-fill" id="progressFill"></div>
+                        <span id="fileUploadResult">请选择文档并点击上传按钮开始构建知识库</span>
                     </div>
                 </div>
-
-                <div id="stream_output">
-                    <div class="status-container">
-                        <i class="fas fa-sync-alt"></i>
-                        <span>文档索引构建进度将在此处实时展示</span>
-                    </div>
-                </div>
-
                 <div class="search-section">
                     <h2><i class="fas fa-search"></i> 知识库测试</h2>
                     <div class="search-input-group">
@@ -115,20 +104,6 @@
                     </div>
                     <div id="search_status"></div>
                     <div id="search_result_table"></div>
-                </div>
-                <div class="info-box">
-                    <h3><i class="fas fa-lightbulb"></i> 系统能力</h3>
-                    <p>系统提供3种文档的知识库构建：</p>
-                    <ul>
-                        <li>支持上传PDF（非扫描版）、Word（docx）和TXT文件，由模型按照语义进行向量化</li>
-                        <li>可自定义向量化过程中的文本块大小，以及文本重叠量</li>
-                        <li>支持文档检索测试，验证知识库构建效果</li>
-                    </ul>
-                </div>
-
-                <div class="info-box">
-                    <h3><i class="fas fa-cogs"></i> 系统设计</h3>
-                    <p>系统设计详见：<a href="https://nipj5983sr.fklzl.cnpc.com.cn/docx/doxgtEu8WXVSegtJpckpBeR5wdd" target="_blank">文档生成系统设计</a></p>
                 </div>
             </div>
         </div>
