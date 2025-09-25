@@ -23,7 +23,7 @@ from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt
 from docx_util import extract_catalogue, fill_doc_with_prompt_in_progress
 from sys_init import init_yml_cfg
 from bp_auth import auth_bp
-from bp_vdb import vdb_bp, VDB_PREFIX
+from bp_vdb import vdb_bp, VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task
 from utils import get_console_arg1
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -59,8 +59,8 @@ task_progress = {
         }
    }
 """
-task_progress = {}
-thread_lock = threading.Lock()
+# task_progress = {}
+# thread_lock = threading.Lock()
 
 @app.route('/')
 def app_home():
@@ -123,10 +123,6 @@ def upload_file():
     filename = f"{task_id}_{file.filename}"
     save_path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(save_path)
-
-    # 初始化进度
-    with thread_lock:
-        task_progress[task_id] = {}
     logger.info(f"upload_file_saved_as {filename}, {task_id}")
     outline = docx_util.get_outline(save_path)
     logger.info(f"get_file_outline,task_id {task_id}, {outline}")
@@ -232,19 +228,12 @@ def get_doc_process_info():
     if not task_id or not uid:
         return jsonify({"error": "缺少任务ID或用户ID"}), 400
     uid_str = str(uid)
-    with thread_lock:
-        user_tasks = task_progress.get(uid_str, {})
-        task_info = user_tasks.get(task_id, {
-            "text": "任务不存在或已过期",
-            "percent": 0,
-            "timestamp": time.time(),
-            "elapsed_time": "0秒"
-        })
+    file_info = DbUtl.get_file_info_by_task_id(task_id)
     info = {
         "task_id": task_id,
-        "progress": task_info.get("text", ""),
-        "percent": task_info.get("percent", 0),
-        "elapsed_time": task_info.get("elapsed_time", "")
+        "progress": file_info.get("process_info", ""),
+        "percent": file_info.get("vdb_finish_percent", 0),
+        "elapsed_time": time.time() - task_id
     }
     # logger.info(f"get_doc_process_info, {info}")
     return json.dumps(info, ensure_ascii=False), 200

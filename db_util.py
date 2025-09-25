@@ -575,36 +575,36 @@ class DbUtl:
         return my_dt
 
     @staticmethod
-    def get_file_info_by_task_id(vdb_task_id: str):
+    def get_vdb_file_info_by_task_id(vdb_task_id: str) -> dict:
         if not vdb_task_id:
             raise RuntimeError(f"param_null_err {vdb_task_id}")
-        sql = f"select * from file_info where vdb_task_id = '{vdb_task_id}' limit 1"
+        sql = f"select * from vdb_file_info where vdb_task_id = '{vdb_task_id}' limit 1"
         logger.info(f"get_file_info_by_task_id, {sql}")
         my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         logger.info(f"get_file_info_by_task_id_dt {my_dt}")
         return my_dt
 
     @staticmethod
-    def get_file_info_by_id(file_id: int):
+    def get_vdb_file_info_by_id(file_id: int):
         if not file_id:
             raise RuntimeError(f"file_id_param_null_err {file_id}")
-        sql = f"select * from file_info where id = {file_id} limit 1"
+        sql = f"select * from vdb_file_info where id = {file_id} limit 1"
         logger.info(f"get_file_sql, {sql}")
         my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         logger.info(f"get_file_info_by_id_dt {my_dt}")
         return my_dt
 
     @staticmethod
-    def get_file_list_wait_to_process():
-        sql = "select * from file_info where vdb_finish_percent != 100 limit 100"
+    def get_vdb_file_list_wait_to_process():
+        sql = "select * from vdb_file_info where vdb_finish_percent != 100 limit 100"
         logger.info(f"get_file_info_by_task_id, {sql}")
         my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         logger.info(f"get_file_info_by_task_id_dt {my_dt}")
         return my_dt
 
     @staticmethod
-    def delete_file_by_uid_vbd_id_file_name(file_name: str, uid: str, vdb_id: str):
-        sql = f"delete from file_info where name ='{file_name}' and uid='{uid}' and vdb_id='{vdb_id}' limit 1 "
+    def delete_vdb_file_by_uid_vbd_id_file_name(file_name: str, uid: str, vdb_id: str):
+        sql = f"delete from vdb_file_info where name ='{file_name}' and uid='{uid}' and vdb_id='{vdb_id}' limit 1 "
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_by_uid_vbd_id_file_name_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
@@ -612,8 +612,8 @@ class DbUtl:
         return my_dt
 
     @staticmethod
-    def delete_file_by_vbd_task_id(vbd_task_id: str):
-        sql = f"delete from file_info where vbd_task_id='{vbd_task_id}' limit 1 "
+    def delete_vdb_file_by_vbd_task_id(vbd_task_id: str):
+        sql = f"delete from vdb_file_info where vbd_task_id='{vbd_task_id}' limit 1 "
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_by_vbd_task_id_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
@@ -621,11 +621,11 @@ class DbUtl:
         return my_dt
 
     @staticmethod
-    def delete_file_by_id(file_id: int):
+    def delete_vdb_file_by_id(file_id: int):
         if not file_id:
             logger.error(f"file_id_null_err, {file_id}")
             return
-        sql = f"delete from file_info where id={file_id} limit 1 "
+        sql = f"delete from vdb_file_info where id={file_id} limit 1 "
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
@@ -633,8 +633,8 @@ class DbUtl:
         return my_dt
 
     @staticmethod
-    def delete_file_by_uid_vbd_id_file_id(file_id: str, uid: str, vdb_id: str):
-        sql = f"delete from file_info where id ='{file_id}' and uid='{uid}' and vdb_id='{vdb_id}' limit 1 "
+    def delete_vdb_file_by_uid_vbd_id_file_id(file_id: str, uid: str, vdb_id: str):
+        sql = f"delete from vdb_file_info where id ='{file_id}' and uid='{uid}' and vdb_id='{vdb_id}' limit 1 "
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_by_uid_vbd_id_file_id_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
@@ -642,8 +642,8 @@ class DbUtl:
         return my_dt
 
     @staticmethod
-    def delete_file_by_uid_vbd_id(uid: str, vdb_id: str):
-        sql = f"delete from file_info where uid='{uid}' and vdb_id='{vdb_id}'"
+    def delete_vdb_file_by_uid_vbd_id(uid: str, vdb_id: str):
+        sql = f"delete from vdb_file_info where uid='{uid}' and vdb_id='{vdb_id}'"
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_by_uid_vbd_id_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
@@ -651,8 +651,8 @@ class DbUtl:
         return my_dt
 
     @staticmethod
-    def save_file_info(original_file_name: str, saved_file_name:str, uid: str, vdb_id: str, vdb_task_id: int, file_md5: str):
-        sql = (f"insert into file_info (name, uid, vdb_id, file_path, vdb_task_id, file_md5) values"
+    def save_vdb_file_info(original_file_name: str, saved_file_name:str, uid: str, vdb_id: str, vdb_task_id: int, file_md5: str):
+        sql = (f"insert into vdb_file_info (name, uid, vdb_id, file_path, vdb_task_id, file_md5) values"
                f" ('{original_file_name}', '{uid}', '{vdb_id}', '{saved_file_name}', '{vdb_task_id}', '{file_md5}')")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"save_file_info_sql, {sql}")

@@ -304,7 +304,7 @@ def upload_file():
             vdb = f"{VDB_PREFIX}{uid}_{kb_id}"
             vdb_util.del_doc(old_file_full_path, vdb)
             logger.info(f"previous_file_deleted_from_vdb, {old_file_full_path}, {vdb}")
-        DbUtl.save_file_info(upload_file_name, disk_file_name, uid, kb_id, vdb_task_id, file_md5)
+        DbUtl.save_vdb_file_info(upload_file_name, disk_file_name, uid, kb_id, vdb_task_id, file_md5)
         logger.info(f"save_new_file_info_in_db, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
         if is_duplicate_file:
             msg = "文件已存在，已更新"
@@ -370,11 +370,12 @@ def search_vdb():
     else:
         return json.dumps({"search_output": "未检索到有效内容"}, ensure_ascii=False), 200
 
-def clean_tasks():
+def clean_expired_vdb_file_task():
     """
     周期性地清理在2小时内未完成的任务，系统存储时间戳create_time为毫秒
     """
     while True:
+        logger.info(f"clean_expired_vdb_file_task")
         file_list = DbUtl.get_vdb_processing_file_list()
         now = int(time.time()*1000)  # 当前时间毫秒数
         vdb_task_id_list = []
@@ -385,11 +386,12 @@ def clean_tasks():
             DbUtl.delete_file_by_vbd_task_id(id)
         time.sleep(300)
 
-def process_file_tasks():
+def process_vdb_file_task():
     """
     周期性地对已经上传的文件进行向量化处理
     """
     while True:
+        logger.info(f"process_doc")
         process_doc()
         time.sleep(5)
 
