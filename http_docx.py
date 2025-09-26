@@ -19,7 +19,6 @@ import docx_meta_util
 import docx_util
 import my_enums
 from agt_util import gen_docx_outline_stream
-from db_util import DbUtl
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
 from docx_util import extract_catalogue, fill_doc_with_prompt_in_progress
 from sys_init import init_yml_cfg
@@ -305,5 +304,7 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
 
 if __name__ == '__main__':
     threading.Thread(target=clean_docx_tasks, daemon=True).start()
+    threading.Thread(target=clean_expired_vdb_file_task, daemon=True).start()
+    threading.Thread(target=process_vdb_file_task, daemon=True).start()
     port = get_console_arg1()
     app.run(host='0.0.0.0', port=port)

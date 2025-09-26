@@ -382,8 +382,8 @@ def clean_expired_vdb_file_task():
         now = int(time.time()*1000)  # 当前时间毫秒数
         vdb_task_id_list = []
         for file in file_list:
-            if now - file['vdb_task_id'] > FILE_PROCESS_EXPIRE_MS:
-                vdb_task_id_list.append(file['vdb_task_id'])
+            if now - file['task_id'] > FILE_PROCESS_EXPIRE_MS:
+                vdb_task_id_list.append(file['task_id'])
         for id in vdb_task_id_list:
             VdbMeta.delete_vdb_file_by_task_id(id)
         time.sleep(300)
@@ -393,7 +393,7 @@ def process_vdb_file_task():
     周期性地对已经上传的文件进行向量化处理
     """
     while True:
-        logger.info(f"process_doc")
+        logger.info(f"process_vdb_file_task")
         process_doc()
         time.sleep(5)
 
