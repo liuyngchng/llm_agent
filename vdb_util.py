@@ -151,8 +151,8 @@ def process_doc_with_id(file_id: int, documents: list[Document], vector_db: str,
 def build_client(llm_cfg: dict) -> OpenAI:
     """创建OpenAI兼容客户端"""
     return OpenAI(
-        base_url=llm_cfg['llm_api_uri'],
-        api_key=llm_cfg['llm_api_key'],
+        base_url=llm_cfg['embedding_api_uri'],
+        api_key=llm_cfg['embedding_api_key'],
         http_client=httpx.Client(
             verify=False,
             timeout=httpx.Timeout(30.0)
