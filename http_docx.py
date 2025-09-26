@@ -292,7 +292,7 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
         docx_util.update_process_info(start_time, thread_lock, uid, task_id, task_progress, "开始处理文档...", 0.0)
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}, 其他写作要求是 {keywords}"
         para_comment_dict = get_para_comment_dict(my_target_doc)
-        default_vdb = DbUtl.get_default_vdb(uid)
+        default_vdb = DbUtl.get_user_default_vdb(uid)
         logger.info(f"my_default_vdb_dir_for_gen_doc: {default_vdb}")
         if default_vdb:
             my_vdb_dir = f"{VDB_PREFIX}{uid}_{default_vdb[0]['id']}"

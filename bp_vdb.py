@@ -17,9 +17,9 @@ from flask import (request, jsonify, Blueprint, render_template)
 from werkzeug.utils import secure_filename
 
 import vdb_util
-from db_util import DbUtl
 from sys_init import init_yml_cfg
-from vdb_util import vector_file, search_txt, update_doc
+from vdb_meta_util import VdbMeta
+from vdb_util import search_txt
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -89,7 +89,7 @@ def get_my_vdb_list():
     logger.info(f"get_my_vdb_list {data}")
     uid = data.get("uid")
     t = data.get("t")
-    my_vdb_list = DbUtl.get_vdb_info_by_uid(uid, '', False)
+    my_vdb_list = VdbMeta.get_vdb_info_by_uid(uid, '', False)
     logger.info(f"get_my_vdb_list {my_vdb_list}")
     return json.dumps({"kb_list": my_vdb_list},ensure_ascii=False)
 
@@ -103,7 +103,7 @@ def get_public_vdb_list():
     logger.info(f"get_public_vdb_list {data}")
     uid = data.get("uid")
     t = data.get("t")
-    my_vdb_list = DbUtl.get_vdb_info_by_uid(uid)
+    my_vdb_list = VdbMeta.get_vdb_info_by_uid(uid)
     logger.info(f"get_public_vdb_list {my_vdb_list}")
     return json.dumps({"kb_list": my_vdb_list}, ensure_ascii=False)
 
@@ -121,23 +121,23 @@ def get_vdb_file_list():
         msg = {"success":False, "msg":"提交的参数为空"}
         logger.error(f"err_msg, {msg}")
         return json.dumps(msg,ensure_ascii=False), 502
-    dt = DbUtl.get_vdb_file_list(uid, vdb_id)
+    dt = VdbMeta.get_vdb_file_list(uid, vdb_id)
     return_dt = {"files": dt, "success": True}
     logger.info(f"get_vdb_file_list_return, {return_dt}")
     return json.dumps(return_dt, ensure_ascii=False), 200
 
 @vdb_bp.route('/vdb/set/default', methods=['POST'])
-def set_default_vdb():
+def set_user_default_vdb():
     """
     设置默认知识库
     """
     data = request.get_json()
-    logger.info(f"set_default_vdb {data}")
+    logger.info(f"set_user_default_vdb {data}")
     uid = data.get("uid")
     t = data.get("t")
     vdb_id = data.get("kb_id")
-    dt = DbUtl.set_default_vdb(uid, vdb_id)
-    kb_name_info = DbUtl.get_default_vdb(uid)
+    dt = VdbMeta.set_user_default_vdb(uid, vdb_id)
+    kb_name_info = VdbMeta.get_user_default_vdb(uid)
 
     if kb_name_info:
         result = json.dumps({"message": dt, "success": True, "kb_name":kb_name_info[0]['name']}, ensure_ascii=False)
@@ -163,7 +163,7 @@ def delete_file_from_vdb():
         info = {"success": False, "message": "知识库不存在，删除失败"}
         logger.info(info)
         return json.dumps(info, ensure_ascii=False), 200
-    dt = DbUtl.get_vdb_file_list(uid, vdb_id)
+    dt = VdbMeta.get_vdb_file_list(uid, vdb_id)
     if not dt or len(dt) == 0:
         info = {"success": False, "message": "知识库中的文件不存在，删除失败"}
         logger.info(info)
@@ -173,7 +173,7 @@ def delete_file_from_vdb():
         info = {"success": False, "message": "文件路径信息缺失，删除失败"}
         logger.info(info)
         return json.dumps(info, ensure_ascii=False), 200
-    DbUtl.delete_file_by_uid_vbd_id_file_id(file_id, uid, vdb_id)
+    VdbMeta.delete_vdb_file_by_uid_vbd_id_file_id(file_id, uid, vdb_id)
     save_path = os.path.join(UPLOAD_FOLDER, disk_file_name)
     result = vdb_util.del_doc(save_path, vdb_dir)
     logger.info(f"delete_file_from_vdb, {result}, file_save_path {save_path}")
@@ -192,7 +192,7 @@ def create_vdb():
     kb_name = data.get("kb_name")
     is_public = data.get("is_public")
     t = data.get("t")
-    db_check = DbUtl.get_vdb_info_by_uid(uid, kb_name, False)
+    db_check = VdbMeta.get_vdb_info_by_uid(uid, kb_name, False)
     if db_check:
         info = {"success": False, "message": f"知识库 {kb_name} 已存在"}
         logger.error(info)
@@ -201,7 +201,7 @@ def create_vdb():
         is_public = 1
     else:
         is_public = 0
-    dt = DbUtl.create_vdb_info(kb_name, uid, is_public)
+    dt = VdbMeta.create_vdb_info(kb_name, uid, is_public)
     return json.dumps({"success": True, "kb": dt}, ensure_ascii=False), 200
 
 @vdb_bp.route('/vdb/delete', methods=['POST'])
@@ -217,8 +217,8 @@ def delete_vdb_dir():
             msg = "未提供合法的用户信息"
             logger.error(msg)
             return json.dumps({"success": del_result,"message": msg}, ensure_ascii=False), 200
-        DbUtl.delete_file_by_uid_vbd_id(uid, kb_id)
-        DbUtl.delete_vdb_by_uid_and_kb_id(uid, kb_id)
+        VdbMeta.delete_vdb_file_by_uid_vbd_id(uid, kb_id)
+        VdbMeta.delete_vdb_by_uid_and_kb_id(uid, kb_id)
 
         vdb_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
         if os.path.exists(vdb_dir):
@@ -289,14 +289,14 @@ def upload_file():
         disk_file_save_path = os.path.join(UPLOAD_FOLDER, disk_file_name)
         # 保存文件
         file.save(disk_file_save_path)
-        file_info = DbUtl.get_file_info_by_md5(file_md5, uid, kb_id)
+        file_info = VdbMeta.get_vdb_file_info_by_md5(file_md5, uid, kb_id)
         is_duplicate_file = False
         if file_info:
             old_file = file_info[0].get('file_path')
             logger.info(f"duplicate_upload_file, {upload_file_name}, {disk_file_name}, "
                     f"{uid}, {kb_id}, previous_file_will_be_deleted, {old_file}")
             is_duplicate_file = True
-            DbUtl.delete_file_by_uid_vbd_id_file_id(file_info[0]['id'], uid, kb_id)
+            VdbMeta.delete_vdb_file_by_uid_vbd_id_file_id(file_info[0]['id'], uid, kb_id)
             old_file_full_path = os.path.join(UPLOAD_FOLDER, old_file)
             if os.path.exists(old_file_full_path):
                 os.remove(old_file_full_path)
@@ -304,7 +304,7 @@ def upload_file():
             vdb = f"{VDB_PREFIX}{uid}_{kb_id}"
             vdb_util.del_doc(old_file_full_path, vdb)
             logger.info(f"previous_file_deleted_from_vdb, {old_file_full_path}, {vdb}")
-        DbUtl.save_vdb_file_info(upload_file_name, disk_file_name, uid, kb_id, vdb_task_id, file_md5)
+        VdbMeta.save_vdb_file_info(upload_file_name, disk_file_name, uid, kb_id, vdb_task_id, file_md5)
         logger.info(f"save_new_file_info_in_db, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
         if is_duplicate_file:
             msg = "文件已存在，已更新"
@@ -342,7 +342,7 @@ def get_doc_process_info():
     task_id = request.json.get("task_id")
     if not task_id:
         return jsonify({"error": "缺少任务ID"}), 400
-    progress_info = DbUtl.get_file_info_by_task_id(task_id)
+    progress_info = VdbMeta.get_vdb_file_info_by_task_id(task_id)
     return json.dumps({
         "task_id": task_id,
         "data": progress_info
@@ -376,14 +376,14 @@ def clean_expired_vdb_file_task():
     """
     while True:
         logger.info(f"clean_expired_vdb_file_task")
-        file_list = DbUtl.get_vdb_processing_file_list()
+        file_list = VdbMeta.get_vdb_file_processing_list()
         now = int(time.time()*1000)  # 当前时间毫秒数
         vdb_task_id_list = []
         for file in file_list:
             if now - file['vdb_task_id'] > FILE_PROCESS_EXPIRE_MS:
                 vdb_task_id_list.append(file['vdb_task_id'])
         for id in vdb_task_id_list:
-            DbUtl.delete_file_by_vbd_task_id(id)
+            VdbMeta.delete_vdb_file_by_vbd_task_id(id)
         time.sleep(300)
 
 def process_vdb_file_task():
@@ -397,7 +397,7 @@ def process_vdb_file_task():
 
 
 def process_doc():
-    file_list = DbUtl.get_file_list_wait_to_process()
+    file_list = VdbMeta.get_vdb_file_processing_list()
     if not file_list or len(file_list) == 0:
         logger.info(f"no_upload_file_need_process")
         return
@@ -411,15 +411,15 @@ def process_doc():
             cur_file_path = os.path.join(UPLOAD_FOLDER, record_file_name)
             if not os.path.exists(cur_file_path):
                 logger.warning(f"file_have_been_deleted_from_disk, {cur_file_path}")
-                DbUtl.delete_file_by_id(file_id)
+                VdbMeta.delete_vdb_file_by_id(file_id)
                 continue
             info = "开始解析文档结构..."
-            DbUtl.update_file_path(file_id, info)
+            VdbMeta.update_vdb_file_path(file_id, info)
             vdb_util.vector_file_with_id(file_id, cur_file_path,
                 output_vdb_dir, my_cfg['api'], 300, 80)
         except Exception as e:
             msg = f"任务处理失败,失败原因： {str(e)}"
-            DbUtl.update_file_path(file_id, msg)
+            VdbMeta.update_vdb_file_path(file_id, msg)
             logger.exception(f"process_doc_err, {record_file_name}", e)
 
 def get_upload_file_name(disk_file_name):
