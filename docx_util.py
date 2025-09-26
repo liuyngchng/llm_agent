@@ -17,6 +17,8 @@ from docx.shared import RGBColor, Pt, Cm
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+import docx_meta_util
 from vdb_util import search_txt
 from txt_util import get_txt_in_dir_by_keywords, strip_prefix_no
 
@@ -121,7 +123,7 @@ def is_3rd_heading(para: Paragraph) -> bool:
     else:
         return False
 
-def get_outline(file_name: str) -> str:
+def get_outline_txt(file_name: str) -> str:
     """
     获取word文档的三级目录，输出格式如下：
     # 1. 一级目录
@@ -207,14 +209,10 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
     # logger.debug(f"classify={classify_result}, tile={current_heading}, para={para.text}")
     return True
 
-def fill_doc_without_prompt_in_progress(start_time: float, uid: int, task_id:str, thread_lock, progress_info:dict, doc_ctx: str, target_doc: str,
+def fill_doc_without_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
     target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict, output_file_name:str):
     """
-    :param start_time: 任务开始时间
-    :param uid: 用户ID
     :param task_id: 执行任务的ID，时间戳的整数字符串
-    :param thread_lock: A thread lock
-    :param progress_info: task process information dict with task_id as key
     :param doc_ctx: 文档写作背景信息
     :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
     :param vdb_dir: 向量数据库的目录
@@ -222,6 +220,7 @@ def fill_doc_without_prompt_in_progress(start_time: float, uid: int, task_id:str
     :param target_doc_catalogue: 需要写的文档的三级目录文本信息
     :param output_file_name: 输出文档的文件名
     """
+    start_time = time.time() * 1000
     doc = Document(target_doc)
     gen_txt_count = 0
     total_paragraphs = len(doc.paragraphs)
@@ -229,9 +228,9 @@ def fill_doc_without_prompt_in_progress(start_time: float, uid: int, task_id:str
     for index, my_para in enumerate(doc.paragraphs):
         percent = index / total_paragraphs * 100
         process_bar_info = (f"正在处理第 {index + 1}/{total_paragraphs} 段文本，"
-            f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}，进度 {percent:.1f}%")
+            f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}")
         logger.info(process_bar_info)
-        update_process_info(start_time, thread_lock, uid, task_id, progress_info, process_bar_info, percent)
+        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, process_bar_info)
         try:
             hd_check = is_3rd_heading(my_para)
             if not hd_check:
@@ -243,7 +242,7 @@ def fill_doc_without_prompt_in_progress(start_time: float, uid: int, task_id:str
         except Exception as ex:
             err_info = "在处理文档的过程中出现了异常，任务已中途退出"
             logger.error(f"fill_doc_job_err_to_break, {err_info}", ex)
-            update_process_info(start_time, thread_lock, uid, task_id, progress_info, err_info, percent)
+            docx_meta_util.update_docx_file_process_info_by_task_id(task_id, err_info)
             break
         new_para = doc.add_paragraph()
         new_para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
@@ -256,17 +255,14 @@ def fill_doc_without_prompt_in_progress(start_time: float, uid: int, task_id:str
             txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，已生成 {gen_txt_count} 段文本，进度 100%"
         else:
             txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，进度 100%，未检测到写作要求文本"
-        update_process_info(start_time, thread_lock, uid, task_id, progress_info, txt_info, 100)
+        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, txt_info, 100)
     logger.info(f"{txt_info}, 所有内容已输出至文件 {output_file_name}")
+    docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
 
-def fill_doc_with_prompt_in_progress(start_time: float, uid: int, task_id:str, thread_lock, process_info:dict, doc_ctx: str, target_doc: str,
+def fill_doc_with_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
     target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict, output_file_name:str):
     """
-    :param start_time, the start time of the task
-    :param uid: 用户ID
     :param task_id: 执行任务的ID
-    :param thread_lock: A thread lock
-    :param process_info: task process information dict with task_id as key
     :param doc_ctx: 文档写作背景信息
     :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
     :param vdb_dir: 向量数据库的目录
@@ -274,17 +270,17 @@ def fill_doc_with_prompt_in_progress(start_time: float, uid: int, task_id:str, t
     :param target_doc_catalogue: 需要写的文档的三级目录文本信息
     :param output_file_name: 输出文档的文件名
     """
-
+    start_time = time.time() * 1000
     doc = Document(target_doc)
     gen_txt_count = 0
     current_heading = []
     total_paragraphs = len(doc.paragraphs)
     for index, my_para in enumerate(doc.paragraphs):
-        percent = index / total_paragraphs * 100
+        percent = int(index / total_paragraphs * 100)
         process_bar_info = (f"正在处理第 {index + 1}/{total_paragraphs} 段文本，"
-            f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}, 进度 {percent:.1f}%")
-        logger.info(process_bar_info)
-        update_process_info(start_time, thread_lock, uid, task_id, process_info, process_bar_info, percent)
+            f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}")
+        logger.info(f"{process_bar_info}, 进度 {percent}%")
+        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, process_bar_info, percent)
         try:
             is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
             if not is_prompt:
@@ -300,18 +296,19 @@ def fill_doc_with_prompt_in_progress(start_time: float, uid: int, task_id:str, t
         except Exception as ex:
             err_info = "在处理文档的过程中出现了异常，任务已中途退出"
             logger.error(f"fill_doc_job_err_to_break, {err_info}", ex)
-            update_process_info(start_time, thread_lock, uid, task_id, process_info, err_info, percent)
+            docx_meta_util.update_docx_file_process_info_by_task_id(task_id, err_info)
             break
         new_para = doc.add_paragraph()
         new_para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
         red_run = new_para.add_run(f"{AI_GEN_TAG}{llm_txt}")
         red_run.font.color.rgb = RGBColor(0, 0, 0)
         my_para._p.addnext(new_para._p)
-        doc.save(output_file_name)
+    doc.save(output_file_name)
+    docx_meta_util.save_docx_output_file_path_by_task_id(task_id,output_file_name)
     txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}，进度 100%"
     if gen_txt_count == 0:
         txt_info += f"未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
-    update_process_info(start_time, thread_lock, uid, task_id, process_info, txt_info, 100.0)
+    docx_meta_util.update_docx_file_process_info_by_task_id(task_id, txt_info, 100.0)
     logger.info(f"{txt_info}, 所有内容已输出至文件 {output_file_name}")
 
 
@@ -356,91 +353,91 @@ def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_
         my_para._p.addnext(new_para._p)
     return doc
 
-def update_process_info(start_time: float, thread_lock, uid: int, task_id: str, process_info: dict, txt_info: str, percent: float):
-    """
-    :param start_time: the start time of the task process
-    :param thread_lock: A thread lock
-    :param uid： 用户ID
-    :param task_id: 执行任务的ID
-    :param process_info: task process information dict with uid and task_id as key,
-        process_info = {
-           "uid1": {
-                "taskId1": {
-                    "percent": 0.0,
-                    "text": "目前的状况是个啥？",
-                    "timestamp": time.time(),
-                    "elapsed_time": "xxx分xxx秒",
-                }
-           },
-           "uid2": {
-                "taskId2": {
-                    "percent": 0.0,
-                    "text": "目前的状况是个啥？",
-                    "timestamp": time.time(),
-                    "elapsed_time": "xxx分xxx秒",
-                }
-           }
-        }
-    :param txt_info: 任务进度信息
-    :param percent: 任务进度百分比
-    """
-    uid_str = str(uid)
-    with thread_lock:
-        if uid_str not in process_info:
-            process_info[uid_str] = {}
-        if task_id not in process_info[uid_str]:
-            process_info[uid_str][task_id] = {
-                "text": "",
-                "percent": 0.0,
-                "timestamp": time.time(),
-                "elapsed_time": ""
-            }
-        task_data = process_info[uid_str][task_id]
-        if txt_info:
-            task_data["text"] = txt_info
-        if percent is not None:
-            task_data["percent"] = percent
-        task_data["timestamp"] = time.time()
-        task_data["elapsed_time"] = get_elapsed_time(start_time)
+# def update_process_info(start_time: float, thread_lock, uid: int, task_id: str, process_info: dict, txt_info: str, percent: float):
+#     """
+#     :param start_time: the start time of the task process
+#     :param thread_lock: A thread lock
+#     :param uid： 用户ID
+#     :param task_id: 执行任务的ID
+#     :param process_info: task process information dict with uid and task_id as key,
+#         process_info = {
+#            "uid1": {
+#                 "taskId1": {
+#                     "percent": 0.0,
+#                     "text": "目前的状况是个啥？",
+#                     "timestamp": time.time(),
+#                     "elapsed_time": "xxx分xxx秒",
+#                 }
+#            },
+#            "uid2": {
+#                 "taskId2": {
+#                     "percent": 0.0,
+#                     "text": "目前的状况是个啥？",
+#                     "timestamp": time.time(),
+#                     "elapsed_time": "xxx分xxx秒",
+#                 }
+#            }
+#         }
+#     :param txt_info: 任务进度信息
+#     :param percent: 任务进度百分比
+#     """
+#     uid_str = str(uid)
+#     with thread_lock:
+#         if uid_str not in process_info:
+#             process_info[uid_str] = {}
+#         if task_id not in process_info[uid_str]:
+#             process_info[uid_str][task_id] = {
+#                 "text": "",
+#                 "percent": 0.0,
+#                 "timestamp": time.time(),
+#                 "elapsed_time": ""
+#             }
+#         task_data = process_info[uid_str][task_id]
+#         if txt_info:
+#             task_data["text"] = txt_info
+#         if percent is not None:
+#             task_data["percent"] = percent
+#         task_data["timestamp"] = time.time()
+#         task_data["elapsed_time"] = get_elapsed_time(start_time)
 
-def get_process_info(uid: int, task_id: str, process_info: dict) -> dict:
-    """
-    获取文档当前处理进度信息
-    :param uid: 用户ID
-    :param task_id: 执行任务的ID
-    :param process_info: task process information dict with task_id as key
-        process_info = {
-            "uid1": {
-                "taskId1": {
-                    "percent": 0.0,
-                    "text": "目前的状况是个啥？",
-                    "timestamp": time.time(),
-                    "elapsed_time": "xxx分xxx秒",
-                }
-            },
-            "uid2": {
-                "taskId2": {
-                    "percent": 0.0,
-                    "text": "目前的状况是个啥？",
-                    "timestamp": time.time(),
-                    "elapsed_time": "xxx分xxx秒",
-                }
-           }
-        }
-    """
-    user_tasks = process_info.get(str(uid), {})
-    task_data = user_tasks.get(task_id, {
-        "text": "任务不存在或未启动",
-        "percent": 0,
-        "timestamp": time.time(),
-        "elapsed_time": "0秒"
-    })
-    return {
-        "task_id": task_id,
-        "progress": task_data.get("text", ""),
-        "percent": task_data.get("percent", 0),
-        "elapsed_time": task_data.get("elapsed_time", "")
-    }
+# def get_process_info(uid: int, task_id: str, process_info: dict) -> dict:
+#     """
+#     获取文档当前处理进度信息
+#     :param uid: 用户ID
+#     :param task_id: 执行任务的ID
+#     :param process_info: task process information dict with task_id as key
+#         process_info = {
+#             "uid1": {
+#                 "taskId1": {
+#                     "percent": 0.0,
+#                     "text": "目前的状况是个啥？",
+#                     "timestamp": time.time(),
+#                     "elapsed_time": "xxx分xxx秒",
+#                 }
+#             },
+#             "uid2": {
+#                 "taskId2": {
+#                     "percent": 0.0,
+#                     "text": "目前的状况是个啥？",
+#                     "timestamp": time.time(),
+#                     "elapsed_time": "xxx分xxx秒",
+#                 }
+#            }
+#         }
+#     """
+#     user_tasks = process_info.get(str(uid), {})
+#     task_data = user_tasks.get(task_id, {
+#         "text": "任务不存在或未启动",
+#         "percent": 0,
+#         "timestamp": time.time(),
+#         "elapsed_time": "0秒"
+#     })
+#     return {
+#         "task_id": task_id,
+#         "progress": task_data.get("text", ""),
+#         "percent": task_data.get("percent", 0),
+#         "elapsed_time": task_data.get("elapsed_time", "")
+#     }
 
 def get_catalogue(target_doc: str) -> str:
     catalogue_file = "my_catalogue.txt"
@@ -523,7 +520,7 @@ def get_elapsed_time(start_timestamp: float) -> str:
     """
     try:
         current_time = time.time()
-        elapsed_seconds = current_time - start_timestamp
+        elapsed_seconds = current_time - start_timestamp/1000
         if elapsed_seconds < 0:
             return "用时计算错误"
         minutes = int(elapsed_seconds // 60)

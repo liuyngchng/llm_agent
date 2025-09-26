@@ -438,10 +438,6 @@ class DbUtl:
         )
 
 
-
-
-
-
 def test_db():
     my_sql = "SELECT * from order_info"
     my_cfg = init_yml_cfg()

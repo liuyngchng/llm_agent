@@ -15,6 +15,7 @@ from xml.etree import ElementTree as ET
 from docx import Document
 from docx.shared import RGBColor, Cm
 
+import docx_meta_util
 from sys_init import init_yml_cfg
 from agt_util import gen_txt
 from docx_util import get_catalogue, refresh_current_heading, get_reference_from_vdb
@@ -179,14 +180,11 @@ def test_get_comment():
         para_txt = get_paragraph_by_id(my_file, para_id)
         logger.info(f"para_id:{para_id}, para_txt:{para_txt}")
 
-def modify_para_with_comment_prompt_in_process(uid:int, task_id:str, thread_lock, task_progress:dict,
+def modify_para_with_comment_prompt_in_process(task_id:int,
     target_doc: str, doc_ctx: str, comments_dict: dict, vdb_dir:str, cfg: dict, output_file_name:str):
     """
     将批注内容替换到对应段落，并将新文本设为红色
-    :param uid: user id to submit the task
     :param task_id: 执行任务的ID
-    :param thread_lock: A thread lock
-    :param task_progress: task process information dict with task_id as key
     :param target_doc: 需要修改的文档路径
     :param doc_ctx: 文档写作的背景信息
     :param comments_dict: 段落ID和段落批注的对应关系字典
@@ -210,13 +208,9 @@ def modify_para_with_comment_prompt_in_process(uid:int, task_id:str, thread_lock
         for para_idx, para in enumerate(doc.paragraphs):
             percent = para_idx / total_paragraphs * 100
             process_percent_bar_info = (f"正在处理第 {para_idx + 1}/{total_paragraphs} 段文本，已识别 {comment_count} 个批注，"
-                f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(task_id)}，进度 {percent:.1f}%")
-            logger.info(process_percent_bar_info)
-            with thread_lock:
-                task_progress[task_id] = {
-                    "text": process_percent_bar_info,
-                    "timestamp": time.time()
-                }
+                f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(task_id)}")
+            logger.info(f"{process_percent_bar_info}, 进度 {percent:.1f}%")
+            docx_meta_util.update_docx_file_process_info_by_task_id(task_id, process_percent_bar_info, percent)
             refresh_current_heading(para, current_heading)
             if para_idx not in comments_dict:
                 continue
@@ -237,19 +231,11 @@ def modify_para_with_comment_prompt_in_process(uid:int, task_id:str, thread_lock
     except Exception as e:
         err_info = f"在处理文档批注时发生异常: {str(e)}"
         logger.error(err_info, exc_info=True)
-        with thread_lock:
-            task_progress[task_id] = {
-                "text": err_info,
-                "timestamp": time.time()
-            }
+        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, err_info)
     doc.save(output_file_name)
-    txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，识别 {comment_count} 个批注, 生成 {gen_txt_count} 段文本，进度 100%"
-
-    with thread_lock:
-        task_progress[task_id] = {
-            "text": txt_info,
-            "timestamp": time.time()
-        }
+    docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
+    txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，识别 {comment_count} 个批注, 生成 {gen_txt_count} 段文本"
+    docx_meta_util.update_docx_file_process_info_by_task_id(task_id, txt_info, 100)
 
 def modify_para_with_comment_prompt(target_doc: str,
         doc_ctx: str, comments_dict: dict, cfg: dict) -> Document:
@@ -290,14 +276,13 @@ def modify_para_with_comment_prompt(target_doc: str,
         logger.error(f"替换失败: {str(e)}", exc_info=True)
     return doc
 
-def get_elapsed_time(start_timestamp: str) -> str:
+def get_elapsed_time(start_timestamp: int) -> str:
     """
     计算任务处理时间
     :param start_timestamp: 任务开始时间戳
     """
-    start_time = int(start_timestamp)
     current_time = int(time.time())
-    elapsed_seconds = current_time - start_time
+    elapsed_seconds = current_time - start_timestamp
     minutes = elapsed_seconds // 60
     seconds = elapsed_seconds % 60
     return f"用时 {minutes}分{seconds}秒"

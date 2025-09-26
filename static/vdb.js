@@ -372,7 +372,7 @@ async function loadFileList(kb_id) {
             row.innerHTML = `
                 <td>${file.id}</td>
                 <td>${file.name}</td>
-                <td>${file.vdb_finish_percent}%</td>
+                <td>${file.percent}%</td>
                 <td>${file.process_info}</td>
                 <td>
                     <button class="btn btn-danger delete-file-btn"

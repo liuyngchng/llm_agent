@@ -15,6 +15,7 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, stream_with_context, Response, render_template)
 
+import docx_meta_util
 import docx_util
 import my_enums
 from agt_util import gen_docx_outline_stream
@@ -25,6 +26,7 @@ from sys_init import init_yml_cfg
 from bp_auth import auth_bp
 from bp_vdb import vdb_bp, VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task
 from utils import get_console_arg1
+from vdb_meta_util import VdbMeta
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -34,6 +36,7 @@ app.config['JSON_AS_ASCII'] = False
 app.register_blueprint(auth_bp)
 app.register_blueprint(vdb_bp)
 UPLOAD_FOLDER = 'upload_doc'
+TASK_EXPIRE_TIME_MS =7200 *1000  # 任务超时时间，默认2小时
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 my_cfg = init_yml_cfg()
 os.system(
@@ -109,29 +112,30 @@ def generate_outline():
     )
 
 @app.route('/docx/upload', methods=['POST'])  # 修正路由路径
-def upload_file():
+def upload_docx_template_file():
     logger.info(f"upload_file_req, {request}")
     if 'file' not in request.files:
         return json.dumps({"error": "未找到文件"}, ensure_ascii=False), 400
     file = request.files['file']
-    uid = request.form.get('uid')
+    uid = int(request.form.get('uid'))
     if file.filename == '':
         return json.dumps({"error": "空文件名"}, ensure_ascii=False), 400
 
-    # 生成任务ID和文件名
-    task_id = f"{uid}_{int(time.time())}"
+    # 生成任务ID， 使用毫秒数
+    task_id = int(time.time()*1000)
     filename = f"{task_id}_{file.filename}"
     save_path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(save_path)
+    docx_meta_util.save_docx_info(uid, task_id, filename)
     logger.info(f"upload_file_saved_as {filename}, {task_id}")
-    outline = docx_util.get_outline(save_path)
+    outline = docx_util.get_outline_txt(save_path)
     logger.info(f"get_file_outline,task_id {task_id}, {outline}")
     info = {
         "task_id": task_id,
         "file_name": filename,
         "outline": outline
     }
-    logger.info(f"upload_file, {info}")
+    logger.info(f"upload_docx_template_file, {info}")
     return json.dumps(info, ensure_ascii=False), 200
 
 @app.route("/docx/write/outline", methods=['POST'])
@@ -152,7 +156,7 @@ def write_doc_with_outline_txt():
         err_info = {"error": "缺少参数"}
         logger.error(f"err_occurred, {err_info}")
         return json.dumps(err_info, ensure_ascii=False), 400
-    task_id = str(int(time.time()))
+    task_id = int(time.time()*1000)
     docx_file_name = docx_util.gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
     logger.info(f"docx_template_file_generated_with_name, {docx_file_name}")
     threading.Thread(
@@ -171,7 +175,7 @@ def write_doc_with_docx_template():
     """
     data = request.json
     logger.info(f"write_doc_with_docx_template, {data}")
-    task_id = data.get("task_id")
+    task_id = int(data.get("task_id"))
     doc_type = data.get("doc_type")
     doc_type_desc = my_enums.WriteDocType.get_doc_type_desc(doc_type)
     doc_title = data.get("doc_title")
@@ -227,47 +231,25 @@ def get_doc_process_info():
     uid = request.json.get("uid")
     if not task_id or not uid:
         return jsonify({"error": "缺少任务ID或用户ID"}), 400
-    uid_str = str(uid)
-    file_info = DbUtl.get_file_info_by_task_id(task_id)
-    info = {
-        "task_id": task_id,
-        "progress": file_info.get("process_info", ""),
-        "percent": file_info.get("vdb_finish_percent", 0),
-        "elapsed_time": time.time() - task_id
-    }
+    file_info = docx_meta_util.get_docx_info_by_task_id(task_id)
+    file_info['elapsed_time'] = time.time() - task_id
     # logger.info(f"get_doc_process_info, {info}")
-    return json.dumps(info, ensure_ascii=False), 200
+    return json.dumps(file_info, ensure_ascii=False), 200
 
 
-def clean_tasks():
+def clean_docx_tasks():
     while True:
-        with thread_lock:
-            now = time.time()
-            expired_uids = []  # 记录待删除的空uid
-
-            # 遍历所有用户
-            for uid, tasks in list(task_progress.items()):
-                expired_tasks = []  # 记录当前用户待删除的task_id
-
-                # 遍历用户的所有任务
-                for task_id, task_info in tasks.items():
-                    if now - task_info['timestamp'] > 7200:  # 2小时过期
-                        expired_tasks.append(task_id)
-                # 删除过期任务
-                for task_id in expired_tasks:
-                    del tasks[task_id]
-
-                # 如果用户无任务则标记删除
-                if not tasks:
-                    expired_uids.append(uid)
-
-            # 删除空用户
-            for uid in expired_uids:
-                del task_progress[uid]
+        now = time.time()
+        expired_uids = []  # 记录待删除的空uid
+        docx_list = docx_meta_util.get_docx_file_processing_list()
+        # 遍历所有用户
+        for file in docx_list:
+            if now - file['task_id'] > TASK_EXPIRE_TIME_MS:  # 2小时过期
+                docx_meta_util.delete_docx_info_by_task_id(file['task_id'])
         time.sleep(1000)
 
 
-def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: str, task_id: str,
+def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: str, task_id: int,
                             file_name: str, is_include_prompt = False):
     """
     处理无模板的文档，三级目录自动生成，每个段落无写作要求
@@ -281,18 +263,18 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
     """
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "
                 f"task_id: {task_id}, file_name: {file_name}, is_include_prompt = {is_include_prompt}")
-    start_time = time.time()
+
     try:
-        docx_util.update_process_info(start_time, thread_lock, uid, task_id, task_progress, "开始解析文档结构...", 0.0)
+        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始解析文档结构...")
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
         catalogue = extract_catalogue(my_target_doc)
         output_file_name = f"output_{task_id}.docx"
         output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
         logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
-        docx_util.update_process_info(start_time, thread_lock, uid, task_id, task_progress, "开始处理文档...", 0.0)
+        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始处理文档...")
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}, 其他写作要求是 {keywords}"
         para_comment_dict = get_para_comment_dict(my_target_doc)
-        default_vdb = DbUtl.get_user_default_vdb(uid)
+        default_vdb = VdbMeta.get_user_default_vdb(uid)
         logger.info(f"my_default_vdb_dir_for_gen_doc: {default_vdb}")
         if default_vdb:
             my_vdb_dir = f"{VDB_PREFIX}{uid}_{default_vdb[0]['id']}"
@@ -302,29 +284,26 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
         if para_comment_dict:
             logger.info("process_word_comment_doc")
             modify_para_with_comment_prompt_in_process(
-                uid, task_id, thread_lock, task_progress,
-                my_target_doc, doc_ctx, para_comment_dict, my_vdb_dir, my_cfg,
-                output_file
+                task_id, my_target_doc, doc_ctx, para_comment_dict,
+                my_vdb_dir, my_cfg, output_file
             )
         elif is_include_prompt:
             logger.info("fill_doc_with_prompt_in_progress")
             fill_doc_with_prompt_in_progress(
-                start_time, uid, task_id, thread_lock, task_progress, doc_ctx,
-                my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
+                task_id, doc_ctx, my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
             )
         else:
             logger.info("fill_doc_without_prompt_in_progress")
             docx_util.fill_doc_without_prompt_in_progress(
-                start_time, uid, task_id, thread_lock, task_progress, doc_ctx,
-                my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
+                task_id, doc_ctx, my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
             )
     except Exception as e:
-        docx_util.update_process_info(thread_lock, uid, task_id, task_progress, f"任务处理失败: {str(e)}", 0.0)
+        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, f"任务处理失败: {str(e)}")
         logger.exception("文档生成异常", e)
 
 
 
 if __name__ == '__main__':
-    threading.Thread(target=clean_tasks, daemon=True).start()
+    threading.Thread(target=clean_docx_tasks, daemon=True).start()
     port = get_console_arg1()
     app.run(host='0.0.0.0', port=port)
