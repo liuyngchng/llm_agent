@@ -5,6 +5,7 @@
 from fastapi import FastAPI, HTTPException, Depends, Header, Security
 from sentence_transformers import SentenceTransformer
 import uvicorn
+import logging.config
 from pydantic import BaseModel
 from typing import Optional, List, Union
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -13,6 +14,14 @@ from sys_init import init_yml_cfg
 
 app = FastAPI()
 model = SentenceTransformer('./../bge-large-zh-v1.5')
+
+logging.config.fileConfig('logging.conf', encoding="utf-8")
+logger = logging.getLogger(__name__)
+
+# # 明确指定使用 CPU
+# model = SentenceTransformer('./../bge-large-zh-v1.5', device='cpu')
+# # 或明确指定使用 GPU
+# model = SentenceTransformer('./../bge-large-zh-v1.5', device='cuda')
 
 # 安全方案
 security = HTTPBearer()
@@ -178,4 +187,6 @@ async def root():
 
 
 if __name__ == "__main__":
+    logger.info(f"模型设备: {model.device}")
+    logger.info(f"是否有 GPU: {model._target_device}")
     uvicorn.run(app, host="0.0.0.0", port=17000)
