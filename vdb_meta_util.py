@@ -103,7 +103,7 @@ class VdbMeta:
 
     @staticmethod
     def get_vdb_file_processing_list():
-        sql = f"select * from vdb_file_info where vdb_finish_percent != 100 limit 100"
+        sql = f"select * from vdb_file_info where finish_percent != 100 limit 100"
         logger.info(f"get_vdb_processing_file_list_sql, {sql}")
         my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         logger.info(f"get_vdb_processing_file_list_dt {my_dt}")
@@ -154,10 +154,10 @@ class VdbMeta:
         return my_dt
 
     @staticmethod
-    def get_vdb_file_info_by_task_id(vdb_task_id: str) -> dict:
-        if not vdb_task_id:
-            raise RuntimeError(f"param_null_err {vdb_task_id}")
-        sql = f"select * from vdb_file_info where vdb_task_id = '{vdb_task_id}' limit 1"
+    def get_vdb_file_info_by_task_id(task_id: str) -> dict:
+        if not task_id:
+            raise RuntimeError(f"param_null_err {task_id}")
+        sql = f"select * from vdb_file_info where task_id = '{task_id}' limit 1"
         logger.info(f"get_file_info_by_task_id, {sql}")
         my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         logger.info(f"get_file_info_by_task_id_dt {my_dt}")
@@ -222,10 +222,10 @@ class VdbMeta:
         return my_dt
 
     @staticmethod
-    def save_vdb_file_info(original_file_name: str, saved_file_name: str, uid: str, vdb_id: str, vdb_task_id: int,
+    def save_vdb_file_info(original_file_name: str, saved_file_name: str, uid: str, vdb_id: str, task_id: int,
                            file_md5: str):
-        sql = (f"insert into vdb_file_info (name, uid, vdb_id, file_path, vdb_task_id, file_md5) values"
-               f" ('{original_file_name}', '{uid}', '{vdb_id}', '{saved_file_name}', '{vdb_task_id}', '{file_md5}')")
+        sql = (f"insert into vdb_file_info (name, uid, vdb_id, file_path, task_id, file_md5) values"
+               f" ('{original_file_name}', '{uid}', '{vdb_id}', '{saved_file_name}', '{task_id}', '{file_md5}')")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"save_file_info_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
