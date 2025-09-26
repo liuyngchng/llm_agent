@@ -157,6 +157,7 @@ def delete_file_from_vdb():
     t = data.get("t")
     vdb_id = data.get("vdb_id")
     file_id = data.get("file_id")
+    file_name = data.get("name")
     dt = VdbMeta.get_vdb_file_info_by_id(file_id)
     if not dt or len(dt) == 0:
         info = {"message": f"file_id={file_id}的文件信息在向量库的文件元数据中不存在", "success": False}
@@ -178,7 +179,7 @@ def delete_file_from_vdb():
         vdb_util.del_doc(save_path, vdb_dir)
     logger.info(f"delete_file_from_vdb_file_meta_info, {file_id}")
     VdbMeta.delete_vdb_file_by_uid_vbd_id_file_id(file_id, uid, vdb_id)
-    info = {"success": True, "message": "文件已成功从知识库中删除"}
+    info = {"success": True, "message": f"文件{file_name}已从知识库中删除"}
     logger.info(info)
     return json.dumps(info, ensure_ascii=False), 200
 
