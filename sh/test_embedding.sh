@@ -9,4 +9,4 @@ echo "MODEL: ${MODEL}"
 curl -ks --noproxy '*' -w'\n' --tlsv1 -X POST  "${API}/embeddings" \
     -H "Content-Type: application/json" \
 	  -H "Authorization: Bearer ${TOKEN}" \
-    -d '{"model": "${MODEL}","input": "本"}' | jq
+    -d '{"model": "${MODEL}","input": "这就是一个测试而已，别太上心了"}' | jq

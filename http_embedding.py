@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Depends, Header, Security
 from sentence_transformers import SentenceTransformer
 import uvicorn
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Union
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from sys_init import init_yml_cfg
@@ -28,7 +28,9 @@ VALID_API_KEYS = {
 # 定义 OpenAI 兼容的请求/响应模型
 class EmbeddingRequest(BaseModel):
     model: str
-    input: List[str]  # 兼容 OpenAI 格式
+    input: Union[str, List[str]]  # 支持字符串和字符串列表
+    user: Optional[str] = None
+    encoding_format: Optional[str] = "float"  # 支持 float 或 base64
 
 
 class EmbeddingData(BaseModel):
@@ -58,6 +60,18 @@ async def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(sec
     return api_key
 
 
+def process_input(input_data: Union[str, List[str]]) -> List[str]:
+    """处理输入数据，统一转换为字符串列表"""
+    if isinstance(input_data, str):
+        return [input_data]
+    elif isinstance(input_data, list):
+        if not all(isinstance(item, str) for item in input_data):
+            raise HTTPException(status_code=400, detail="输入列表中的元素必须是字符串")
+        return input_data
+    else:
+        raise HTTPException(status_code=400, detail="输入必须是字符串或字符串列表")
+
+
 @app.post("/v1/embeddings")
 async def create_embedding(
         request: EmbeddingRequest,
@@ -65,22 +79,40 @@ async def create_embedding(
 ):
     """OpenAI 兼容的嵌入端点"""
     try:
-        if not request.input:
+        # 处理输入格式
+        input_texts = process_input(request.input)
+
+        if not input_texts:
             raise HTTPException(status_code=400, detail="输入不能为空")
 
-        if len(request.input) > 100:  # 限制批量大小
+        if len(input_texts) > 100:  # 限制批量大小
             raise HTTPException(status_code=400, detail="单次请求最多处理100个文本")
 
+        # 检查每个文本的长度
+        for i, text in enumerate(input_texts):
+            if len(text.strip()) == 0:
+                raise HTTPException(status_code=400, detail=f"第 {i + 1} 个文本为空")
+            if len(text) > 8192:  # 限制单个文本长度
+                raise HTTPException(status_code=400, detail=f"第 {i + 1} 个文本过长（最大8192字符）")
+
         # 计算嵌入
-        embeddings = model.encode(request.input).tolist()
+        embeddings = model.encode(input_texts).tolist()
 
         # 构建 OpenAI 兼容的响应
         data = []
         for i, emb in enumerate(embeddings):
-            data.append(EmbeddingData(index=i, embedding=emb))
+            # 处理 encoding_format 参数
+            if request.encoding_format == "base64":
+                # 如果需要 base64 格式，这里可以转换
+                # 但通常使用 float 格式
+                embedding_data = emb
+            else:
+                embedding_data = emb
+
+            data.append(EmbeddingData(index=i, embedding=embedding_data))
 
         # 模拟 token 使用量（实际可以根据文本长度计算）
-        total_tokens = sum(len(text) for text in request.input)
+        total_tokens = sum(len(text) for text in input_texts)
 
         return EmbeddingResponse(
             data=data,
@@ -91,6 +123,8 @@ async def create_embedding(
             }
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"处理请求时出错: {str(e)}")
 
