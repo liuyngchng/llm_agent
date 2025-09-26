@@ -246,8 +246,8 @@ def upload_file():
         return json.dumps(info, ensure_ascii=False), 400
     file = request.files['file']
     upload_file_name = file.filename
-    kb_id = request.form.get('kb_id')
-    uid = request.form.get('uid')
+    kb_id = int(request.form.get('kb_id'))
+    uid = int(request.form.get('uid'))
     if not kb_id or not uid or not upload_file_name:
         info = {"success": False, "message": f"缺少参数,文件名、知识库ID或用户ID为空, {upload_file_name}, {kb_id}, {uid}"}
         logger.error(info)
@@ -385,7 +385,7 @@ def clean_expired_vdb_file_task():
             if now - file['vdb_task_id'] > FILE_PROCESS_EXPIRE_MS:
                 vdb_task_id_list.append(file['vdb_task_id'])
         for id in vdb_task_id_list:
-            VdbMeta.delete_vdb_file_by_vbd_task_id(id)
+            VdbMeta.delete_vdb_file_by_task_id(id)
         time.sleep(300)
 
 def process_vdb_file_task():

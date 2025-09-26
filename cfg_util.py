@@ -69,11 +69,11 @@ def get_uid_by_user(usr:str) ->str:
             logger.info(f"user info for {usr} can't be found")
     return uid
 
-def get_user_name_by_uid(uid:str)-> str | None:
+def get_user_name_by_uid(uid: int)-> str | None:
     user = None
     with sqlite3.connect(config_db) as my_conn:
         try:
-            sql = f"select name from user where id='{uid}' limit 1"
+            sql = f"select name from user where id={uid} limit 1"
             check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             user = user_dt[0][0]

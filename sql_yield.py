@@ -29,7 +29,7 @@ from my_enums import DBType, DataType, YieldType, AppType
 
 from db_util import DbUtl
 from sys_init import init_yml_cfg
-from vdb_util import vector_file, load_vdb, search_txt
+from vdb_util import load_vdb, search_txt, vector_file_with_id
 
 """
 pip install langchain_openai langchain_ollama \
@@ -180,11 +180,11 @@ class SqlYield(DbUtl):
         """
         hack_vdb_file = f"./vdb/{uid}_q_hack_desc_vdb"
         if not os.path.exists(hack_vdb_file):
-            thread_lock = threading.Lock()
-            task_id = (str)(time.time())
+            task_id = int(time.time())
             file = f"./hack/{uid}_q_desc.txt"
             logger.info(f"vector_file({file}, {hack_vdb_file})")
-            vector_file(task_id, thread_lock, {}, file, hack_vdb_file, self.cfg['api'],
+            # todo debug, task_id need to be replase with file_id
+            vector_file_with_id(task_id, file, hack_vdb_file, self.cfg['api'],
             80, 10, 10, ["\n"])
         hack_vdb = load_vdb(hack_vdb_file, self.cfg['api'])
         if not hack_vdb:
