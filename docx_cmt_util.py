@@ -183,7 +183,7 @@ def test_get_comment():
 def modify_para_with_comment_prompt_in_process(task_id:int,
     target_doc: str, doc_ctx: str, comments_dict: dict, vdb_dir:str, cfg: dict, output_file_name:str):
     """
-    将批注内容替换到对应段落，并将新文本设为红色
+    将批注内容替换到对应段落
     :param task_id: 执行任务的ID
     :param target_doc: 需要修改的文档路径
     :param doc_ctx: 文档写作的背景信息
@@ -204,12 +204,13 @@ def modify_para_with_comment_prompt_in_process(task_id:int,
     total_paragraphs = len(doc.paragraphs)
     gen_txt_count = 0
     comment_count = 0
-    try:
-        for para_idx, para in enumerate(doc.paragraphs):
-            percent = para_idx / total_paragraphs * 100
-            process_percent_bar_info = (f"正在处理第 {para_idx + 1}/{total_paragraphs} 段文本，已识别 {comment_count} 个批注，"
-                f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(task_id)}")
-            logger.info(f"{process_percent_bar_info}, 进度 {percent:.1f}%")
+    err_record = []
+    for para_idx, para in enumerate(doc.paragraphs):
+        percent = para_idx / total_paragraphs * 100
+        process_percent_bar_info = (f"正在处理第 {para_idx + 1}/{total_paragraphs} 段文本，已识别 {comment_count} 个批注，"
+            f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(task_id)}")
+        logger.info(f"{process_percent_bar_info}, 进度 {percent:.1f}%")
+        try:
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, process_percent_bar_info, percent)
             refresh_current_heading(para, current_heading)
             if para_idx not in comments_dict:
@@ -226,15 +227,18 @@ def modify_para_with_comment_prompt_in_process(task_id:int,
                 para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
                 run = para.add_run(f"{AI_GEN_TAG}{modified_txt}")
                 run.font.color.rgb = RGBColor(0, 0, 0)
+                doc.save(output_file_name)
             else:
                 logger.error(f"no_gen_txt_for_para, {para_idx}, comment {comment_text}")
-    except Exception as e:
-        err_info = f"在处理文档批注时发生异常: {str(e)}"
-        logger.error(err_info, exc_info=True)
-        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, err_info)
+        except Exception as e:
+            err_info = f"在处理文档批注时发生异常: {str(e)}， 文档任务ID {task_id},错误信息 {str(e)}"
+            err_record.append(err_info)
+            logger.error(err_info, exc_info=True)
+            docx_meta_util.update_docx_file_process_info_by_task_id(task_id, err_info)
+            continue
     doc.save(output_file_name)
     docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
-    txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，识别 {comment_count} 个批注, 生成 {gen_txt_count} 段文本"
+    txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，识别 {comment_count} 个批注, 生成 {gen_txt_count} 段文本,发生错误 {len(err_record)} 处，错误信息 {err_record}"
     docx_meta_util.update_docx_file_process_info_by_task_id(task_id, txt_info, 100)
 
 def modify_para_with_comment_prompt(target_doc: str,

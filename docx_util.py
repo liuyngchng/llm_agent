@@ -225,12 +225,13 @@ def fill_doc_without_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: s
     gen_txt_count = 0
     total_paragraphs = len(doc.paragraphs)
     txt_info = ""
+    err_record = []
     for index, my_para in enumerate(doc.paragraphs):
-        percent = index / total_paragraphs * 100
+        percent = int(index/total_paragraphs * 100)
         process_bar_info = (f"正在处理第 {index + 1}/{total_paragraphs} 段文本，"
             f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}")
         logger.info(process_bar_info)
-        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, process_bar_info)
+        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, process_bar_info, percent)
         try:
             hd_check = is_3rd_heading(my_para)
             if not hd_check:
@@ -240,10 +241,11 @@ def fill_doc_without_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: s
             llm_txt = gen_txt(doc_ctx, reference, "", target_doc_catalogue, my_para.text, sys_cfg, )
             gen_txt_count += 1
         except Exception as ex:
-            err_info = "在处理文档的过程中出现了异常，任务已中途退出"
+            err_info = f"在处理文档的过程中出现了异常，已跳过当前错误，{str(ex)}"
+            err_record.append(err_info)
             logger.error(f"fill_doc_job_err_to_break, {err_info}", ex)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, err_info)
-            break
+            continue
         new_para = doc.add_paragraph()
         new_para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
         red_run = new_para.add_run(llm_txt)
@@ -252,7 +254,7 @@ def fill_doc_without_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: s
         doc.save(output_file_name)
         logger.info(f"fill_doc_job_success_save_doc, {output_file_name}")
         if gen_txt_count > 0:
-            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，已生成 {gen_txt_count} 段文本，进度 100%"
+            txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，已生成 {gen_txt_count} 段文本, 发生错误 {len(err_record)} 处， 错误信息 {err_record}"
         else:
             txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，进度 100%，未检测到写作要求文本"
         docx_meta_util.update_docx_file_process_info_by_task_id(task_id, txt_info, 100)
@@ -275,6 +277,7 @@ def fill_doc_with_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
     gen_txt_count = 0
     current_heading = []
     total_paragraphs = len(doc.paragraphs)
+    err_record = []
     for index, my_para in enumerate(doc.paragraphs):
         percent = int(index / total_paragraphs * 100)
         process_bar_info = (f"正在处理第 {index + 1}/{total_paragraphs} 段文本，"
@@ -285,31 +288,28 @@ def fill_doc_with_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
             is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
             if not is_prompt:
                 continue
-            # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
             reference = get_reference_from_vdb(my_para.text, vdb_dir, sys_cfg['api'])
-            # with thread_lock:
-            #     thread_lock[task_id] = f"正在处理文本[{my_para.text}]"
             llm_txt = gen_txt(doc_ctx, reference, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg )
             gen_txt_count += 1
-            # with thread_lock:
-            #     thread_lock[task_id] = f"生成文本：{llm_txt}"
+            new_para = doc.add_paragraph()
+            new_para.paragraph_format.first_line_indent = Cm(
+                1)  # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
+            red_run = new_para.add_run(f"{AI_GEN_TAG}{llm_txt}")
+            red_run.font.color.rgb = RGBColor(0, 0, 0)
+            my_para._p.addnext(new_para._p)
+            doc.save(output_file_name)
         except Exception as ex:
-            err_info = "在处理文档的过程中出现了异常，任务已中途退出"
+            err_info = f"在处理文档的过程中出现了异常，已跳过当前错误, 任务ID: {task_id}, {str(ex)}"
             logger.error(f"fill_doc_job_err_to_break, {err_info}", ex)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, err_info)
-            break
-        new_para = doc.add_paragraph()
-        new_para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
-        red_run = new_para.add_run(f"{AI_GEN_TAG}{llm_txt}")
-        red_run.font.color.rgb = RGBColor(0, 0, 0)
-        my_para._p.addnext(new_para._p)
+            continue
     doc.save(output_file_name)
     docx_meta_util.save_docx_output_file_path_by_task_id(task_id,output_file_name)
-    txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}，进度 100%"
+    txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}，发生错误 {len(err_record)} 次, 错误信息 {err_record}"
     if gen_txt_count == 0:
         txt_info += f"未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
     docx_meta_util.update_docx_file_process_info_by_task_id(task_id, txt_info, 100.0)
-    logger.info(f"{txt_info}, 所有内容已输出至文件 {output_file_name}")
+    logger.info(f"{txt_info}, 写做任务 {task_id} 所有内容已输出至文件 {output_file_name}")
 
 
 def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict) -> Document:
