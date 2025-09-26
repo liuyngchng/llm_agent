@@ -125,9 +125,11 @@ def process_doc_with_id(file_id: int, documents: list[Document], vector_db: str,
                         metadatas=batch_metas
                     )
                     pbar.update(len(batch_ids))
+                    percent = round(100 * i / len(all_doc_ids), 1)
                     VdbMeta.update_vdb_file_process_info(
                         file_id,
-                        f"已处理 {min(i+batch_size, len(all_doc_ids))}/{len(all_doc_ids)} 个分块"
+                        f"已处理 {min(i+batch_size, len(all_doc_ids))}/{len(all_doc_ids)} 个分块",
+                        percent
                     )
                 except Exception as e:
                     info = f"处理批次 {i}-{i+batch_size} 时出错: {str(e)}"

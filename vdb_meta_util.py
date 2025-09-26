@@ -244,10 +244,13 @@ class VdbMeta:
         return my_dt
 
     @staticmethod
-    def update_vdb_file_process_info(file_id: int, process_info: str):
+    def update_vdb_file_process_info(file_id: int, process_info: str, percent=0):
         if not file_id or not process_info:
             raise RuntimeError(f"param_null_err, {file_id}, {process_info}")
-        sql = f"update vdb_file_info set process_info = '{process_info}' where id = {file_id} limit 1"
+        if percent == 0:
+            sql = f"update vdb_file_info set process_info = '{process_info}' where id = {file_id} limit 1"
+        else:
+            sql = f"update vdb_file_info set process_info = '{process_info}', percent={percent} where id = {file_id} limit 1"
         logger.info(f"update_file_info_sql, {sql}")
         my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         logger.info(f"update_file_info_dt {my_dt}")

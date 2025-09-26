@@ -382,7 +382,9 @@ def clean_expired_vdb_file_task():
         now = int(time.time()*1000)  # 当前时间毫秒数
         vdb_task_id_list = []
         for file in file_list:
-            if now - file['task_id'] > FILE_PROCESS_EXPIRE_MS:
+            time_diff = now - file['task_id']
+            if time_diff > FILE_PROCESS_EXPIRE_MS:
+                logger.info(f"record_expired_task, {file['task_id']} time_diff, {time_diff}ms, timeout_threshold: {FILE_PROCESS_EXPIRE_MS}ms")
                 vdb_task_id_list.append(file['task_id'])
         for id in vdb_task_id_list:
             VdbMeta.delete_vdb_file_by_task_id(id)
