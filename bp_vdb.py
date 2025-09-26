@@ -157,26 +157,27 @@ def delete_file_from_vdb():
     t = data.get("t")
     vdb_id = data.get("vdb_id")
     file_id = data.get("file_id")
-
-    vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_id}"
-    if not os.path.exists(vdb_dir):
-        info = {"success": False, "message": "知识库不存在，删除失败"}
-        logger.info(info)
-        return json.dumps(info, ensure_ascii=False), 200
-    dt = VdbMeta.get_vdb_file_list(uid, vdb_id)
+    dt = VdbMeta.get_vdb_file_info_by_id(file_id)
     if not dt or len(dt) == 0:
-        info = {"success": False, "message": "知识库中的文件不存在，删除失败"}
+        info = {"message": f"file_id={file_id}的文件信息在向量库的文件元数据中不存在", "success": False}
         logger.info(info)
         return json.dumps(info, ensure_ascii=False), 200
+    logger.info(f"file_info, {dt}")
     disk_file_name = dt[0].get("file_path", None)
     if not disk_file_name:
-        info = {"success": False, "message": "文件路径信息缺失，删除失败"}
+        info = {"message": f"file_id={file_id}的文件磁盘存储信息在向量库的文件元数据中不存在", "success": False}
         logger.info(info)
         return json.dumps(info, ensure_ascii=False), 200
-    VdbMeta.delete_vdb_file_by_uid_vbd_id_file_id(file_id, uid, vdb_id)
     save_path = os.path.join(UPLOAD_FOLDER, disk_file_name)
-    result = vdb_util.del_doc(save_path, vdb_dir)
-    logger.info(f"delete_file_from_vdb, {result}, file_save_path {save_path}")
+    if os.path.exists(save_path):
+        logger.info(f"delete_file_from_disk, file_id_{file_id}, {save_path}")
+        os.remove(save_path)
+    vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_id}"
+    if os.path.exists(vdb_dir):
+        logger.info(f"delete_file_from_vdb, file_save_path {save_path}")
+        vdb_util.del_doc(save_path, vdb_dir)
+    logger.info(f"delete_file_from_vdb_file_meta_info, {file_id}")
+    VdbMeta.delete_vdb_file_by_uid_vbd_id_file_id(file_id, uid, vdb_id)
     info = {"success": True, "message": "文件已成功从知识库中删除"}
     logger.info(info)
     return json.dumps(info, ensure_ascii=False), 200
