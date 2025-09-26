@@ -22,8 +22,6 @@ from langchain_community.document_loaders import (
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from openai import OpenAI
-
-from db_util import DbUtl
 from sys_init import init_yml_cfg
 from tqdm import tqdm
 from chromadb import Documents, EmbeddingFunction, Embeddings
@@ -69,96 +67,6 @@ class RemoteChromaEmbedder(EmbeddingFunction):
     def get_config(self) -> dict[str, Any]:
         return {"client": self.client, "model_name": self.model_name}
 
-
-def process_doc(task_id: str, thread_lock, task_progress: dict, documents: list[Document],
-                vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10, separators=None) -> None:
-    """处理文档并构建向量数据库"""
-    if separators is None:
-        separators = ['。', '！', '？', '；', '...', '、', '，']
-    pbar = None
-    try:
-        doc_sources = [doc.metadata['source'] for doc in documents]
-        logger.info(f"load_documents_size, {len(documents)}:\n" + "\n".join(f"- {src}" for src in doc_sources))
-
-        # 文本分割
-
-        with thread_lock:
-            task_progress[task_id] = {"text": "启动文本分片", "timestamp": time.time()}
-        if not separators:
-            separators = ['。', '！', '？', '；', '...', '、', '，']
-        logger.info(f"splitting_documents_with_separators {separators}...")
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            separators=separators,
-            keep_separator=False
-        )
-        doc_list = text_splitter.split_documents(documents)
-
-        # 创建Chroma客户端
-        chroma_client = chromadb.PersistentClient(path=vector_db)
-        openai_client = build_client(llm_cfg)
-        embed_model = RemoteChromaEmbedder(openai_client, llm_cfg['embedding_model_name'])
-
-        collection = chroma_client.get_or_create_collection(
-            name="knowledge_base",
-            embedding_function=embed_model,
-            metadata={"hnsw:space": "cosine"}  # 使用余弦相似度
-        )
-
-        # 准备文档数据
-        all_doc_ids = []
-        all_metadata = []
-        all_documents = []
-
-        for i, chunk in enumerate(doc_list):
-            doc_id = f"{os.path.basename(chunk.metadata['source'])}_chunk_{i}"
-            all_doc_ids.append(doc_id)
-            all_metadata.append(chunk.metadata)
-            all_documents.append(chunk.page_content)
-
-        # 批量添加文档
-        logger.info(f"开始向量化 {len(all_doc_ids)} chunks (batch_size={batch_size})")
-        with thread_lock:
-            task_progress[task_id] = {"text": "开始文本向量化", "timestamp": time.time()}
-
-        with tqdm(total=len(all_doc_ids), desc="文档向量化进度", unit="chunk") as pbar:
-            for i in range(0, len(all_doc_ids), batch_size):
-                batch_ids = all_doc_ids[i:i+batch_size]
-                batch_metas = all_metadata[i:i+batch_size]
-                batch_texts = all_documents[i:i+batch_size]
-                try:
-                    collection.upsert(
-                        ids=batch_ids,
-                        documents=batch_texts,
-                        metadatas=batch_metas
-                    )
-                    pbar.update(len(batch_ids))
-                    with thread_lock:
-                        task_progress[task_id] = {
-                            "text": f"已处理 {min(i+batch_size, len(all_doc_ids))}/{len(all_doc_ids)} 个分块",
-                            "timestamp": time.time()
-                        }
-                except Exception as e:
-                    info = f"处理批次 {i}-{i+batch_size} 时出错: {str(e)}"
-                    logger.error(info)
-                    with thread_lock:
-                        task_progress[task_id] = {"text": info, "timestamp": time.time()}
-                    continue
-
-        logger.info(f"向量数据库构建完成，保存到 {vector_db}")
-        with thread_lock:
-            task_progress[task_id] = {"text": "向量化已完成，保存至个人知识空间", "timestamp": time.time()}
-
-    except Exception as e:
-        info = f"处理文档时发生错误: {str(e)}"
-        logger.error(info, exc_info=True)
-        with thread_lock:
-            task_progress[task_id] = {"text": info, "timestamp": time.time()}
-        raise
-    finally:
-        if pbar and not pbar.disable:
-            pbar.close()
 
 def process_doc_with_id(file_id: int, documents: list[Document], vector_db: str,
         llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10, separators=None) -> None:
