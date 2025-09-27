@@ -362,7 +362,9 @@ async function loadFileList(kb_id) {
             })
         });
 
-        if (!response.ok) throw new Error('获取文件列表失败');
+        if (!response.ok) {
+            throw new Error(`HTTP错误 ${response.status}: ${response.statusText}`);
+        }
         const result = await response.json();
         if (!result.files) {
             throw new Error('返回数据格式错误，缺少 files 属性');
