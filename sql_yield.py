@@ -29,7 +29,7 @@ from my_enums import DBType, DataType, YieldType, AppType
 
 from db_util import DbUtl
 from sys_init import init_yml_cfg
-from vdb_util import load_vdb, search_txt, vector_file_with_id
+from vdb_util import load_vdb, search_txt, vector_file
 
 """
 pip install langchain_openai langchain_ollama \
@@ -184,8 +184,8 @@ class SqlYield(DbUtl):
             file = f"./hack/{uid}_q_desc.txt"
             logger.info(f"vector_file({file}, {hack_vdb_file})")
             # todo debug, task_id need to be replase with file_id
-            vector_file_with_id(task_id, file, hack_vdb_file, self.cfg['api'],
-            80, 10, 10, ["\n"])
+            vector_file(task_id, file, hack_vdb_file, self.cfg['api'],
+                        80, 10, 10, ["\n"])
         hack_vdb = load_vdb(hack_vdb_file, self.cfg['api'])
         if not hack_vdb:
             raise RuntimeError(f"load_vdb {hack_vdb_file} failed, hack_vdb_collection_is_null")

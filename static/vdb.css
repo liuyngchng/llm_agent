@@ -426,14 +426,40 @@ footer {
     padding-top: 20px;
     border-top: 1px solid #eee;
 }
+#fileListTable {
+    table-layout: fixed;
+    width: 100%;
+}
 
-#fileListTable th:nth-child(1) { width: 20%; }
-#fileListTable th:nth-child(2) { width: 60%; }
-#fileListTable th:nth-child(3) { width: 20%; }
+#fileListTable th:nth-child(1) { width: 8%; }   /* 文件ID */
+#fileListTable th:nth-child(2) { width: 20%; }  /* 文件名 */
+#fileListTable th:nth-child(3) { width: 10%; }  /* 处理进度 */
+#fileListTable th:nth-child(4) { width: 52%; }  /* 处理信息 */
+#fileListTable th:nth-child(5) { width: 10%; }  /* 操作 */
+
+#fileListTable td {
+    word-wrap: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 0;
+    padding: 8px 10px;
+    vertical-align: middle;
+}
+
+#fileListTable td:nth-child(4) {
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.4;
+    max-height: 60px;
+    overflow-y: auto;
+}
 
 .delete-file-btn {
-    padding: 8px 15px;
-    font-size: 0.9rem;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    width: 100%;
 }
 
 @keyframes spin {
@@ -505,5 +531,19 @@ footer {
     #setDefaultBtn, #deleteBtn {
         margin-top: 10px;
         width: 100%;
+    }
+    #fileListTable {
+        font-size: 0.9rem;
+    }
+
+    #fileListTable th:nth-child(1) { width: 15%; }
+    #fileListTable th:nth-child(2) { width: 25%; }
+    #fileListTable th:nth-child(3) { width: 15%; }
+    #fileListTable th:nth-child(4) { width: 30%; }
+    #fileListTable th:nth-child(5) { width: 15%; }
+
+    .delete-file-btn {
+        padding: 4px 8px;
+        font-size: 0.7rem;
     }
 }

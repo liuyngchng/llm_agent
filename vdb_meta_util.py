@@ -97,9 +97,9 @@ class VdbMeta:
         if not uid or not vdb_id:
             raise RuntimeError(f"get_vdb_file_list_param_null_err, {uid}, {vdb_id}")
         sql = f"select * from vdb_file_info where uid = {uid} and vdb_id = {vdb_id}"
-        logger.info(f"get_vdb_file_list_sql, {sql}")
+        logger.debug(f"get_vdb_file_list_sql, {sql}")
         my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-        logger.info(f"get_vdb_file_list_dt, {my_dt}")
+        logger.debug(f"get_vdb_file_list_dt, {my_dt}")
         return my_dt
 
     @staticmethod

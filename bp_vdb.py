@@ -113,7 +113,7 @@ def get_vdb_file_list():
     获取知识库内的文件列表
     """
     data = request.get_json()
-    logger.info(f"get_vdb_file_list {data}")
+    logger.debug(f"get_vdb_file_list {data}")
     uid = data.get("uid")
     t = data.get("t")
     vdb_id = data.get("vdb_id")
@@ -123,7 +123,7 @@ def get_vdb_file_list():
         return json.dumps(msg,ensure_ascii=False), 502
     dt = VdbMeta.get_vdb_file_list(uid, vdb_id)
     return_dt = {"files": dt, "success": True}
-    logger.info(f"get_vdb_file_list_return, {return_dt}")
+    logger.debug(f"get_vdb_file_list_return, {return_dt}")
     return json.dumps(return_dt, ensure_ascii=False), 200
 
 @vdb_bp.route('/vdb/set/default', methods=['POST'])
@@ -384,7 +384,7 @@ def clean_expired_vdb_file_task():
         for file in file_list:
             time_diff = now - file['task_id']
             if time_diff > FILE_PROCESS_EXPIRE_MS:
-                logger.info(f"record_expired_task, {file['task_id']} time_diff, {time_diff}ms, timeout_threshold: {FILE_PROCESS_EXPIRE_MS}ms")
+                logger.info(f"detected_expired_task, {file['task_id']} time_diff, {time_diff}ms, timeout_threshold: {FILE_PROCESS_EXPIRE_MS}ms")
                 vdb_task_id_list.append(file['task_id'])
         for id in vdb_task_id_list:
             VdbMeta.delete_vdb_file_by_task_id(id)
@@ -395,7 +395,7 @@ def process_vdb_file_task():
     周期性地对已经上传的文件进行向量化处理
     """
     while True:
-        logger.info(f"process_vdb_file_task")
+        logger.debug(f"process_vdb_file_task")
         process_doc()
         time.sleep(5)
 
@@ -403,7 +403,7 @@ def process_vdb_file_task():
 def process_doc():
     file_list = VdbMeta.get_vdb_file_processing_list()
     if not file_list or len(file_list) == 0:
-        logger.info(f"no_upload_file_need_process")
+        logger.debug(f"no_upload_file_need_process")
         return
     for file in file_list:
         file_id = file['id']
@@ -419,8 +419,8 @@ def process_doc():
                 continue
             info = "开始解析文档结构..."
             VdbMeta.update_vdb_file_process_info(file_id, info)
-            vdb_util.vector_file_with_id(file_id, cur_file_path,
-                output_vdb_dir, my_cfg['api'], 300, 80)
+            vdb_util.vector_file(file_id, cur_file_path,
+                                 output_vdb_dir, my_cfg['api'], 300, 80)
         except Exception as e:
             msg = f"任务处理失败,失败原因： {str(e)}"
             VdbMeta.update_vdb_file_process_info(file_id, msg)

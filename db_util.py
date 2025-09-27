@@ -168,7 +168,7 @@ class DbUtl:
             logger.error(f"database_type_error, {__file__}")
             raise "database type error"
 
-        logger.info(f"data {data} for {db_con}")
+        logger.debug(f"data {data} for {db_con}")
         df = pd.DataFrame(data['data'], columns=data['columns'])
         dt_fmt = data_format.lower()
 
@@ -184,7 +184,7 @@ class DbUtl:
             logger.error(info)
             raise info
         dt1 = dt.replace('\n', ' ')
-        logger.info(f"output_data_dt:{dt1}")
+        logger.debug(f"output_data_dt:{dt1}")
         return dt
 
     @staticmethod

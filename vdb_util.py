@@ -68,8 +68,8 @@ class RemoteChromaEmbedder(EmbeddingFunction):
         return {"client": self.client, "model_name": self.model_name}
 
 
-def process_doc_with_id(file_id: int, documents: list[Document], vector_db: str,
-        llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10, separators=None) -> None:
+def process_doc(file_id: int, documents: list[Document], vector_db: str,
+                llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10, separators=None) -> None:
     """处理文档并构建向量数据库"""
     if separators is None:
         separators = ['。', '！', '？', '；', '...', '、', '，']
@@ -162,8 +162,8 @@ def build_client(llm_cfg: dict) -> OpenAI:
         ),
     )
 
-def vector_file_with_id(file_id: int, file_name: str, vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80,
-        batch_size=10, separators = None) -> None:
+def vector_file(file_id: int, file_name: str, vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80,
+                batch_size=10, separators = None) -> None:
     """
     处理单个文档文件并添加到向量数据库
     :param file_id: 待处理文档在数据库中的唯一标识
@@ -205,7 +205,7 @@ def vector_file_with_id(file_id: int, file_name: str, vector_db: str, llm_cfg: d
                 doc.metadata['source'] = abs_path
         logger.info(f"load_success_txt_snippet: {len(documents)}")
         VdbMeta.update_vdb_file_process_info(file_id, f"已经检测到 {len(documents)} 个文本片段")
-        process_doc_with_id(file_id, documents, vector_db, llm_cfg, chunk_size, chunk_overlap, batch_size, separators)
+        process_doc(file_id, documents, vector_db, llm_cfg, chunk_size, chunk_overlap, batch_size, separators)
 
     except Exception as e:
         logger.error(f"load_file_fail_err, {abs_path}, {e}", exc_info=True)
@@ -246,7 +246,7 @@ def update_doc(task_id: int, thread_lock, task_progress: dict, prev_file_path: s
         with thread_lock:
             task_progress[task_id] = {"text": "已删除旧版本文档", "timestamp": time.time()}
     # 再重新添加文档
-    vector_file_with_id(task_id, cur_file_path, vector_db, llm_cfg)
+    vector_file(task_id, cur_file_path, vector_db, llm_cfg)
 
 
 def load_vdb(vector_db: str, llm_cfg: dict) -> Optional[chromadb.Collection]:
@@ -350,7 +350,7 @@ def test_vector_file():
     vdb = "./vdb/332987902_q_desc_vdb"
     llm_cfg = my_cfg['api']
     logger.info(f"vector_file({task_id}, {thread_lock}, {task_progress}, {file}, {vdb}, {llm_cfg})")
-    vector_file_with_id(task_id, file, vdb, llm_cfg, 80, 10, 10,["\n"])
+    vector_file(task_id, file, vdb, llm_cfg, 80, 10, 10, ["\n"])
 
 def test_del_doc():
     test_search_txt()
