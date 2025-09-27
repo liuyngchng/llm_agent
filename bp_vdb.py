@@ -418,12 +418,12 @@ def process_doc():
                 VdbMeta.delete_vdb_file_by_id(file_id)
                 continue
             info = "开始解析文档结构..."
-            VdbMeta.update_vdb_file_path(file_id, info)
+            VdbMeta.update_vdb_file_process_info(file_id, info)
             vdb_util.vector_file_with_id(file_id, cur_file_path,
                 output_vdb_dir, my_cfg['api'], 300, 80)
         except Exception as e:
             msg = f"任务处理失败,失败原因： {str(e)}"
-            VdbMeta.update_vdb_file_path(file_id, msg)
+            VdbMeta.update_vdb_file_process_info(file_id, msg)
             logger.exception(f"process_doc_err, {record_file_name}", e)
 
 def get_upload_file_name(disk_file_name):

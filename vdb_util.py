@@ -110,35 +110,38 @@ def process_doc_with_id(file_id: int, documents: list[Document], vector_db: str,
             all_metadata.append(chunk.metadata)
             all_documents.append(chunk.page_content)
 
+        total_chunks = len(all_doc_ids)
         # 批量添加文档
-        logger.info(f"开始向量化 {len(all_doc_ids)} chunks (batch_size={batch_size})")
+        logger.info(f"开始向量化 {total_chunks} chunks (batch_size={batch_size})")
         VdbMeta.update_vdb_file_process_info(file_id, "开始对文本片段进行向量化")
-        with tqdm(total=len(all_doc_ids), desc="文档向量化进度", unit="chunk") as pbar:
-            for i in range(0, len(all_doc_ids), batch_size):
-                batch_ids = all_doc_ids[i:i+batch_size]
-                batch_metas = all_metadata[i:i+batch_size]
-                batch_texts = all_documents[i:i+batch_size]
+        with tqdm(total=total_chunks, desc="文档向量化进度", unit="chunk") as pbar:
+            for i in range(0, total_chunks, batch_size):
+                end_idx = min(i + batch_size, total_chunks)
+                batch_ids = all_doc_ids[i:end_idx]
+                batch_metas = all_metadata[i:end_idx]
+                batch_texts = all_documents[i:end_idx]
                 try:
                     collection.upsert(
                         ids=batch_ids,
                         documents=batch_texts,
                         metadatas=batch_metas
                     )
+                    processed_count = end_idx  # 当前已处理的chunk数量
                     pbar.update(len(batch_ids))
-                    percent = round(100 * i / len(all_doc_ids), 1)
+                    percent = round(100 * processed_count / total_chunks, 1)
                     VdbMeta.update_vdb_file_process_info(
                         file_id,
-                        f"已处理 {min(i+batch_size, len(all_doc_ids))}/{len(all_doc_ids)} 个分块",
+                        f"已处理 {processed_count}/{total_chunks} 个分块",
                         percent
                     )
                 except Exception as e:
-                    info = f"处理批次 {i}-{i+batch_size} 时出错: {str(e)}"
+                    info = f"处理批次 {i}-{end_idx} 时出错: {str(e)}"
                     VdbMeta.update_vdb_file_process_info(file_id, info)
                     logger.error(info)
                     continue
 
         logger.info(f"向量数据库构建完成，保存到 {vector_db}")
-        VdbMeta.update_vdb_file_process_info(file_id, "向量化已完成，保存至个人知识空间")
+        VdbMeta.update_vdb_file_process_info(file_id, "文档向量化已完成", 100)
     except Exception as e:
         info = f"处理文档时发生错误: {str(e)}"
         VdbMeta.update_vdb_file_process_info(file_id, info)
