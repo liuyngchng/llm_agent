@@ -131,7 +131,7 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
                     percent = round(100 * processed_count / total_chunks, 1)
                     VdbMeta.update_vdb_file_process_info(
                         file_id,
-                        f"已处理 {processed_count}/{total_chunks} 个分块",
+                        f"已处理 {processed_count}/{total_chunks} 个文本块",
                         percent
                     )
                 except Exception as e:

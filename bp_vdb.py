@@ -418,7 +418,7 @@ def process_doc():
                 VdbMeta.delete_vdb_file_by_id(file_id)
                 continue
             info = "开始解析文档结构..."
-            VdbMeta.update_vdb_file_process_info(file_id, info)
+            VdbMeta.update_vdb_file_process_info(file_id, info, 0)
             vdb_util.vector_file(file_id, cur_file_path,
                                  output_vdb_dir, my_cfg['api'], 300, 80)
         except Exception as e:

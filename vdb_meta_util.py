@@ -244,10 +244,10 @@ class VdbMeta:
         return my_dt
 
     @staticmethod
-    def update_vdb_file_process_info(file_id: int, process_info: str, percent=0):
+    def update_vdb_file_process_info(file_id: int, process_info: str, percent=-1):
         if not file_id or not process_info:
             raise RuntimeError(f"param_null_err, {file_id}, {process_info}")
-        if percent == 0:
+        if percent == -1:
             sql = f"update vdb_file_info set process_info = '{process_info}' where id = {file_id} limit 1"
         else:
             sql = f"update vdb_file_info set process_info = '{process_info}', percent={percent} where id = {file_id} limit 1"

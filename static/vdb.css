@@ -462,6 +462,53 @@ footer {
     width: 100%;
 }
 
+/* 文件名截断样式 */
+.filename-cell {
+    max-width: 200px; /* 改为固定值 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    position: relative;
+    cursor: help;
+}
+
+/* 文件名提示框样式 */
+.filename-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    margin-bottom: 5px;
+}
+
+.filename-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.8);
+}
+
+.filename-cell:hover .filename-tooltip {
+    opacity: 1;
+}
+
+
+
+
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -546,4 +593,17 @@ footer {
         padding: 4px 8px;
         font-size: 0.7rem;
     }
+
+    .filename-cell {
+        max-width: 120px; /* 移动端显示更短 */
+    }
+
+    .filename-tooltip {
+        max-width: 200px;
+        white-space: normal;
+        word-break: break-word;
+        text-align: center;
+    }
+
+
 }

@@ -16,8 +16,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const createKB = document.getElementById('createKB');
     const selectBtn = document.getElementById('selectBtn');
 
+    // 修改自动刷新逻辑 - 添加对selector.value的检查
     refreshInterval = setInterval(() => {
-        if (currentKB) {
+        const selector = document.getElementById('kb_selector');
+        // 三重检查：currentKB存在、selector有值、且两者一致
+        if (currentKB && selector.value && selector.value === currentKB) {
             loadFileList(currentKB);
         }
     }, 2000);
@@ -37,6 +40,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             step2.classList.remove('hidden');
             loadFileList(currentKB);
         } else {
+            // 彻底清理状态
+            currentKB = null;
             step2.classList.add('hidden');
             deleteBtn.style.display = 'none';
             setDefaultBtn.style.display = 'none';
@@ -353,12 +358,10 @@ async function loadFileList(kb_id) {
 
         if (!response.ok) throw new Error('获取文件列表失败');
         const result = await response.json();
-        // 检查结果中是否有 files 属性
         if (!result.files) {
             throw new Error('返回数据格式错误，缺少 files 属性');
         }
         const files = result.files;
-        // 清空表格
         tbody.innerHTML = '';
 
         if (files.length === 0) {
@@ -369,9 +372,14 @@ async function loadFileList(kb_id) {
         // 填充文件列表
         files.forEach(file => {
             const row = document.createElement('tr');
+            const displayName = truncateFileName(file.name, 25); // 25个字符长度
+
             row.innerHTML = `
                 <td>${file.id}</td>
-                <td>${file.name}</td>
+                <td class="filename-cell">
+                    ${displayName}
+                    ${file.name.length > 25 ? `<div class="filename-tooltip">${file.name}</div>` : ''}
+                </td>
                 <td>${file.percent}%</td>
                 <td>${file.process_info}</td>
                 <td>
@@ -395,6 +403,15 @@ async function loadFileList(kb_id) {
         console.error('加载文件列表失败:', error);
         container.style.display = 'none';
     }
+}
+
+// 文件名截断函数
+function truncateFileName(filename, maxLength) {
+    if (filename.length <= maxLength) {
+        return filename;
+    }
+    // 确保截断后总长度不超过maxLength
+    return filename.substring(0, maxLength - 3) + '...';
 }
 
 // 处理文件删除
