@@ -583,11 +583,11 @@ footer {
         font-size: 0.9rem;
     }
 
-    #fileListTable th:nth-child(1) { width: 15%; }
+    #fileListTable th:nth-child(1) { width: 10%; }
     #fileListTable th:nth-child(2) { width: 25%; }
     #fileListTable th:nth-child(3) { width: 15%; }
-    #fileListTable th:nth-child(4) { width: 30%; }
-    #fileListTable th:nth-child(5) { width: 15%; }
+    #fileListTable th:nth-child(4) { width: 40%; }
+    #fileListTable th:nth-child(5) { width: 10%; }
 
     .delete-file-btn {
         padding: 4px 8px;

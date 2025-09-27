@@ -103,9 +103,10 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
         all_doc_ids = []
         all_metadata = []
         all_documents = []
-
+        source_list = set()
         for i, chunk in enumerate(doc_list):
             doc_id = f"{os.path.basename(chunk.metadata['source'])}_chunk_{i}"
+            source_list.add(os.path.basename(chunk.metadata['source']))
             all_doc_ids.append(doc_id)
             all_metadata.append(chunk.metadata)
             all_documents.append(chunk.page_content)
@@ -114,7 +115,8 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
         # 批量添加文档
         logger.info(f"开始向量化 {total_chunks} chunks (batch_size={batch_size})")
         VdbMeta.update_vdb_file_process_info(file_id, "开始对文本片段进行向量化")
-        with tqdm(total=total_chunks, desc="文档向量化进度", unit="chunk") as pbar:
+        source_desc = f"[{file_id}]_{source_list} 向量化进度"
+        with tqdm(total=total_chunks, desc=source_desc, unit="chunk") as pbar:
             for i in range(0, total_chunks, batch_size):
                 end_idx = min(i + batch_size, total_chunks)
                 batch_ids = all_doc_ids[i:end_idx]

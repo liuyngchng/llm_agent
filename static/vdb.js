@@ -128,6 +128,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const responseData = await uploadRes.json();
             // 更新状态
             document.getElementById('fileUploadResult').textContent = responseData.message;
+            if (uploadRes.ok) {
+                // 清空文件输入
+                fileInput.value = '';
+                // 清空文件名显示
+                document.getElementById('fileName').textContent = "未选择文件";
+            }
         } catch (error) {
             console.error('处理失败:', error);
             document.getElementById('fileUploadResult').textContent = "处理失败";
@@ -370,12 +376,13 @@ async function loadFileList(kb_id) {
         }
 
         // 填充文件列表
-        files.forEach(file => {
+        files.forEach((file, index)  => {
             const row = document.createElement('tr');
             const displayName = truncateFileName(file.name, 25); // 25个字符长度
+            const sequenceNumber = formatSequenceNumber(index, files.length);
 
             row.innerHTML = `
-                <td>${file.id}</td>
+                <td>${sequenceNumber}</td>
                 <td class="filename-cell">
                     ${displayName}
                     ${file.name.length > 25 ? `<div class="filename-tooltip">${file.name}</div>` : ''}
@@ -403,6 +410,12 @@ async function loadFileList(kb_id) {
         console.error('加载文件列表失败:', error);
         container.style.display = 'none';
     }
+}
+
+function formatSequenceNumber(index, total) {
+    const digits = total.toString().length;
+    return (index + 1).toString().padStart(digits, ' ');
+    // 或者使用零填充：return (index + 1).toString().padStart(digits, '0');
 }
 
 // 文件名截断函数
