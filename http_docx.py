@@ -87,8 +87,6 @@ def generate_outline():
     keywords = request.json.get("keywords")
     if not doc_type_chinese or not doc_title:
         return jsonify({"error": "未提交待写作文档的标题或文档类型，请补充"}), 400
-    task_id = int(time.time()*1000) # 生成任务ID， 使用毫秒数
-    docx_meta_util.save_docx_meta_info(uid, task_id, doc_type, doc_title, keywords)
     return Response(
         stream_with_context(gen_docx_outline_stream(doc_type_chinese, doc_title, keywords, my_cfg)),
         mimetype='text/event-stream',
@@ -132,7 +130,7 @@ def write_doc_with_outline_txt():
     文档目录参数 doc_outline 传递的文本格式如下： 1.标题1 \n1.1 标题1.1 \n1.2 标题1.2
     """
     data = request.json
-    logger.info(f"write_doc_with_outline_txt , data{data}")
+    logger.info(f"write_doc_with_outline_txt, data{data}")
     uid = data.get("uid")
     doc_title = data.get("doc_title")
     doc_outline = data.get("doc_outline")
@@ -140,15 +138,17 @@ def write_doc_with_outline_txt():
     keywords = data.get("keywords")
     doc_type_desc = my_enums.WriteDocType.get_doc_type_desc(doc_type)
     if not doc_type_desc or not doc_title or not doc_outline:
-        err_info = {"error": "缺少参数"}
+        err_info = {"error": "缺少文档类型、标题、目录参数中的一个或多个"}
         logger.error(f"err_occurred, {err_info}")
         return json.dumps(err_info, ensure_ascii=False), 400
-    task_id = int(time.time()*1000)
-    docx_file_name = docx_util.gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
-    logger.info(f"docx_template_file_generated_with_name, {docx_file_name}")
+    task_id = int(time.time()*1000)                 # 生成任务ID， 使用毫秒数
+
+    template_file_name = docx_util.gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
+    logger.info(f"docx_template_file_generated_with_name, {template_file_name}")
+    docx_meta_util.save_docx_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
     threading.Thread(
         target=fill_docx_with_template,
-        args=(uid, doc_type_desc, doc_title, keywords, task_id, docx_file_name, False)
+        args=(uid, doc_type_desc, doc_title, keywords, task_id, template_file_name, False)
     ).start()
     info = {"status": "started", "task_id": task_id}
     logger.info(f"write_doc_with_outline_txt, {info}")
@@ -174,9 +174,10 @@ def write_doc_with_docx_template():
     uid = data.get("uid")
     keywords = data.get("keywords")
     if not task_id or not template_file_name or not uid:
-        err_info = {"error": "缺少参数"}
+        err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
         logger.error(f"err_occurred, {err_info}")
         return jsonify(err_info), 400
+    docx_meta_util.save_docx_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
     threading.Thread(
         target=fill_docx_with_template,
         args=(uid, doc_type_desc, doc_title, keywords, task_id, template_file_name, True)
