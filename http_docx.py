@@ -41,28 +41,7 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
-# 数据结构
-"""
-task_progress = {
-   "uid1": {
-        "taskId1": {
-            "percent": 0.0,
-            "text": "目前的状况是个啥？",
-            "timestamp": time.time(),
-            "elapsed_time": "xxx分xxx秒",
-        }
-   },
-   "uid2": {
-        "taskId2": {
-            "percent": 0.0,
-            "text": "目前的状况是个啥？",
-            "timestamp": time.time(),
-            "elapsed_time": "xxx分xxx秒",
-        }
-   }
-"""
-# task_progress = {}
-# thread_lock = threading.Lock()
+
 
 @app.route('/')
 def app_home():
@@ -72,6 +51,9 @@ def app_home():
 
 @app.route('/docx/task', methods=['GET'])
 def my_docx_task():
+    """
+    获取当前在进行的写作任务
+    """
     logger.info("my_docx_task")
     uid = request.args.get('uid')
     app_source = request.args.get('app_source')
@@ -90,7 +72,7 @@ def my_docx_task():
 @app.route('/docx/generate/outline', methods=['POST'])
 def generate_outline():
     """
-    生成文档目录
+    对于没有写作模板的，由系统自动生成文档目录，默认为三级
     return outline like
     # 1.一级标题
     ## 1.1 二级标题
@@ -98,6 +80,7 @@ def generate_outline():
     ### 1.1.2 三级标题
     """
     logger.info(f"gen_doc_outline {request.json}")
+    uid = request.json.get("uid")
     doc_type = request.json.get("doc_type")
     doc_type_chinese = my_enums.WriteDocType.get_doc_type_desc(doc_type)
     doc_title = request.json.get("doc_title")
@@ -110,15 +93,18 @@ def generate_outline():
         status=200,
     )
 
-@app.route('/docx/upload', methods=['POST'])  # 修正路由路径
+@app.route('/docx/upload', methods=['POST'])
 def upload_docx_template_file():
+    """
+    上传Word docx写作文档模板，需要包含三级目录
+    """
     logger.info(f"upload_file_req, {request}")
     if 'file' not in request.files:
-        return json.dumps({"error": "未找到文件"}, ensure_ascii=False), 400
+        return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
     file = request.files['file']
     uid = int(request.form.get('uid'))
     if file.filename == '':
-        return json.dumps({"error": "空文件名"}, ensure_ascii=False), 400
+        return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
 
     # 生成任务ID， 使用毫秒数
     task_id = int(time.time()*1000)
