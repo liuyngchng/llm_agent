@@ -87,6 +87,8 @@ def generate_outline():
     keywords = request.json.get("keywords")
     if not doc_type_chinese or not doc_title:
         return jsonify({"error": "未提交待写作文档的标题或文档类型，请补充"}), 400
+    task_id = int(time.time()*1000) # 生成任务ID， 使用毫秒数
+    docx_meta_util.save_docx_meta_info(uid, task_id, doc_type, doc_title, keywords)
     return Response(
         stream_with_context(gen_docx_outline_stream(doc_type_chinese, doc_title, keywords, my_cfg)),
         mimetype='text/event-stream',

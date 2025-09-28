@@ -11,8 +11,26 @@ from my_enums import DataType
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+def save_docx_meta_info(uid: int, task_id: int, doc_type: str, doc_title: str, keywords: str) -> dict:
+    """
+    保存docx文件处理任务的相关元数据信息
+    :param uid: user id
+    :param task_id: process task id
+    :param doc_type: docx content type
+    :param doc_title: docx content title
+    :param keywords: 其他通用的写作要求
+    :return:
+    """
+    logger.info(f"save_docx_info {uid}, {task_id}, {doc_type}, {doc_title}, {keywords}")
+    sql = (f"insert into docx_info(uid, task_id, doc_type, doc_title, keywords) values "
+           f"({uid}, {task_id}, '{doc_type}', '{doc_title}', '{keywords}')")
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
+        logger.info(f"save_file_info_sql, {sql}")
+        my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
+        return my_dt
 
-def save_docx_info(uid: int, task_id: int, template_path: str) -> dict:
+
+def save_docx_template_path(uid: int, task_id: int, template_path: str) -> dict:
     """
     保存docx文件处理任务的相关元数据信息
     :param uid: user id

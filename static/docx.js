@@ -39,16 +39,26 @@ function selectTemplate(type) {
 
     // 重置目录显示
     const outlineContainer = document.getElementById('outlineContainer');
+    // 获取已存储的目录
+    const existingOutline = document.getElementById('outlineText').value;
     if (type === 'system') {
-        outlineContainer.innerHTML = `
-            <div class="info-message" style="text-align: center; padding: 30px;">
-                <i class="fas fa-robot" style="font-size: 3rem; color: #4b6cb7; margin-bottom: 15px;"></i>
-                <p>已选择系统智能生成模式，点击下方按钮生成目录</p>
-                <button class="btn btn-primary" onclick="generateOutline()" style="margin-top: 20px;">
-                <i class="fas fa-sync-alt"></i> 生成目录
-                </button>
-            </div>
-        `;
+        //如果已有生成的目录，则显示它；否则显示提示信息
+        if (existingOutline) {
+            renderOutline(existingOutline); // 直接渲染已存储的目录
+            console.log('line48_confirmBtn_disabled_false')
+            confirmBtn.disabled = false;
+        } else {
+            confirmBtn.disabled = true;
+            outlineContainer.innerHTML = `
+                <div class="info-message" style="text-align: center; padding: 30px;">
+                    <i class="fas fa-robot" style="font-size: 3rem; color: #4b6cb7; margin-bottom: 15px;"></i>
+                    <p>已选择系统智能生成模式，点击下方按钮生成目录</p>
+                    <button class="btn btn-primary" onclick="generateOutline()" style="margin-top: 20px;">
+                    <i class="fas fa-sync-alt"></i> 生成目录
+                    </button>
+                </div>
+            `;
+        }
     } else {
         outlineContainer.innerHTML = `
             <div class="info-message" style="text-align: center; padding: 30px;">
@@ -57,9 +67,6 @@ function selectTemplate(type) {
             </div>
         `;
     }
-
-    // 禁用确认按钮
-    document.getElementById('confirmOutlineBtn').disabled = true;
 }
 
 // 下一步函数
