@@ -34,6 +34,7 @@ sqlite_vss
 **/*.yaml
 **/*.wav
 cfg.yml
+cfg.db
 **/*.cer
 **/*.faiss
 **/*.doc

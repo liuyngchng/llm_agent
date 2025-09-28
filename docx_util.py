@@ -455,7 +455,7 @@ def get_catalogue(target_doc: str) -> str:
     return my_catalogue
 
 
-def gen_docx_template_with_outline_txt(task_id: str, os_dir:str, title: str, outline: str) -> str:
+def gen_docx_template_with_outline_txt(task_id: int, os_dir:str, title: str, outline: str) -> str:
     """
     生成Word docx 文档文件，并返回文件名称
     :param task_id: 执行任务的ID
