@@ -111,7 +111,6 @@ def upload_docx_template_file():
     filename = f"{task_id}_{file.filename}"
     save_path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(save_path)
-    docx_meta_util.save_docx_info(uid, task_id, filename)
     logger.info(f"upload_file_saved_as {filename}, {task_id}")
     outline = docx_util.get_outline_txt(save_path)
     logger.info(f"get_file_outline,task_id {task_id}, {outline}")
@@ -220,7 +219,10 @@ def get_doc_process_info():
     if not task_id or not uid:
         return jsonify({"error": "缺少任务ID或用户ID"}), 400
     file_info = docx_meta_util.get_docx_info_by_task_id(task_id)
-    file_info['elapsed_time'] = time.time() - task_id
+    logger.info(f"get_docx_info_by_task_id, {file_info}")
+    if not file_info or len(file_info) == 0:
+        return json.dumps({"error": "未找到任务ID对应的文档信息"}, ensure_ascii=False), 400
+    file_info[0]['elapsed_time'] = time.time() - task_id
     # logger.info(f"get_doc_process_info, {info}")
     return json.dumps(file_info, ensure_ascii=False), 200
 
@@ -253,7 +255,7 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
                 f"task_id: {task_id}, file_name: {file_name}, is_include_prompt = {is_include_prompt}")
 
     try:
-        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始解析文档结构...")
+        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始解析文档结构...", 0)
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
         catalogue = extract_catalogue(my_target_doc)
         output_file_name = f"output_{task_id}.docx"

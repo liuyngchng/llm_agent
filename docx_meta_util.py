@@ -24,7 +24,7 @@ def save_docx_meta_info(uid: int, task_id: int, doc_type: str, doc_title: str,
     :return:
     """
     logger.info(f"save_docx_info {uid}, {task_id}, {doc_type}, {doc_title}, {keywords}, {template_file_name}")
-    sql = (f"insert into docx_info(uid, task_id, doc_type, doc_title, keywords, template_path) values "
+    sql = (f"insert into docx_file_info(uid, task_id, doc_type, doc_title, keywords, template_path) values "
            f"({uid}, {task_id}, '{doc_type}', '{doc_title}', '{keywords}', '{template_file_name}')")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         logger.info(f"save_file_info_sql, {sql}")

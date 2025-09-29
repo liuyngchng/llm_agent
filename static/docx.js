@@ -473,12 +473,13 @@ async function fetchTaskProgress(taskId, token) {
 
         if (!response.ok) throw new Error('进度获取失败');
 
-        const progressInfo = await response.json();
+        const progressData = await response.json();
+        const progressInfo = progressData[0] || {};
         const progressText = document.getElementById('progressText');
         const progressBarFill = document.getElementById('progressBarFill');
 
         // 更新进度显示
-        progressText.innerHTML = progressInfo.progress || '正在处理...';
+        progressText.innerHTML = progressInfo.process_info || '正在处理...';
         if (progressInfo.elapsed_time) {
             document.getElementById('elapsed_time').value = progressInfo.elapsed_time;
         }
@@ -490,10 +491,7 @@ async function fetchTaskProgress(taskId, token) {
         }
 
         // 检查任务是否完成
-        if (progressInfo.status === "completed" ||
-            progressInfo.progress?.includes("100%") ||
-            progressInfo.progress?.toLowerCase().includes("完成") ||
-            progressInfo.progress?.toLowerCase().includes("成功")) {
+        if (progressInfo.percent >= 100) {
             clearInterval(pollInterval);
             const taskId = document.getElementById('taskId').value;
             const downloadUrl = `/docx/download/task/${taskId}`;
