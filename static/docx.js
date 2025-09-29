@@ -379,6 +379,7 @@ function markdownToPlainText(markdown) {
 
 document.addEventListener('DOMContentLoaded', function() {
     updateProgressBar();
+    loadKnowledgeBases();
 });
 
 async function gen_doc() {
@@ -410,7 +411,8 @@ async function gen_doc() {
             doc_type: doc_type,
             doc_title: doc_title,
             keywords: keywords,
-            doc_outline: doc_outline
+            doc_outline: doc_outline,
+            vbd_id: document.getElementById('knowledgeBase').value
         };
     } else {
         apiUrl = '/docx/write/template';
@@ -420,7 +422,8 @@ async function gen_doc() {
             doc_title: doc_title,
             keywords: keywords,
             task_id: task_id,
-            file_name: file_name
+            file_name: file_name,
+            vbd_id: document.getElementById('knowledgeBase').value
         };
     }
 
@@ -551,5 +554,41 @@ function updateDownloadLink(downloadUrl) {
                 alert('下载链接无效，请重试');
             }
         };
+    }
+}
+
+// 加载知识库列表
+async function loadKnowledgeBases() {
+    const selector = document.getElementById('knowledgeBase');
+    const uid = document.getElementById('uid').value;
+    const token = document.getElementById('t').value;
+
+    try {
+        const response = await fetch('/vdb/my/list', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ uid, t })
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`API 错误 ${response.status}: ${errorText.slice(0, 100)}...`);
+        }
+
+        const result = await response.json();
+        // 清空现有选项（除了第一个）
+        while (selector.options.length > 1) {
+            selector.remove(1);
+        }
+        // 添加知识库选项
+        if (result.kb_list && result.kb_list.length > 0) {
+            result.kb_list.forEach(kb => {
+                const option = document.createElement('option');
+                option.value = kb.id;
+                option.textContent = kb.name;
+                selector.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('加载知识库失败:', error);
     }
 }

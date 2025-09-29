@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (currentKB && selector.value && selector.value === currentKB) {
             loadFileList(currentKB);
         }
-    }, 2000);
+    }, 5000);
 
     // 加载知识库列表
     await loadKnowledgeBases();
@@ -133,6 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fileInput.value = '';
                 // 清空文件名显示
                 document.getElementById('fileName').textContent = "未选择文件";
+                loadFileList(currentKB)
             }
         } catch (error) {
             console.error('处理失败:', error);
