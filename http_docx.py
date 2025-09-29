@@ -147,20 +147,21 @@ def write_doc_with_outline_txt():
     doc_title = data.get("doc_title")
     doc_outline = data.get("doc_outline")
     doc_type = data.get("doc_type")
-    keywords = data.get("keywords")
+
     doc_type_desc = my_enums.WriteDocType.get_doc_type_desc(doc_type)
     if not doc_type_desc or not doc_title or not doc_outline:
         err_info = {"error": "缺少文档类型、标题、目录参数中的一个或多个"}
         logger.error(f"err_occurred, {err_info}")
         return json.dumps(err_info, ensure_ascii=False), 400
     task_id = int(time.time()*1000)                 # 生成任务ID， 使用毫秒数
-
+    vbd_id = int(data.get("vbd_id"))
+    keywords = data.get("keywords")
     template_file_name = docx_util.gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
     logger.info(f"docx_template_file_generated_with_name, {template_file_name}")
     docx_meta_util.save_docx_meta_info(uid, task_id, doc_type_desc, doc_title, keywords, template_file_name)
     threading.Thread(
         target=fill_docx_with_template,
-        args=(uid, doc_type_desc, doc_title, keywords, task_id, template_file_name, False)
+        args=(uid, doc_type_desc, doc_title, keywords, task_id, template_file_name, vbd_id, False)
     ).start()
     info = {"status": "started", "task_id": task_id}
     logger.info(f"write_doc_with_outline_txt, {info}")
@@ -178,6 +179,7 @@ def write_doc_with_docx_template():
     doc_type = data.get("doc_type")
     doc_type_desc = my_enums.WriteDocType.get_doc_type_desc(doc_type)
     doc_title = data.get("doc_title")
+
     if not doc_type_desc or not doc_title:
         err_info = {"error": "缺少参数"}
         logger.error(f"err_occurred, {err_info}")
@@ -185,6 +187,7 @@ def write_doc_with_docx_template():
     template_file_name = data.get("file_name")
     uid = data.get("uid")
     keywords = data.get("keywords")
+    vbd_id = int(data.get("vbd_id"))
     if not task_id or not template_file_name or not uid:
         err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
         logger.error(f"err_occurred, {err_info}")
@@ -192,7 +195,7 @@ def write_doc_with_docx_template():
     docx_meta_util.save_docx_meta_info(uid, task_id, doc_type_desc, doc_title, keywords, template_file_name)
     threading.Thread(
         target=fill_docx_with_template,
-        args=(uid, doc_type_desc, doc_title, keywords, task_id, template_file_name, True)
+        args=(uid, doc_type_desc, doc_title, keywords, task_id, template_file_name, vbd_id, True)
     ).start()
 
     info = {"status": "started", "task_id": task_id}
@@ -253,7 +256,7 @@ def clean_docx_tasks():
 
 
 def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: str, task_id: int,
-                            file_name: str, is_include_prompt = False):
+                            file_name: str, vbd_id:int, is_include_prompt = False):
     """
     处理无模板的文档，三级目录自动生成，每个段落无写作要求
     :param uid: 用户ID
@@ -265,7 +268,7 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
     :param is_include_prompt: 各小节是否包含有写作提示词语
     """
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "
-                f"task_id: {task_id}, file_name: {file_name}, is_include_prompt = {is_include_prompt}")
+                f"task_id: {task_id}, file_name: {file_name}, vbd_id:{vbd_id}, is_include_prompt = {is_include_prompt}")
 
     try:
         docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始解析文档结构...", 0)
@@ -277,7 +280,10 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
         docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始处理文档...")
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}, 其他写作要求是 {keywords}"
         para_comment_dict = get_para_comment_dict(my_target_doc)
-        default_vdb = VdbMeta.get_user_default_vdb(uid)
+        if vbd_id:
+            default_vdb = VdbMeta.get_vdb_by_id(vbd_id)
+        else:
+            default_vdb = VdbMeta.get_user_default_vdb(uid)
         logger.info(f"my_default_vdb_dir_for_gen_doc: {default_vdb}")
         if default_vdb:
             my_vdb_dir = f"{VDB_PREFIX}{uid}_{default_vdb[0]['id']}"

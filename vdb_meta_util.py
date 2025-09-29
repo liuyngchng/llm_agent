@@ -121,6 +121,16 @@ class VdbMeta:
         return my_dt
 
     @staticmethod
+    def get_vdb_by_id(vbd_id: int):
+        if not vbd_id:
+            raise RuntimeError(f"get_vdb_by_id_param_null_err, {vbd_id}")
+        sql = f"select id, name from vdb_info where id = {vbd_id} limit 1"
+        logger.info(f"get_vdb_by_id_sql, {sql}")
+        my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+        logger.info(f"get_vdb_by_id_dt {my_dt}")
+        return my_dt
+
+    @staticmethod
     def set_user_default_vdb(uid: int, vdb_id: int):
         if not uid or not vdb_id:
             raise RuntimeError(f"set_default_vdb_param_null_err, {uid}, {vdb_id}")
