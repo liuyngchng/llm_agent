@@ -50,11 +50,11 @@ def app_home():
 
 
 @app.route('/docx/task', methods=['GET'])
-def my_docx_task():
+def docx_task_index():
     """
-    获取当前在进行的写作任务
+    获取当前在进行的写作任务，渲染页面
     """
-    logger.info("my_docx_task")
+    logger.info(f"docx_task_index, {request.args}")
     uid = request.args.get('uid')
     app_source = request.args.get('app_source')
     warning_info = request.args.get('warning_info', "")
@@ -68,6 +68,19 @@ def my_docx_task():
     dt_idx = "docx_my_task.html"
     logger.info(f"return_page_with_no_auth {dt_idx}")
     return render_template(dt_idx, **ctx)
+
+@app.route('/docx/my/task', methods=['POST'])
+def my_docx_task():
+    """
+    获取当前在进行的写作任务
+    """
+    data = request.json
+    logger.info(f"my_docx_task_req, {data}")
+    uid = int(data.get('uid'))
+    logger.info(f"get_my_docx_task, uid {uid}")
+    task_list = docx_meta_util.get_user_docx_task_list(uid)
+    return json.dumps(task_list, ensure_ascii=False), 200
+
 
 @app.route('/docx/generate/outline', methods=['POST'])
 def generate_outline():

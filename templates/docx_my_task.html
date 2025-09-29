@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>在线文档生成 - 我的任务</title>
-<!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">-->
     <link rel="stylesheet" href="/static/docx.my.task.css">
 </head>
 <body>
@@ -14,9 +13,6 @@
             <p>查看和管理您的文档生成任务</p>
 
             <div class="header-controls">
-                <a href="/docx" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> 返回文档生成
-                </a>
                 <button class="btn btn-primary" id="refreshAllBtn">
                     <i class="fas fa-sync-alt"></i> 刷新所有任务
                 </button>
@@ -31,10 +27,10 @@
             <table id="tasksTable">
                 <thead>
                     <tr>
-                        <th>任务ID</th>
-                        <th>任务信息</th>
-                        <th>创建时间</th>
-                        <th>状态</th>
+                        <th>文档ID</th>
+                        <th>文档标题</th>
+                        <th>处理信息</th>
+                        <th>处理进度</th>
                         <th>文档下载</th>
                         <th>操作</th>
                     </tr>
@@ -60,6 +56,11 @@
         async function fetchTasks() {
             showLoading();
             try {
+                // 确保token和uid已定义
+                const token = localStorage.getItem('token') || '';
+<!--                const uid = localStorage.getItem('uid') || '';-->
+                const uid = getUidFromUrl(); // 直接从URL获取
+
                 const response = await fetch('/docx/my/task', {
                     method: 'POST',
                     headers: {
@@ -72,15 +73,11 @@
                 if (!response.ok) throw new Error('任务获取失败');
 
                 const tasksData = await response.json();
-                // 假设返回的是任务数组，根据实际API响应结构调整
                 const tasks = Array.isArray(tasksData) ? tasksData : [tasksData];
 
                 renderTasksTable(tasks);
             } catch (error) {
                 console.error('获取任务失败:', error);
-                alert('获取任务列表失败，请重试');
-                // 可保留示例数据作为降级方案
-                renderTasksTable(sampleTasks);
             } finally {
                 hideLoading();
             }
@@ -91,8 +88,10 @@
             showLoading();
 
             try {
-                // 调用刷新API，根据实际接口调整
-                const response = await fetch(`/docx/my/task/refresh`, {
+                const token = localStorage.getItem('token') || '';
+                const uid = localStorage.getItem('uid') || '';
+
+                const response = await fetch('/docx/my/task/refresh', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -106,26 +105,49 @@
 
                 if (!response.ok) throw new Error('刷新失败');
 
-                // 重新获取最新任务列表
                 await fetchTasks();
-                alert(`任务 ${taskId} 状态已刷新`);
             } catch (error) {
                 console.error('刷新失败:', error);
                 alert('刷新失败，请重试');
             }
         }
 
-        // 初始化页面
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('refreshAllBtn').addEventListener('click', fetchTasks);
-            fetchTasks();
-        });
+        // 重试任务
+        async function retryTask(taskId) {
+            showLoading();
+
+            try {
+                const token = localStorage.getItem('token') || '';
+                const uid = localStorage.getItem('uid') || '';
+
+                const response = await fetch('/docx/my/task/retry', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        uid: uid,
+                        task_id: taskId
+                    })
+                });
+
+                if (!response.ok) throw new Error('重试失败');
+
+                await fetchTasks();
+                alert(`任务 ${taskId} 已重新提交`);
+            } catch (error) {
+                console.error('重试失败:', error);
+                alert('重试失败，请重试');
+            }
+        }
+
         // 渲染任务表格
         function renderTasksTable(tasks) {
             const tableBody = document.querySelector('#tasksTable tbody');
             const emptyState = document.getElementById('emptyState');
 
-            if (tasks.length === 0) {
+            if (!tasks || tasks.length === 0) {
                 document.querySelector('table').style.display = 'none';
                 emptyState.style.display = 'block';
                 return;
@@ -135,74 +157,34 @@
             tasks.forEach(task => {
                 const row = document.createElement('tr');
 
-                // 任务ID
+                // 文档ID
                 const idCell = document.createElement('td');
-                idCell.textContent = task.id;
+                idCell.textContent = task.task_id || '未知ID';
                 idCell.style.fontWeight = '600';
                 idCell.style.color = '#4b6cb7';
 
-                // 任务信息
+                // 文档标题
                 const infoCell = document.createElement('td');
                 infoCell.innerHTML = `
-                    <div><strong>${task.title}</strong></div>
-                    <div style="color: #666; font-size: 0.9rem;">${task.type}</div>
+                    <div><strong>${task.doc_title || '无标题'}</strong></div>
+                    <div style="color: #666; font-size: 0.9rem;">${task.doc_type || '未知类型'}</div>
                 `;
 
-                // 创建时间
+                // 处理信息
                 const timeCell = document.createElement('td');
-                timeCell.textContent = task.createdAt;
+                timeCell.textContent = task.process_info || '未知时间';
 
-                // 状态
+                // 处理进度
                 const statusCell = document.createElement('td');
-                let statusText, statusClass;
-
-                switch(task.status) {
-                    case 'pending':
-                        statusText = '等待中';
-                        statusClass = 'status-pending';
-                        break;
-                    case 'in-progress':
-                        statusText = `生成中 (${task.progress}%)`;
-                        statusClass = 'status-in-progress';
-                        break;
-                    case 'completed':
-                        statusText = '已完成';
-                        statusClass = 'status-completed';
-                        break;
-                    case 'failed':
-                        statusText = '生成失败';
-                        statusClass = 'status-failed';
-                        break;
-                    default:
-                        statusText = '未知状态';
-                        statusClass = 'status-pending';
-                }
-
-                statusCell.innerHTML = `
-                    <div class="status-indicator ${statusClass}">
-                        <i class="fas ${task.status === 'completed' ? 'fa-check-circle' :
-                                      task.status === 'failed' ? 'fa-exclamation-circle' :
-                                      task.status === 'in-progress' ? 'fa-sync-alt fa-spin' : 'fa-clock'}"></i>
-                        ${statusText}
-                    </div>
-                    ${task.status === 'in-progress' ? `
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" style="width: ${task.progress}%"></div>
-                        </div>
-                    ` : ''}
-                `;
+                statusCell.textContent = task.percent + '%';
 
                 // 文档下载
                 const downloadCell = document.createElement('td');
-                if (task.status === 'completed' && task.downloadUrl) {
-                    downloadCell.innerHTML = `
-                        <a href="${task.downloadUrl}" class="action-btn action-download" download>
-                            <i class="fas fa-download"></i> 下载文档
+                downloadCell.innerHTML = `
+                        <a href="/docx/download/task/{task.task_id}">
+                            全文下载
                         </a>
                     `;
-                } else {
-                    downloadCell.textContent = '-';
-                }
 
                 // 操作
                 const actionCell = document.createElement('td');
@@ -226,64 +208,17 @@
                     `;
                 }
 
-                // 添加单元格到行
                 row.appendChild(idCell);
                 row.appendChild(infoCell);
                 row.appendChild(timeCell);
                 row.appendChild(statusCell);
                 row.appendChild(downloadCell);
                 row.appendChild(actionCell);
-
-                // 添加行到表格
                 tableBody.appendChild(row);
             });
 
             document.querySelector('table').style.display = 'table';
             emptyState.style.display = 'none';
-        }
-
-        // 模拟从后端获取任务数据
-        function fetchTasks() {
-            showLoading();
-
-            // 模拟网络请求延迟
-            setTimeout(() => {
-                renderTasksTable(sampleTasks);
-                hideLoading();
-            }, 800);
-        }
-
-        // 刷新任务状态
-        function refreshTask(taskId) {
-            showLoading();
-
-            // 模拟网络请求
-            setTimeout(() => {
-                // 在实际应用中，这里会调用后端API更新任务状态
-                alert(`任务 ${taskId} 状态已刷新`);
-                hideLoading();
-            }, 800);
-        }
-
-        // 重试任务
-        function retryTask(taskId) {
-            showLoading();
-
-            // 模拟网络请求
-            setTimeout(() => {
-                // 在实际应用中，这里会调用后端API重试任务
-                alert(`任务 ${taskId} 已重新提交`);
-
-                // 更新任务状态为"in-progress"
-                const task = sampleTasks.find(t => t.id === taskId);
-                if (task) {
-                    task.status = 'in-progress';
-                    task.progress = 10;
-                    renderTasksTable(sampleTasks);
-                }
-
-                hideLoading();
-            }, 800);
         }
 
         // 显示加载状态
@@ -298,18 +233,13 @@
 
         // 初始化页面
         document.addEventListener('DOMContentLoaded', () => {
-            // 刷新所有任务按钮事件
-            document.getElementById('refreshAllBtn').addEventListener('click', () => {
-                showLoading();
-                setTimeout(() => {
-                    alert('所有任务状态已刷新');
-                    hideLoading();
-                }, 800);
-            });
-
-            // 初始加载任务数据
+            document.getElementById('refreshAllBtn').addEventListener('click', fetchTasks);
             fetchTasks();
         });
+        function getUidFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('uid');
+        }
     </script>
 </body>
 </html>
