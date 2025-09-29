@@ -56,55 +56,70 @@
     </div>
 
     <script>
-        // 示例任务数据（实际应用中应从后端API获取）
-        const sampleTasks = [
-            {
-                id: "TX-20231001",
-                title: "营销策划方案",
-                type: "营销策划方案",
-                createdAt: "2023-10-01 14:30",
-                status: "in-progress",
-                progress: 75,
-                downloadUrl: ""
-            },
-            {
-                id: "TX-20230928",
-                title: "年度工作总结报告",
-                type: "年度工作总结",
-                createdAt: "2023-09-28 09:15",
-                status: "completed",
-                progress: 100,
-                downloadUrl: "/download/TX-20230928.docx"
-            },
-            {
-                id: "TX-20230925",
-                title: "项目计划书",
-                type: "项目计划书",
-                createdAt: "2023-09-25 16:45",
-                status: "completed",
-                progress: 100,
-                downloadUrl: "/download/TX-20230925.docx"
-            },
-            {
-                id: "TX-20230920",
-                title: "国家标准文档草案",
-                type: "国家标准(GB/(GB/T))",
-                createdAt: "2023-09-20 11:20",
-                status: "pending",
-                progress: 0,
-                downloadUrl: ""
-            },
-            {
-                id: "TX-20230915",
-                title: "技术可行性研究报告",
-                type: "可行性研究报告",
-                createdAt: "2023-09-15 13:40",
-                status: "failed",
-                progress: 45,
-                downloadUrl: ""
-            }
-        ];
+        // 获取任务数据
+        async function fetchTasks() {
+            showLoading();
+            try {
+                const response = await fetch('/docx/my/task', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ uid: uid })
+                });
 
+                if (!response.ok) throw new Error('任务获取失败');
+
+                const tasksData = await response.json();
+                // 假设返回的是任务数组，根据实际API响应结构调整
+                const tasks = Array.isArray(tasksData) ? tasksData : [tasksData];
+
+                renderTasksTable(tasks);
+            } catch (error) {
+                console.error('获取任务失败:', error);
+                alert('获取任务列表失败，请重试');
+                // 可保留示例数据作为降级方案
+                renderTasksTable(sampleTasks);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 刷新单个任务状态
+        async function refreshTask(taskId) {
+            showLoading();
+
+            try {
+                // 调用刷新API，根据实际接口调整
+                const response = await fetch(`/docx/my/task/refresh`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        uid: uid,
+                        task_id: taskId
+                    })
+                });
+
+                if (!response.ok) throw new Error('刷新失败');
+
+                // 重新获取最新任务列表
+                await fetchTasks();
+                alert(`任务 ${taskId} 状态已刷新`);
+            } catch (error) {
+                console.error('刷新失败:', error);
+                alert('刷新失败，请重试');
+            }
+        }
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('refreshAllBtn').addEventListener('click', fetchTasks);
+            fetchTasks();
+        });
         // 渲染任务表格
         function renderTasksTable(tasks) {
             const tableBody = document.querySelector('#tasksTable tbody');
