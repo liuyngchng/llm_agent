@@ -157,7 +157,7 @@ def write_doc_with_outline_txt():
 
     template_file_name = docx_util.gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
     logger.info(f"docx_template_file_generated_with_name, {template_file_name}")
-    docx_meta_util.save_docx_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
+    docx_meta_util.save_docx_meta_info(uid, task_id, doc_type_desc, doc_title, keywords, template_file_name)
     threading.Thread(
         target=fill_docx_with_template,
         args=(uid, doc_type_desc, doc_title, keywords, task_id, template_file_name, False)
@@ -189,7 +189,7 @@ def write_doc_with_docx_template():
         err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
         logger.error(f"err_occurred, {err_info}")
         return jsonify(err_info), 400
-    docx_meta_util.save_docx_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
+    docx_meta_util.save_docx_meta_info(uid, task_id, doc_type_desc, doc_title, keywords, template_file_name)
     threading.Thread(
         target=fill_docx_with_template,
         args=(uid, doc_type_desc, doc_title, keywords, task_id, template_file_name, True)
