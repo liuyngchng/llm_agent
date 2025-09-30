@@ -75,17 +75,23 @@
         <!-- 第二步：文档上传（默认隐藏） -->
         <div id="step2" class="hidden">
             <div class="content-section">
-
-
                 <h2><i class="fas fa-file-upload"></i> 文档上传</h2>
                 <div class="input-group">
-                    <input type="file" id="fileInput" accept=".pdf,.docx,.txt" style="display:none">
+                    <input type="file" id="fileInput" accept=".pdf,.docx,.txt" multiple style="display:none">
                     <button class="btn btn-primary" id="selectBtn">
-                        <i class="fas fa-folder-open"></i> 选择文档
+                        <i class="fas fa-folder-open"></i> 选择多个文档
                     </button>
-                    <div id="fileName">未选择文件</div>
+                    <div id="fileList" class="file-list-container">
+                        <div class="file-list-header">
+                            <span>已选择 <span id="fileCount">0</span> 个文件</span>
+                            <button type="button" class="btn-clear" id="clearFilesBtn">清空</button>
+                        </div>
+                        <div id="fileItems" class="file-items">
+                            <!-- 文件列表将在这里动态显示 -->
+                        </div>
+                    </div>
                     <button class="btn btn-primary" id="startBtn">
-                        <i class="fas fa-cloud-upload-alt"></i> 上传
+                        <i class="fas fa-cloud-upload-alt"></i> 批量上传
                     </button>
                 </div>
 
@@ -93,6 +99,15 @@
                     <div class="progress-text">
                         <i class="fas fa-info-circle"></i>
                         <span id="fileUploadResult">请选择文档并点击上传按钮开始构建参考材料库</span>
+                    </div>
+                    <div id="uploadProgress" class="upload-progress" style="display: none;">
+                        <div class="progress-bar">
+                            <div id="overallProgressFill" class="progress-fill"></div>
+                        </div>
+                        <div class="progress-info">
+                            <span id="progressText">上传中: 0/0</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
                     </div>
                 </div>
             </div>

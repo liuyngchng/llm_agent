@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 import sqlite3
+import time
 
 import cfg_util
 from db_util import DbUtl, CFG_DB_URI, CFG_DB_FILE
@@ -63,7 +64,10 @@ class VdbMeta:
 
     @staticmethod
     def create_vdb_info(kdb_name: str, uid: int, is_public=False):
-        sql = f"insert into vdb_info (name, uid, is_public) values ('{kdb_name}', {uid}, '{is_public}')"
+        timestamp = time.time()
+        # 生成类似格式（UTC时间）
+        iso_str = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
+        sql = f"insert into vdb_info (name, uid, is_public, create_time) values ('{kdb_name}', {uid}, '{is_public}','{iso_str}')"
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"create_vdb_info_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
@@ -235,8 +239,11 @@ class VdbMeta:
     @staticmethod
     def save_vdb_file_info(original_file_name: str, saved_file_name: str, uid: int, vdb_id: int, task_id: int,
                            file_md5: str):
-        sql = (f"insert into vdb_file_info (name, uid, vdb_id, file_path, task_id, file_md5) values"
-               f" ('{original_file_name}', {uid}, {vdb_id}, '{saved_file_name}', {task_id}, '{file_md5}')")
+        timestamp = time.time()
+        # 生成类似格式（UTC时间）
+        iso_str = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
+        sql = (f"insert into vdb_file_info (name, uid, vdb_id, file_path, task_id, file_md5, create_time) values"
+               f" ('{original_file_name}', {uid}, {vdb_id}, '{saved_file_name}', {task_id}, '{file_md5}', '{iso_str}')")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"save_file_info_sql, {sql}")
             my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)

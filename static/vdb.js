@@ -5,6 +5,7 @@ let currentKB = null;
 const spinnerChars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 let spinCounter = 0;
 let refreshInterval = null;
+let selectedFiles = []; // 存储选中的文件列表
 
 // 页面加载时初始化知识库管理
 document.addEventListener('DOMContentLoaded', async () => {
@@ -15,6 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const kbSelector = document.getElementById('kb_selector');
     const createKB = document.getElementById('createKB');
     const selectBtn = document.getElementById('selectBtn');
+    const clearFilesBtn = document.getElementById('clearFilesBtn');
 
     // 修改自动刷新逻辑 - 添加对selector.value的检查
     refreshInterval = setInterval(() => {
@@ -86,60 +88,102 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // 文件选择处理
+    // 文件选择处理 - 多文件
     selectBtn.addEventListener('click', () => {
         document.getElementById('fileInput').click();
     });
 
     document.getElementById('fileInput').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            document.getElementById('fileName').textContent = `${file.name} (${formatFileSize(file.size)})`;
-        } else {
-            document.getElementById('fileName').textContent = "未选择文件";
+        const files = Array.from(e.target.files);
+
+        if (files.length === 0) {
+            clearFileList();
+            return;
         }
+
+        // 文件类型验证
+        const allowedTypes = ['.pdf', '.docx', '.txt'];
+        const invalidFiles = files.filter(file => {
+            const fileName = file.name.toLowerCase();
+            return !allowedTypes.some(ext => fileName.endsWith(ext));
+        });
+
+        if (invalidFiles.length > 0) {
+            const invalidNames = invalidFiles.map(f => f.name).join(', ');
+            alert(`以下文件类型不支持：${invalidNames}\n\n仅支持 PDF、DOCX、TXT 文件`);
+            // 移除不支持的文件
+            const validFiles = files.filter(file => {
+                const fileName = file.name.toLowerCase();
+                return allowedTypes.some(ext => fileName.endsWith(ext));
+            });
+
+            if (validFiles.length === 0) {
+                clearFileList();
+                return;
+            }
+
+            // 更新文件输入
+            const dataTransfer = new DataTransfer();
+            validFiles.forEach(file => dataTransfer.items.add(file));
+            this.files = dataTransfer.files;
+
+            updateFileList(validFiles);
+            return;
+        }
+
+        // 文件数量限制
+        const MAX_FILES = 20;
+        if (files.length > MAX_FILES) {
+            alert(`最多只能选择 ${MAX_FILES} 个文件，已自动选择前 ${MAX_FILES} 个文件`);
+            const limitedFiles = files.slice(0, MAX_FILES);
+
+            // 更新文件输入
+            const dataTransfer = new DataTransfer();
+            limitedFiles.forEach(file => dataTransfer.items.add(file));
+            this.files = dataTransfer.files;
+
+            updateFileList(limitedFiles);
+            return;
+        }
+
+        updateFileList(files);
     });
 
-    // 开始生成文档处理
+    // 清空文件列表
+    clearFilesBtn.addEventListener('click', clearFileList);
+
+    // 批量上传文档处理
     document.getElementById('startBtn').addEventListener('click', async () => {
         if (!currentKB) {
             alert('请先选择知识库');
             return;
         }
-        const fileInput = document.getElementById('fileInput');
-        if (!fileInput.files.length) {
+        if (selectedFiles.length === 0) {
             alert('请先选择 Word/PDF/TXT 文档');
             return;
         }
+
+        // 禁用上传按钮防止重复点击
+        const startBtn = document.getElementById('startBtn');
+        const originalBtnText = startBtn.innerHTML;
+        startBtn.disabled = true;
+        startBtn.innerHTML = '<div class="spinner"></div> 上传中...';
+
         // 重置界面
-        document.getElementById('fileUploadResult').textContent = "开始处理...";
+        document.getElementById('fileUploadResult').textContent = "开始批量处理...";
+        const uploadProgress = document.getElementById('uploadProgress');
+        uploadProgress.style.display = 'block';
+
         const uid = document.getElementById('uid').value;
-        // 上传文件
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        formData.append('kb_id', currentKB);
-        formData.append('uid', uid);
+
         try {
-            console.log('start_form_req, ' + formData)
-            const uploadRes = await fetch('/vdb/upload', {
-                method: 'POST',
-                body: formData
-            });
-            const responseData = await uploadRes.json();
-            // 更新状态
-            document.getElementById('fileUploadResult').textContent = responseData.message;
-            if (uploadRes.ok) {
-                // 清空文件输入
-                fileInput.value = '';
-                // 清空文件名显示
-                document.getElementById('fileName').textContent = "未选择文件";
-                loadFileList(currentKB)
-            }
+            await uploadFilesSequentially(selectedFiles, currentKB, uid);
         } catch (error) {
-            console.error('处理失败:', error);
-            document.getElementById('fileUploadResult').textContent = "处理失败";
-            document.getElementById('stream_output').innerHTML =
-                `<div class="error-container">错误: ${error.message}</div>`;
+            console.error('批量上传失败:', error);
+            document.getElementById('fileUploadResult').textContent = "批量上传失败";
+            // 恢复按钮状态
+            startBtn.disabled = false;
+            startBtn.innerHTML = originalBtnText;
         }
     });
 
@@ -195,7 +239,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             deleteBtn.innerHTML = originalText;
         }
     });
-     // 设置为默认知识库功能
+
+    // 设置为默认知识库功能
     document.getElementById('setDefaultBtn').addEventListener('click', async () => {
         if (!currentKB) {
             alert('请先选择知识库');
@@ -253,6 +298,155 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 加载文件列表
     loadFileList(currentKB);
 });
+
+// 更新文件列表显示
+function updateFileList(files) {
+    selectedFiles = files;
+    const fileItems = document.getElementById('fileItems');
+    const fileCount = document.getElementById('fileCount');
+
+    fileItems.innerHTML = '';
+    fileCount.textContent = files.length;
+
+    files.forEach((file, index) => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        fileItem.innerHTML = `
+            <span class="file-name">${file.name}</span>
+            <span class="file-size">(${formatFileSize(file.size)})</span>
+            <button type="button" class="btn-remove" data-index="${index}">×</button>
+        `;
+        fileItems.appendChild(fileItem);
+    });
+
+    // 添加删除单个文件的事件监听
+    document.querySelectorAll('.btn-remove').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const index = parseInt(this.getAttribute('data-index'));
+            removeFile(index);
+        });
+    });
+
+    // 显示文件列表容器
+    document.getElementById('fileList').style.display = 'block';
+}
+
+// 移除单个文件
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    updateFileList(selectedFiles);
+}
+
+// 清空文件列表
+function clearFileList() {
+    selectedFiles = [];
+    document.getElementById('fileInput').value = '';
+    document.getElementById('fileList').style.display = 'none';
+    document.getElementById('fileCount').textContent = '0';
+    document.getElementById('fileItems').innerHTML = '';
+}
+
+// 顺序上传文件
+async function uploadFilesSequentially(files, kbId, uid) {
+    const totalFiles = files.length;
+    let completedCount = 0;
+    let successCount = 0;
+    let failCount = 0;
+
+    // 更新进度显示
+    const updateProgress = () => {
+        const percent = Math.round((completedCount / totalFiles) * 100);
+        document.getElementById('overallProgressFill').style.width = `${percent}%`;
+        document.getElementById('progressText').textContent =
+            `上传中: ${completedCount}/${totalFiles} (成功: ${successCount}, 失败: ${failCount})`;
+        document.getElementById('progressPercent').textContent = `${percent}%`;
+    };
+
+    // 重置进度
+    completedCount = 0;
+    successCount = 0;
+    failCount = 0;
+    updateProgress();
+
+    const failedFiles = []; // 记录失败的文件
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        try {
+            // 上传单个文件
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('kb_id', kbId);
+            formData.append('uid', uid);
+
+            const uploadRes = await fetch('/vdb/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const responseData = await uploadRes.json();
+
+            if (uploadRes.ok) {
+                successCount++;
+                console.log(`文件 "${file.name}" 上传成功:`, responseData.message);
+            } else {
+                failCount++;
+                failedFiles.push({
+                    name: file.name,
+                    error: responseData.message || '未知错误'
+                });
+                console.error(`文件 "${file.name}" 上传失败:`, responseData.message);
+            }
+        } catch (error) {
+            failCount++;
+            failedFiles.push({
+                name: file.name,
+                error: error.message || '网络错误'
+            });
+            console.error(`文件 "${file.name}" 上传异常:`, error);
+        } finally {
+            completedCount++;
+            updateProgress();
+        }
+    }
+
+    // 上传完成
+    let resultMessage = `批量上传完成！成功: ${successCount}, 失败: ${failCount}`;
+    if (failedFiles.length > 0) {
+        resultMessage += `\n失败文件: ${failedFiles.map(f => f.name).join(', ')}`;
+    }
+
+    document.getElementById('fileUploadResult').textContent = resultMessage;
+
+    // 恢复按钮状态
+    const startBtn = document.getElementById('startBtn');
+    startBtn.disabled = false;
+    startBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> 批量上传';
+
+    // 清空文件列表
+    clearFileList();
+
+    // 隐藏进度条
+    document.getElementById('uploadProgress').style.display = 'none';
+
+    // 刷新文件列表显示
+    if (currentKB) {
+        await loadFileList(currentKB);
+    }
+
+    // 如果有失败的文件，显示详细信息
+    if (failedFiles.length > 0) {
+        setTimeout(() => {
+            const failedDetails = failedFiles.map(f => `${f.name}: ${f.error}`).join('\n');
+            if (failedFiles.length <= 3) {
+                alert(`以下文件上传失败：\n\n${failedDetails}`);
+            } else {
+                console.log('失败文件详情:', failedDetails);
+            }
+        }, 500);
+    }
+}
 
 // 加载知识库列表
 async function loadKnowledgeBases() {
@@ -418,7 +612,6 @@ async function loadFileList(kb_id) {
 function formatSequenceNumber(index, total) {
     const digits = total.toString().length;
     return (index + 1).toString().padStart(digits, ' ');
-    // 或者使用零填充：return (index + 1).toString().padStart(digits, '0');
 }
 
 // 文件名截断函数
@@ -472,7 +665,6 @@ async function handleFileDelete(e) {
         btn.innerHTML = originalHTML;
     }
 }
-
 
 window.addEventListener('beforeunload', () => {
     if (refreshInterval) {
