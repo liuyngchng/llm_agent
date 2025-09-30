@@ -1,0 +1,227 @@
+// 全局变量
+let refreshInterval;
+
+// 获取任务数据
+async function fetchTasks() {
+    try {
+        const token = localStorage.getItem('token') || '';
+        const uid = getUidFromUrl();
+
+        const response = await fetch('/docx/my/task', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ uid: uid })
+        });
+
+        if (!response.ok) throw new Error('任务获取失败');
+
+        const tasksData = await response.json();
+        const tasks = Array.isArray(tasksData) ? tasksData : [tasksData];
+
+        // 按创建时间排序（新任务在前）
+        tasks.sort((a, b) => {
+            return new Date(b.create_time) - new Date(a.create_time);
+        });
+
+        // 直接重新渲染整个表格
+        renderTasksTable(tasks);
+    } catch (error) {
+        console.error('获取任务失败:', error);
+    }
+}
+
+// 渲染任务表格
+function renderTasksTable(tasks) {
+    const tableBody = document.querySelector('#tasksTable tbody');
+    const emptyState = document.getElementById('emptyState');
+
+    if (!tasks || tasks.length === 0) {
+        document.querySelector('table').style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    tableBody.innerHTML = '';
+    tasks.forEach((task, index) => {
+        const row = document.createElement('tr');
+
+        // 序号
+        const idCell = document.createElement('td');
+        idCell.textContent = index + 1;
+        idCell.style.fontWeight = '600';
+        idCell.style.color = '#4b6cb7';
+
+        // 文档标题
+        const infoCell = document.createElement('td');
+        infoCell.innerHTML = `
+            <div><strong>${task.doc_title || '无标题'}</strong></div>
+            <div style="color: #666; font-size: 0.9rem;">${task.doc_type || '未知类型'}</div>
+        `;
+
+        // 创建时间
+        const createTimeCell = document.createElement('td');
+        let createTime = '未知时间';
+        if (task.create_time) {
+            createTime = new Date(task.create_time).toLocaleString('zh-CN').replace(/\//g, '-');
+        }
+        createTimeCell.textContent = createTime;
+
+        // 处理信息
+        const timeCell = document.createElement('td');
+        timeCell.textContent = task.process_info || '未知时间';
+
+        // 处理进度
+        const statusCell = document.createElement('td');
+        statusCell.innerHTML = `
+            <div>${task.percent || 0}%</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: ${task.percent || 0}%"></div>
+            </div>
+        `;
+
+        // 文档下载
+        const downloadCell = document.createElement('td');
+        downloadCell.innerHTML = `
+            <a href="/docx/download/task/${task.task_id}" class="action-btn action-download">
+                <i class="fas fa-download"></i> 全文下载
+            </a>
+        `;
+
+        // 操作
+        const actionCell = document.createElement('td');
+        if (task.status === 'in-progress' || task.status === 'pending') {
+            actionCell.innerHTML = `
+                <button class="action-btn action-refresh" onclick="refreshTask('${task.id}')">
+                    <i class="fas fa-sync-alt"></i> 刷新状态
+                </button>
+            `;
+        } else if (task.status === 'failed') {
+            actionCell.innerHTML = `
+                <button class="action-btn action-refresh" onclick="retryTask('${task.id}')">
+                    <i class="fas fa-redo"></i> 重试
+                </button>
+            `;
+        } else {
+            actionCell.innerHTML = `
+                <button class="action-btn" disabled>
+                    <i class="fas fa-check"></i> 已完成
+                </button>
+            `;
+        }
+
+        row.appendChild(idCell);
+        row.appendChild(infoCell);
+        row.appendChild(createTimeCell);
+        row.appendChild(timeCell);
+        row.appendChild(statusCell);
+        row.appendChild(downloadCell);
+        row.appendChild(actionCell);
+        tableBody.appendChild(row);
+    });
+
+    document.querySelector('table').style.display = 'table';
+    emptyState.style.display = 'none';
+}
+
+// 刷新单个任务状态
+async function refreshTask(taskId) {
+    showLoading();
+    try {
+        const token = localStorage.getItem('token') || '';
+        const uid = localStorage.getItem('uid') || '';
+
+        const response = await fetch('/docx/my/task/refresh', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                uid: uid,
+                task_id: taskId
+            })
+        });
+
+        if (!response.ok) throw new Error('刷新失败');
+        await fetchTasks();
+    } catch (error) {
+        console.error('刷新失败:', error);
+        alert('刷新失败，请重试');
+    } finally {
+        hideLoading();
+    }
+}
+
+// 重试任务
+async function retryTask(taskId) {
+    showLoading();
+    try {
+        const token = localStorage.getItem('token') || '';
+        const uid = localStorage.getItem('uid') || '';
+
+        const response = await fetch('/docx/my/task/retry', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                uid: uid,
+                task_id: taskId
+            })
+        });
+
+        if (!response.ok) throw new Error('重试失败');
+        await fetchTasks();
+        alert(`任务 ${taskId} 已重新提交`);
+    } catch (error) {
+        console.error('重试失败:', error);
+        alert('重试失败，请重试');
+    } finally {
+        hideLoading();
+    }
+}
+
+// 显示/隐藏加载状态
+function showLoading() {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+}
+function hideLoading() {
+    document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+// 自动刷新控制
+function startAutoRefresh() {
+    refreshInterval = setInterval(fetchTasks, 5000);
+    document.getElementById('refreshIndicator').style.display = 'block';
+}
+function stopAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        document.getElementById('refreshIndicator').style.display = 'none';
+    }
+}
+
+// 从URL获取UID
+function getUidFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('uid');
+}
+
+// 初始化页面
+document.addEventListener('DOMContentLoaded', () => {
+    fetchTasks();
+    startAutoRefresh();
+
+    // 页面可见性控制
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            stopAutoRefresh();
+        } else {
+            startAutoRefresh();
+        }
+    });
+});
