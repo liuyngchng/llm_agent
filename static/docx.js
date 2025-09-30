@@ -437,7 +437,7 @@ async function gen_doc() {
 
         const result = await response.json();
         if (result.status === "started") {
-            alert('文档生成任务已提交！可以开始下一项任务。');
+            alert('文档生成任务已提交，可在页面右上角"我的写作任务"中查看写作进度');
             resetForm(); // 重置表单
         } else {
             throw new Error('任务提交失败');

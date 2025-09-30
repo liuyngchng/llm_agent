@@ -154,7 +154,10 @@ def write_doc_with_outline_txt():
         logger.error(f"err_occurred, {err_info}")
         return json.dumps(err_info, ensure_ascii=False), 400
     task_id = int(time.time()*1000)                 # 生成任务ID， 使用毫秒数
-    vbd_id = int(data.get("vbd_id"))
+    if data.get("vbd_id"):
+        vbd_id = int(data.get("vbd_id"))
+    else:
+        vbd_id = None
     keywords = data.get("keywords")
     template_file_name = docx_util.gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
     logger.info(f"docx_template_file_generated_with_name, {template_file_name}")
@@ -265,6 +268,7 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
     :param keywords: 其他的写作要求
     :param task_id: 任务ID
     :param file_name: Word template 模板文件名, 其中包含三级目录，可能含有段落写作的提示词，也可能没有
+    :param vbd_id: vector db id.
     :param is_include_prompt: 各小节是否包含有写作提示词语
     """
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "

@@ -26,7 +26,18 @@ def get_model(cfg, is_remote=True):
             api_key=cfg['api']['llm_api_key'],
             base_url=cfg['api']['llm_api_uri'],
             http_client=httpx.Client(verify=False, proxy=None),
-            model=cfg['api']['llm_model_name']
+            model=cfg['api']['llm_model_name'],
+            # 常用参数配置
+            temperature=0.7,        # 控制随机性 (0.0-2.0)
+            max_tokens=4000,        # 最大生成长度
+            top_p=0.9,              # 核采样参数
+            frequency_penalty=0.1,  # 频率惩罚
+            presence_penalty=0.1,   # 存在惩罚
+            timeout=30,             # 超时时间
+            max_retries=2,          # 重试次数
+            extra_body={
+                "reasoning": False
+            }
         )
     else:
         model = ChatOllama(model=cfg['api']['llm_model_name'], base_url=cfg['api']['llm_api_uri'])
@@ -156,9 +167,9 @@ def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: d
         # 流式调用模型
         for chunk in model.stream(prompt.format(doc_type=doc_type, doc_title=doc_title, keywords=keywords)):
             if hasattr(chunk, 'content'):
-                yield chunk.content
+                yield utils.rmv_think_block(chunk.content)
             elif hasattr(chunk, 'text'):
-                yield chunk.text
+                yield utils.rmv_think_block(chunk.text())
 
     finally:
         # 清理资源
@@ -226,6 +237,8 @@ def gen_txt(write_context: str, demo_txt: str, paragraph_prompt: str, catalogue:
                 torch.cuda.empty_cache()
             logger.error(f"all_retries_exhausted_task_gen_txt_failed, {paragraph_prompt}")
             raise last_exception
+    return None
+
 
 def txt2sql(schema: str, txt: str, dialect:str, cfg: dict, max_retries=6) -> str | None:
     """
