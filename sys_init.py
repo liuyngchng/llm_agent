@@ -17,7 +17,7 @@ def init_yml_cfg(cfg_file="cfg.yml")-> dict[str, any]:
     """
     global __init_cfg__
     if __init_cfg__:
-        logger.info(f"cfg_already_inited_return_variable__init_cfg__, {__init_cfg__}")
+        logger.debug(f"cfg_already_inited_return_variable__init_cfg__, {__init_cfg__}")
         return __init_cfg__
     # 检查配置文件
     if not os.path.exists(cfg_file):
