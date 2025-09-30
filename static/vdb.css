@@ -431,11 +431,12 @@ footer {
     width: 100%;
 }
 
-#fileListTable th:nth-child(1) { width: 8%; }   /* 文件ID */
-#fileListTable th:nth-child(2) { width: 20%; }  /* 文件名 */
-#fileListTable th:nth-child(3) { width: 10%; }  /* 处理进度 */
-#fileListTable th:nth-child(4) { width: 52%; }  /* 处理信息 */
-#fileListTable th:nth-child(5) { width: 10%; }  /* 操作 */
+#fileListTable th:nth-child(1) { width: 6%; }   /* No. */
+#fileListTable th:nth-child(2) { width: 18%; }  /* 文件名 */
+#fileListTable th:nth-child(3) { width: 16%; }  /* 创建时间 - 新增列 */
+#fileListTable th:nth-child(4) { width: 10%; }  /* 处理进度 */
+#fileListTable th:nth-child(5) { width: 40%; }  /* 处理信息 */
+#fileListTable th:nth-child(6) { width: 10%; }  /* 操作 */
 
 #fileListTable td {
     word-wrap: break-word;
@@ -447,12 +448,18 @@ footer {
     vertical-align: middle;
 }
 
-#fileListTable td:nth-child(4) {
+#fileListTable td:nth-child(5) {
     white-space: normal;
     word-break: break-word;
     line-height: 1.4;
     max-height: 60px;
     overflow-y: auto;
+}
+/* 创建时间单元格样式 */
+.create-time-cell {
+    font-size: 0.85rem;
+    color: #666;
+    white-space: nowrap;
 }
 
 .delete-file-btn {
@@ -464,7 +471,7 @@ footer {
 
 /* 文件名截断样式 */
 .filename-cell {
-    max-width: 200px; /* 改为固定值 */
+    max-width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -692,11 +699,17 @@ footer {
         font-size: 0.9rem;
     }
 
-    #fileListTable th:nth-child(1) { width: 10%; }
-    #fileListTable th:nth-child(2) { width: 25%; }
-    #fileListTable th:nth-child(3) { width: 15%; }
-    #fileListTable th:nth-child(4) { width: 40%; }
-    #fileListTable th:nth-child(5) { width: 10%; }
+    #fileListTable th:nth-child(1) { width: 8%; }
+    #fileListTable th:nth-child(2) { width: 20%; }
+    #fileListTable th:nth-child(3) { width: 18%; }  /* 移动端创建时间列宽 */
+    #fileListTable th:nth-child(4) { width: 12%; }
+    #fileListTable th:nth-child(5) { width: 32%; }
+    #fileListTable th:nth-child(6) { width: 10%; }
+
+    .create-time-cell {
+        font-size: 0.8rem;
+    }
+
 
     .delete-file-btn {
         padding: 4px 8px;

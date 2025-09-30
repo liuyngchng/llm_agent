@@ -422,7 +422,7 @@ async function uploadFilesSequentially(files, kbId, uid) {
     // 恢复按钮状态
     const startBtn = document.getElementById('startBtn');
     startBtn.disabled = false;
-    startBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> 批量上传';
+    startBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> 上传';
 
     // 清空文件列表
     clearFileList();
@@ -540,6 +540,7 @@ function formatFileSize(bytes) {
 }
 
 // 加载文件列表
+// 加载文件列表
 async function loadFileList(kb_id) {
     const container = document.getElementById('fileListContainer');
     const tbody = document.querySelector('#fileListTable tbody');
@@ -578,12 +579,24 @@ async function loadFileList(kb_id) {
             const displayName = truncateFileName(file.name, 25); // 25个字符长度
             const sequenceNumber = formatSequenceNumber(index, files.length);
 
+            // 处理创建时间
+            let createTime = '未知时间';
+            if (file.create_time) {
+                try {
+                    createTime = new Date(file.create_time).toLocaleString('zh-CN').replace(/\//g, '-');
+                } catch (e) {
+                    console.warn('时间格式转换错误:', file.create_time, e);
+                    createTime = file.create_time; // 使用原始字符串
+                }
+            }
+
             row.innerHTML = `
                 <td>${sequenceNumber}</td>
                 <td class="filename-cell">
                     ${displayName}
                     ${file.name.length > 25 ? `<div class="filename-tooltip">${file.name}</div>` : ''}
                 </td>
+                <td class="create-time-cell">${createTime}</td>
                 <td>${file.percent}%</td>
                 <td>${file.process_info}</td>
                 <td>
