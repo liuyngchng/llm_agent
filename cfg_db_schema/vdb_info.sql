@@ -5,5 +5,6 @@ CREATE TABLE "vdb_info" (
 	"uid"	INTEGER,
 	"is_public"	INTEGER,
 	"is_default"	INTEGER NOT NULL DEFAULT 0,
+	"create_time"	TEXT,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
