@@ -189,6 +189,6 @@ async def root():
 
 
 if __name__ == "__main__":
-    logger.info(f"模型设备: {model.device}")
-    logger.info(f"是否有 GPU: {model._target_device}")
+    logger.info(f"模型设备: {model.device}, {model._target_device}")
+    logger.info(f"api_cfg, {my_cfg['api']}")
     uvicorn.run(app, host="0.0.0.0", port=17000)
