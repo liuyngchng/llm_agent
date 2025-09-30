@@ -12,5 +12,6 @@ CREATE TABLE "docx_file_info" (
 	"doc_title"	TEXT,
 	"keywords"	TEXT,
 	"outline"	TEXT,
+	"create_time"	TEXT,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );

@@ -78,7 +78,7 @@
                 // 按创建时间排序（新任务在前）
                 tasks.sort((a, b) => {
                     // 假设后端返回的是ISO格式的时间字符串
-                    return new Date(b.created_at || b.create_time) - new Date(a.created_at || a.create_time);
+                    return new Date(b.create_time) - new Date(a.create_time);
                 });
 
                 renderTasksTable(tasks);
@@ -183,15 +183,8 @@
                 // 或者时间戳，如 1792222222
                 let createTime = '未知时间';
 
-                if (task.created_at || task.create_time) {
-                    // 如果是时间戳（数字）
-                    if (typeof (task.created_at || task.create_time) === 'number') {
-                        createTime = new Date((task.created_at || task.create_time) * 1000).toLocaleString('zh-CN');
-                    }
-                    // 如果是时间字符串
-                    else {
-                        createTime = new Date(task.created_at || task.create_time).toLocaleString('zh-CN');
-                    }
+                if (task.create_time) {
+                    createTime = new Date(task.create_time).toLocaleString('zh-CN').replace(/\//g, '-');
                 }
                 createTimeCell.textContent = createTime;
 
