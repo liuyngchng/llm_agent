@@ -180,34 +180,8 @@
                         <i class="fas fa-arrow-left"></i> 上一步
                     </button>
                     <button class="btn btn-primary" id="generateBtn" onclick="gen_doc()">
-                        生成文档 <i class="fas fa-file-word"></i>
+                        提交任务 <i class="fas fa-file-word"></i>
                     </button>
-                </div>
-            </div>
-
-            <!-- 步骤4: 下载文档 -->
-            <div class="step-panel" id="step4">
-                <div class="download-success">
-                    <i class="fas fa-check-circle"></i>
-                    <h3>文档生成成功！</h3>
-                    <p id="elapsedTimeDisplay" style="margin: 10px 0; font-size: 0.95rem; color: #27ae60;">
-                        总共<span id="timeValue">{{elapsed_time}}</span>
-                    </p>
-                    <p>您的专业文档已准备就绪，点击下方按钮下载</p>
-
-                    <div class="btn-container">
-                        <button class="btn btn-secondary" onclick="prevStep(4)">
-                            <i class="fas fa-arrow-left"></i> 返回编辑
-                        </button>
-                        <a id="downloadButton" class="btn btn-primary" href="#" download>
-                            <i class="fas fa-download"></i> 下载Word文档
-                        </a>
-                    </div>
-                    <div id="downloadTip" style="margin-top: 20px; color: #e74c3c; font-size: 0.9rem; text-align: center; display: none;">
-                        若点击'下载Word文档'按钮无法正常下载，请拷贝链接：<br>
-                        <span id="downloadUrlText" style="font-weight: bold;"></span><br>
-                        至浏览器地址栏中，回车即可下载
-                    </div>
                 </div>
             </div>
         </div>

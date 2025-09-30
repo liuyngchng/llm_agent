@@ -10,13 +10,7 @@
     <div class="container">
         <header>
             <h1><i class="fas fa-tasks"></i> 文档生成任务</h1>
-            <p>查看和管理您的文档生成任务</p>
-
-            <div class="header-controls">
-                <button class="btn btn-primary" id="refreshAllBtn">
-                    <i class="fas fa-sync-alt"></i> 刷新所有任务
-                </button>
-            </div>
+            <p>查看和管理您的文档生成任务（每5秒自动刷新）</p>
         </header>
 
         <div class="tasks-container">
@@ -28,6 +22,7 @@
                     <tr>
                         <th>No.</th>
                         <th>文档标题</th>
+                        <th>创建时间</th>
                         <th>处理信息</th>
                         <th>处理进度</th>
                         <th>文档下载</th>
@@ -50,15 +45,21 @@
         </div>
     </div>
 
+    <div class="auto-refresh-indicator" id="refreshIndicator">
+        <i class="fas fa-sync-alt"></i> 自动刷新已启用
+    </div>
+
     <script>
+        // 全局变量
+        let refreshInterval;
+        let tasks = [];
+
         // 获取任务数据
         async function fetchTasks() {
-<!--            showLoading();-->
+            showLoading();
             try {
-                // 确保token和uid已定义
                 const token = localStorage.getItem('token') || '';
-<!--                const uid = localStorage.getItem('uid') || '';-->
-                const uid = getUidFromUrl(); // 直接从URL获取
+                const uid = getUidFromUrl();
 
                 const response = await fetch('/docx/my/task', {
                     method: 'POST',
@@ -72,19 +73,25 @@
                 if (!response.ok) throw new Error('任务获取失败');
 
                 const tasksData = await response.json();
-                const tasks = Array.isArray(tasksData) ? tasksData : [tasksData];
+                tasks = Array.isArray(tasksData) ? tasksData : [tasksData];
+
+                // 按创建时间排序（新任务在前）
+                tasks.sort((a, b) => {
+                    // 假设后端返回的是ISO格式的时间字符串
+                    return new Date(b.created_at || b.create_time) - new Date(a.created_at || a.create_time);
+                });
 
                 renderTasksTable(tasks);
             } catch (error) {
                 console.error('获取任务失败:', error);
             } finally {
-<!--                hideLoading();-->
+                hideLoading();
             }
         }
 
         // 刷新单个任务状态
         async function refreshTask(taskId) {
-<!--            showLoading();-->
+            showLoading();
 
             try {
                 const token = localStorage.getItem('token') || '';
@@ -113,7 +120,7 @@
 
         // 重试任务
         async function retryTask(taskId) {
-<!--            showLoading();-->
+            showLoading();
 
             try {
                 const token = localStorage.getItem('token') || '';
@@ -157,7 +164,7 @@
             tasks.forEach(task => {
                 const row = document.createElement('tr');
 
-                // 文档ID
+                // 序号
                 const idCell = document.createElement('td');
                 idCell.textContent = sequenceNumber++;
                 idCell.style.fontWeight = '600';
@@ -170,13 +177,31 @@
                     <div style="color: #666; font-size: 0.9rem;">${task.doc_type || '未知类型'}</div>
                 `;
 
+                // 创建时间 - 使用格式化时间
+                const createTimeCell = document.createElement('td');
+                // 假设后端返回的是ISO格式时间字符串，如 '2025-08-25T12:37:14Z'
+                // 或者时间戳，如 1792222222
+                let createTime = '未知时间';
+
+                if (task.created_at || task.create_time) {
+                    // 如果是时间戳（数字）
+                    if (typeof (task.created_at || task.create_time) === 'number') {
+                        createTime = new Date((task.created_at || task.create_time) * 1000).toLocaleString('zh-CN');
+                    }
+                    // 如果是时间字符串
+                    else {
+                        createTime = new Date(task.created_at || task.create_time).toLocaleString('zh-CN');
+                    }
+                }
+                createTimeCell.textContent = createTime;
+
                 // 处理信息
                 const timeCell = document.createElement('td');
                 timeCell.textContent = task.process_info || '未知时间';
 
                 // 处理进度
                 const statusCell = document.createElement('td');
-                statusCell.textContent = task.percent + '%';
+                statusCell.textContent = (task.percent || 0) + '%';
 
                 // 文档下载
                 const downloadCell = document.createElement('td');
@@ -210,6 +235,7 @@
 
                 row.appendChild(idCell);
                 row.appendChild(infoCell);
+                row.appendChild(createTimeCell);
                 row.appendChild(timeCell);
                 row.appendChild(statusCell);
                 row.appendChild(downloadCell);
@@ -231,15 +257,55 @@
             document.getElementById('loadingOverlay').style.display = 'none';
         }
 
-        // 初始化页面
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('refreshAllBtn').addEventListener('click', fetchTasks);
-            fetchTasks();
-        });
+        // 启动自动刷新
+        function startAutoRefresh() {
+            // 每5秒刷新一次
+            refreshInterval = setInterval(fetchTasks, 5000);
+
+            // 显示刷新指示器
+            const indicator = document.getElementById('refreshIndicator');
+            indicator.style.display = 'block';
+
+            // 添加闪烁动画
+            let blinkCount = 0;
+            const blinkInterval = setInterval(() => {
+                indicator.style.opacity = indicator.style.opacity === '0.7' ? '1' : '0.7';
+                blinkCount++;
+                if (blinkCount >= 6) {
+                    clearInterval(blinkInterval);
+                    indicator.style.opacity = '1';
+                }
+            }, 300);
+        }
+
+        // 停止自动刷新
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                document.getElementById('refreshIndicator').style.display = 'none';
+            }
+        }
+
+        // 从URL获取UID
         function getUidFromUrl() {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get('uid');
         }
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchTasks();
+            startAutoRefresh();
+
+            // 当页面失去焦点时停止刷新，获得焦点时重新开始
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    stopAutoRefresh();
+                } else {
+                    startAutoRefresh();
+                }
+            });
+        });
     </script>
 </body>
 </html>
