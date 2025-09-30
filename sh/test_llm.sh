@@ -13,23 +13,8 @@ curl -ks --noproxy '*' \
         "model": "'"${MODEL}"'",
         "messages": [
           {"role": "system", "content": "你是一名气象信息向导."},
-          {"role": "user", "content": "伦敦今天的天气怎么样?"}
+          {"role": "user", "content": "你都知道什么知识?"}
         ],
-        "tools": [{
-          "type": "function",
-          "function": {
-            "name": "get_weather",
-            "description": "获取指定城市的天气信息",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "location": {"type": "string", "description": "城市名称"},
-                "unit": {"type": "string", "enum": ["celsius", "fahrenheit"], "default": "celsius"}
-              },
-              "required": ["location"]
-            }
-          }
-        }],
         "stream": false
       }' \
   "${API}" | jq
