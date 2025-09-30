@@ -13,20 +13,22 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sys_init import init_yml_cfg
 
 app = FastAPI()
-model = SentenceTransformer('./../bge-large-zh-v1.5')
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-# # 明确指定使用 CPU
-# model = SentenceTransformer('./../bge-large-zh-v1.5', device='cpu')
-# # 或明确指定使用 GPU
-# model = SentenceTransformer('./../bge-large-zh-v1.5', device='cuda')
+
 
 # 安全方案
 security = HTTPBearer()
 
 my_cfg = init_yml_cfg()
+
+model = SentenceTransformer(f"./../{my_cfg["api"]["embedding_model_name"]}", device='cpu')
+# # 明确指定使用 CPU
+# model = SentenceTransformer('your_model_name', device='cpu')
+# # 或明确指定使用 GPU
+# model = SentenceTransformer('your_model_name', device='cuda')
 
 # 有效的 API Keys（在实际应用中应该从环境变量或数据库读取）
 VALID_API_KEYS = {

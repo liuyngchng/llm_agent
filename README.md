@@ -101,3 +101,24 @@ ssh -i your_private_key_file_path your_user@your_host -p ssh_port
 scp -i your_private_key_file_path -P ssh_port your_file_want_to_be_uploaed devbox@your_host:/your_host_dir
 
 ```
+
+# 4. deploy LLM
+一张显卡并行化=1, tensor-parallel-size=1,
+max-model-len 表示模型上下文token长度为32k，
+端口默认8000, 设置端口呢？
+
+```sh
+vllm serve ../DeepSeek-R1-Distill-Qwen-7B \
+    --tensor-parallel-size 1 \
+    --max-model-len 32768 \
+    --enforce-eager \
+    --port 8000 \
+    --gpu-memory-utilization 0.9 \
+    --served-model-name DeepSeek-R1 &
+```
+
+测试
+```sh
+curl -s http://127.0.0.1:8000/v1/models | jq
+
+```
