@@ -52,11 +52,9 @@
     <script>
         // 全局变量
         let refreshInterval;
-        let tasks = [];
 
         // 获取任务数据
         async function fetchTasks() {
-            showLoading();
             try {
                 const token = localStorage.getItem('token') || '';
                 const uid = getUidFromUrl();
@@ -73,78 +71,17 @@
                 if (!response.ok) throw new Error('任务获取失败');
 
                 const tasksData = await response.json();
-                tasks = Array.isArray(tasksData) ? tasksData : [tasksData];
+                const tasks = Array.isArray(tasksData) ? tasksData : [tasksData];
 
                 // 按创建时间排序（新任务在前）
                 tasks.sort((a, b) => {
-                    // 假设后端返回的是ISO格式的时间字符串
                     return new Date(b.create_time) - new Date(a.create_time);
                 });
 
+                // 直接重新渲染整个表格
                 renderTasksTable(tasks);
             } catch (error) {
                 console.error('获取任务失败:', error);
-            } finally {
-                hideLoading();
-            }
-        }
-
-        // 刷新单个任务状态
-        async function refreshTask(taskId) {
-            showLoading();
-
-            try {
-                const token = localStorage.getItem('token') || '';
-                const uid = localStorage.getItem('uid') || '';
-
-                const response = await fetch('/docx/my/task/refresh', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        uid: uid,
-                        task_id: taskId
-                    })
-                });
-
-                if (!response.ok) throw new Error('刷新失败');
-
-                await fetchTasks();
-            } catch (error) {
-                console.error('刷新失败:', error);
-                alert('刷新失败，请重试');
-            }
-        }
-
-        // 重试任务
-        async function retryTask(taskId) {
-            showLoading();
-
-            try {
-                const token = localStorage.getItem('token') || '';
-                const uid = localStorage.getItem('uid') || '';
-
-                const response = await fetch('/docx/my/task/retry', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        uid: uid,
-                        task_id: taskId
-                    })
-                });
-
-                if (!response.ok) throw new Error('重试失败');
-
-                await fetchTasks();
-                alert(`任务 ${taskId} 已重新提交`);
-            } catch (error) {
-                console.error('重试失败:', error);
-                alert('重试失败，请重试');
             }
         }
 
@@ -160,13 +97,12 @@
             }
 
             tableBody.innerHTML = '';
-            let sequenceNumber = 1;
-            tasks.forEach(task => {
+            tasks.forEach((task, index) => {
                 const row = document.createElement('tr');
 
                 // 序号
                 const idCell = document.createElement('td');
-                idCell.textContent = sequenceNumber++;
+                idCell.textContent = index + 1;
                 idCell.style.fontWeight = '600';
                 idCell.style.color = '#4b6cb7';
 
@@ -177,12 +113,9 @@
                     <div style="color: #666; font-size: 0.9rem;">${task.doc_type || '未知类型'}</div>
                 `;
 
-                // 创建时间 - 使用格式化时间
+                // 创建时间
                 const createTimeCell = document.createElement('td');
-                // 假设后端返回的是ISO格式时间字符串，如 '2025-08-25T12:37:14Z'
-                // 或者时间戳，如 1792222222
                 let createTime = '未知时间';
-
                 if (task.create_time) {
                     createTime = new Date(task.create_time).toLocaleString('zh-CN').replace(/\//g, '-');
                 }
@@ -194,15 +127,20 @@
 
                 // 处理进度
                 const statusCell = document.createElement('td');
-                statusCell.textContent = (task.percent || 0) + '%';
+                statusCell.innerHTML = `
+                    <div>${task.percent || 0}%</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: ${task.percent || 0}%"></div>
+                    </div>
+                `;
 
                 // 文档下载
                 const downloadCell = document.createElement('td');
                 downloadCell.innerHTML = `
-                        <a href="/docx/download/task/${task.task_id}">
-                            全文下载
-                        </a>
-                    `;
+                    <a href="/docx/download/task/${task.task_id}" class="action-btn action-download">
+                        <i class="fas fa-download"></i> 全文下载
+                    </a>
+                `;
 
                 // 操作
                 const actionCell = document.createElement('td');
@@ -240,38 +178,78 @@
             emptyState.style.display = 'none';
         }
 
-        // 显示加载状态
+        // 刷新单个任务状态
+        async function refreshTask(taskId) {
+            showLoading();
+            try {
+                const token = localStorage.getItem('token') || '';
+                const uid = localStorage.getItem('uid') || '';
+
+                const response = await fetch('/docx/my/task/refresh', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        uid: uid,
+                        task_id: taskId
+                    })
+                });
+
+                if (!response.ok) throw new Error('刷新失败');
+                await fetchTasks();
+            } catch (error) {
+                console.error('刷新失败:', error);
+                alert('刷新失败，请重试');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 重试任务
+        async function retryTask(taskId) {
+            showLoading();
+            try {
+                const token = localStorage.getItem('token') || '';
+                const uid = localStorage.getItem('uid') || '';
+
+                const response = await fetch('/docx/my/task/retry', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        uid: uid,
+                        task_id: taskId
+                    })
+                });
+
+                if (!response.ok) throw new Error('重试失败');
+                await fetchTasks();
+                alert(`任务 ${taskId} 已重新提交`);
+            } catch (error) {
+                console.error('重试失败:', error);
+                alert('重试失败，请重试');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 显示/隐藏加载状态
         function showLoading() {
             document.getElementById('loadingOverlay').style.display = 'flex';
         }
-
-        // 隐藏加载状态
         function hideLoading() {
             document.getElementById('loadingOverlay').style.display = 'none';
         }
 
-        // 启动自动刷新
+        // 自动刷新控制
         function startAutoRefresh() {
-            // 每5秒刷新一次
             refreshInterval = setInterval(fetchTasks, 5000);
-
-            // 显示刷新指示器
-            const indicator = document.getElementById('refreshIndicator');
-            indicator.style.display = 'block';
-
-            // 添加闪烁动画
-            let blinkCount = 0;
-            const blinkInterval = setInterval(() => {
-                indicator.style.opacity = indicator.style.opacity === '0.7' ? '1' : '0.7';
-                blinkCount++;
-                if (blinkCount >= 6) {
-                    clearInterval(blinkInterval);
-                    indicator.style.opacity = '1';
-                }
-            }, 300);
+            document.getElementById('refreshIndicator').style.display = 'block';
         }
-
-        // 停止自动刷新
         function stopAutoRefresh() {
             if (refreshInterval) {
                 clearInterval(refreshInterval);
@@ -290,7 +268,7 @@
             fetchTasks();
             startAutoRefresh();
 
-            // 当页面失去焦点时停止刷新，获得焦点时重新开始
+            // 页面可见性控制
             document.addEventListener('visibilitychange', function() {
                 if (document.hidden) {
                     stopAutoRefresh();
