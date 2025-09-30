@@ -379,11 +379,12 @@ function markdownToPlainText(markdown) {
 
 document.addEventListener('DOMContentLoaded', function() {
     updateProgressBar();
+    loadKnowledgeBases();
 });
 
 async function gen_doc() {
     document.getElementById('modifiedOutline').readOnly = true;
-        const uid = document.getElementById('uid').value;
+    const uid = document.getElementById('uid').value;
     const token = document.getElementById('t').value;
     const task_id = document.getElementById('taskId').value;
     const doc_outline = document.getElementById('modifiedOutline').value;
@@ -391,17 +392,13 @@ async function gen_doc() {
     const doc_type = document.getElementById('docType').value;
     const keywords = document.getElementById('keywords').value;
     const generateBtn = document.getElementById('generateBtn');
-    const progressDisplay = document.getElementById('progressDisplay');
-    const progressText = document.getElementById('progressText');
-    const progressBarFill = document.getElementById('progressBarFill');
     const outlineSource = document.getElementById('outline_source').value;
     const file_name = document.getElementById('file_name').value;
-    // 禁用按钮并显示加载状态
+
+    // 禁用按钮
     generateBtn.disabled = true;
-    generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 文档生成中...';
-    progressDisplay.style.display = 'block';
-    progressText.innerHTML = '文档生成任务运行中...';
-    progressBarFill.style.width = '0%';
+    generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+
     let apiUrl, postData;
     if (outlineSource === 'system') {
         apiUrl = '/docx/write/outline';
@@ -410,7 +407,8 @@ async function gen_doc() {
             doc_type: doc_type,
             doc_title: doc_title,
             keywords: keywords,
-            doc_outline: doc_outline
+            doc_outline: doc_outline,
+            vbd_id: document.getElementById('knowledgeBase').value
         };
     } else {
         apiUrl = '/docx/write/template';
@@ -420,12 +418,12 @@ async function gen_doc() {
             doc_title: doc_title,
             keywords: keywords,
             task_id: task_id,
-            file_name: file_name
+            file_name: file_name,
+            vbd_id: document.getElementById('knowledgeBase').value
         };
     }
 
     try {
-        // 发送生成请求
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -435,121 +433,89 @@ async function gen_doc() {
             body: JSON.stringify(postData)
         });
 
-        if (!response.ok) throw new Error('文档生成失败');
+        if (!response.ok) throw new Error('文档生成任务提交失败');
 
         const result = await response.json();
         if (result.status === "started") {
-            taskId = result.task_id; // 存储任务ID
-            document.getElementById('taskId').value = taskId;
-            progressText.innerHTML = '文档生成中，请稍候...';
-
-            // 启动进度轮询
-            pollInterval = setInterval(() => {
-                fetchTaskProgress(taskId, token);
-            }, 1000);
+            alert('文档生成任务已提交！可以开始下一项任务。');
+            resetForm(); // 重置表单
         } else {
-            throw new Error('未知响应状态');
-       }
+            throw new Error('任务提交失败');
+        }
     } catch (error) {
         alert(`错误: ${error.message}`);
         resetGenerateState();
     }
 }
-// 获取任务进度
-async function fetchTaskProgress(taskId, token) {
-    const uid = document.getElementById('uid').value;
-    try {
-        const response = await fetch('/docx/process/info', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                task_id: taskId,
-                uid: uid
-            })
-        });
 
-        if (!response.ok) throw new Error('进度获取失败');
+// 重置表单
+function resetForm() {
+    // 重置到第一步
+    document.getElementById(`step${currentStep}`).classList.remove('active');
+    currentStep = 1;
+    document.getElementById(`step${currentStep}`).classList.add('active');
+    updateProgressBar();
 
-        const progressData = await response.json();
-        const progressInfo = progressData[0] || {};
-        const progressText = document.getElementById('progressText');
-        const progressBarFill = document.getElementById('progressBarFill');
+    // 清空表单数据
+    document.getElementById('docType').selectedIndex = 0;
+    document.getElementById('docTitle').value = '';
+    document.getElementById('keywords').value = '';
+    document.getElementById('knowledgeBase').selectedIndex = 0;
+    document.getElementById('outlineText').value = '';
+    document.getElementById('modifiedOutline').value = '';
+    document.getElementById('fileInfo').style.display = 'none';
+    document.getElementById('templateFile').value = '';
+    document.getElementById('taskId').value = '';
+    document.getElementById('file_name').value = '';
 
-        // 更新进度显示
-        progressText.innerHTML = progressInfo.process_info || '正在处理...';
-        if (progressInfo.elapsed_time) {
-            document.getElementById('elapsed_time').value = progressInfo.elapsed_time;
-        }
-
-        // 如果包含百分比数字则更新进度条
-        const percentMatch = progressInfo.percent
-        if (percentMatch) {
-            progressBarFill.style.width = `${percentMatch}%`;
-        }
-
-        // 检查任务是否完成
-        if (progressInfo.percent >= 100) {
-            clearInterval(pollInterval);
-            const taskId = document.getElementById('taskId').value;
-            const downloadUrl = `/docx/download/task/${taskId}`;
-            console.log('downloadUrl=' + downloadUrl)
-            updateDownloadLink(downloadUrl);
-            // 等待2秒显示完成状态
-            setTimeout(() => {
-                nextStep(3);
-                const elapsedTime = document.getElementById('elapsed_time').value;
-                document.getElementById('timeValue').innerText = elapsedTime;
-            }, 2000);
-        }
-        if (progressInfo.error) {
-            clearInterval(pollInterval);
-            document.getElementById('progressText').innerHTML =
-                `生成失败: ${progressInfo.error}`;
-            resetGenerateState();
-            return;
-       }
-    } catch (error) {
-        console.error('进度获取错误:', error);
-        document.getElementById('progressText').innerHTML = '进度更新失败';
-    }
- }
+    // 重置模板选择
+    selectTemplate('system');
+    resetGenerateState();
+}
 
 // 重置生成状态
 function resetGenerateState() {
     const generateBtn = document.getElementById('generateBtn');
     if (generateBtn) {
         generateBtn.disabled = false;
-        generateBtn.innerHTML = '生成文档 <i class="fas fa-file-word"></i>';
+        generateBtn.innerHTML = '提交任务 <i class="fas fa-paper-plane"></i>';
     }
-
-    if (pollInterval) clearInterval(pollInterval);
-    taskId = null;
-
-    const progressDisplay = document.getElementById('progressDisplay');
-    if (progressDisplay) progressDisplay.style.display = 'none';
     document.getElementById('modifiedOutline').readOnly = false;
 }
-// 在生成文档完成后设置下载链接
-function updateDownloadLink(downloadUrl) {
-    const downloadButton = document.getElementById('downloadButton');
-    const downloadTip = document.getElementById('downloadTip');
-    const downloadUrlText = document.getElementById('downloadUrlText');
-    if (downloadButton) {
-        // 设置下载链接和文件名
-        downloadButton.href = downloadUrl;
-        downloadButton.download = '生成的文档.docx';
-        downloadUrlText.textContent = window.location.origin + downloadUrl;
-        downloadTip.style.display = 'block';
 
-        // 添加点击事件确保在自签证书环境下也能工作
-        downloadButton.onclick = function(e) {
-            if (!downloadUrl) {
-                e.preventDefault();
-                alert('下载链接无效，请重试');
-            }
-        };
+
+// 加载知识库列表
+async function loadKnowledgeBases() {
+    const selector = document.getElementById('knowledgeBase');
+    const uid = document.getElementById('uid').value;
+    const token = document.getElementById('t').value;
+
+    try {
+        const response = await fetch('/vdb/my/list', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ uid, t })
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`API 错误 ${response.status}: ${errorText.slice(0, 100)}...`);
+        }
+
+        const result = await response.json();
+        // 清空现有选项（除了第一个）
+        while (selector.options.length > 1) {
+            selector.remove(1);
+        }
+        // 添加知识库选项
+        if (result.kb_list && result.kb_list.length > 0) {
+            result.kb_list.forEach(kb => {
+                const option = document.createElement('option');
+                option.value = kb.id;
+                option.textContent = kb.name;
+                selector.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('加载知识库失败:', error);
     }
 }

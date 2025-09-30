@@ -4,6 +4,7 @@
 
 import logging.config
 import sqlite3
+import time
 
 from db_util import DbUtl, CFG_DB_FILE, CFG_DB_URI
 from my_enums import DataType
@@ -24,24 +25,11 @@ def save_docx_meta_info(uid: int, task_id: int, doc_type: str, doc_title: str,
     :return:
     """
     logger.info(f"save_docx_info {uid}, {task_id}, {doc_type}, {doc_title}, {keywords}, {template_file_name}")
-    sql = (f"insert into docx_file_info(uid, task_id, doc_type, doc_title, keywords, template_path) values "
-           f"({uid}, {task_id}, '{doc_type}', '{doc_title}', '{keywords}', '{template_file_name}')")
-    with sqlite3.connect(CFG_DB_FILE) as my_conn:
-        logger.info(f"save_file_info_sql, {sql}")
-        my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
-        return my_dt
-
-
-def save_docx_template_path(uid: int, task_id: int, template_path: str) -> dict:
-    """
-    保存docx文件处理任务的相关元数据信息
-    :param uid: user id
-    :param task_id: process task id
-    :param template_path: docx template path
-    :return:
-    """
-    logger.info(f"save_docx_info {uid}, {task_id}, {template_path}")
-    sql = f"insert into docx_file_info(uid, task_id, docx_template_path) values ({uid}, {task_id}, '{template_path}')"
+    timestamp = time.time()
+    # 生成类似格式（UTC时间）
+    iso_str = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
+    sql = (f"insert into docx_file_info(uid, task_id, doc_type, doc_title, keywords, template_path, create_time) values "
+           f"({uid}, {task_id}, '{doc_type}', '{doc_title}', '{keywords}', '{template_file_name}','{iso_str}')")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         logger.info(f"save_file_info_sql, {sql}")
         my_dt = DbUtl.sqlite_insert_delete_tool(my_conn, sql)
@@ -59,6 +47,20 @@ def get_docx_info_by_task_id(task_id: int) -> dict:
     logger.info(f"get_docx_info_by_task_id_sql, {sql}")
     my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"get_docx_info_by_task_id_dt {my_dt}")
+    return my_dt
+
+def get_user_docx_task_list(uid: int) -> dict:
+    """
+    根据任务id获取docx文件处理任务的相关元数据信息
+    :param uid: process task id
+    :return:
+    """
+    if not uid:
+        raise RuntimeError(f"param_uid_null_err {uid}")
+    sql = f"select * from docx_file_info where uid = {uid} order by task_id desc limit 100"
+    logger.info(f"get_docx_info_by_uid_sql, {sql}")
+    my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"get_docx_info_by_uid_dt {my_dt}")
     return my_dt
 
 def get_docx_file_processing_list()-> list:

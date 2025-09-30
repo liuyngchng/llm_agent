@@ -5,7 +5,6 @@
     <meta id="docx_index.html">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>在线文档生成</title>
-<!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">-->
     <link rel="stylesheet" href="/static/docx.css">
     <script type="text/javascript" src="/static/marked.min.js"></script>
     <script type="text/javascript" src="/static/purify.min.js"></script>
@@ -16,9 +15,9 @@
         <header>
             <div class="header-buttons">
                 <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="knowledge-btn" target="_blank">
-                    <i class="fas fa-book"></i> 知识库构建
+                    <i class="fas fa-book"></i> 建立参考材料库
                 </a>
-                <a href="/vdb/task?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="my-btn" target="_blank">
+                <a href="/docx/task?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="my-btn" target="_blank">
                     <i class="fas fa-user"></i> 我的写作任务
                 </a>
                 <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="logout-btn">
@@ -78,8 +77,15 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="keywords">自定义写作要求 (可选)</label>
+                    <label for="keywords">自定义写作要求 (可选项)</label>
                     <input type="text" id="keywords" placeholder="输入写作要求，用逗号分隔">
+                </div>
+
+                <div class="form-group">
+                    <label for="knowledgeBase">选择参考材料库 (可选项，提前建立参考材料库，写作时参照参考材料可以提高文档质量)</label>
+                    <select id="knowledgeBase">
+                        <option value="">-- 选择参考材料库 --</option>
+                    </select>
                 </div>
 
                 <div class="btn-container">
@@ -174,34 +180,8 @@
                         <i class="fas fa-arrow-left"></i> 上一步
                     </button>
                     <button class="btn btn-primary" id="generateBtn" onclick="gen_doc()">
-                        生成文档 <i class="fas fa-file-word"></i>
+                        提交任务 <i class="fas fa-file-word"></i>
                     </button>
-                </div>
-            </div>
-
-            <!-- 步骤4: 下载文档 -->
-            <div class="step-panel" id="step4">
-                <div class="download-success">
-                    <i class="fas fa-check-circle"></i>
-                    <h3>文档生成成功！</h3>
-                    <p id="elapsedTimeDisplay" style="margin: 10px 0; font-size: 0.95rem; color: #27ae60;">
-                        总共<span id="timeValue">{{elapsed_time}}</span>
-                    </p>
-                    <p>您的专业文档已准备就绪，点击下方按钮下载</p>
-
-                    <div class="btn-container">
-                        <button class="btn btn-secondary" onclick="prevStep(4)">
-                            <i class="fas fa-arrow-left"></i> 返回编辑
-                        </button>
-                        <a id="downloadButton" class="btn btn-primary" href="#" download>
-                            <i class="fas fa-download"></i> 下载Word文档
-                        </a>
-                    </div>
-                    <div id="downloadTip" style="margin-top: 20px; color: #e74c3c; font-size: 0.9rem; text-align: center; display: none;">
-                        若点击'下载Word文档'按钮无法正常下载，请拷贝链接：<br>
-                        <span id="downloadUrlText" style="font-weight: bold;"></span><br>
-                        至浏览器地址栏中，回车即可下载
-                    </div>
                 </div>
             </div>
         </div>

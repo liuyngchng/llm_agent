@@ -3,38 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>在线文档生成 - 我的任务</title>
-<!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">-->
+    <title>文档生成 - 我的任务</title>
     <link rel="stylesheet" href="/static/docx.my.task.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-tasks"></i> 我的文档任务</h1>
-            <p>查看和管理您的文档生成任务</p>
-
-            <div class="header-controls">
-                <a href="/docx" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> 返回文档生成
-                </a>
-                <button class="btn btn-primary" id="refreshAllBtn">
-                    <i class="fas fa-sync-alt"></i> 刷新所有任务
-                </button>
-            </div>
+            <h1><i class="fas fa-tasks"></i> 文档生成任务</h1>
+            <p>查看和管理您的文档生成任务（每5秒自动刷新）</p>
         </header>
 
         <div class="tasks-container">
             <div class="loading-overlay" id="loadingOverlay">
                 <div class="spinner"></div>
             </div>
-
             <table id="tasksTable">
                 <thead>
                     <tr>
-                        <th>任务ID</th>
-                        <th>任务信息</th>
+                        <th>No.</th>
+                        <th>文档标题</th>
                         <th>创建时间</th>
-                        <th>状态</th>
+                        <th>处理信息</th>
+                        <th>处理进度</th>
                         <th>文档下载</th>
                         <th>操作</th>
                     </tr>
@@ -55,246 +45,9 @@
         </div>
     </div>
 
-    <script>
-        // 示例任务数据（实际应用中应从后端API获取）
-        const sampleTasks = [
-            {
-                id: "TX-20231001",
-                title: "营销策划方案",
-                type: "营销策划方案",
-                createdAt: "2023-10-01 14:30",
-                status: "in-progress",
-                progress: 75,
-                downloadUrl: ""
-            },
-            {
-                id: "TX-20230928",
-                title: "年度工作总结报告",
-                type: "年度工作总结",
-                createdAt: "2023-09-28 09:15",
-                status: "completed",
-                progress: 100,
-                downloadUrl: "/download/TX-20230928.docx"
-            },
-            {
-                id: "TX-20230925",
-                title: "项目计划书",
-                type: "项目计划书",
-                createdAt: "2023-09-25 16:45",
-                status: "completed",
-                progress: 100,
-                downloadUrl: "/download/TX-20230925.docx"
-            },
-            {
-                id: "TX-20230920",
-                title: "国家标准文档草案",
-                type: "国家标准(GB/(GB/T))",
-                createdAt: "2023-09-20 11:20",
-                status: "pending",
-                progress: 0,
-                downloadUrl: ""
-            },
-            {
-                id: "TX-20230915",
-                title: "技术可行性研究报告",
-                type: "可行性研究报告",
-                createdAt: "2023-09-15 13:40",
-                status: "failed",
-                progress: 45,
-                downloadUrl: ""
-            }
-        ];
-
-        // 渲染任务表格
-        function renderTasksTable(tasks) {
-            const tableBody = document.querySelector('#tasksTable tbody');
-            const emptyState = document.getElementById('emptyState');
-
-            if (tasks.length === 0) {
-                document.querySelector('table').style.display = 'none';
-                emptyState.style.display = 'block';
-                return;
-            }
-
-            tableBody.innerHTML = '';
-            tasks.forEach(task => {
-                const row = document.createElement('tr');
-
-                // 任务ID
-                const idCell = document.createElement('td');
-                idCell.textContent = task.id;
-                idCell.style.fontWeight = '600';
-                idCell.style.color = '#4b6cb7';
-
-                // 任务信息
-                const infoCell = document.createElement('td');
-                infoCell.innerHTML = `
-                    <div><strong>${task.title}</strong></div>
-                    <div style="color: #666; font-size: 0.9rem;">${task.type}</div>
-                `;
-
-                // 创建时间
-                const timeCell = document.createElement('td');
-                timeCell.textContent = task.createdAt;
-
-                // 状态
-                const statusCell = document.createElement('td');
-                let statusText, statusClass;
-
-                switch(task.status) {
-                    case 'pending':
-                        statusText = '等待中';
-                        statusClass = 'status-pending';
-                        break;
-                    case 'in-progress':
-                        statusText = `生成中 (${task.progress}%)`;
-                        statusClass = 'status-in-progress';
-                        break;
-                    case 'completed':
-                        statusText = '已完成';
-                        statusClass = 'status-completed';
-                        break;
-                    case 'failed':
-                        statusText = '生成失败';
-                        statusClass = 'status-failed';
-                        break;
-                    default:
-                        statusText = '未知状态';
-                        statusClass = 'status-pending';
-                }
-
-                statusCell.innerHTML = `
-                    <div class="status-indicator ${statusClass}">
-                        <i class="fas ${task.status === 'completed' ? 'fa-check-circle' :
-                                      task.status === 'failed' ? 'fa-exclamation-circle' :
-                                      task.status === 'in-progress' ? 'fa-sync-alt fa-spin' : 'fa-clock'}"></i>
-                        ${statusText}
-                    </div>
-                    ${task.status === 'in-progress' ? `
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" style="width: ${task.progress}%"></div>
-                        </div>
-                    ` : ''}
-                `;
-
-                // 文档下载
-                const downloadCell = document.createElement('td');
-                if (task.status === 'completed' && task.downloadUrl) {
-                    downloadCell.innerHTML = `
-                        <a href="${task.downloadUrl}" class="action-btn action-download" download>
-                            <i class="fas fa-download"></i> 下载文档
-                        </a>
-                    `;
-                } else {
-                    downloadCell.textContent = '-';
-                }
-
-                // 操作
-                const actionCell = document.createElement('td');
-                if (task.status === 'in-progress' || task.status === 'pending') {
-                    actionCell.innerHTML = `
-                        <button class="action-btn action-refresh" onclick="refreshTask('${task.id}')">
-                            <i class="fas fa-sync-alt"></i> 刷新状态
-                        </button>
-                    `;
-                } else if (task.status === 'failed') {
-                    actionCell.innerHTML = `
-                        <button class="action-btn action-refresh" onclick="retryTask('${task.id}')">
-                            <i class="fas fa-redo"></i> 重试
-                        </button>
-                    `;
-                } else {
-                    actionCell.innerHTML = `
-                        <button class="action-btn" disabled>
-                            <i class="fas fa-check"></i> 已完成
-                        </button>
-                    `;
-                }
-
-                // 添加单元格到行
-                row.appendChild(idCell);
-                row.appendChild(infoCell);
-                row.appendChild(timeCell);
-                row.appendChild(statusCell);
-                row.appendChild(downloadCell);
-                row.appendChild(actionCell);
-
-                // 添加行到表格
-                tableBody.appendChild(row);
-            });
-
-            document.querySelector('table').style.display = 'table';
-            emptyState.style.display = 'none';
-        }
-
-        // 模拟从后端获取任务数据
-        function fetchTasks() {
-            showLoading();
-
-            // 模拟网络请求延迟
-            setTimeout(() => {
-                renderTasksTable(sampleTasks);
-                hideLoading();
-            }, 800);
-        }
-
-        // 刷新任务状态
-        function refreshTask(taskId) {
-            showLoading();
-
-            // 模拟网络请求
-            setTimeout(() => {
-                // 在实际应用中，这里会调用后端API更新任务状态
-                alert(`任务 ${taskId} 状态已刷新`);
-                hideLoading();
-            }, 800);
-        }
-
-        // 重试任务
-        function retryTask(taskId) {
-            showLoading();
-
-            // 模拟网络请求
-            setTimeout(() => {
-                // 在实际应用中，这里会调用后端API重试任务
-                alert(`任务 ${taskId} 已重新提交`);
-
-                // 更新任务状态为"in-progress"
-                const task = sampleTasks.find(t => t.id === taskId);
-                if (task) {
-                    task.status = 'in-progress';
-                    task.progress = 10;
-                    renderTasksTable(sampleTasks);
-                }
-
-                hideLoading();
-            }, 800);
-        }
-
-        // 显示加载状态
-        function showLoading() {
-            document.getElementById('loadingOverlay').style.display = 'flex';
-        }
-
-        // 隐藏加载状态
-        function hideLoading() {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-
-        // 初始化页面
-        document.addEventListener('DOMContentLoaded', () => {
-            // 刷新所有任务按钮事件
-            document.getElementById('refreshAllBtn').addEventListener('click', () => {
-                showLoading();
-                setTimeout(() => {
-                    alert('所有任务状态已刷新');
-                    hideLoading();
-                }, 800);
-            });
-
-            // 初始加载任务数据
-            fetchTasks();
-        });
-    </script>
+    <div class="auto-refresh-indicator" id="refreshIndicator">
+        <i class="fas fa-sync-alt"></i> 自动刷新已启用
+    </div>
+    <script type="text/javascript" src="/static/docx.my.task.js"></script>
 </body>
 </html>

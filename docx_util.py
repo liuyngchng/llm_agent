@@ -307,7 +307,7 @@ def fill_doc_with_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
     docx_meta_util.save_docx_output_file_path_by_task_id(task_id,output_file_name)
     txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}，发生错误 {len(err_record)} 次, 错误信息 {err_record}"
     if gen_txt_count == 0:
-        txt_info += f"未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于20个汉字"
+        txt_info += f"未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于 {MIN_PROMPT_LEN} 个汉字"
     docx_meta_util.update_docx_file_process_info_by_task_id(task_id, txt_info, 100.0)
     logger.info(f"{txt_info}, 写做任务 {task_id} 所有内容已输出至文件 {output_file_name}")
 

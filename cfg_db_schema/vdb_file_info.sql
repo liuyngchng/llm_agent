@@ -9,5 +9,6 @@ CREATE TABLE "vdb_file_info" (
 	"percent"	INTEGER NOT NULL DEFAULT 0,
 	"process_info"	TEXT NOT NULL DEFAULT '已上传，待处理',
 	"file_md5"	TEXT,
+	"create_time"	TEXT,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
