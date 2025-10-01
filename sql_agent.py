@@ -72,7 +72,6 @@ class SqlAgent(DbUtl):
         self.llm_api_uri = cfg['api']['llm_api_uri']
         self.llm_api_key = SecretStr(cfg['api']['llm_api_key'])
         self.llm_model_name = cfg['api']['llm_model_name']
-        self.is_remote_model = cfg['api']['is_remote']
 
         # 带数据库结构的提示模板
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]

@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 import json
-import re
 
 import utils
 from sys_init import init_yml_cfg
@@ -20,6 +19,10 @@ from typing import List, Dict, Any
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+__temperature = 0.7
+__max_tokens=32768
+__reasoning=False
+
 def get_model(cfg):
     if cfg['api']['is_remote']:
         model = ChatOpenAI(
@@ -28,19 +31,23 @@ def get_model(cfg):
             http_client=httpx.Client(verify=False, proxy=None),
             model=cfg['api']['llm_model_name'],
             # 常用参数配置
-            temperature=0.7,        # 控制随机性 (0.0-2.0)
-            max_tokens=4000,        # 最大生成长度
+            temperature=__temperature,        # 控制随机性 (0.0-2.0)
+            max_tokens=__max_tokens,        # 最大生成长度
             top_p=0.9,              # 核采样参数
             frequency_penalty=0.1,  # 频率惩罚
             presence_penalty=0.1,   # 存在惩罚
             timeout=30,             # 超时时间
             max_retries=2,          # 重试次数
             extra_body={
-                "reasoning": False
+                "reasoning": __reasoning
             }
         )
     else:
-        model = ChatOllama(model=cfg['api']['llm_model_name'], base_url=cfg['api']['llm_api_uri'])
+        model = ChatOllama(
+            model=cfg['api']['llm_model_name'],
+            base_url=cfg['api']['llm_api_uri'],
+            temperature=__temperature,
+        )
     return model
 
 def classify_msg(labels: list, msg: str, cfg: dict) -> dict:
@@ -58,7 +65,6 @@ def classify_msg(labels: list, msg: str, cfg: dict) -> dict:
     :param labels: the label list collection which AI can produce label within it
     :param msg: the msg need to be classified by AI
     :param cfg: the configuration information of system
-    :param is_remote: is the LLM is deployed in remote endpoint
     """
 
     classify_label = ';\n'.join(map(str, labels))
@@ -365,7 +371,7 @@ def get_abs_of_chat(txt: list, cfg: dict) -> str:
     try:
         abstract = rmv_think_block(response.content)
     except Exception as es:
-        logger.error(f"start_extract_abstract_of_txt {response.content}")
+        logger.exception(f"start_extract_abstract_of_txt {response.content}")
     return abstract
 
 def test_fill_dict():
