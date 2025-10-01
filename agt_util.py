@@ -157,12 +157,12 @@ def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: d
     :cfg: 系统配置
     :is_remote: 是否调用远端LLM
     """
-    logger.info(f"doc_type[{doc_type}] , doc_title[{doc_title}], cfg[{cfg}]")
+    logger.info(f"doc_type[{doc_type}] , doc_title[{doc_title}], cfg['api']=[{cfg.get('api', None)}]")
     template = cfg['prompts']['gen_docx_outline_msg']
     prompt = ChatPromptTemplate.from_template(utils.replace_spaces(template))
     logger.info(f"prompt {prompt}")
     model = get_model(cfg, is_remote)
-    logger.info(f"submit doc_type[{doc_type}], doc_title[{doc_title}, keywords[{keywords}]] to llm_api {cfg['api']}")
+    logger.info(f"submit_to_llm, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}, prompt {prompt}")
     try:
         # 流式调用模型
         for chunk in model.stream(prompt.format(doc_type=doc_type, doc_title=doc_title, keywords=keywords)):

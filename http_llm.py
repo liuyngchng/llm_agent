@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+import logging.config
 
 from flask import Flask, request, jsonify
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -8,6 +9,9 @@ import torch
 import threading
 
 app = Flask(__name__)
+
+logging.config.fileConfig('logging.conf', encoding="utf-8")
+logger = logging.getLogger(__name__)
 
 # 加载模型
 model_path = "../DeepSeek-R1-Distill-Qwen-7B"
@@ -38,6 +42,7 @@ def generate_response(prompt, max_length=512):
 @app.route('/v1/chat/completions', methods=['POST'])
 def chat_completions():
     data = request.json
+    logger.info(f"chat_data, {data}")
     messages = data.get('messages', [])
 
     # 构建 prompt
@@ -91,4 +96,6 @@ def list_models():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, threaded=True)
+    port = 8000
+    logger.info(f"start listening {port}")
+    app.run(host='0.0.0.0', port=port, threaded=True)
