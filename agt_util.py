@@ -48,6 +48,7 @@ def get_model(cfg):
             base_url=cfg['api']['llm_api_uri'],
             temperature=__temperature,
         )
+    logger.info(f"get_model,{type(model)}, {model}")
     return model
 
 def classify_msg(labels: list, msg: str, cfg: dict) -> dict:
