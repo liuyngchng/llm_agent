@@ -5,43 +5,101 @@ import logging.config
 import json
 import time
 import uuid
+import signal
+import functools
+import platform
 
-from flask import Flask, request, jsonify, Response, stream_with_context
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from flask import Flask, request, Response, stream_with_context
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
-import threading
 
 app = Flask(__name__)
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+
+def timeout(seconds=60):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            # Windows不支持signal.alarm
+            if platform.system() == 'Windows':
+                logger.warning("Timeout decorator not supported on Windows, skipping timeout")
+                return func(*args, **kwargs)
+            else:
+                def timeout_handler(signum, frame):
+                    raise TimeoutError("Function execution timed out")
+
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(seconds)
+                try:
+                    result = func(*args, **kwargs)
+                finally:
+                    signal.alarm(0)
+                return result
+
+        return wrapper
+
+    return decorator
+
+
 # 加载模型
 model_path = "../DeepSeek-R1-Distill-Qwen-7B"
 model_name = "DeepSeek-R1"
-tokenizer = AutoTokenizer.from_pretrained(model_path)
-model = AutoModelForCausalLM.from_pretrained(
-    model_path,
-    dtype=torch.bfloat16,
-    device_map="cpu",
-    low_cpu_mem_usage=True
-)
+
+try:
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+    # 4-bit 量化配置
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16
+    )
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        quantization_config=bnb_config,
+        device_map="auto",
+        trust_remote_code=True
+    )
+
+    # 验证模型加载
+    test_input = tokenizer("Test", return_tensors="pt")
+    with torch.no_grad():
+        _ = model.generate(**test_input, max_new_tokens=1)
+    logger.info("Model loaded and verified successfully")
+
+except Exception as e:
+    logger.error(f"Model loading failed: {str(e)}")
+    raise
 
 
+@timeout(120)
 def generate_response(prompt, max_length=512, temperature=0.7):
-    """普通生成响应"""
-    inputs = tokenizer(prompt, return_tensors="pt")
+    """带性能监控的生成响应"""
+    start_time = time.time()
+    inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1024)
+
     with torch.no_grad():
         outputs = model.generate(
             **inputs,
             max_length=max_length,
             temperature=temperature,
-            do_sample=True,
+            do_sample=temperature > 0.1,
             pad_token_id=tokenizer.eos_token_id,
-            repetition_penalty=1.1
+            repetition_penalty=1.1,
+            early_stopping=True,
         )
+
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return response[len(prompt):].strip()
+    final_response = response[len(prompt):].strip()
+
+    generation_time = time.time() - start_time
+    logger.info(f"Generation completed in {generation_time:.2f}s, tokens: {len(tokenizer.encode(final_response))}")
+    return final_response
 
 
 def build_prompt(messages):
@@ -66,19 +124,16 @@ def gen_stream(prompt, max_tokens, temperature):
     logger.info(f"Starting stream generation for prompt length: {len(prompt)}")
 
     try:
-        # 先发送开始消息
         yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
                                    'created': timestamp, 'model': model_name,
                                    'choices': [{'index': 0, 'delta': {'role': 'assistant'}, 'finish_reason': None}]})}\n\n"
 
-        # 生成流式内容 - 关键修复：确保这里实际生成了内容
         inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048)
         prompt_length = len(inputs['input_ids'][0])
 
         logger.info(f"Input tokens: {prompt_length}, max_new_tokens: {max_tokens}")
 
         with torch.no_grad():
-            # 使用 generate 并确保返回所有序列
             outputs = model.generate(
                 **inputs,
                 max_new_tokens=max_tokens,
@@ -91,13 +146,11 @@ def gen_stream(prompt, max_tokens, temperature):
                 output_scores=False
             )
 
-        # 获取生成的序列
         generated_ids = outputs.sequences[0]
         total_length = len(generated_ids)
 
         logger.info(f"Generated {total_length - prompt_length} new tokens")
 
-        # 逐个token输出
         accumulated_text = ""
         for i in range(prompt_length, total_length):
             token_id = generated_ids[i].unsqueeze(0)
@@ -108,24 +161,21 @@ def gen_stream(prompt, max_tokens, temperature):
                 accumulated_text += token_text
                 yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
                                            'created': timestamp, 'model': model_name,
-                                           'choices': [{'index': 0, 'delta': {'content': token_text}, 'finish_reason': None}]})}\n\n"
-
-                # 添加小延迟，让流式效果更明显
+                                           'choices': [{'index': 0, 'delta': {'content': token_text}, 'finish_reason': None}]}, ensure_ascii=False)}\n\n"
                 time.sleep(0.01)
 
         logger.info(f"Stream generation completed: {accumulated_text[:100]}...")
 
-        # 发送结束消息
         yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
                                    'created': timestamp, 'model': model_name,
-                                   'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]})}\n\n"
+                                   'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
 
     except Exception as e:
         logger.error(f"Stream generation error: {str(e)}")
         yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
                                    'created': timestamp, 'model': model_name,
-                                   'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]})}\n\n"
+                                   'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
 
 
@@ -141,7 +191,7 @@ def gen_normal_response(prompt, max_tokens, temperature):
             temperature=temperature
         )
 
-        return jsonify({
+        response_data = {
             "id": request_id,
             "object": "chat.completion",
             "created": timestamp,
@@ -159,21 +209,23 @@ def gen_normal_response(prompt, max_tokens, temperature):
                 "completion_tokens": len(tokenizer.encode(response_text)),
                 "total_tokens": len(tokenizer.encode(prompt)) + len(tokenizer.encode(response_text))
             }
-        })
+        }
+
+        return json.dumps(response_data, ensure_ascii=False), 200
 
     except Exception as e:
         logger.error(f"Non-stream generation error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        error_data = {"error": str(e)}
+        return json.dumps(error_data, ensure_ascii=False), 500
 
 
-# OpenAI 兼容的聊天接口
 @app.route('/v1/chat/completions', methods=['POST'])
 def chat_completions():
     start_time = time.time()
     data = request.json
 
     if not data:
-        return jsonify({"error": "Request body is required"}), 400
+        return json.dumps({"error": "Request body is required"}, ensure_ascii=False), 400
 
     logger.info(f"chat_data received")
 
@@ -182,17 +234,14 @@ def chat_completions():
     temperature = data.get('temperature', 0.7)
     max_tokens = data.get('max_tokens', 512)
 
-    # 验证消息格式
     if not messages or not isinstance(messages, list):
-        return jsonify({"error": "Messages must be a non-empty list"}), 400
+        return json.dumps({"error": "Messages must be a non-empty list"}, ensure_ascii=False), 400
 
-    # 构建prompt
     prompt = build_prompt(messages)
     logger.info(f"generated_prompt_length: {len(prompt)}")
 
     try:
         if stream:
-            # 流式响应
             logger.info("Returning stream response")
             return Response(
                 stream_with_context(gen_stream(prompt, max_tokens, temperature)),
@@ -203,24 +252,22 @@ def chat_completions():
                 }
             )
         else:
-            # 非流式响应
             logger.info("Returning normal response")
-            response = gen_normal_response(prompt, max_tokens, temperature)
-
-        processing_time = time.time() - start_time
-        logger.info(f"Request processed in {processing_time:.2f}s, stream: {stream}")
-        return response
-
+            response_data, status_code = gen_normal_response(prompt, max_tokens, temperature)
+            processing_time = time.time() - start_time
+            logger.info(f"Request processed in {processing_time:.2f}s, stream: {stream}")
+            return Response(response_data, mimetype='application/json', status=status_code)
     except Exception as e:
         logger.error(f"Chat completion error: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
+        error_data = {"error": "Internal server error"}
+        return Response(json.dumps(error_data, ensure_ascii=False),
+                        mimetype='application/json', status=500)
 
 
-# 模型列表接口
 @app.route('/v1/models', methods=['GET'])
 def list_models():
     timestamp = int(time.time())
-    return jsonify({
+    return json.dumps({
         "object": "list",
         "data": [{
             "id": model_name,
@@ -228,18 +275,17 @@ def list_models():
             "created": timestamp,
             "owned_by": "deepseek"
         }]
-    })
+    }, ensure_ascii=False)
 
 
-# 健康检查接口
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({
+    return json.dumps({
         "status": "healthy",
         "model_loaded": True,
         "model": model_name,
         "timestamp": int(time.time())
-    })
+    }, ensure_ascii=False)
 
 
 if __name__ == '__main__':
