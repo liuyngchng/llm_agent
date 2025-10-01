@@ -12,6 +12,7 @@ import time
 from typing import Dict
 from datetime import datetime
 
+import agt_util
 import cfg_util
 import utils
 from doris import Doris
@@ -19,11 +20,7 @@ from utils import extract_md_content, rmv_think_block, extract_json
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.utilities import SQLDatabase
-from langchain_openai import ChatOpenAI
-
-from langchain_ollama import ChatOllama
 import logging.config
-import httpx
 from pydantic import SecretStr
 from my_enums import DBType, DataType, YieldType, AppType
 
@@ -72,7 +69,7 @@ class SqlYield(DbUtl):
     # db_uri = "mysql+pymysql://db_user:db_password@db_host/db_name"
     """
 
-    def __init__(self, cfg:dict , is_remote_model=True, prompt_padding=""):
+    def __init__(self, cfg:dict, prompt_padding=""):
         self.cfg = cfg
         self.db_type = cfg['db']['type'].lower()
         if DBType.DORIS.value == self.db_type:
@@ -84,8 +81,6 @@ class SqlYield(DbUtl):
         self.llm_api_uri = cfg['api']['llm_api_uri']
         self.llm_api_key = SecretStr(cfg['api']['llm_api_key'])
         self.llm_model_name = cfg['api']['llm_model_name']
-        self.is_remote_model = is_remote_model
-        self.llm = self.get_llm()
         self.db_name = self.cfg['db'].get('name', self.cfg['db'].get('data_source'))
 
         # 带数据库结构的提示模板
@@ -166,7 +161,7 @@ class SqlYield(DbUtl):
         # hack_content = cfg_util.get_hack_q_file_content(uid)
         hack_content = cfg_util.get_user_hack_info(uid, self.cfg)
         data_source_info = cfg_util.get_const("data_source_info", AppType.TXT2SQL.name.lower())
-        chain = self.refine_q_prompt_template | self.llm
+        chain = self.refine_q_prompt_template | self.get_llm()
         refine_q_dict = SqlYield.build_refine_invoke_json(question, hack_content, data_source_info)
         logger.info(f"start_refine_user_q, {uid}, {refine_q_dict}")
         response = chain.invoke(refine_q_dict)
@@ -200,7 +195,7 @@ class SqlYield(DbUtl):
         """
         generate sql
         """
-        chain = self.sql_gen_prompt_template | self.llm
+        chain = self.sql_gen_prompt_template | self.get_llm()
         gen_sql_dict = self.build_invoke_json(uid, question)
         logger.info(f"gen_sql_by_txt: {gen_sql_dict}")
         response = chain.invoke(gen_sql_dict)
@@ -210,7 +205,7 @@ class SqlYield(DbUtl):
         """
         generate sql
         """
-        chain = self.sql_review_prompt_template | self.llm
+        chain = self.sql_review_prompt_template | self.get_llm()
         review_sql_dict = {
             "current_sql": current_sql,
             "error_reason": error_reason,
@@ -225,7 +220,7 @@ class SqlYield(DbUtl):
         """
         generate count sql by data retrieval sql
         """
-        chain = self.count_sql_gen_prompt_template | self.llm
+        chain = self.count_sql_gen_prompt_template | self.get_llm()
         gen_sql_dict = self.build_invoke_json(uid, sql)
         logger.info(f"gen_count_sql_by_sql: {gen_sql_dict}")
         response = chain.invoke(gen_sql_dict)
@@ -235,7 +230,7 @@ class SqlYield(DbUtl):
         """
         generate count sql by data retrieval sql
         """
-        chain = self.explain_sql_msg_template | self.llm
+        chain = self.explain_sql_msg_template | self.get_llm()
         explain_sql_dict = self.build_invoke_json(uid, sql)
         logger.info(f"get_explain_sql_txt: {explain_sql_dict}")
         response = chain.invoke(explain_sql_dict)
@@ -245,7 +240,7 @@ class SqlYield(DbUtl):
         """
         generate sql
         """
-        chain = self.desc_usr_dt_template | self.llm
+        chain = self.desc_usr_dt_template | self.get_llm()
         response = chain.invoke({
             "msg": question,
             "usr_dt": usr_dt,
@@ -256,7 +251,7 @@ class SqlYield(DbUtl):
         """
         generate sql for get user data from user account database
         """
-        chain = self.sql_gen_prompt_template | self.llm
+        chain = self.sql_gen_prompt_template | self.get_llm()
         check_sql_dict = self.build_invoke_json(uid, question)
         logger.info(f"check_sql_dict: {check_sql_dict}")
         response = chain.invoke(check_sql_dict)
@@ -267,14 +262,14 @@ class SqlYield(DbUtl):
         build chart.js data from source data
         :param md_dt： data table in mark down format
         """
-        chain = self.chart_dt_gen_prompt_template | self.llm
+        chain = self.chart_dt_gen_prompt_template | self.get_llm()
         response = chain.invoke({
             "msg": md_dt
         })
         return response.content
 
     def intercept_usr_question(self, uid: str, q: str):
-        chain = self.intercept_q_msg_template | self.llm
+        chain = self.intercept_q_msg_template | self.get_llm()
         intercept_gen_sql_dict = {
             "msg": q,
             "schema": self.get_schema_info(),
@@ -372,21 +367,8 @@ class SqlYield(DbUtl):
         return schema_info
 
     def get_llm(self):
-        if self.is_remote_model:
-            if "https" in self.llm_api_uri:
-                model = ChatOpenAI(
-                    api_key=self.llm_api_key,
-                    base_url=self.llm_api_uri,
-                    http_client=httpx.Client(verify=False, proxy=None),
-                    model=self.llm_model_name,
-                    temperature=0
-                )
-            else:
-                model = ChatOllama(model=self.llm_model_name, base_url=self.llm_api_uri, temperature=0)
-        else:
-            model = ChatOllama(model=self.llm_model_name, base_url=self.llm_api_uri, temperature=0)
-        logger.debug(f"model, {model}")
-        return model
+        return agt_util.get_model(self.cfg)
+
 
     def yield_dt_with_nl(self, uid: str, q: str, dt_fmt: str, user_page_dt: dict):
         """

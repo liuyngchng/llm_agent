@@ -20,8 +20,8 @@ from typing import List, Dict, Any
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-def get_model(cfg, is_remote=True):
-    if is_remote:
+def get_model(cfg):
+    if cfg['api']['is_remote']:
         model = ChatOpenAI(
             api_key=cfg['api']['llm_api_key'],
             base_url=cfg['api']['llm_api_uri'],
@@ -43,7 +43,7 @@ def get_model(cfg, is_remote=True):
         model = ChatOllama(model=cfg['api']['llm_model_name'], base_url=cfg['api']['llm_api_uri'])
     return model
 
-def classify_msg(labels: list, msg: str, cfg: dict, is_remote=True) -> dict:
+def classify_msg(labels: list, msg: str, cfg: dict) -> dict:
     """
     classify user's question first, multi-label can be obtained
     from transformers import pipeline
@@ -66,7 +66,7 @@ def classify_msg(labels: list, msg: str, cfg: dict, is_remote=True) -> dict:
     template = cfg['prompts']['csm_cls_msg']
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
-    model = get_model(cfg, is_remote)
+    model = get_model(cfg)
     chain = prompt | model
     arg_dict = {"msg": msg, "classify_label": classify_label}
     logger.info(f"submit_arg_dict[{arg_dict}] to llm {cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}")
@@ -80,7 +80,7 @@ def classify_msg(labels: list, msg: str, cfg: dict, is_remote=True) -> dict:
         )
     )
 
-def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str | None:
+def classify_txt(labels: list, txt: str, cfg: dict) -> str | None:
     """
     classify txt, multi-label can be obtained
     """
@@ -101,7 +101,7 @@ def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str | Non
             prompt = ChatPromptTemplate.from_template(template)
             # logger.info(f"prompt {prompt}")
 
-            model = get_model(cfg, is_remote)
+            model = get_model(cfg)
             chain = prompt | model
             arg_dict = {"txt": txt, "classify_label": classify_label}
             logger.info(f"submit_arg_dict_to_llm, [{arg_dict}], llm[{cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}]")
@@ -122,7 +122,7 @@ def classify_txt(labels: list, txt: str, cfg: dict, is_remote=True) -> str | Non
             logger.error(f"all_retries_exhausted_task_classify_txt_failed, {labels}, {txt}")
             raise last_exception
 
-def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dict:
+def fill_dict(user_info: str, user_dict: dict, cfg: dict) -> dict:
     """
     search user questions in knowledge base,
     submit the search result and user msg to LLM, return the answer
@@ -131,7 +131,7 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
     template = cfg['prompts']['fill_dict_msg']
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
-    model = get_model(cfg, is_remote)
+    model = get_model(cfg)
     chain = prompt | model
     arg_dict = {
         "context": user_info,
@@ -148,7 +148,7 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict, is_remote=True) -> dic
         logger.exception(f"json_loads_err_for {response.content}")
     return fill_result
 
-def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: dict, is_remote=True):
+def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: dict):
     """
     流式生成docx文档目录
     :doc_type: docx 文档的内容类型，详见:class:`my_enums`WriteDocType
@@ -161,7 +161,7 @@ def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: d
     template = cfg['prompts']['gen_docx_outline_msg']
     prompt = ChatPromptTemplate.from_template(utils.replace_spaces(template))
     logger.info(f"prompt {prompt}")
-    model = get_model(cfg, is_remote)
+    model = get_model(cfg)
     logger.info(f"submit_to_llm, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}, prompt {prompt}")
     try:
         # 流式调用模型
@@ -179,7 +179,7 @@ def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: d
 
 
 def gen_txt(write_context: str, demo_txt: str, paragraph_prompt: str, catalogue: str,
-            current_sub_title: str, cfg: dict, is_remote=True, max_retries=6) -> str | None:
+            current_sub_title: str, cfg: dict, max_retries=6) -> str | None:
     """
     根据提供的三级目录、文本的写作风格，以及每个章节的具体文本写作要求，输出文本
     :param write_context:       整体的写作背景
@@ -188,7 +188,6 @@ def gen_txt(write_context: str, demo_txt: str, paragraph_prompt: str, catalogue:
     :param catalogue:           整个文档的三级目录
     :param current_sub_title:   当前写作章节的目录标题
     :param cfg:                 系统配置
-    :param is_remote:           是否调用远端LLM
     :param max_retries:         最大尝试次数， 需处于集合 [1, 7]
     """
     # logger.info(
@@ -282,7 +281,7 @@ def txt2sql(schema: str, txt: str, dialect:str, cfg: dict, max_retries=6) -> str
             logger.exception(f"all_retries_exhausted_task_txt2sql_failed, schema={schema}, dialect={dialect}, txt={txt}")
             raise last_exception
 
-def update_session_info(user_info: str, append_info: str, cfg: dict, is_remote=True) -> str:
+def update_session_info(user_info: str, append_info: str, cfg: dict) -> str:
     """
     search user questions in knowledge base,
     submit the search result and user msg to LLM, return the answer
@@ -291,7 +290,7 @@ def update_session_info(user_info: str, append_info: str, cfg: dict, is_remote=T
     template = cfg['prompts']['pad_dict_info_msg']
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
-    model = get_model(cfg, is_remote)
+    model = get_model(cfg)
     chain = prompt | model
     arg_dict = {"context": user_info, "append_info": append_info}
     logger.info(f"submit_arg_dict_to_llm {arg_dict}, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
@@ -305,7 +304,7 @@ def update_session_info(user_info: str, append_info: str, cfg: dict, is_remote=T
         logger.error(f"json_loads_err_for {response.content}")
     return fill_result
 
-def extract_session_info(chat_log: str, cfg: dict, is_remote=True) -> str:
+def extract_session_info(chat_log: str, cfg: dict) -> str:
     """
     extract_session_info from chat log
     """
@@ -313,7 +312,7 @@ def extract_session_info(chat_log: str, cfg: dict, is_remote=True) -> str:
     template = cfg['prompts']['extract_person_info_msg']
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
-    model = get_model(cfg, is_remote)
+    model = get_model(cfg)
     chain = prompt | model
     arg_dict = {"context": chat_log}
     logger.info(f"submit_arg_dict_to_llm[{arg_dict}], {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
@@ -327,7 +326,7 @@ def extract_session_info(chat_log: str, cfg: dict, is_remote=True) -> str:
         logger.error(f"json_loads_err_for {response.content}")
     return final_result
 
-def extract_lpg_order_info(chat_log: str, cfg: dict, is_remote=True) -> str:
+def extract_lpg_order_info(chat_log: str, cfg: dict) -> str:
     """
     extract lpg order  from chat log
     """
@@ -335,7 +334,7 @@ def extract_lpg_order_info(chat_log: str, cfg: dict, is_remote=True) -> str:
     template = cfg['prompts']['get_lpg_order_info_msg']
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
-    model = get_model(cfg, is_remote)
+    model = get_model(cfg)
     chain = prompt | model
     logger.info(f"submit chat_log[{chat_log}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     response = chain.invoke({"context": chat_log})
@@ -348,7 +347,7 @@ def extract_lpg_order_info(chat_log: str, cfg: dict, is_remote=True) -> str:
         logger.error(f"json_loads_err_for {response.content}")
     return final_result
 
-def get_abs_of_chat(txt: list, cfg: dict, is_remote=True) -> str:
+def get_abs_of_chat(txt: list, cfg: dict) -> str:
     """
     get abstract of a long text
     """
@@ -356,7 +355,7 @@ def get_abs_of_chat(txt: list, cfg: dict, is_remote=True) -> str:
     template = cfg['prompts']['get_chat_abs_msg']
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
-    model = get_model(cfg, is_remote)
+    model = get_model(cfg)
     chain = prompt | model
     logger.info(f"submit user_info[{txt}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     response = chain.invoke({"context": txt,})

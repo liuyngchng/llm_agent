@@ -7,8 +7,6 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 import logging.config
 import os
@@ -16,7 +14,8 @@ import subprocess
 import socket
 import faiss
 import torch
-import httpx
+
+import agt_util
 from utils import extract_md_content
 
 from sys_init import init_yml_cfg
@@ -77,12 +76,12 @@ def get_vector_db() -> FAISS:
 
 
 
-def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[str, dict]]]:
+def search(question: str, cfg: dict) -> Union[str, list[Union[str, dict]]]:
     """
     search user questions in knowledge base,
     submit the search result and user msg to LLM, return the answer
     """
-    logger.info(f"sim_search [{question}] in doc {doc}")
+    logger.info(f"sim_search [{question}]")
     # 搜索部分
     docs_with_scores = get_vector_db().similarity_search_with_relevance_scores(question, k=5)
 
@@ -98,7 +97,7 @@ def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[st
         """
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
-    model = get_model(cfg, is_remote)
+    model = get_model(cfg)
     chain = prompt | model
     logger.info(f"submit msg[{question}] to llm {cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}")
     response = chain.invoke({
@@ -110,16 +109,8 @@ def search(question: str, cfg: dict, is_remote=True) -> Union[str, list[Union[st
     return extract_md_content(response.content, "html")
 
 
-def get_model(cfg, is_remote):
-    if is_remote:
-        model = ChatOpenAI(api_key=cfg['api']['llm_api_key'],
-                           base_url=cfg['api']['llm_api_uri'],
-                           http_client=httpx.Client(verify=False, proxy=None),
-                           model=cfg['api']['llm_model_name']
-                           )
-    else:
-        model = ChatOllama(model=cfg['api']['llm_model_name'], base_url=cfg['api']['llm_api_uri'])
-    return model
+def get_model(cfg):
+    return agt_util.get_model(cfg)
 
 
 def test_search():
