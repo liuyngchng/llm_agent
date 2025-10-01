@@ -20,24 +20,20 @@ logger = logging.getLogger(__name__)
 
 
 def timeout(seconds=60):
+    """简单的超时装饰器（不使用signal）"""
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            # Windows不支持signal.alarm
-            if platform.system() == 'Windows':
-                logger.warning("Timeout decorator not supported on Windows, skipping timeout")
-                return func(*args, **kwargs)
-            else:
-                def timeout_handler(signum, frame):
-                    raise TimeoutError("Function execution timed out")
+            start_time = time.time()
+            result = func(*args, **kwargs)
+            end_time = time.time()
 
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(seconds)
-                try:
-                    result = func(*args, **kwargs)
-                finally:
-                    signal.alarm(0)
-                return result
+            execution_time = end_time - start_time
+            if execution_time > seconds:
+                logger.warning(f"Function {func.__name__} took {execution_time:.2f}s (exceeded {seconds}s timeout)")
+
+            return result
 
         return wrapper
 
@@ -51,7 +47,8 @@ model_name = "DeepSeek-R1"
 try:
     tokenizer = AutoTokenizer.from_pretrained(model_path)
 
-    # 4-bit 量化配置
+
+    # 4-bit 量化配置, for GPU with limited resource
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_use_double_quant=True,
@@ -61,8 +58,11 @@ try:
 
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
-        quantization_config=bnb_config,
-        device_map="auto",
+        # quantization_config=bnb_config,   # for GPU
+        torch_dtype=torch.bfloat16,         # bfloat16以减少内存使用, for CPU or limited GPU
+        # device_map="auto",                # for GPU
+        device_map="cpu",                   # for CPU, 明确指定CPU
+        low_cpu_mem_usage=True,             # for CPU, 优化CPU内存使用
         trust_remote_code=True
     )
 
