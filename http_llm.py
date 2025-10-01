@@ -38,7 +38,7 @@ def generate_response(prompt, max_length=512, temperature=0.7):
             temperature=temperature,
             do_sample=True,
             pad_token_id=tokenizer.eos_token_id,
-            repetition_penalty=1.1  # 添加重复惩罚
+            repetition_penalty=1.1
         )
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return response[len(prompt):].strip()
@@ -63,32 +63,43 @@ def gen_stream(prompt, max_tokens, temperature):
     request_id = f"chatcmpl-{uuid.uuid4().hex[:8]}"
     timestamp = int(time.time())
 
+    logger.info(f"Starting stream generation for prompt length: {len(prompt)}")
+
     try:
         # 先发送开始消息
         yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
                                    'created': timestamp, 'model': model_name,
                                    'choices': [{'index': 0, 'delta': {'role': 'assistant'}, 'finish_reason': None}]})}\n\n"
 
-        # 生成流式内容
+        # 生成流式内容 - 关键修复：确保这里实际生成了内容
         inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048)
         prompt_length = len(inputs['input_ids'][0])
 
+        logger.info(f"Input tokens: {prompt_length}, max_new_tokens: {max_tokens}")
+
         with torch.no_grad():
+            # 使用 generate 并确保返回所有序列
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=max_tokens,  # 使用max_new_tokens更准确
+                max_new_tokens=max_tokens,
                 temperature=temperature,
                 do_sample=True,
                 pad_token_id=tokenizer.eos_token_id,
                 repetition_penalty=1.1,
-                early_stopping=True
+                early_stopping=True,
+                return_dict_in_generate=True,
+                output_scores=False
             )
 
-        generated_ids = outputs[0]
+        # 获取生成的序列
+        generated_ids = outputs.sequences[0]
+        total_length = len(generated_ids)
+
+        logger.info(f"Generated {total_length - prompt_length} new tokens")
 
         # 逐个token输出
         accumulated_text = ""
-        for i in range(prompt_length, len(generated_ids)):
+        for i in range(prompt_length, total_length):
             token_id = generated_ids[i].unsqueeze(0)
             token_text = tokenizer.decode(token_id, skip_special_tokens=True,
                                           clean_up_tokenization_spaces=False)
@@ -99,17 +110,22 @@ def gen_stream(prompt, max_tokens, temperature):
                                            'created': timestamp, 'model': model_name,
                                            'choices': [{'index': 0, 'delta': {'content': token_text}, 'finish_reason': None}]})}\n\n"
 
+                # 添加小延迟，让流式效果更明显
+                time.sleep(0.01)
+
+        logger.info(f"Stream generation completed: {accumulated_text[:100]}...")
+
         # 发送结束消息
         yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
                                    'created': timestamp, 'model': model_name,
                                    'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]})}\n\n"
         yield "data: [DONE]\n\n"
 
-        logger.info(f"Stream response completed: {accumulated_text[:100]}...")
-
     except Exception as e:
         logger.error(f"Stream generation error: {str(e)}")
-        yield f"data: {json.dumps({'error': str(e), 'id': request_id})}\n\n"
+        yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
+                                   'created': timestamp, 'model': model_name,
+                                   'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]})}\n\n"
         yield "data: [DONE]\n\n"
 
 
@@ -159,7 +175,7 @@ def chat_completions():
     if not data:
         return jsonify({"error": "Request body is required"}), 400
 
-    logger.info(f"chat_data: {data}")
+    logger.info(f"chat_data received")
 
     messages = data.get('messages', [])
     stream = data.get('stream', False)
@@ -177,12 +193,18 @@ def chat_completions():
     try:
         if stream:
             # 流式响应
-            response = Response(
+            logger.info("Returning stream response")
+            return Response(
                 stream_with_context(gen_stream(prompt, max_tokens, temperature)),
-                mimetype='text/event-stream'
+                mimetype='text/event-stream',
+                headers={
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                }
             )
         else:
             # 非流式响应
+            logger.info("Returning normal response")
             response = gen_normal_response(prompt, max_tokens, temperature)
 
         processing_time = time.time() - start_time
@@ -218,16 +240,6 @@ def health_check():
         "model": model_name,
         "timestamp": int(time.time())
     })
-
-
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({"error": "Endpoint not found"}), 404
-
-
-@app.errorhandler(500)
-def internal_error(error):
-    return jsonify({"error": "Internal server error"}), 500
 
 
 if __name__ == '__main__':
