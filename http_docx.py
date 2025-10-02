@@ -20,6 +20,7 @@ import docx_meta_util
 import docx_util
 import my_enums
 from agt_util import gen_docx_outline_stream
+from doc_gen_parallel import DocxGenerator
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
 from docx_util import extract_catalogue, fill_doc_with_prompt_in_progress, fill_doc_without_prompt_in_progress
 from sys_init import init_yml_cfg
@@ -260,7 +261,7 @@ def clean_docx_tasks():
 
 
 def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: str, task_id: int,
-                            file_name: str, vbd_id:int, is_include_prompt = False):
+                            file_name: str, vbd_id: int, is_include_prompt=False):
     """
     处理无模板的文档，三级目录自动生成，每个段落无写作要求
     :param uid: 用户ID
@@ -275,6 +276,7 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "
                 f"task_id: {task_id}, file_name: {file_name}, vbd_id:{vbd_id}, is_include_prompt = {is_include_prompt}")
 
+    generator = None
     try:
         docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始解析文档结构...", 0)
         my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
@@ -284,36 +286,48 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
         logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
         docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始处理文档...")
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}, 其他写作要求是 {keywords}"
+
         para_comment_dict = get_para_comment_dict(my_target_doc)
         if vbd_id:
             default_vdb = VdbMeta.get_vdb_by_id(vbd_id)
         else:
             default_vdb = VdbMeta.get_user_default_vdb(uid)
+
         logger.info(f"my_default_vdb_dir_for_gen_doc: {default_vdb}")
         if default_vdb:
             my_vdb_dir = f"{VDB_PREFIX}{uid}_{default_vdb[0]['id']}"
         else:
             my_vdb_dir = ""
         logger.info(f"my_vdb_dir_for_gen_doc: {my_vdb_dir}")
+
+        # 使用并行化版本
+        generator = DocxGenerator()
+
         if para_comment_dict:
-            logger.info("process_word_comment_doc")
-            modify_para_with_comment_prompt_in_process(
+            logger.info("使用并行化批注处理")
+            generator.modify_para_with_comment_prompt_in_parallel(
                 task_id, my_target_doc, doc_ctx, para_comment_dict,
                 my_vdb_dir, my_cfg, output_file
             )
         elif is_include_prompt:
-            logger.info("fill_doc_with_prompt_in_progress")
-            fill_doc_with_prompt_in_progress(
-                task_id, doc_ctx, my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
+            logger.info("使用并行化带提示词处理")
+            generator.fill_doc_with_prompt_in_parallel(
+                task_id, doc_ctx, my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file
             )
         else:
-            logger.info("fill_doc_without_prompt_in_progress")
-            fill_doc_without_prompt_in_progress(
-                task_id, doc_ctx, my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
+            logger.info("使用并行化无提示词处理")
+            generator.fill_doc_without_prompt_in_parallel(
+                task_id, doc_ctx, my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file
             )
+        generator.shutdown()
+
     except Exception as e:
         docx_meta_util.update_docx_file_process_info_by_task_id(task_id, f"任务处理失败: {str(e)}")
         logger.exception("文档生成异常", e)
+    finally:
+        # 确保资源被释放
+        if generator:
+            generator.shutdown()
 
 
 

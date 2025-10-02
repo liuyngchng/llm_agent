@@ -3,12 +3,14 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 import logging.config
+import multiprocessing
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any
 import threading
 
+import psutil
 from docx import Document
 from docx.shared import RGBColor, Cm
 
@@ -26,15 +28,82 @@ class DocxGenerator:
     DOCX文档生成器，使用多线程并行生成文本内容
     """
 
-    def __init__(self, max_workers=3, timeout=300):
+    def __init__(self, max_workers=None, timeout=300, consider_memory=True):
+        """
+        :param max_workers: 固定工作线程数，None则自动计算
+        :param timeout: 任务超时时间
+        :param consider_memory: 是否考虑内存使用情况
+        """
+        self.consider_memory = consider_memory
+
+        if max_workers is None:
+            max_workers = self._calculate_dynamic_workers()
+
+        self.max_workers = max_workers
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.timeout = timeout
         self.lock = threading.Lock()
         self.start_time = None
 
-    def fill_doc_with_prompt_parallel(self, task_id: int, doc_ctx: str, target_doc: str,
-                                      target_doc_catalogue: str, vdb_dir: str,
-                                      sys_cfg: dict, output_file_name: str) -> str:
+        logger.info(f"初始化文档生成器 - 工作线程: {self.max_workers}, "
+                    f"CPU核心: {multiprocessing.cpu_count()}, "
+                    f"内存: {self._get_memory_info()}")
+
+    def _calculate_dynamic_workers(self) -> int:
+        """
+        基于系统资源动态计算工作线程数
+        考虑CPU核心数、内存使用情况等
+        """
+        try:
+            cpu_count = multiprocessing.cpu_count()
+            memory_info = DocxGenerator._get_memory_usage()
+            base_workers = cpu_count * 2
+            if self.consider_memory and memory_info['available_percent'] < 20:
+                memory_factor = 0.5
+                logger.warning(f"系统内存紧张({memory_info['available_percent']:.1f}%)，减少工作线程数")
+            elif self.consider_memory and memory_info['available_percent'] < 40:
+                memory_factor = 0.8
+            else:
+                memory_factor = 1.0
+            optimal_workers = int(base_workers * memory_factor)
+            optimal_workers = max(2, min(optimal_workers, 16))
+            logger.info(f"动态计算工作线程 - CPU: {cpu_count}, "
+                        f"内存可用: {memory_info['available_percent']:.1f}%, "
+                        f"最终线程数: {optimal_workers}")
+            return optimal_workers
+        except Exception as e:
+            logger.warning(f"动态计算工作线程失败，使用默认值: {e}")
+            return 4
+
+    @staticmethod
+    def _get_memory_usage() -> dict:
+        """
+        获取系统内存使用情况
+        """
+        try:
+            memory = psutil.virtual_memory()
+            return {
+                'total': memory.total,
+                'available': memory.available,
+                'used': memory.used,
+                'available_percent': (memory.available / memory.total) * 100
+            }
+        except Exception as e:
+            logger.warning(f"获取内存信息失败: {e}")
+            return {'available_percent': 100}  # 默认认为内存充足
+
+    @staticmethod
+    def _get_memory_info() -> str:
+        """获取内存信息字符串"""
+        try:
+            memory = DocxGenerator._get_memory_usage()
+            return f"{memory['available_percent']:.1f}%可用"
+        except:
+            return "未知"
+
+    def fill_doc_with_prompt_in_parallel(self, task_id: int, doc_ctx: str, target_doc: str,
+                                         target_doc_catalogue: str, vdb_dir: str,
+                                         sys_cfg: dict, output_file_name: str) -> str:
         """
         并行填充word文档（改进错误处理和统计）
         """
@@ -337,11 +406,8 @@ class DocxGenerator:
             logger.info(initial_info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
 
-            # 执行并行生成
             results = self._execute_parallel_generation(tasks, task_id, start_time, len(tasks))
-            # 更新文档内容
             DocxGenerator._update_doc_with_comments(results)
-            # 保存文档
             doc.save(output_file_name)
             logger.info(f"保存批注处理文档完成: {output_file_name}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
@@ -546,7 +612,7 @@ if __name__ == '__main__':
     config = init_yml_cfg()
 
     with DocxGenerator(max_workers=3) as generator:
-        result = generator.fill_doc_with_prompt_parallel(
+        result = generator.fill_doc_with_prompt_in_parallel(
             task_id=12345,
             doc_ctx="可行性研究报告",
             target_doc=my_template_file,
