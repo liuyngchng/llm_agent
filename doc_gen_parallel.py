@@ -138,14 +138,14 @@ class DocxGenerator:
             failed_count = len(tasks) - success_count
             total_time = get_elapsed_time(start_time)
 
-            final_info = (f"{task_id}, 任务完成！共处理 {len(tasks)} 个段落，"
+            final_info = (f"任务完成，共执行 {len(tasks)} 个文本生成任务，"
                           f"成功生成 {success_count} 段文本，失败 {failed_count} 段，{total_time}")
 
             if failed_count > 0:
-                final_info += f"，失败段落可在日志中查看详情"
+                final_info += f"，失败任务的原因可在日志中查看具体的失败原因"
 
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, final_info, 100)
-            logger.info(f"{final_info}，输出文件: {output_file_name}")
+            logger.info(f"{task_id}, {final_info}，输出文件: {output_file_name}")
             return final_info
 
         except Exception as e:
@@ -242,9 +242,9 @@ class DocxGenerator:
                     else:
                         remaining_str = f"约{int(estimated_remaining / 60)}分{int(estimated_remaining % 60)}秒"
 
-                    progress_info = f"正在生成文本 {completed}/{total_tasks}，{elapsed_time}，剩余{remaining_str}"
+                    progress_info = f"正在处理第 {completed}/{total_tasks} 个文本生成任务，{elapsed_time}，剩余{remaining_str}"
                 else:
-                    progress_info = f"正在生成文本 {completed}/{total_tasks}，{elapsed_time}"
+                    progress_info = f"正在处理第 {completed}/{total_tasks} 个文本生成任务，{elapsed_time}"
 
                 docx_meta_util.update_docx_file_process_info_by_task_id(
                     task_id, progress_info, percent)
