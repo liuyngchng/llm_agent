@@ -15,12 +15,13 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, stream_with_context, Response, render_template)
 
+import docx_cmt_util
 import docx_meta_util
 import docx_util
 import my_enums
 from agt_util import gen_docx_outline_stream
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
-from docx_util import extract_catalogue, fill_doc_with_prompt_in_progress
+from docx_util import extract_catalogue, fill_doc_with_prompt_in_progress, fill_doc_without_prompt_in_progress
 from sys_init import init_yml_cfg
 from bp_auth import auth_bp
 from bp_vdb import vdb_bp, VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task
@@ -307,7 +308,7 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
             )
         else:
             logger.info("fill_doc_without_prompt_in_progress")
-            docx_util.fill_doc_without_prompt_in_progress(
+            fill_doc_without_prompt_in_progress(
                 task_id, doc_ctx, my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file,
             )
     except Exception as e:

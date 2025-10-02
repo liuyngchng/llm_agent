@@ -185,12 +185,12 @@ def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: d
         torch.cuda.empty_cache()
 
 
-def gen_txt(write_context: str, demo_txt: str, paragraph_prompt: str, catalogue: str,
+def gen_txt(write_context: str, references: str, paragraph_prompt: str, catalogue: str,
             current_sub_title: str, cfg: dict, max_retries=6) -> str | None:
     """
     根据提供的三级目录、文本的写作风格，以及每个章节的具体文本写作要求，输出文本
     :param write_context:       整体的写作背景
-    :param demo_txt:            可供参考的写作风格样例子文本
+    :param references:            可供参考的样例子文本
     :param paragraph_prompt:    局部章节文本的写作要求
     :param catalogue:           整个文档的三级目录
     :param current_sub_title:   当前写作章节的目录标题
@@ -223,7 +223,7 @@ def gen_txt(write_context: str, demo_txt: str, paragraph_prompt: str, catalogue:
                 "write_context": write_context,
                 "catalogue": catalogue,
                 "current_sub_title": current_sub_title,
-                "demo_txt": demo_txt,
+                "references": references,
                 "paragraph_prompt": paragraph_prompt
             }
             logger.info(f"submit_arg_dict_to_llm, {arg_dict}, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")

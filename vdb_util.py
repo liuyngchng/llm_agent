@@ -347,7 +347,7 @@ def test_vector_file():
     task_id =int(time.time())
     task_progress = {}
     # file = "./llm.txt"
-    file = "./hack/332987902_q_desc.txt"
+    file = "./hack/332987902.txt"
     VdbMeta.save_vdb_file_info(file, file, 123, 223, task_id, 'balabalayidadui')
     vdb = "./vdb/332987902_q_desc_vdb"
     llm_cfg = my_cfg['api']
