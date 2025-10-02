@@ -192,7 +192,10 @@ def write_doc_with_docx_template():
     template_file_name = data.get("file_name")
     uid = data.get("uid")
     keywords = data.get("keywords")
-    vbd_id = int(data.get("vbd_id"))
+    if data.get("vbd_id"):
+        vbd_id = int(data.get("vbd_id"))
+    else:
+        vbd_id = None
     if not task_id or not template_file_name or not uid:
         err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
         logger.error(f"err_occurred, {err_info}")
@@ -290,10 +293,9 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
         para_comment_dict = get_para_comment_dict(my_target_doc)
         if vbd_id:
             default_vdb = VdbMeta.get_vdb_by_id(vbd_id)
+            logger.info(f"my_default_vdb_dir_for_gen_doc: {default_vdb}")
         else:
-            default_vdb = VdbMeta.get_user_default_vdb(uid)
-
-        logger.info(f"my_default_vdb_dir_for_gen_doc: {default_vdb}")
+            default_vdb = None
         if default_vdb:
             my_vdb_dir = f"{VDB_PREFIX}{uid}_{default_vdb[0]['id']}"
         else:
