@@ -235,6 +235,23 @@ def download_file_by_task_id(task_id):
         abort(404)
     return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
 
+@app.route('/docx/del/task/<task_id>', methods=['GET'])
+def delete_file_info_by_task_id(task_id):
+    """
+    根据任务ID下载文件
+    ：param task_id: 任务ID，其对应的文件名格式如下 f"output_{task_id}.docx"
+    """
+    logger.info(f"download_file_task_id, {task_id}")
+    filename = f"output_{task_id}.docx"
+    disk_file = os.path.join(UPLOAD_FOLDER, filename)
+    if os.path.exists(disk_file):
+        os.remove(disk_file)
+    else:
+        logger.warning(f"文件 {filename} 不存在， 无需删除物理文件, 只需删除数据库记录")
+    docx_meta_util.delete_docx_info_by_task_id(task_id)
+
+    return json.dumps({"msg":"删除成功", "task_id": task_id}, ensure_ascii=False), 200
+
 @app.route('/docx/process/info', methods=['POST'])
 def get_doc_process_info():
     # logger.info(f"get_doc_process_info {request}")

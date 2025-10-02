@@ -63,11 +63,7 @@ function renderTasksTable(tasks) {
 
         // 创建时间
         const createTimeCell = document.createElement('td');
-        let createTime = '未知时间';
-        if (task.create_time) {
-            createTime = new Date(task.create_time).toLocaleString('zh-CN').replace(/\//g, '-');
-        }
-        createTimeCell.textContent = createTime;
+        createTimeCell.textContent = formatDateTime(task.create_time);
 
         // 处理信息
         const timeCell = document.createElement('td');
@@ -90,27 +86,40 @@ function renderTasksTable(tasks) {
             </a>
         `;
 
-        // 操作
+        // 操作 （刷新/重试/完成）
         const actionCell = document.createElement('td');
+        actionCell.style.display = 'flex';
+        actionCell.style.gap = '8px';
+        actionCell.style.flexWrap = 'wrap';
+
+        let statusButton = '';
         if (task.status === 'in-progress' || task.status === 'pending') {
-            actionCell.innerHTML = `
+            statusButton = `
                 <button class="action-btn action-refresh" onclick="refreshTask('${task.id}')">
-                    <i class="fas fa-sync-alt"></i> 刷新状态
+                    <i class="fas fa-sync-alt"></i> 刷新
                 </button>
             `;
         } else if (task.status === 'failed') {
-            actionCell.innerHTML = `
+            statusButton = `
                 <button class="action-btn action-refresh" onclick="retryTask('${task.id}')">
                     <i class="fas fa-redo"></i> 重试
                 </button>
             `;
         } else {
-            actionCell.innerHTML = `
+            statusButton = `
                 <button class="action-btn" disabled>
-                    <i class="fas fa-check"></i> 已完成
+                    <i class="fas fa-check"></i> 完成
                 </button>
             `;
         }
+
+        // 删除按钮
+        const deleteButton = `
+            <button class="action-btn action-delete" onclick="deleteTask('${task.task_id}', '${task.doc_title || '无标题'}')">
+                <i class="fas fa-trash"></i> 删除
+            </button>
+        `;
+        actionCell.innerHTML = statusButton + deleteButton;
 
         row.appendChild(idCell);
         row.appendChild(infoCell);
@@ -124,6 +133,44 @@ function renderTasksTable(tasks) {
 
     document.querySelector('table').style.display = 'table';
     emptyState.style.display = 'none';
+}
+
+// 格式化日期时间，确保月份、日期、小时、分钟、秒都是两位数
+function formatDateTime(dateString, useLocalTime = true) {
+    if (!dateString) return '未知时间';
+
+    try {
+        const date = new Date(dateString);
+
+        if (isNaN(date.getTime())) {
+            return '未知时间';
+        }
+
+        let year, month, day, hours, minutes, seconds;
+
+        if (useLocalTime) {
+            // 使用本地时区
+            year = date.getFullYear();
+            month = String(date.getMonth() + 1).padStart(2, '0');
+            day = String(date.getDate()).padStart(2, '0');
+            hours = String(date.getHours()).padStart(2, '0');
+            minutes = String(date.getMinutes()).padStart(2, '0');
+            seconds = String(date.getSeconds()).padStart(2, '0');
+        } else {
+            // 使用 UTC 时间
+            year = date.getUTCFullYear();
+            month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            day = String(date.getUTCDate()).padStart(2, '0');
+            hours = String(date.getUTCHours()).padStart(2, '0');
+            minutes = String(date.getUTCMinutes()).padStart(2, '0');
+            seconds = String(date.getUTCSeconds()).padStart(2, '0');
+        }
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    } catch (error) {
+        console.error('日期格式化错误:', error);
+        return '未知时间';
+    }
 }
 
 // 刷新单个任务状态
@@ -180,6 +227,38 @@ async function retryTask(taskId) {
     } catch (error) {
         console.error('重试失败:', error);
         alert('重试失败，请重试');
+    } finally {
+        hideLoading();
+    }
+}
+
+// 删除任务
+async function deleteTask(taskId, docTitle) {
+    if (!confirm(`确定要删除任务 "${docTitle}" 吗？此操作将删除任务记录和生成的文档，且不可恢复。`)) {
+        return;
+    }
+
+    showLoading();
+    try {
+        const token = localStorage.getItem('token') || '';
+
+        const response = await fetch(`/docx/del/task/${taskId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) throw new Error('删除失败');
+
+        const result = await response.json();
+        alert(result.msg || '删除成功');
+
+        // 刷新任务列表
+        await fetchTasks();
+    } catch (error) {
+        console.error('删除失败:', error);
+        alert('删除失败，请重试');
     } finally {
         hideLoading();
     }

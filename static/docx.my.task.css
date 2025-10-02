@@ -253,6 +253,20 @@ tr:hover {
     animation: spin 1s linear infinite;
 }
 
+.action-delete {
+    background-color: #dc3545;
+    color: white;
+}
+
+.action-delete:hover {
+    background-color: #c82333;
+}
+
+.action-delete:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }

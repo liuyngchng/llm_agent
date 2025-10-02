@@ -139,7 +139,7 @@ class DocxGenerator:
             total_time = get_elapsed_time(start_time)
 
             final_info = (f"任务完成，共执行 {len(tasks)} 个文本生成任务，"
-                          f"成功生成 {success_count} 段文本，失败 {failed_count} 段，{total_time}")
+                          f"成功生成 {success_count} 段文本，失败任务 {failed_count} 个，{total_time}")
 
             if failed_count > 0:
                 final_info += f"，失败任务的原因可在日志中查看具体的失败原因"
