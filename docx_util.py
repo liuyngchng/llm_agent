@@ -202,7 +202,7 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
     if len(current_heading) == 0 or len(current_heading[0]) < 2:
         logger.info(f"heading_err_for_para, {current_heading}, {para.text}")
         return False
-    classify_result = classify_txt(labels, para.text, sys_cfg, True)
+    classify_result = classify_txt(labels, para.text, sys_cfg)
     if labels[1] in classify_result:
         # logger.debug(f"classify={classify_result}, tile={current_heading}, para={para.text}")
         return False
@@ -212,6 +212,7 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
 def fill_doc_without_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
     target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict, output_file_name:str):
     """
+    自动填充word文档，Word文档中只有 三级目录
     :param task_id: 执行任务的ID，时间戳的整数字符串
     :param doc_ctx: 文档写作背景信息
     :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
@@ -264,6 +265,7 @@ def fill_doc_without_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: s
 def fill_doc_with_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
     target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict, output_file_name:str):
     """
+    自动填充word文档，Word文档中除了三级目录外，最后后一级目录下的文本可能是写作要求，也可能不是
     :param task_id: 执行任务的ID
     :param doc_ctx: 文档写作背景信息
     :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
