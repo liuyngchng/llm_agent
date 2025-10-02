@@ -117,3 +117,15 @@ def save_docx_output_file_path_by_task_id(task_id: int, file_path: str):
     my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"update_docx_file_path_dt {my_dt}")
     return my_dt
+
+def save_docx_outline_by_task_id(task_id: int, outline: str):
+    """
+    保存输出的Word文档的三级目录
+    """
+    if not task_id or not outline:
+        raise RuntimeError(f"param_null_err, {task_id}, {outline}")
+    sql = f"update docx_file_info set outline = '{outline}' where task_id = {task_id} limit 1"
+    logger.info(f"update_docx_outline_sql, {sql}")
+    my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"update_docx_outline_dt {my_dt}")
+    return my_dt

@@ -28,8 +28,8 @@ from agt_util import classify_txt, gen_txt
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-MIN_PROMPT_LEN = 20
-AI_GEN_TAG="[_AI生成_]"
+MIN_DESC_TXT_LEN = 10               # 描述性文本的最小长度
+AI_GEN_TAG="[_AI生成_]"              # Word文档中 AI 生成的内容标识
 
 def get_reference_from_vdb(keywords: str, vdb_dir: str, sys_cfg: dict) -> str:
     """
@@ -88,7 +88,7 @@ def extract_catalogue(target_doc: str) -> str:
 
 def refresh_current_heading(para: Paragraph, heading: list) -> bool:
     """
-    更新当前标题，并返回是否为三级标题
+    更新当前层级标题，并返回当前段落内容是否为文章标题
     :param para: 段落
     :param heading: 当前标题
     :return: 是否为三级标题
@@ -175,9 +175,9 @@ def get_outline_txt(file_name: str) -> str:
 
     return "\n".join(result_lines)
 
-def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool:
+def is_txt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool:
     """
-    判断写作要求文档中的每段文本，是否为用户所提的写作要求文本
+    判断当前段落是否为描述性的文本
     :param para: 写作要求word文档中的一个段落
     :param current_heading: 当前para 所在的目录
     :param sys_cfg: 系统配置，涉及大模型的地址等
@@ -185,7 +185,6 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
     """
 
     pattern = r'^(图|表)\s*\d+[\.\-\s]'  # 匹配"图1."/"表2-"等开头
-    labels = ["需要生成文本", "不需要生成文本"]
     if refresh_current_heading(para, current_heading):
         return False
     if "TOC" in para.style.name or para._element.xpath(".//w:instrText[contains(.,'TOC')]"):
@@ -196,17 +195,12 @@ def is_prompt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool
         return False
     if not para.text:
         return False
-    if len(para.text.strip()) < MIN_PROMPT_LEN:
+    if len(para.text.strip()) < MIN_DESC_TXT_LEN:
         logger.info(f"ignored_short_txt {para.text}")
         return False
     if len(current_heading) == 0 or len(current_heading[0]) < 2:
         logger.info(f"heading_err_for_para, {current_heading}, {para.text}")
         return False
-    classify_result = classify_txt(labels, para.text, sys_cfg)
-    if labels[1] in classify_result:
-        # logger.debug(f"classify={classify_result}, tile={current_heading}, para={para.text}")
-        return False
-    # logger.debug(f"classify={classify_result}, tile={current_heading}, para={para.text}")
     return True
 
 def fill_doc_without_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
@@ -287,7 +281,7 @@ def fill_doc_with_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
         logger.info(f"{process_bar_info}, 进度 {percent}%")
         docx_meta_util.update_docx_file_process_info_by_task_id(task_id, process_bar_info, percent)
         try:
-            is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
+            is_prompt = is_txt_para(my_para, current_heading, sys_cfg)
             if not is_prompt:
                 continue
             reference = get_reference_from_vdb(my_para.text, vdb_dir, sys_cfg['api'])
@@ -309,7 +303,7 @@ def fill_doc_with_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
     docx_meta_util.save_docx_output_file_path_by_task_id(task_id,output_file_name)
     txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}，发生错误 {len(err_record)} 次, 错误信息 {err_record}"
     if gen_txt_count == 0:
-        txt_info += f"未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于 {MIN_PROMPT_LEN} 个汉字"
+        txt_info += f"未检测到创作需求描述，您可以尝试在需要创作的段落处填写： 描述/列出/简述xxxxx, 写作需求描述文字数量大于 {MIN_DESC_TXT_LEN} 个汉字"
     docx_meta_util.update_docx_file_process_info_by_task_id(task_id, txt_info, 100.0)
     logger.info(f"{txt_info}, 写做任务 {task_id} 所有内容已输出至文件 {output_file_name}")
 
@@ -331,7 +325,7 @@ def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_
         process_bar_info = f"正在处理第 {index + 1}/{total_paragraphs} 段文本，进度 {percent:.1f}%"
         logger.info(f"percent: {process_bar_info}")
         try:
-            is_prompt = is_prompt_para(my_para, current_heading, sys_cfg)
+            is_prompt = is_txt_para(my_para, current_heading, sys_cfg)
             if not is_prompt:
                 continue
             # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
@@ -354,108 +348,6 @@ def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_
         red_run.font.color.rgb = RGBColor(255, 0, 0)
         my_para._p.addnext(new_para._p)
     return doc
-
-# def update_process_info(start_time: float, thread_lock, uid: int, task_id: str, process_info: dict, txt_info: str, percent: float):
-#     """
-#     :param start_time: the start time of the task process
-#     :param thread_lock: A thread lock
-#     :param uid： 用户ID
-#     :param task_id: 执行任务的ID
-#     :param process_info: task process information dict with uid and task_id as key,
-#         process_info = {
-#            "uid1": {
-#                 "taskId1": {
-#                     "percent": 0.0,
-#                     "text": "目前的状况是个啥？",
-#                     "timestamp": time.time(),
-#                     "elapsed_time": "xxx分xxx秒",
-#                 }
-#            },
-#            "uid2": {
-#                 "taskId2": {
-#                     "percent": 0.0,
-#                     "text": "目前的状况是个啥？",
-#                     "timestamp": time.time(),
-#                     "elapsed_time": "xxx分xxx秒",
-#                 }
-#            }
-#         }
-#     :param txt_info: 任务进度信息
-#     :param percent: 任务进度百分比
-#     """
-#     uid_str = str(uid)
-#     with thread_lock:
-#         if uid_str not in process_info:
-#             process_info[uid_str] = {}
-#         if task_id not in process_info[uid_str]:
-#             process_info[uid_str][task_id] = {
-#                 "text": "",
-#                 "percent": 0.0,
-#                 "timestamp": time.time(),
-#                 "elapsed_time": ""
-#             }
-#         task_data = process_info[uid_str][task_id]
-#         if txt_info:
-#             task_data["text"] = txt_info
-#         if percent is not None:
-#             task_data["percent"] = percent
-#         task_data["timestamp"] = time.time()
-#         task_data["elapsed_time"] = get_elapsed_time(start_time)
-
-# def get_process_info(uid: int, task_id: str, process_info: dict) -> dict:
-#     """
-#     获取文档当前处理进度信息
-#     :param uid: 用户ID
-#     :param task_id: 执行任务的ID
-#     :param process_info: task process information dict with task_id as key
-#         process_info = {
-#             "uid1": {
-#                 "taskId1": {
-#                     "percent": 0.0,
-#                     "text": "目前的状况是个啥？",
-#                     "timestamp": time.time(),
-#                     "elapsed_time": "xxx分xxx秒",
-#                 }
-#             },
-#             "uid2": {
-#                 "taskId2": {
-#                     "percent": 0.0,
-#                     "text": "目前的状况是个啥？",
-#                     "timestamp": time.time(),
-#                     "elapsed_time": "xxx分xxx秒",
-#                 }
-#            }
-#         }
-#     """
-#     user_tasks = process_info.get(str(uid), {})
-#     task_data = user_tasks.get(task_id, {
-#         "text": "任务不存在或未启动",
-#         "percent": 0,
-#         "timestamp": time.time(),
-#         "elapsed_time": "0秒"
-#     })
-#     return {
-#         "task_id": task_id,
-#         "progress": task_data.get("text", ""),
-#         "percent": task_data.get("percent", 0),
-#         "elapsed_time": task_data.get("elapsed_time", "")
-#     }
-
-def get_catalogue(target_doc: str) -> str:
-    catalogue_file = "my_catalogue.txt"
-    if os.path.exists(catalogue_file):
-        logger.info(f"文件 {catalogue_file} 已存在")
-        with open(catalogue_file, 'r', encoding='utf-8') as f:
-            my_catalogue = f.read()
-            logger.info(f"目录内容已从文件 {catalogue_file} 读取")
-    else:
-        logger.info(f"文件 {catalogue_file} 不存在，将创建")
-        my_catalogue = extract_catalogue(target_doc)
-        with open(catalogue_file, 'w', encoding='utf-8') as f:
-            f.write(my_catalogue)
-            logger.info(f"目录内容已写入 {catalogue_file}")
-    return my_catalogue
-
 
 def gen_docx_template_with_outline_txt(task_id: int, os_dir:str, title: str, outline: str) -> str:
     """
@@ -543,7 +435,7 @@ if __name__ == "__main__":
     # test_catalogue = extract_catalogue(my_target_doc)
     # logger.info(f"doc_catalogue: {test_catalogue}")
     my_doc_ctx = "我正在写一个可行性研究报告"
-    doc_catalogue = get_catalogue(my_target_doc)
+    doc_catalogue = extract_catalogue(my_target_doc)
     logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
     my_vdb_dir = "./vdb/vdb_idx_332987902_26"
     output_doc = fill_doc_with_prompt(my_doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_vdb_dir, my_cfg)

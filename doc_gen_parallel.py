@@ -16,7 +16,7 @@ from docx.shared import RGBColor, Cm
 
 import docx_meta_util
 from agt_util import gen_txt
-from docx_util import get_elapsed_time, get_reference_from_vdb, AI_GEN_TAG, is_3rd_heading, is_prompt_para, \
+from docx_util import get_elapsed_time, get_reference_from_vdb, AI_GEN_TAG, is_3rd_heading, is_txt_para, \
     refresh_current_heading
 from sys_init import init_yml_cfg
 
@@ -114,7 +114,6 @@ class DocxGenerator:
             logger.info(f"{task_id}, 开始处理文档 {target_doc}")
             tasks = DocxGenerator._collect_generation_tasks(task_id, doc, doc_ctx, target_doc_catalogue,
                                                    vdb_dir, sys_cfg)
-
             if not tasks:
                 final_info = f"{task_id}, 未检测到需要生成的文本段落"
                 logger.info(f"{final_info}, {target_doc}")
@@ -169,19 +168,16 @@ class DocxGenerator:
         current_heading = []
         para_count = len(doc.paragraphs)
         for index, para in enumerate(doc.paragraphs):
-            try:
-                refresh_current_heading(para, current_heading)
-                is_prompt = is_prompt_para(para, current_heading, sys_cfg)
-            except Exception as e:
-                logger.error(f"{task_id}, 判断写作要求段落失败: {e}，跳过该段落")
-                continue
-
-            if not is_prompt:
+            refresh_current_heading(para, current_heading)
+            check_if_is_txt_para = is_txt_para(para, current_heading, sys_cfg)
+            if not check_if_is_txt_para:
+                logger.info(f"{task_id}, 跳过非描述性的文本段落 {para.text}")
                 continue
             task = {
                 'unique_key': f"para_{len(tasks)}",
                 'write_context': doc_ctx,
                 'paragraph_prompt': para.text,
+                "user_comment": "",
                 'catalogue': target_doc_catalogue,
                 'current_sub_title': current_heading[0] if current_heading else "",
                 'cfg': sys_cfg,
@@ -272,6 +268,7 @@ class DocxGenerator:
                 paragraph_prompt=task['paragraph_prompt'],
                 catalogue=task['catalogue'],
                 current_sub_title=task['current_sub_title'],
+                user_comment=task['user_comment'],
                 cfg=task['cfg']
             )
 
@@ -358,7 +355,7 @@ class DocxGenerator:
         logger.info(f"{final_info}，输出文件: {output_file_name}")
         return final_info
 
-    def modify_para_with_comment_prompt_in_parallel(self, task_id: int, target_doc: str,
+    def modify_para_with_comment_prompt_in_parallel(self, task_id: int, target_doc: str, catalogue:str,
                                                     doc_ctx: str, comments_dict: dict,
                                                     vdb_dir: str, cfg: dict,
                                                     output_file_name: str) -> str:
@@ -379,7 +376,7 @@ class DocxGenerator:
             return error_info
 
         if not comments_dict:
-            warning_info = "文件批注信息为空"
+            warning_info = "文件里未找到批注信息"
             logger.warning(warning_info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, warning_info, 100)
             return warning_info
@@ -388,11 +385,11 @@ class DocxGenerator:
         doc = Document(target_doc)
 
         try:
-            info = f"处理带批注的文档 {target_doc}，共 {len(comments_dict)} 个批注"
+            info = f"处理带批注的文档 {target_doc}，共找到 {len(comments_dict)} 个批注"
             logger.info(info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, info)
             # 收集批注处理任务
-            tasks = DocxGenerator._collect_comment_tasks(task_id, doc, doc_ctx, comments_dict, vdb_dir, cfg)
+            tasks = DocxGenerator._collect_comment_tasks(task_id, doc, catalogue, doc_ctx, comments_dict, vdb_dir, cfg)
 
             if not tasks:
                 final_info = "未找到有效的批注处理任务"
@@ -433,7 +430,7 @@ class DocxGenerator:
             return error_info
 
     @staticmethod
-    def _collect_comment_tasks(task_id: int , doc: Document, doc_ctx: str,
+    def _collect_comment_tasks(task_id: int , doc: Document, catalogue:str, doc_ctx: str,
                                comments_dict: dict, vdb_dir: str,
                                cfg: dict) -> List[Dict[str, Any]]:
         """
@@ -441,34 +438,27 @@ class DocxGenerator:
         """
         tasks = []
         current_heading = []
-
+        para_count = len(doc.paragraphs)
         for para_idx, para in enumerate(doc.paragraphs):
             # 更新当前标题
-            try:
-                from docx_util import refresh_current_heading
-                refresh_current_heading(para, current_heading)
-            except Exception as e:
-                logger.warning(f"{task_id}, 更新标题失败: {e}，继续处理")
-
+            refresh_current_heading(para, current_heading)
+            check_if_txt_para = is_txt_para(para, current_heading, cfg)
+            if not check_if_txt_para:
+                logger.debug(f"{task_id}, 跳过非文本段落: {para.text}")
+                continue
             # 检查当前段落是否有批注
             if para_idx not in comments_dict:
+                logger.debug(f"{task_id}, 跳过无批注段落: {para.text}")
                 continue
-
             comment_text = comments_dict[para_idx]
             if not comment_text or not comment_text.strip():
+                logger.debug(f"{task_id}, 跳过无批注内容段落: {para.text}")
                 continue
-
-            # 获取目录
-            try:
-                from docx_cmt_util import get_catalogue
-                catalogue = get_catalogue(doc.part.blob)
-            except:
-                catalogue = ""
 
             task = {
                 'unique_key': f"comment_{para_idx}",
                 'write_context': doc_ctx,
-                'paragraph_prompt': comment_text,
+                'paragraph_prompt': para.text,
                 'catalogue': catalogue,
                 'current_sub_title': current_heading[0] if current_heading else "",
                 'cfg': cfg,
@@ -478,7 +468,7 @@ class DocxGenerator:
                 'comment_text': comment_text
             }
             tasks.append(task)
-            docx_meta_util.update_docx_file_process_info_by_task_id(task_id, f"正在创建第 {len(tasks)} 个处理任务")
+            docx_meta_util.update_docx_file_process_info_by_task_id(task_id, f"正在处理第 {para_idx}/{para_count} 段文本，已创建 {len(tasks)} 个处理任务")
         return tasks
 
     @staticmethod

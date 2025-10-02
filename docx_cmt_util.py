@@ -18,7 +18,7 @@ from docx.shared import RGBColor, Cm
 import docx_meta_util
 from sys_init import init_yml_cfg
 from agt_util import gen_txt
-from docx_util import get_catalogue, refresh_current_heading, get_reference_from_vdb
+from docx_util import refresh_current_heading, get_reference_from_vdb, extract_catalogue
 from vdb_util import search_txt
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -151,7 +151,7 @@ def inspect_docx_structure():
 
 def get_para_comment_dict(file_fullpath: str) -> dict:
     """
-    获取文档中所有修改批注及其关联的段落ID
+    获取文档中所有用户修改批注（修订模式）及其关联的段落ID
     返回格式: {
         comment_id: {
             "author": 作者,
@@ -218,7 +218,7 @@ def modify_para_with_comment_prompt_in_process(task_id:int,
             comment_count += 1
             logger.info(f"matched_comment_for_para_idx {para_idx}")
             comment_text = comments_dict[para_idx]
-            catalogue = get_catalogue(target_doc)
+            catalogue = extract_catalogue(target_doc)
             reference = get_reference_from_vdb(comment_text, vdb_dir, cfg['api'])
             modified_txt = gen_txt(doc_ctx, reference, comment_text, catalogue, str(current_heading), cfg)
             if modified_txt:
@@ -267,7 +267,7 @@ def modify_para_with_comment_prompt(target_doc: str,
                 continue
             logger.info(f"matched_comment_for_para_idx {para_idx}")
             comment_text = comments_dict[para_idx]
-            catalogue = get_catalogue(target_doc)
+            catalogue = extract_catalogue(target_doc)
             modified_txt = gen_txt(doc_ctx, "", comment_text, catalogue, str(current_heading), cfg)
             if modified_txt:
                 para.clear()

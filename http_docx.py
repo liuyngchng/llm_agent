@@ -281,7 +281,7 @@ def clean_docx_tasks():
 
 
 def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: str, task_id: int,
-                            file_name: str, vbd_id: int, is_include_prompt=False):
+                            file_name: str, vbd_id: int, is_include_para_txt=False):
     """
     处理无模板的文档，三级目录自动生成，每个段落无写作要求
     :param uid: 用户ID
@@ -291,23 +291,24 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
     :param task_id: 任务ID
     :param file_name: Word template 模板文件名, 其中包含三级目录，可能含有段落写作的提示词，也可能没有
     :param vbd_id: vector db id.
-    :param is_include_prompt: 各小节是否包含有写作提示词语
+    :param is_include_para_txt: 各小节（章节标题下）是否包含有描述性的文本
     """
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "
-                f"task_id: {task_id}, file_name: {file_name}, vbd_id:{vbd_id}, is_include_prompt = {is_include_prompt}")
+                f"task_id: {task_id}, file_name: {file_name}, vbd_id:{vbd_id}, is_include_para_txt = {is_include_para_txt}")
 
     generator = None
     try:
         docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始解析文档结构...", 0)
-        my_target_doc = os.path.join(UPLOAD_FOLDER, file_name)
-        catalogue = extract_catalogue(my_target_doc)
+        full_file_name = os.path.join(UPLOAD_FOLDER, file_name)
+        catalogue = extract_catalogue(full_file_name)
+        docx_meta_util.save_docx_outline_by_task_id(task_id, catalogue)
         output_file_name = f"output_{task_id}.docx"
         output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
         logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
         docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始处理文档...")
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}, 其他写作要求是 {keywords}"
 
-        para_comment_dict = get_para_comment_dict(my_target_doc)
+
         if vbd_id:
             default_vdb = VdbMeta.get_vdb_by_id(vbd_id)
             logger.info(f"my_default_vdb_dir_for_gen_doc: {default_vdb}")
@@ -321,22 +322,22 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
 
         # 使用并行化版本
         generator = DocxGenerator()
-
+        para_comment_dict = get_para_comment_dict(full_file_name)
         if para_comment_dict:
             logger.info("使用并行化批注处理")
             generator.modify_para_with_comment_prompt_in_parallel(
-                task_id, my_target_doc, doc_ctx, para_comment_dict,
+                task_id, full_file_name, catalogue, doc_ctx, para_comment_dict,
                 my_vdb_dir, my_cfg, output_file
             )
-        elif is_include_prompt:
+        elif is_include_para_txt:
             logger.info("使用并行化带提示词处理")
             generator.fill_doc_with_prompt_in_parallel(
-                task_id, doc_ctx, my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file
+                task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
             )
         else:
             logger.info("使用并行化无提示词处理")
             generator.fill_doc_without_prompt_in_parallel(
-                task_id, doc_ctx, my_target_doc, catalogue, my_vdb_dir, my_cfg, output_file
+                task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
             )
         generator.shutdown()
 

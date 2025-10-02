@@ -185,13 +185,14 @@ def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: d
         torch.cuda.empty_cache()
 
 
-def gen_txt(write_context: str, references: str, paragraph_prompt: str, catalogue: str,
+def gen_txt(write_context: str, references: str, paragraph_prompt: str, user_comment: str, catalogue: str,
             current_sub_title: str, cfg: dict, max_retries=6) -> str | None:
     """
-    根据提供的三级目录、文本的写作风格，以及每个章节的具体文本写作要求，输出文本
+    根据提供的三级目录、参考资料，以及每个章节的具体文本写作要求，输出文本
     :param write_context:       整体的写作背景
-    :param references:            可供参考的样例子文本
+    :param references:          可供参考的样例子文本
     :param paragraph_prompt:    局部章节文本的写作要求
+    :param user_comment:        用户添加的批注文本
     :param catalogue:           整个文档的三级目录
     :param current_sub_title:   当前写作章节的目录标题
     :param cfg:                 系统配置
@@ -224,9 +225,10 @@ def gen_txt(write_context: str, references: str, paragraph_prompt: str, catalogu
                 "catalogue": catalogue,
                 "current_sub_title": current_sub_title,
                 "references": references,
-                "paragraph_prompt": paragraph_prompt
+                "paragraph_prompt": paragraph_prompt,
+                "user_comment": user_comment,
             }
-            logger.info(f"submit_arg_dict_to_llm, {arg_dict}, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
+            logger.info(f"gen_txt_arg, {arg_dict}, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
             response = chain.invoke(arg_dict)
             output_txt = rmv_think_block(response.content)
             del model
@@ -408,91 +410,6 @@ def test_classify():
      # if labels[6] in result:
      #    logger.info(f"classify_result:labels[6] {labels[6]}")
 
-
-
-class TextGenerator:
-    """
-    文本生成器，使用多线程生成文本
-    """
-    def __init__(self, max_workers=5):
-        """
-        初始化线程池
-        :param max_workers: 最大线程数
-        """
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)
-        self.timeout = 30
-
-    def batch_generate(self, tasks: List[Dict[str, Any]]) -> Dict[str, str]:
-        """
-        批量生成文本，阻塞式获取最终结果
-        :param tasks: 任务列表，每个元素是包含gen_txt参数的字典
-        :return: 字典形式结果 {任务标识: 生成的文本}
-        """
-        results = {}
-        future_to_key = {}
-
-        # 提交所有任务到线程池 （非阻塞）
-        for task in tasks:
-            # 要求每个task必须包含unique_key作为任务标识
-            unique_key = task.pop('unique_key')
-            future = self.executor.submit(TextGenerator.gen_txt_wrapper, **task)
-            future_to_key[future] = unique_key
-
-        # 获取结果 (阻塞)
-        for future in as_completed(future_to_key):
-            key = future_to_key[future]
-            try:
-                results[key] = future.result()      # block here
-            except Exception as e:
-                logger.error(f"Task {key} failed: {str(e)}")
-                results[key] = None
-        return results
-
-    def __del__(self):
-        self.executor.shutdown(wait=True)
-
-    @staticmethod
-    def gen_txt_wrapper(**kwargs):
-            """包装原始函数，便于线程池调用"""
-            try:
-                return gen_txt(**kwargs)
-            except Exception as e:
-                logger.error(f"Error in gen_txt: {str(e)}")
-                raise
-
-
-def test_txt_generator():
-    # 初始化生成器
-    generator = TextGenerator(max_workers=3)
-
-    # 准备批量任务
-    tasks = [
-        {
-            'unique_key': 'task1',
-            'write_context': '背景1...',
-            'demo_txt': '示例1...',
-            'paragraph_prompt': '要求1...',
-            'catalogue': '目录1...',
-            'current_sub_title': '标题1...',
-            'cfg': {...},
-            'is_remote': True
-        },
-        {
-            'unique_key': 'task2',
-            # 其他参数...
-        }
-        # 更多任务...
-    ]
-
-    # 执行批量生成
-    results = generator.batch_generate(tasks)
-
-    # 处理结果
-    for task_id, text in results.items():
-        if text is not None:
-            print(f"Task {task_id} 生成成功: {text[:50]}...")
-        else:
-            print(f"Task {task_id} 生成失败")
 
 if __name__ == "__main__":
 
