@@ -284,9 +284,12 @@ function generateOutline() {
  // 渲染Markdown目录数据
 function renderOutline(markdown) {
     const outlineContainer = document.getElementById('outlineContainer');
+    // 修复Markdown格式问题
+    const fixedMarkdown = fixMarkdownFormat(markdown);
+
     // 使用marked将Markdown转换为HTML
     try {
-        const htmlContent = marked.parse(markdown);
+        const htmlContent = marked.parse(fixedMarkdown);
         outlineContainer.innerHTML = htmlContent;
         outlineContainer.scrollTop = outlineContainer.scrollHeight;
         // 添加一些基本样式
@@ -346,6 +349,27 @@ function renderOutline(markdown) {
     } catch (e) {
         // 错误处理保持不变
     }
+}
+
+// 修复Markdown格式问题
+function fixMarkdownFormat(markdown) {
+    if (!markdown) return '';
+
+    let fixed = markdown;
+
+    // 修复格式错误的标题行（标题符号和内容之间缺少空格）
+    fixed = fixed.replace(/(#+)(\d+\s*\.\s*\d*\s*\.?\s*\d*\s*)(.*)/g, function(match, hashes, numbers, text) {
+        // 确保标题符号和内容之间有空格
+        return hashes + ' ' + numbers.trim() + ' ' + text.trim();
+    });
+
+    // 修复被错误包裹在段落中的标题
+    fixed = fixed.replace(/<p>(#+\s*\d+\.\d*\.?\d*\s*.*?)<\/p>/g, '$1');
+
+    // 修复特定的格式问题：###8 .1 .2项目价值评估 -> ### 8.1.2 项目价值评估
+    fixed = fixed.replace(/(#+)\s*(\d+)\s*\.\s*(\d+)\s*\.?\s*(\d*)\s*(.*)/g, '$1 $2.$3.$4 $5');
+
+    return fixed;
 }
 
 // 将Markdown转换为缩进文本（用于第三步编辑）
