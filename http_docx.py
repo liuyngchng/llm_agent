@@ -21,7 +21,7 @@ import docx_util
 import mermaid_render
 import my_enums
 from agt_util import gen_docx_outline_stream
-from doc_gen_parallel import DocxGenerator
+from docx_gen_parallel import DocxGenerator
 from docx_cmt_util import get_para_comment_dict, modify_para_with_comment_prompt_in_process
 from docx_util import extract_catalogue, fill_doc_with_prompt_in_progress, fill_doc_without_prompt_in_progress
 from sys_init import init_yml_cfg
