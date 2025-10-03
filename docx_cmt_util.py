@@ -290,7 +290,7 @@ def get_elapsed_time(start_timestamp: int) -> str:
     elapsed_seconds = current_time - start_timestamp
     minutes = elapsed_seconds // 60
     seconds = elapsed_seconds % 60
-    return f"用时 {minutes}分{seconds}秒"
+    return f"用时 {minutes} 分 {seconds} 秒"
 
 def test_modify_para_with_comment():
     my_cfg = init_yml_cfg()

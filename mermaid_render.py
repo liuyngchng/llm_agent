@@ -109,7 +109,9 @@ class MermaidRenderer:
                 temp_path = temp_file.name
 
             # 在文档末尾插入图片
-            doc.add_picture(temp_path, width=Inches(width))
+            pic_para = doc.add_paragraph()
+            pic_para.alignment = 1  # 居中对齐
+            pic_para.add_run().add_picture(temp_path, width=Inches(width))
 
             # 保存文档
             doc.save(doc_path)
@@ -166,6 +168,7 @@ class MermaidRenderer:
                     # 在Mermaid脚本段落后面插入图片
                     parent = item['paragraph']._p.getparent()
                     pic_para = doc.add_paragraph()
+                    pic_para.alignment = 1          # 图片左右居中
                     run = pic_para.add_run()
                     # 读取图片原始尺寸
                     with Image.open(temp_path) as img:
@@ -173,7 +176,7 @@ class MermaidRenderer:
                         aspect_ratio = width / height
 
                     # 根据宽高比决定使用宽度优先还是高度优先
-                    max_width = Inches(6.0)
+                    max_width = Inches(5.0)
                     max_height = Inches(4.0)
                     if aspect_ratio > 1:  # 横向图
                         run.add_picture(temp_path, width=max_width)
@@ -198,9 +201,8 @@ class MermaidRenderer:
                     logger.info(f"已处理第 {i + 1} 个Mermaid图表")
 
                 except Exception as e:
-                    logger.error(f"处理第 {i + 1} 个Mermaid脚本失败: {str(e)}")
-                    # 标记处理失败的脚本
-                    item['paragraph'].text = f"[图表生成失败: {str(e)}]"
+                    logger.error(f"处理第 {i + 1} 个Mermaid脚本失败: {str(e)}, mermaid_scrip_fail, {item['paragraph'].text}")
+
                     continue
 
             # 保存文档
