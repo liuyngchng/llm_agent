@@ -222,7 +222,7 @@ def fill_doc_without_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: s
     txt_info = ""
     err_record = []
     for index, my_para in enumerate(doc.paragraphs):
-        percent = int(index/total_paragraphs * 100)
+        percent = 0.95 *(index+1)/total_paragraphs * 100
         process_bar_info = (f"正在处理第 {index + 1}/{total_paragraphs} 段文本，"
             f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}")
         logger.info(process_bar_info)
@@ -275,7 +275,7 @@ def fill_doc_with_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
     total_paragraphs = len(doc.paragraphs)
     err_record = []
     for index, my_para in enumerate(doc.paragraphs):
-        percent = int(index / total_paragraphs * 100)
+        percent = 0.95 * (index+1) / total_paragraphs * 100
         process_bar_info = (f"正在处理第 {index + 1}/{total_paragraphs} 段文本，"
             f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(start_time)}")
         logger.info(f"{process_bar_info}, 进度 {percent}%")
@@ -307,47 +307,6 @@ def fill_doc_with_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
     docx_meta_util.update_docx_file_process_info_by_task_id(task_id, txt_info, 100.0)
     logger.info(f"{txt_info}, 写做任务 {task_id} 所有内容已输出至文件 {output_file_name}")
 
-
-def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict) -> Document:
-    """
-    :param doc_ctx: 文档写作背景信息
-    :param source_dir: 提供的样本文档
-    :param target_doc: 需要写的文档三级目录，以及各个章节的具体写作需求
-    :param vdb_dir: 向量数据库的目录
-    :param sys_cfg: 系统配置信息
-    :param target_doc_catalogue: 需要写的文档的三级目录文本信息
-    """
-    doc = Document(target_doc)
-    current_heading = []
-    total_paragraphs = len(doc.paragraphs)
-    for index, my_para in enumerate(doc.paragraphs):
-        percent = (index + 1) / total_paragraphs * 100
-        process_bar_info = f"正在处理第 {index + 1}/{total_paragraphs} 段文本，进度 {percent:.1f}%"
-        logger.info(f"percent: {process_bar_info}")
-        try:
-            is_prompt = is_txt_para(my_para, current_heading, sys_cfg)
-            if not is_prompt:
-                continue
-            # logger.info(f"prompt_txt_of_heading {current_heading}, {my_para.text}")
-            reference = get_reference_from_vdb(my_para.text, vdb_dir, sys_cfg['api'])
-            if source_dir and os.path.exists(source_dir):
-                source_para_txt = get_txt_in_dir_by_keywords(strip_prefix_no(current_heading[0]), source_dir)
-                demo_txt = f"{source_para_txt}\n{reference}"
-                demo_txt = demo_txt.replace("\n", " ").strip()
-            else:
-                demo_txt = f"{reference}"
-
-            llm_txt = gen_txt(doc_ctx, demo_txt, my_para.text, target_doc_catalogue, current_heading[0], sys_cfg, )
-            logger.info(f"llm_txt_for_instruction[{my_para.text}]\n===gen_llm_txt===\n{llm_txt}")
-        except Exception as ex:
-            logger.error("fill_doc_job_err_to_break", ex)
-            break
-        new_para = doc.add_paragraph()
-        new_para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
-        red_run = new_para.add_run(f"{cfg_util.AI_GEN_TAG}{llm_txt}")
-        red_run.font.color.rgb = RGBColor(255, 0, 0)
-        my_para._p.addnext(new_para._p)
-    return doc
 
 def gen_docx_template_with_outline_txt(task_id: int, os_dir:str, title: str, outline: str) -> str:
     """
@@ -438,7 +397,7 @@ if __name__ == "__main__":
     doc_catalogue = extract_catalogue(my_target_doc)
     logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
     my_vdb_dir = "./vdb/vdb_idx_332987902_26"
-    output_doc = fill_doc_with_prompt(my_doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_vdb_dir, my_cfg)
+    task_id = int(time.time())
     output_file = 'doc_output.docx'
-    output_doc.save(output_file)
+    fill_doc_with_prompt_in_progress(task_id, my_doc_ctx, my_source_dir, my_target_doc, doc_catalogue, my_vdb_dir, my_cfg, output_file)
     logger.info(f"save_content_to_file: {output_file}")

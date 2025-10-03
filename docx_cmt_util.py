@@ -207,7 +207,7 @@ def modify_para_with_comment_prompt_in_process(task_id:int,
     comment_count = 0
     err_record = []
     for para_idx, para in enumerate(doc.paragraphs):
-        percent = para_idx / total_paragraphs * 100
+        percent = 0.95 * (para_idx +1) / total_paragraphs * 100
         process_percent_bar_info = (f"正在处理第 {para_idx + 1}/{total_paragraphs} 段文本，已识别 {comment_count} 个批注，"
             f"已生成 {gen_txt_count} 段文本，{get_elapsed_time(task_id)}")
         logger.info(f"{process_percent_bar_info}, 进度 {percent:.1f}%")
