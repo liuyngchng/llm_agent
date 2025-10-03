@@ -18,7 +18,6 @@ import docx_meta_util
 from agt_util import gen_txt
 from docx_util import get_elapsed_time, get_reference_from_vdb, AI_GEN_TAG, is_3rd_heading, is_txt_para, \
     refresh_current_heading
-from sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -112,8 +111,8 @@ class DocxGenerator:
         doc = Document(target_doc)
         try:
             logger.info(f"{task_id}, 开始处理文档 {target_doc}")
-            tasks = DocxGenerator._collect_doc_gen_tasks(task_id, doc, doc_ctx, target_doc_catalogue,
-                                                         vdb_dir, sys_cfg)
+            tasks = DocxGenerator._collect_doc_with_prompt_gen_tasks(task_id, doc, doc_ctx, target_doc_catalogue,
+                                                                     vdb_dir, sys_cfg)
             if not tasks:
                 final_info = f"{task_id}, 未检测到需要生成的文本段落"
                 logger.info(f"{final_info}, {target_doc}")
@@ -125,7 +124,7 @@ class DocxGenerator:
             logger.info(initial_info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
             results = self._exec_tasks(tasks, task_id, start_time, len(tasks))
-            self._insert_results_to_doc(doc, results)
+            self._insert_gen_para_to_doc(doc, results)
 
             # 保存文档
             doc.save(output_file_name)
@@ -148,8 +147,8 @@ class DocxGenerator:
             return final_info
 
         except Exception as e:
-            error_info = f"{task_id}, 文档生成过程出现异常: {str(e)}"
-            logger.error(error_info)
+            error_info = f"文档生成过程出现异常: {str(e)}"
+            logger.error(f"{task_id}, {error_info}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, error_info, 100)
             try:
                 doc.save(output_file_name)
@@ -158,13 +157,13 @@ class DocxGenerator:
             return error_info
 
     @staticmethod
-    def _collect_doc_gen_tasks(task_id: int, doc: Document, doc_ctx: str,
-                               target_doc_catalogue: str, vdb_dir: str,
-                               sys_cfg: dict) -> List[Dict[str, Any]]:
+    def _collect_doc_with_prompt_gen_tasks(task_id: int, doc: Document, doc_ctx: str,
+                                           target_doc_catalogue: str, vdb_dir: str,
+                                           sys_cfg: dict) -> List[Dict[str, Any]]:
         """
-        收集所有需要生成文本的任务信息
+        收集含有描述性的文本的docx文档的所有需要生成文本的任务信息
         """
-        logger.info(f"{task_id}, start_collect_task, {doc.filename}")
+        logger.info(f"{task_id}, start_collect_task")
         tasks = []
         current_heading = []
         para_count = len(doc.paragraphs)
@@ -189,7 +188,7 @@ class DocxGenerator:
             tasks.append(task)
             process_info = f"正在处理第 {index}/{para_count}  段文本， 已创建 {len(tasks)} 个处理任务"
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, process_info)
-        logger.info(f"_collect_task, {json.dump(tasks, ensure_ascii=False)}")
+        logger.info(f"_collect_task, {len(tasks)}")
         return tasks
 
     def _exec_tasks(self, tasks: List[Dict[str, Any]],
@@ -282,11 +281,11 @@ class DocxGenerator:
             }
 
         except Exception as e:
-            logger.exception(f"生成段落失败: {str(e)}, single_task_args, {json.dumps(task, ensure_ascii=False)}")
+            logger.exception(f"生成段落失败: {str(e)}, single_task_args, {task['current_heading']}")
             raise
 
     @staticmethod
-    def _insert_results_to_doc(doc: Document, results: Dict[str, Dict]):
+    def _insert_gen_para_to_doc(doc: Document, results: Dict[str, Dict]):
         """
         将生成的结果插入到文档中
         """
@@ -309,56 +308,6 @@ class DocxGenerator:
 
             # 插入到原始段落后面
             original_para._p.addnext(new_para._p)
-
-    def fill_doc_without_prompt_parallel(self, task_id: int, doc_ctx: str, target_doc: str,
-                                         target_doc_catalogue: str, vdb_dir: str,
-                                         sys_cfg: dict, output_file_name: str) -> str:
-        """
-        并行填充word文档（只有三级目录的版本）
-        """
-        logger.info(f"{task_id}, 开始处理文档 {target_doc}")
-        start_time = time.time() * 1000
-        doc = Document(target_doc)
-
-        # 收集三级标题任务
-        tasks = []
-        for para in doc.paragraphs:
-            if not is_3rd_heading(para):
-                continue
-            task = {
-                'unique_key': f"heading_{len(tasks)}",
-                'write_context': doc_ctx,
-                'paragraph_prompt': para.text,
-                'user_comment':'',
-                'catalogue': target_doc_catalogue,
-                'current_sub_title': para.text,
-                'cfg': sys_cfg,
-                'vdb_dir': vdb_dir,
-                'original_para': para
-            }
-            tasks.append(task)
-            docx_meta_util.update_docx_file_process_info_by_task_id(task_id, f"正在创建第 {len(tasks)} 个处理任务")
-
-        if not tasks:
-            final_info = "未找到三级标题"
-            logger.error(f"{task_id}, {final_info}")
-            docx_meta_util.update_docx_file_process_info_by_task_id(task_id, final_info, 100)
-            doc.save(output_file_name)
-            return final_info
-
-        # 并行执行并插入结果
-        results = self._exec_tasks(tasks, task_id, start_time, len(tasks))
-        self._insert_results_to_doc(doc, results)
-
-        # 保存文档
-        doc.save(output_file_name)
-        docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
-
-        success_count = len([r for r in results.values() if r.get('success')])
-        final_info = f"任务完成，共处理 {len(tasks)} 个标题，成功生成 {success_count} 段文本，{get_elapsed_time(start_time)}"
-        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, final_info, 100)
-        logger.info(f"{final_info}，输出文件: {output_file_name}")
-        return final_info
 
     def modify_para_with_comment_prompt_in_parallel(self, task_id: int, target_doc: str, catalogue:str,
                                                     doc_ctx: str, comments_dict: dict,
@@ -394,7 +343,7 @@ class DocxGenerator:
             logger.info(info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, info)
             # 收集批注处理任务
-            tasks = DocxGenerator._collect_comment_tasks(task_id, doc, catalogue, doc_ctx, comments_dict, vdb_dir, cfg)
+            tasks = DocxGenerator._collect_doc_with_comment_gen_tasks(task_id, doc, catalogue, doc_ctx, comments_dict, vdb_dir, cfg)
 
             if not tasks:
                 final_info = "未找到有效的批注处理任务"
@@ -435,11 +384,11 @@ class DocxGenerator:
             return error_info
 
     @staticmethod
-    def _collect_comment_tasks(task_id: int , doc: Document, catalogue:str, doc_ctx: str,
+    def _collect_doc_with_comment_gen_tasks(task_id: int , doc: Document, catalogue:str, doc_ctx: str,
                                comments_dict: dict, vdb_dir: str,
                                cfg: dict) -> List[Dict[str, Any]]:
         """
-        收集批注处理任务
+        收集含有批注的文档的并行处理任务
         """
         tasks = []
         current_heading = []
@@ -547,7 +496,7 @@ class DocxGenerator:
             logger.info(initial_info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
             results = self._exec_tasks(tasks, task_id, start_time, len(tasks))
-            DocxGenerator._insert_results_to_doc(doc, results)
+            DocxGenerator._insert_gen_para_to_doc(doc, results)
             doc.save(output_file_name)
             logger.info(f"保存无提示词文档完成: {output_file_name}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
@@ -592,21 +541,3 @@ class DocxGenerator:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.shutdown()
-
-
-if __name__ == '__main__':
-    catalogue_text = "1.1 概述\n1.2 背景\n1.3 需求描述\n1.4 需求分析\n1.5 需求规格\n1.6 需求计划\n1.7 需求评估"
-    my_template_file = "/home/rd/doc/文档生成/template.docx"
-    config = init_yml_cfg()
-
-    with DocxGenerator(max_workers=3) as generator:
-        result = generator.fill_doc_with_prompt_in_parallel(
-            task_id=12345,
-            doc_ctx="可行性研究报告",
-            target_doc=my_template_file,
-            target_doc_catalogue=catalogue_text,
-            vdb_dir="./vdb",
-            sys_cfg=config,
-            output_file_name="output.docx"
-        )
-        logger.info(result)
