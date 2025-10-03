@@ -19,6 +19,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 config_db = "cfg.db"
 user_sample_data_db = "user_info.db"
+AI_GEN_TAG="[_AI生成_]"
 
 DORIS_HTTP_REQ_NOT_200_ERR = "http_request_to_doris_return_status_not_200_exception"
 

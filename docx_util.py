@@ -18,6 +18,7 @@ from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
+import cfg_util
 import docx_meta_util
 from vdb_util import search_txt
 from txt_util import get_txt_in_dir_by_keywords, strip_prefix_no
@@ -29,7 +30,6 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 MIN_DESC_TXT_LEN = 10               # 描述性文本的最小长度
-AI_GEN_TAG="[_AI生成_]"              # Word文档中 AI 生成的内容标识
 
 def get_reference_from_vdb(keywords: str, vdb_dir: str, sys_cfg: dict) -> str:
     """
@@ -290,7 +290,7 @@ def fill_doc_with_prompt_in_progress(task_id:int, doc_ctx: str, target_doc: str,
             new_para = doc.add_paragraph()
             new_para.paragraph_format.first_line_indent = Cm(
                 1)  # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
-            red_run = new_para.add_run(f"{AI_GEN_TAG}{llm_txt}")
+            red_run = new_para.add_run(f"{cfg_util.AI_GEN_TAG}{llm_txt}")
             red_run.font.color.rgb = RGBColor(0, 0, 0)
             my_para._p.addnext(new_para._p)
             doc.save(output_file_name)
@@ -344,7 +344,7 @@ def fill_doc_with_prompt(doc_ctx: str, source_dir: str, target_doc: str, target_
             break
         new_para = doc.add_paragraph()
         new_para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
-        red_run = new_para.add_run(f"{AI_GEN_TAG}{llm_txt}")
+        red_run = new_para.add_run(f"{cfg_util.AI_GEN_TAG}{llm_txt}")
         red_run.font.color.rgb = RGBColor(255, 0, 0)
         my_para._p.addnext(new_para._p)
     return doc

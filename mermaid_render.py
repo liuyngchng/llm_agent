@@ -10,6 +10,9 @@ import requests
 import tempfile
 from docx import Document
 from docx.shared import Inches
+from PIL import Image
+
+import cfg_util
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -164,17 +167,34 @@ class MermaidRenderer:
                     parent = item['paragraph']._p.getparent()
                     pic_para = doc.add_paragraph()
                     run = pic_para.add_run()
-                    run.add_picture(temp_path, width=Inches(6.0))
+                    # 读取图片原始尺寸
+                    with Image.open(temp_path) as img:
+                        width, height = img.size
+                        aspect_ratio = width / height
+
+                    # 根据宽高比决定使用宽度优先还是高度优先
+                    max_width = Inches(6.0)
+                    max_height = Inches(4.0)
+                    if aspect_ratio > 1:  # 横向图
+                        run.add_picture(temp_path, width=max_width)
+                    else:  # 竖向图
+                        run.add_picture(temp_path, height=max_height)
 
                     # 将图片段落插入到原段落后面
                     parent.insert(parent.index(item['paragraph']._p) + 1, pic_para._p)
 
+                    # 再插入文本段落
+                    text_para = doc.add_paragraph()
+                    text_run = text_para.add_run(f"{cfg_util.AI_GEN_TAG} 图 {i + 1}")
+                    # 设置文本居中和加粗
+                    text_para.alignment = 1  # 居中对齐
+                    text_run.bold = True  # 加粗
+                    # 将文本段落插入到图片段落后面
+                    parent.insert(parent.index(pic_para._p) + 1, text_para._p)
+
                     # 清理临时文件
                     os.unlink(temp_path)
-
-                    # 可选：移除原Mermaid脚本段落或添加注释
-                    item['paragraph'].text = f"[已生成图表 {i + 1}]"
-
+                    item['paragraph'].text = ""
                     logger.info(f"已处理第 {i + 1} 个Mermaid图表")
 
                 except Exception as e:
@@ -203,21 +223,21 @@ def test_mermaid_render():
 
     # 测试ER图
     er_diagram = """
-erDiagram
-    DEVICE_INFO ||--o{ REAL_TIME_DATA : "1:N"
-    DEVICE_INFO {
-        varchar device_id PK
-        varchar device_name
-        varchar device_type
-        datetime install_date
-    }
-    REAL_TIME_DATA {
-        bigint record_id PK
-        varchar device_id FK
-        numeric sensor_value
-        datetime collect_time
-    }
-"""
+        erDiagram
+            DEVICE_INFO ||--o{ REAL_TIME_DATA : "1:N"
+            DEVICE_INFO {
+                varchar device_id PK
+                varchar device_name
+                varchar device_type
+                datetime install_date
+            }
+            REAL_TIME_DATA {
+                bigint record_id PK
+                varchar device_id FK
+                numeric sensor_value
+                datetime collect_time
+            }
+        """
 
     try:
         image_data = renderer.render_mermaid_to_image(er_diagram, 'png')

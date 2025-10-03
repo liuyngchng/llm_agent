@@ -15,6 +15,7 @@ from xml.etree import ElementTree as ET
 from docx import Document
 from docx.shared import RGBColor, Cm
 
+import cfg_util
 import docx_meta_util
 from sys_init import init_yml_cfg
 from agt_util import gen_txt
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 UPLOAD_FOLDER = 'upload_doc'
 
-AI_GEN_TAG="[_AI生成_]"
+
 
 
 def get_comments_dict(target_doc: str) -> dict:
@@ -225,7 +226,7 @@ def modify_para_with_comment_prompt_in_process(task_id:int,
                 gen_txt_count += 1
                 para.clear()
                 para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
-                run = para.add_run(f"{AI_GEN_TAG}{modified_txt}")
+                run = para.add_run(f"{cfg_util.AI_GEN_TAG}{modified_txt}")
                 run.font.color.rgb = RGBColor(0, 0, 0)
                 doc.save(output_file_name)
             else:
@@ -272,7 +273,7 @@ def modify_para_with_comment_prompt(target_doc: str,
             if modified_txt:
                 para.clear()
                 para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
-                run = para.add_run(f"{AI_GEN_TAG}{modified_txt}")
+                run = para.add_run(f"{cfg_util.AI_GEN_TAG}{modified_txt}")
                 run.font.color.rgb = RGBColor(0, 0, 0)
             else:
                 logger.error(f"no_gen_txt_for_para, {para_idx}, comment {comment_text}")

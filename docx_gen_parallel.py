@@ -14,10 +14,11 @@ import psutil
 from docx import Document
 from docx.shared import RGBColor, Cm
 
+import cfg_util
 import docx_meta_util
 import mermaid_render
 from agt_util import gen_txt
-from docx_util import get_elapsed_time, get_reference_from_vdb, AI_GEN_TAG, is_3rd_heading, is_txt_para, \
+from docx_util import get_elapsed_time, get_reference_from_vdb, is_3rd_heading, is_txt_para, \
     refresh_current_heading
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -124,7 +125,7 @@ class DocxGenerator:
             initial_info = f"开始并行处理 {len(tasks)} 个段落，使用 {self.executor._max_workers} 个线程"
             logger.info(f"{task_id}, {initial_info}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
-            results = self._exec_tasks(tasks, task_id, start_time, len(tasks))
+            results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
             self._insert_gen_para_to_doc(doc, results)
 
             # 保存文档
@@ -132,18 +133,23 @@ class DocxGenerator:
             logger.info(f"{task_id}, 保存文档完成，{output_file_name}，耗时 {get_elapsed_time(start_time)}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
 
-            # 处理Mermaid图表
-            try:
-                logger.info(f"{task_id}, 开始处理文档中的Mermaid图表")
-                DocxGenerator._process_mermaid_in_document(output_file_name, results)
-                logger.info(f"{task_id}, Mermaid图表处理完成")
-            except Exception as e:
-                logger.error(f"{task_id}, Mermaid图表处理失败: {str(e)}")
-
             # 计算详细统计信息
             success_count = len([r for r in results.values() if r.get('success')])
             failed_count = len(tasks) - success_count
             total_time = get_elapsed_time(start_time)
+
+            # 处理Mermaid图表
+            try:
+                logger.info(f"{task_id}, 开始处理文档中的Mermaid图表")
+                current_info = docx_meta_util.get_docx_info_by_task_id(task_id)
+                docx_meta_util.update_docx_file_process_info_by_task_id(task_id, f"{current_info[0]['process_info']}, 开始处理文档配图", 95)
+                mermaid_success = DocxGenerator._process_mermaid_in_document(output_file_name, results)
+                if not mermaid_success:
+                    failed_count += 1
+                logger.info(f"{task_id}, Mermaid图表处理完成")
+            except Exception as e:
+                failed_count += 1
+                logger.error(f"{task_id}, Mermaid图表处理失败: {str(e)}")
 
             final_info = (f"任务完成，共执行 {len(tasks)} 个文本生成任务，"
                           f"成功生成 {success_count} 段文本，失败任务 {failed_count} 个，{total_time}")
@@ -202,15 +208,23 @@ class DocxGenerator:
 
     def _exec_tasks(self, tasks: List[Dict[str, Any]],
                     task_id: int, start_time: float,
-                    total_tasks: int) -> Dict[str, Dict]:
+                    total_tasks: int, include_mermaid: bool = False) -> Dict[str, Dict]:
         """
-        并行执行文本生成任务（优化进度更新频率）
+        并行执行文本生成任务
+        :param tasks: 任务列表
+        :param task_id: 任务ID
+        :param start_time: 开始时间
+        :param total_tasks: 总任务数
+        :param include_mermaid: 是否包含Mermaid处理任务
         """
         results = {}
         completed = 0
         future_to_key = {}
         last_update_time = time.time()
         update_interval = 2  # 每2秒更新一次进度，避免过于频繁
+
+        # 如果包含Mermaid任务，总任务数需要加1
+        actual_total_tasks = total_tasks + 1 if include_mermaid else total_tasks
 
         # 提交所有任务到线程池
         for task in tasks:
@@ -234,14 +248,15 @@ class DocxGenerator:
             completed += 1
             current_time = time.time()
             if current_time - last_update_time >= update_interval or completed == total_tasks:
-                percent = int(completed / total_tasks * 100)
+                # 计算进度百分比时考虑Mermaid任务
+                percent = int(completed / actual_total_tasks * 100)
                 elapsed_time = get_elapsed_time(start_time)
 
                 # 计算预估剩余时间
                 if completed > 0:
                     elapsed_seconds = (time.time() * 1000 - start_time) / 1000
                     avg_time_per_task = elapsed_seconds / completed
-                    remaining_tasks = total_tasks - completed
+                    remaining_tasks = actual_total_tasks - completed
                     estimated_remaining = avg_time_per_task * remaining_tasks
 
                     if estimated_remaining < 60:
@@ -249,15 +264,16 @@ class DocxGenerator:
                     else:
                         remaining_str = f"约{int(estimated_remaining / 60)}分{int(estimated_remaining % 60)}秒"
 
-                    progress_info = f"正在处理第 {completed}/{total_tasks} 个文本生成任务，{elapsed_time}，剩余{remaining_str}"
+                    progress_info = f"正在处理第 {completed}/{actual_total_tasks} 个任务，{elapsed_time}，剩余{remaining_str}"
                 else:
-                    progress_info = f"正在处理第 {completed}/{total_tasks} 个文本生成任务，{elapsed_time}"
+                    progress_info = f"正在处理第 {completed}/{actual_total_tasks} 个任务，{elapsed_time}"
 
                 docx_meta_util.update_docx_file_process_info_by_task_id(
                     task_id, progress_info, percent)
                 last_update_time = current_time
 
         return results
+
 
     @staticmethod
     def _gen_single_doc_paragraph(task: Dict[str, Any]) -> Dict:
@@ -285,7 +301,7 @@ class DocxGenerator:
 
             return {
                 'success': True,
-                'generated_text': f"{AI_GEN_TAG}{llm_txt}",
+                'generated_text': f"{cfg_util.AI_GEN_TAG}{llm_txt}",
                 'original_para': task['original_para'],
                 'current_heading': task['current_heading'],
                 'contains_mermaid': '<mermaid>' in llm_txt,
@@ -296,23 +312,41 @@ class DocxGenerator:
             raise
 
     @staticmethod
-    def _process_mermaid_in_document(doc_path: str, results: Dict[str, Dict]):
+    def _process_mermaid_in_document(doc_path: str, results: Dict[str, Dict]) -> Dict[str, Any]:
         """
         处理文档中的Mermaid图表
+        :return: 处理结果信息
         """
         try:
             # 检查是否有包含Mermaid的内容
             has_mermaid = any(result.get('contains_mermaid') for result in results.values() if result.get('success'))
+            mermaid_count = sum(1 for result in results.values() if result.get('success') and result.get('contains_mermaid'))
 
             if has_mermaid:
                 logger.info(f"检测到文档包含Mermaid图表，开始处理: {doc_path}")
                 mermaid_render.mermaid_renderer.batch_process_mermaid_in_docx(doc_path)
+                logger.info(f"文档包含Mermaid图表处理完成: {doc_path}")
+                return {
+                    'success': True,
+                    'mermaid_count': mermaid_count,
+                    'has_mermaid': True
+                }
             else:
                 logger.info(f"文档未包含Mermaid图表，跳过处理: {doc_path}")
+                return {
+                    'success': True,
+                    'mermaid_count': 0,
+                    'has_mermaid': False
+                }
 
         except Exception as e:
             logger.error(f"处理Mermaid图表时发生异常: {str(e)}")
-            # 不抛出异常，避免影响主要文档生成流程
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+
 
     @staticmethod
     def _insert_gen_para_to_doc(doc: Document, results: Dict[str, Dict]):
@@ -340,9 +374,9 @@ class DocxGenerator:
             original_para._p.addnext(new_para._p)
 
     def modify_para_with_comment_prompt_in_parallel(self, task_id: int, target_doc: str, catalogue:str,
-                                                    doc_ctx: str, comments_dict: dict,
-                                                    vdb_dir: str, cfg: dict,
-                                                    output_file_name: str) -> str:
+                                                doc_ctx: str, comments_dict: dict,
+                                                vdb_dir: str, cfg: dict,
+                                                output_file_name: str) -> str:
         """
         并行处理带有批注的文档
         :param task_id: 执行任务的ID
@@ -386,24 +420,33 @@ class DocxGenerator:
             logger.info(initial_info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
 
-            results = self._exec_tasks(tasks, task_id, start_time, len(tasks))
+            results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
             DocxGenerator._update_doc_with_comments(results)
             doc.save(output_file_name)
             logger.info(f"保存批注处理文档完成: {output_file_name}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
 
-            # 新增：处理Mermaid图表
-            try:
-                logger.info(f"{task_id}, 开始处理文档中的Mermaid图表")
-                DocxGenerator._process_mermaid_in_document(output_file_name, results)
-                logger.info(f"{task_id}, Mermaid图表处理完成")
-            except Exception as e:
-                logger.error(f"{task_id}, Mermaid图表处理失败: {str(e)}")
-
             # 统计结果
             success_count = len([r for r in results.values() if r.get('success')])
             failed_count = len(tasks) - success_count
             total_time = get_elapsed_time(start_time)
+
+            # 处理Mermaid图表
+            try:
+                logger.info(f"{task_id}, 开始处理文档中的Mermaid图表")
+                current_info = docx_meta_util.get_docx_info_by_task_id(task_id)
+                docx_meta_util.update_docx_file_process_info_by_task_id(
+                    task_id,
+                    f"{current_info[0]['process_info']}, 开始处理文档配图",
+                    95
+                )
+                mermaid_success = DocxGenerator._process_mermaid_in_document(output_file_name, results)
+                if not mermaid_success:
+                    failed_count += 1
+                logger.info(f"{task_id}, Mermaid图表处理完成")
+            except Exception as e:
+                failed_count += 1  # 将Mermaid处理失败计入总失败数
+                logger.error(f"{task_id}, Mermaid图表处理失败: {str(e)}")
 
             final_info = (f"批注处理完成！共处理 {len(tasks)} 个批注段落，"
                           f"成功生成 {success_count} 段文本，失败 {failed_count} 段，{total_time}")
@@ -421,6 +464,7 @@ class DocxGenerator:
             except Exception:
                 pass
             return error_info
+
 
     @staticmethod
     def _collect_doc_with_comment_gen_tasks(task_id: int , doc: Document, catalogue:str, doc_ctx: str,
@@ -487,8 +531,8 @@ class DocxGenerator:
             run.font.color.rgb = RGBColor(0, 0, 0)
 
     def fill_doc_without_prompt_in_parallel(self, task_id: int, doc_ctx: str, target_doc: str,
-                                            target_doc_catalogue: str, vdb_dir: str,
-                                            sys_cfg: dict, output_file_name: str) -> str:
+                                        target_doc_catalogue: str, vdb_dir: str,
+                                        sys_cfg: dict, output_file_name: str) -> str:
         """
         并行填充word文档（只有三级目录，无需段落提示词）
         :param task_id: 执行任务的ID
@@ -534,23 +578,32 @@ class DocxGenerator:
             initial_info = f"开始并行处理 {len(tasks)} 个三级标题，使用 {self.executor._max_workers} 个线程"
             logger.info(initial_info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
-            results = self._exec_tasks(tasks, task_id, start_time, len(tasks))
+            results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
             DocxGenerator._insert_gen_para_to_doc(doc, results)
             doc.save(output_file_name)
             logger.info(f"保存无提示词文档完成: {output_file_name}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
 
-            # 处理Mermaid图表
-            try:
-                logger.info(f"{task_id}, 开始处理文档中的Mermaid图表")
-                DocxGenerator._process_mermaid_in_document(output_file_name, results)
-                logger.info(f"{task_id}, Mermaid图表处理完成")
-            except Exception as e:
-                logger.error(f"{task_id}, Mermaid图表处理失败: {str(e)}")
-
             success_count = len([r for r in results.values() if r.get('success')])
             failed_count = len(tasks) - success_count
             total_time = get_elapsed_time(start_time)
+
+            # 处理Mermaid图表
+            try:
+                logger.info(f"{task_id}, 开始处理文档中的Mermaid图表")
+                current_info = docx_meta_util.get_docx_info_by_task_id(task_id)
+                docx_meta_util.update_docx_file_process_info_by_task_id(
+                    task_id,
+                    f"{current_info[0]['process_info']}, 开始处理文档配图",
+                    95
+                )
+                mermaid_success = DocxGenerator._process_mermaid_in_document(output_file_name, results)
+                if not mermaid_success:
+                    failed_count += 1
+                logger.info(f"{task_id}, Mermaid图表处理完成")
+            except Exception as e:
+                failed_count += 1  # 将Mermaid处理失败计入总失败数
+                logger.error(f"{task_id}, Mermaid图表处理失败: {str(e)}")
 
             final_info = (f"无提示词文档处理完成！共处理 {len(tasks)} 个三级标题，"
                           f"成功生成 {success_count} 段文本，失败 {failed_count} 段，{total_time}")
@@ -571,6 +624,7 @@ class DocxGenerator:
             except Exception:
                 pass
             return error_info
+
 
     def shutdown(self):
         """主动关闭线程池"""

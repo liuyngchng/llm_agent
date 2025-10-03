@@ -340,19 +340,6 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
             generator.fill_doc_without_prompt_in_parallel(
                 task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
             )
-        if generator and os.path.exists(output_file):
-            try:
-                logger.info(f"开始处理文档中的Mermaid图表: {output_file}")
-                docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始给文档添加图表")
-                mermaid_render.mermaid_renderer.batch_process_mermaid_in_docx(output_file)
-                docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "文档图表添加完成")
-                logger.info(f"Mermaid图表处理完成: {output_file}")
-            except Exception as e:
-                logger.error(f"Mermaid图表处理失败，但不影响文档主体: {str(e)}")
-                # 记录错误但不中断流程
-                docx_meta_util.update_docx_file_process_info_by_task_id(
-                    task_id, f"文档生成完成，但图表处理遇到问题: {str(e)}"
-                )
         generator.shutdown()
 
     except Exception as e:
