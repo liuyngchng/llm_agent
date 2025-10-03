@@ -88,7 +88,26 @@ class MermaidRenderer:
             else:
                 cleaned = f"graph TD\n{cleaned}"
 
+        if cleaned.startswith('sequenceDiagram'):
+            # 更完善的JSON内容识别和转义
+            def escape_message_content(match):
+                arrow_part = match.group(1)
+                content = match.group(2).strip()
+                # 如果内容以{开头，说明是JSON，需要转义并加引号
+                if content.startswith('{'):
+                    # 转义内部引号
+                    escaped_content = content.replace('"', '\\"')
+                    return f'{arrow_part} "{escaped_content}"'
+                return match.group(0)
+
+            # 匹配箭头操作符和后面的消息内容
+            cleaned = re.sub(r'(\w+->>?\w+:)(.*?)(?=\n\s*\w+->>|\Z)',
+                             escape_message_content,
+                             cleaned,
+                             flags=re.DOTALL)
+
         return cleaned
+
 
 
     def insert_mermaid_to_docx(self, doc_path: str, mermaid_script: str,
@@ -202,7 +221,9 @@ class MermaidRenderer:
 
                     # 清理临时文件
                     os.unlink(temp_path)
-                    item['paragraph'].text = ""
+                    original_text = item['paragraph'].text
+                    cleaned_text = re.sub(r'<mermaid>.*?</mermaid>', '', original_text, flags=re.DOTALL)
+                    item['paragraph'].text = cleaned_text.strip()
                     logger.info(f"已处理第 {i + 1} 个Mermaid图表")
 
                 except Exception as e:

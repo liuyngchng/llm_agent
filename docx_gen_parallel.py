@@ -448,16 +448,16 @@ class DocxGenerator:
                 failed_count += 1  # 将Mermaid处理失败计入总失败数
                 logger.error(f"{task_id}, Mermaid图表处理失败: {str(e)}")
 
-            final_info = (f"批注处理完成！共处理 {len(tasks)} 个批注段落，"
+            final_info = (f"批注文档处理完成，共处理 {len(tasks)} 个批注段落，"
                           f"成功生成 {success_count} 段文本，失败 {failed_count} 段，{total_time}")
             if failed_count > 0:
                 final_info += "，失败段落可在日志中查看详情"
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, final_info, 100)
-            logger.info(f"{final_info}，输出文件: {output_file_name}")
+            logger.info(f"{task_id}, {final_info}，输出文件: {output_file_name}")
             return final_info
         except Exception as e:
             error_info = f"批注文档处理过程出现异常: {str(e)}"
-            logger.error(error_info)
+            logger.error(f"{task_id}, {error_info}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, error_info, 100)
             try:
                 doc.save(output_file_name)
@@ -605,19 +605,19 @@ class DocxGenerator:
                 failed_count += 1  # 将Mermaid处理失败计入总失败数
                 logger.error(f"{task_id}, Mermaid图表处理失败: {str(e)}")
 
-            final_info = (f"无提示词文档处理完成！共处理 {len(tasks)} 个三级标题，"
+            final_info = (f"文档处理完成，共处理 {len(tasks)} 个三级标题，"
                           f"成功生成 {success_count} 段文本，失败 {failed_count} 段，{total_time}")
 
             if failed_count > 0:
                 final_info += "，失败标题可在日志中查看详情"
 
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, final_info, 100)
-            logger.info(f"{final_info}，输出文件: {output_file_name}")
+            logger.info(f"{task_id}, {final_info}，输出文件: {output_file_name}")
             return final_info
 
         except Exception as e:
-            error_info = f"无提示词文档生成过程出现异常: {str(e)}"
-            logger.error(error_info)
+            error_info = f"文档生成过程出现异常: {str(e)}"
+            logger.error(f"{task_id}, {error_info}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, error_info, 100)
             try:
                 doc.save(output_file_name)
