@@ -168,6 +168,28 @@ h1 {
     display: block;
     animation: fadeIn 0.5s ease;
 }
+
+/* 专门针对步骤1段落中的链接 */
+#step1 p a {
+    color: #4b6cb7;
+    text-decoration: underline;
+    background: none !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: inline !important;
+    font-weight: normal !important;
+    border-radius: 0 !important;
+}
+
+#step1 p a:hover {
+    color: #3a5a9e !important;
+    background: none !important;
+    transform: none !important;
+    box-shadow: none !important;
+    text-decoration: underline !important;
+}
+
 #step4 .btn {
     padding: 7px 30px; /* 原为14px 30px，垂直内边距减半 */
 }
