@@ -13,12 +13,7 @@ sudo apt install fontconfig
 
 # 刷新字体缓存
 fc-cache -fv
-"""
-# !/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
-"""
 pip install python-docx cairosvg
 """
 from docx import Document
