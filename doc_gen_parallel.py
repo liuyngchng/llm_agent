@@ -114,14 +114,14 @@ class DocxGenerator:
             tasks = DocxGenerator._collect_doc_with_prompt_gen_tasks(task_id, doc, doc_ctx, target_doc_catalogue,
                                                                      vdb_dir, sys_cfg)
             if not tasks:
-                final_info = f"{task_id}, 未检测到需要生成的文本段落"
-                logger.info(f"{final_info}, {target_doc}")
+                final_info = f"未检测到需要生成的文本段落"
+                logger.info(f"{task_id}, {final_info}, {target_doc}")
                 docx_meta_util.update_docx_file_process_info_by_task_id(task_id, final_info, 100)
                 doc.save(output_file_name)
                 return final_info
 
-            initial_info = f"{task_id}, 开始并行处理 {len(tasks)} 个段落，使用 {self.executor._max_workers} 个线程"
-            logger.info(initial_info)
+            initial_info = f"开始并行处理 {len(tasks)} 个段落，使用 {self.executor._max_workers} 个线程"
+            logger.info(f"{task_id}, {initial_info}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
             results = self._exec_tasks(tasks, task_id, start_time, len(tasks))
             self._insert_gen_para_to_doc(doc, results)

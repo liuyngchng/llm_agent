@@ -33,31 +33,31 @@
                 <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
                 <div class="step active">
                     <span>1</span>
-                    <div class="step-label">选择类型</div>
+                    <div class="step-label">制订写作计划</div>
                 </div>
                 <div class="step">
                     <span>2</span>
-                    <div class="step-label">生成目录</div>
+                    <div class="step-label">生成文档目录</div>
                 </div>
                 <div class="step">
                     <span>3</span>
-                    <div class="step-label">编辑内容</div>
+                    <div class="step-label">编辑文档目录</div>
                 </div>
                 <div class="step">
                     <span>4</span>
-                    <div class="step-label">下载文档</div>
+                    <div class="step-label">提交写作任务</div>
                 </div>
             </div>
         </div>
 
         <div class="step-content">
-            <!-- 步骤1: 选择文档类型 -->
+            <!-- 步骤1: 制定写作计划 -->
             <div class="step-panel active" id="step1">
-                <h2><i class="fas fa-clipboard-list"></i> 选择文档类型</h2>
-                <p>请选择您要创建的文档类型，系统将智能生成相应结构</p>
+                <h2><i class="fas fa-clipboard-list"></i> 制订写作计划</h2>
+                <p>请按需制订写作计划，系统将自动生成相应文档；若提前建立参考材料库，写作时可以提高文档写作质量</p>
 
                 <div class="form-group">
-                    <label for="docType">文档类型</label>
+                    <label for="docType">【1】文档类型</label>
                     <select id="docType">
                         <option value="">-- 请选择文档类型 --</option>
                         <option value="report">工作报告</option>
@@ -72,17 +72,17 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="docTitle">文档标题</label>
+                    <label for="docTitle">【2】文档标题</label>
                     <input type="text" id="docTitle" placeholder="请输入文档标题">
                 </div>
 
                 <div class="form-group">
-                    <label for="keywords">自定义写作要求 (可选项)</label>
+                    <label for="keywords">【3】写作要求 (可选项)</label>
                     <input type="text" id="keywords" placeholder="输入写作要求，用逗号分隔">
                 </div>
 
                 <div class="form-group">
-                    <label for="knowledgeBase">选择参考材料库 (可选项，提前建立参考材料库，写作时参照参考材料可以提高文档质量)</label>
+                    <label for="knowledgeBase">【4】选择参考材料库 (可选项)</label>
                     <select id="knowledgeBase">
                         <option value="">-- 选择参考材料库 --</option>
                     </select>
@@ -96,10 +96,10 @@
                 </div>
             </div>
 
-            <!-- 步骤2: 显示生成目录 -->
+            <!-- 步骤2: 显示生成文档目录 -->
             <div class="step-panel" id="step2">
-                <h2><i class="fas fa-sitemap"></i> 生成目录</h2>
-                <p>请选择使用系统生成目录，或上传自定义Word模板，也可以上传含批注修改意见的文档</p>
+                <h2><i class="fas fa-sitemap"></i> 生成文档目录</h2>
+                <p>可以选择通过系统自动生成目录，也可以上传自定义Word模板，还可以上传含批注修改意见的文档</p>
 
                 <div class="template-selector">
                     <h3>选择目录来源</h3>
@@ -158,8 +158,8 @@
 
             <!-- 步骤3: 编辑目录 -->
             <div class="step-panel" id="step3">
-                <h2><i class="fas fa-edit"></i> 编辑文档内容</h2>
-                <p>请修改以下文档结构（须保持正确的缩进），完成后点击生成文档按钮</p>
+                <h2><i class="fas fa-edit"></i> 编辑文档目录</h2>
+                <p>请确认以下文档目录（须保持正确的缩进），完成后点击“提交任务”按钮</p>
 
                 <div class="progress-display" id="progressDisplay">
                     <div class="progress-text">
