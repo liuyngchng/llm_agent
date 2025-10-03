@@ -10,9 +10,6 @@ import requests
 import tempfile
 from docx import Document
 from docx.shared import Inches
-from docx.oxml.ns import qn
-import base64
-import time
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)

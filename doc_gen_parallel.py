@@ -15,6 +15,7 @@ from docx import Document
 from docx.shared import RGBColor, Cm
 
 import docx_meta_util
+import mermaid_render
 from agt_util import gen_txt
 from docx_util import get_elapsed_time, get_reference_from_vdb, AI_GEN_TAG, is_3rd_heading, is_txt_para, \
     refresh_current_heading
@@ -130,6 +131,14 @@ class DocxGenerator:
             doc.save(output_file_name)
             logger.info(f"{task_id}, 保存文档完成，{output_file_name}，耗时 {get_elapsed_time(start_time)}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
+
+            # 处理Mermaid图表
+            try:
+                logger.info(f"{task_id}, 开始处理文档中的Mermaid图表")
+                DocxGenerator._process_mermaid_in_document(output_file_name, results)
+                logger.info(f"{task_id}, Mermaid图表处理完成")
+            except Exception as e:
+                logger.error(f"{task_id}, Mermaid图表处理失败: {str(e)}")
 
             # 计算详细统计信息
             success_count = len([r for r in results.values() if r.get('success')])
@@ -253,7 +262,7 @@ class DocxGenerator:
     @staticmethod
     def _gen_single_doc_paragraph(task: Dict[str, Any]) -> Dict:
         """
-        单个段落文本的生成任务
+        单个段落文本的生成任务（支持Mermaid图表）
         """
         try:
             # 获取参考文本
@@ -273,16 +282,37 @@ class DocxGenerator:
                 user_comment=task['user_comment'],
                 cfg=task['cfg']
             )
+
             return {
                 'success': True,
                 'generated_text': f"{AI_GEN_TAG}{llm_txt}",
                 'original_para': task['original_para'],
-                'current_heading': task['current_heading']
+                'current_heading': task['current_heading'],
+                'contains_mermaid': '<mermaid>' in llm_txt,
             }
 
         except Exception as e:
             logger.exception(f"生成段落失败: {str(e)}, single_task_args, {task['current_heading']}")
             raise
+
+    @staticmethod
+    def _process_mermaid_in_document(doc_path: str, results: Dict[str, Dict]):
+        """
+        处理文档中的Mermaid图表
+        """
+        try:
+            # 检查是否有包含Mermaid的内容
+            has_mermaid = any(result.get('contains_mermaid') for result in results.values() if result.get('success'))
+
+            if has_mermaid:
+                logger.info(f"检测到文档包含Mermaid图表，开始处理: {doc_path}")
+                mermaid_render.mermaid_renderer.batch_process_mermaid_in_docx(doc_path)
+            else:
+                logger.info(f"文档未包含Mermaid图表，跳过处理: {doc_path}")
+
+        except Exception as e:
+            logger.error(f"处理Mermaid图表时发生异常: {str(e)}")
+            # 不抛出异常，避免影响主要文档生成流程
 
     @staticmethod
     def _insert_gen_para_to_doc(doc: Document, results: Dict[str, Dict]):
@@ -361,6 +391,15 @@ class DocxGenerator:
             doc.save(output_file_name)
             logger.info(f"保存批注处理文档完成: {output_file_name}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
+
+            # 新增：处理Mermaid图表
+            try:
+                logger.info(f"{task_id}, 开始处理文档中的Mermaid图表")
+                DocxGenerator._process_mermaid_in_document(output_file_name, results)
+                logger.info(f"{task_id}, Mermaid图表处理完成")
+            except Exception as e:
+                logger.error(f"{task_id}, Mermaid图表处理失败: {str(e)}")
+
             # 统计结果
             success_count = len([r for r in results.values() if r.get('success')])
             failed_count = len(tasks) - success_count
@@ -500,6 +539,15 @@ class DocxGenerator:
             doc.save(output_file_name)
             logger.info(f"保存无提示词文档完成: {output_file_name}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
+
+            # 处理Mermaid图表
+            try:
+                logger.info(f"{task_id}, 开始处理文档中的Mermaid图表")
+                DocxGenerator._process_mermaid_in_document(output_file_name, results)
+                logger.info(f"{task_id}, Mermaid图表处理完成")
+            except Exception as e:
+                logger.error(f"{task_id}, Mermaid图表处理失败: {str(e)}")
+
             success_count = len([r for r in results.values() if r.get('success')])
             failed_count = len(tasks) - success_count
             total_time = get_elapsed_time(start_time)
