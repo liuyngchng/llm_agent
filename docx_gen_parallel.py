@@ -260,9 +260,9 @@ class DocxGenerator:
                     estimated_remaining = avg_time_per_task * remaining_tasks
 
                     if estimated_remaining < 60:
-                        remaining_str = f"约{int(estimated_remaining)}秒"
+                        remaining_str = f"约 {int(estimated_remaining)} 秒"
                     else:
-                        remaining_str = f"约{int(estimated_remaining / 60)}分{int(estimated_remaining % 60)}秒"
+                        remaining_str = f"约 {int(estimated_remaining / 60)} 分 {int(estimated_remaining % 60)} 秒"
 
                     progress_info = f"正在处理第 {completed}/{actual_total_tasks} 个任务，{elapsed_time}，剩余{remaining_str}"
                 else:

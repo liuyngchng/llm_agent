@@ -39,7 +39,7 @@ class MermaidRenderer:
 
         try:
             # 清理Mermaid脚本
-            cleaned_script = self._clean_mermaid_script(mermaid_script)
+            cleaned_script = MermaidRenderer._clean_mermaid_script(mermaid_script)
 
             # 发送到Kroki服务
             response = requests.post(
@@ -52,7 +52,10 @@ class MermaidRenderer:
             if response.status_code == 200:
                 return response.content
             else:
-                error_msg = f"Kroki渲染失败: {response.status_code} - {response.text}"
+                error_msg = (f"Kroki渲染失败[kroki_mermaid_script_render_fail]: "
+                             f"{response.status_code},{response.text}, "
+                             f"cleaned_script:[{cleaned_script}], "
+                             f"original_script:[{mermaid_script}]")
                 logger.error(error_msg)
                 raise Exception(error_msg)
 
@@ -65,7 +68,8 @@ class MermaidRenderer:
             logger.error(error_msg)
             raise Exception(error_msg)
 
-    def _clean_mermaid_script(self, mermaid_script: str) -> str:
+    @staticmethod
+    def _clean_mermaid_script(mermaid_script: str) -> str:
         """
         清理Mermaid脚本，确保语法正确
         """
@@ -73,7 +77,7 @@ class MermaidRenderer:
         cleaned = re.sub(r'<mermaid>|</mermaid>', '', mermaid_script).strip()
 
         # 确保脚本以正确的图表类型开头
-        if not cleaned.startswith(('graph', 'sequenceDiagram', 'erDiagram', 'gantt', 'classDiagram', 'stateDiagram')):
+        if not cleaned.startswith(('graph', 'sequenceDiagram', 'erDiagram', 'gantt', 'classDiagram', 'stateDiagram', 'flowchart')):
             # 尝试自动添加缺失的图表类型声明
             if '->>' in cleaned or '->' in cleaned:
                 cleaned = f"sequenceDiagram\n{cleaned}"
@@ -85,6 +89,7 @@ class MermaidRenderer:
                 cleaned = f"graph TD\n{cleaned}"
 
         return cleaned
+
 
     def insert_mermaid_to_docx(self, doc_path: str, mermaid_script: str,
                                output_format: str = 'png', width: float = 6.0) -> str:
