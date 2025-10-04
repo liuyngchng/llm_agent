@@ -429,7 +429,11 @@ class DocxGenerator:
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
 
             doc_gen_results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
-            DocxGenerator._update_doc_with_comments(doc_gen_results)
+            # DocxGenerator._update_doc_with_comments(doc_gen_results)
+            DocxGenerator._update_doc_with_comments_using_revisions(doc, doc_gen_results)
+            # 保存前启用修订显示
+            doc.settings.track_revisions = True
+            doc.settings.show_revisions = True
             doc.save(output_file_name)
             logger.info(f"保存批注处理文档完成: {output_file_name}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
@@ -516,6 +520,50 @@ class DocxGenerator:
             tasks.append(task)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, f"正在处理第 {para_idx}/{para_count} 段文本，已创建 {len(tasks)} 个处理任务")
         return tasks
+
+    @staticmethod
+    def _update_doc_with_comments_using_revisions(doc: Document, results: Dict[str, Dict], author_name: str = "AI 助手"):
+        """
+        使用修订模式更新文档中的批注段落，并添加作者信息
+        """
+        # 设置文档作者信息
+        doc.core_properties.author = author_name
+        doc.core_properties.last_modified_by = author_name
+
+        # 按段落索引排序处理
+        sorted_keys = sorted(results.keys(), key=lambda x: int(x.split('_')[1]))
+
+        # 启用修订跟踪
+        doc.settings.track_revisions = True
+
+        for key in sorted_keys:
+            result = results[key]
+            if not result.get('success'):
+                continue
+
+            original_para = result['original_para']
+            generated_text = result['generated_text'].replace(cfg_util.AI_GEN_TAG, '').strip()
+            original_text = original_para.text.strip()
+
+            # 清空原段落内容
+            original_para.clear()
+
+            # 添加原始文本（标记为删除）
+            if original_text:
+                deleted_run = original_para.add_run(original_text)
+                deleted_run.font.strike = True  # 删除线表示删除
+                # 设置颜色为红色表示删除
+                deleted_run.font.color.rgb = RGBColor(255, 0, 0)
+
+            # 添加新文本（标记为插入）
+            if generated_text:
+                inserted_run = original_para.add_run(generated_text)
+                # 设置颜色为绿色表示插入
+                inserted_run.font.color.rgb = RGBColor(0, 176, 80)
+
+            original_para.paragraph_format.first_line_indent = Cm(1)
+
+
 
     @staticmethod
     def _update_doc_with_comments(results: Dict[str, Dict]):
