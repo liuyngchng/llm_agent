@@ -294,7 +294,7 @@ class DocxGenerator:
                 task['vdb_dir'],
                 task['cfg']['api']
             )
-
+            logger.debug(f"gen_txt_user_comment, {task['user_comment']}")
             # 生成文本
             llm_txt = gen_txt(
                 write_context=task['write_context'],
@@ -302,21 +302,25 @@ class DocxGenerator:
                 paragraph_prompt=task['paragraph_prompt'],
                 catalogue=task['catalogue'],
                 current_sub_title=task['current_sub_title'],
-                user_comment=task['user_comment'],
+                user_comment=task.get['user_comment'],  # 使用get方法提供默认值
                 cfg=task['cfg']
             )
+
 
             return {
                 'success': True,
                 'generated_text': f"{cfg_util.AI_GEN_TAG}{llm_txt}",
                 'original_para': task['original_para'],
-                'current_heading': task['current_heading'],
+                'current_heading': task.get('current_heading', []),  # 使用get方法提供默认值
                 'contains_mermaid': '<mermaid>' in llm_txt,
             }
 
         except Exception as e:
-            logger.exception(f"生成段落失败: {str(e)}, single_task_args, {task['current_heading']}")
+            # 更安全地访问current_heading
+            heading_info = task.get('current_heading', 'unknown')
+            logger.exception(f"生成段落失败: {str(e)}, single_task_args, {heading_info}")
             raise
+
 
     @staticmethod
     def _process_mermaid_in_document(task_id:int, doc_path: str, results: Dict[str, Dict]) -> Dict[str, Any]:
@@ -478,7 +482,6 @@ class DocxGenerator:
                 pass
             return error_info
 
-
     @staticmethod
     def _collect_doc_with_comment_gen_tasks(task_id: int , doc: Document, catalogue:str, doc_ctx: str,
                                comments_dict: dict, vdb_dir: str,
@@ -515,14 +518,16 @@ class DocxGenerator:
                 'vdb_dir': vdb_dir,
                 'original_para': para,
                 'para_index': para_idx,
-                'comment_text': comment_text
+                'user_comment': comment_text,
+                'current_heading': current_heading.copy()  # 添加这行，确保任务包含current_heading字段
             }
+            logger.debug(f"{task_id}, user_comment: {task['user_comment']}")
             tasks.append(task)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, f"正在处理第 {para_idx}/{para_count} 段文本，已创建 {len(tasks)} 个处理任务")
         return tasks
 
     @staticmethod
-    def _update_doc_with_comments_using_revisions(doc: Document, results: Dict[str, Dict], author_name: str = "AI 助手"):
+    def _update_doc_with_comments_using_revisions(doc: Document, results: Dict[str, Dict], author_name: str = "AI assistant powered by richard"):
         """
         使用修订模式更新文档中的批注段落，并添加作者信息
         """
@@ -557,7 +562,7 @@ class DocxGenerator:
 
             # 添加新文本（标记为插入）
             if generated_text:
-                inserted_run = original_para.add_run(generated_text)
+                inserted_run = original_para.add_run(f"{cfg_util.AI_GEN_TAG}{generated_text}")
                 # 设置颜色为绿色表示插入
                 inserted_run.font.color.rgb = RGBColor(0, 176, 80)
 
