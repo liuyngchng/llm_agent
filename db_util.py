@@ -13,6 +13,7 @@ import json
 import pandas as pd
 import logging.config
 import oracledb
+import dmPython
 
 from cfg_util import get_user_name_by_uid
 from my_enums import DataType, DBType
@@ -24,6 +25,10 @@ postgresql+psycopg2://postgres:123456@localhost:5432/test
 sqlite:///test.db
 mssql+pymssql://<username>:<password>@<freetds_name>/?charset=utf8
 oracle+oracledb://user:pass@hostname:port[/dbname][?service_name=<service>[&key=value&key=value...]]
+
+for DM, pip install dmPython
+for Oracle, pip install oracledb
+for MySQL, pip install pymysql
 """
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -61,7 +66,7 @@ class DbUtl:
 
 
     @staticmethod
-    def get_col_name_from_sql_for_mysql(db_con, raw_columns: list, sql: str) -> list:
+    def get_col_name_from_sql_for_mysql(db_con: pymysql.Connection, raw_columns: list, sql: str) -> list:
         """
         get column name from SQL, for MySQL DB
         :param db_con: database connection info
@@ -164,6 +169,16 @@ class DbUtl:
                 logger.error(f"col_name_hack_failed, {str(e)}")
         elif isinstance(db_con, oracledb.Connection):
             data = DbUtl.oracle_query_tool(db_con, sql)
+        elif isinstance(db_con, dmPython.Connection):
+            data = DbUtl.dm8_query_tool(db_con, sql)
+            try:
+                data['columns'] = DbUtl.get_col_name_from_sql_for_dm8(
+                    db_con,
+                    data['columns'],
+                    sql
+                )
+            except Exception as e:
+                logger.error(f"col_name_hack_failed for DM8, {str(e)}")
         else:
             logger.error(f"database_type_error, {__file__}")
             raise "database type error"
@@ -317,6 +332,224 @@ class DbUtl:
 
     #################### for support oracle DB #########################
 
+
+    #################### for support DM8 Database #########################
+    @staticmethod
+    def dm8_query_tool(db_con, query: str) -> dict:
+        try:
+            cursor = db_con.cursor()
+            cursor.execute(query)
+            columns = [desc[0] for desc in cursor.description] if cursor.description else []
+            data = cursor.fetchall()
+            # 处理日期时间类型
+            processed_data = [
+                tuple(
+                    item.isoformat() if isinstance(item, (datetime.date, datetime.datetime)) else item
+                    for item in row
+                )
+                for row in data
+            ]
+            return {"columns": columns, "data": processed_data}
+        except Exception as e:
+            logger.exception("dm8_query_tool_err")
+            raise e
+
+    @staticmethod
+    def dm8_output(cfg: dict, sql: str, data_format: str):
+        """
+        连接达梦数据库并执行查询
+        """
+        db_config = cfg.get('db', {})
+        if all(key in db_config for key in ['name', 'host', 'user', 'password']):
+            # 使用配置信息连接
+            conn = dmPython.connect(
+                host=db_config['host'],
+                port=db_config.get('port', 5236),
+                user=db_config['user'],
+                password=db_config['password'],
+                schema=db_config['name'],
+                connect_timeout=DB_CONN_TIMEOUT,
+                network_timeout=DB_RW_TIMEOUT
+            )
+        else:
+            # 使用连接字符串连接
+            parsed_uri = urlparse(db_config['uri'])
+            conn = dmPython.connect(
+                host=unquote(parsed_uri.hostname),
+                port=parsed_uri.port or 5236,
+                user=unquote(parsed_uri.username),
+                password=unquote(parsed_uri.password),
+                schema=unquote(parsed_uri.path[1:]) if parsed_uri.path else None,
+                connect_timeout=DB_CONN_TIMEOUT,
+                network_timeout=DB_RW_TIMEOUT
+            )
+
+        dt = DbUtl.output_data(conn, sql, data_format)
+        conn.close()
+        return dt
+
+    @staticmethod
+    def get_dm8_db_info(cfg: dict) -> list:
+        """
+        获取达梦数据库中的表列表
+        """
+        db_config = cfg.get('db', {})
+        if all(key in db_config for key in ['name', 'host', 'user', 'password']):
+            conn = dmPython.connect(
+                host=db_config['host'],
+                port=db_config.get('port', 5236),
+                user=db_config['user'],
+                password=db_config['password'],
+                schema=db_config['name']
+            )
+        else:
+            parsed_uri = urlparse(db_config['uri'])
+            conn = dmPython.connect(
+                host=unquote(parsed_uri.hostname),
+                port=parsed_uri.port or 5236,
+                user=unquote(parsed_uri.username),
+                password=unquote(parsed_uri.password),
+                schema=unquote(parsed_uri.path[1:]) if parsed_uri.path else None
+            )
+
+        try:
+            cursor = conn.cursor()
+            # 查询用户表信息
+            cursor.execute("SELECT TABLE_NAME FROM USER_TABLES")
+            return [row[0] for row in cursor.fetchall()]
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_dm8_table_schema(cfg: dict, table_name: str) -> str:
+        """
+        获取达梦数据库表结构信息
+        """
+        db_config = cfg.get('db', {})
+        if all(key in db_config for key in ['name', 'host', 'user', 'password']):
+            conn = dmPython.connect(
+                host=db_config['host'],
+                port=db_config.get('port', 5236),
+                user=db_config['user'],
+                password=db_config['password'],
+                schema=db_config['name']
+            )
+        else:
+            parsed_uri = urlparse(db_config['uri'])
+            conn = dmPython.connect(
+                host=unquote(parsed_uri.hostname),
+                port=parsed_uri.port or 5236,
+                user=unquote(parsed_uri.username),
+                password=unquote(parsed_uri.password),
+                schema=unquote(parsed_uri.path[1:]) if parsed_uri.path else None
+            )
+
+        try:
+            cursor = conn.cursor()
+
+            # 获取表字段信息
+            cursor.execute(f"""
+                SELECT COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT 
+                FROM USER_TAB_COLUMNS 
+                WHERE TABLE_NAME = '{table_name}' 
+                ORDER BY COLUMN_ID
+            """)
+
+            table_header = "| 字段名 | 字段类型 | 字段注释 |\n|--------|----------|----------|"
+            table_rows = []
+            for row in cursor.fetchall():
+                name = row[0] if row[0] else ""
+                col_type = row[1] if row[1] else "N/A"
+                comment = row[2] if row[2] else ""
+                table_rows.append(f"| {name} | {col_type} | {comment} |")
+
+            column_table = "\n".join([table_header] + table_rows)
+
+            # 获取示例数据
+            sample_dt_sql = f"SELECT * FROM {table_name} WHERE ROWNUM <= 3"
+            cursor.execute(sample_dt_sql)
+            sample_data = cursor.fetchall()
+
+            return f"表名：{table_name}\n字段信息：\n{column_table}\n示例数据：\n{sample_data}"
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_col_name_from_sql_for_dm8(db_con: dmPython.Connection, raw_columns: list, sql: str) -> list:
+        """
+        get column name from SQL, for DM8 DB
+        :param db_con: database connection info
+        :param raw_columns: original columns
+        :param sql: sql need to be executed next
+        :return: the column name more explainable
+        """
+        try:
+            # 提取表名
+            table_match = re.search(r'(?i)FROM\s+([`\w.]+)', sql)
+            table_name = table_match.group(1).replace('`', '') if table_match else None
+            if not table_name:
+                return raw_columns
+
+            # 处理模式名和表名
+            if '.' in table_name:
+                schema_name, table_name = table_name.split('.')[:2]
+                full_table_name = f"{schema_name}.{table_name}"
+            else:
+                full_table_name = table_name
+
+            # 获取列注释映射
+            comment_map = {}
+            cursor = db_con.cursor()
+            # 查询表列注释信息
+            cursor.execute(f"""
+                SELECT COLUMN_NAME, COMMENTS 
+                FROM ALL_COL_COMMENTS 
+                WHERE TABLE_NAME = '{table_name.upper()}'
+                AND OWNER = '{schema_name.upper() if '.' in table_name else db_con.username.upper()}'
+            """)
+
+            for col in cursor.fetchall():
+                if col[1]:  # 如果有注释
+                    comment_map[col[0].upper()] = DbUtl.get_punctuation_seg(col[1])
+
+            # 处理列名
+            processed_columns = []
+            for col in raw_columns:
+                col_upper = col.upper()
+                comment = comment_map.get(col_upper, "")
+
+                # 处理聚合函数列名
+                suffix, base_col = "", col
+                patterns = [
+                    (r'^(AVG|SUM|MAX|MIN|COUNT)\(([\w`]+)\)$', lambda m: (f"{m[1]}的", m[2].replace('`', ''))),
+                    (r'^(TOTAL|AVG|SUM|MAX|MIN)_([\w`]+)$', lambda m: (f"{m[1]}的", m[2].replace('`', '')))
+                ]
+
+                for pattern, handler in patterns:
+                    match = re.match(pattern, col_upper)
+                    if match:
+                        suffix_part, base_col = handler(match)
+                        suffix = {"AVG的": "平均值", "SUM的": "总和",
+                                  "MAX的": "最大值", "MIN的": "最小值",
+                                  "COUNT的": "计数", "TOTAL的": "总和"}.get(suffix_part, "")
+                        base_comment = comment_map.get(base_col.upper(), "")
+                        break
+                else:
+                    base_comment = DbUtl.get_punctuation_seg(comment)
+                    base_comment = base_comment[:16]
+
+                final_name = f"{base_comment}{suffix}" if base_comment else col
+                processed_columns.append(final_name.strip())
+
+            return processed_columns
+        except Exception as e:
+            logger.error(f"Error processing column names for DM8: {str(e)}")
+            return raw_columns
+
+    #################### for support DM8 Database #########################
+
+
+
     @staticmethod
     def sqlite_output(db_uri: str, sql:str, data_format:str):
         """
@@ -337,6 +570,7 @@ class DbUtl:
         """
         mysql+pymysql://user:pswd@host/db
         oracle+cx_oracle://user:password@host:port/service_name
+        dm://user:password@host:port/database
         """
         db_cfg = cfg.get('db', {})
         db_type_cfg = db_cfg['type'].lower()
@@ -355,6 +589,11 @@ class DbUtl:
                 pwd = quote(db_cfg['password'])
                 my_db_uri = (f"oracle+cx_oracle://{usr}:{pwd}"
                              f"@{db_cfg['host']}:{db_cfg.get('port', 1521)}/?service_name={db_cfg['name']}")
+            elif DBType.DM8.value in db_type_cfg:  # 添加DM8支持
+                usr = quote(db_cfg['user'])
+                pwd = quote(db_cfg['password'])
+                my_db_uri = (f"dm://{usr}:{pwd}"
+                             f"@{db_cfg['host']}:{db_cfg.get('port', 5236)}/{db_cfg['name']}")
             else:
                 raise "unknown db type in config txt_file"
         elif all(key in db_cfg for key in ['type', 'name']):
@@ -452,6 +691,8 @@ def test_db():
         my_dt = my_db_util.mysql_output(my_cfg, my_sql, 'json')
     elif DBType.ORACLE.value in db_uri:
         my_dt = my_db_util.oracle_output(my_cfg, my_sql, 'json')
+    elif DBType.DM8.value in db_uri:
+        my_dt = my_db_util.dm8_output(my_cfg, my_sql, 'json')
     else:
         my_dt = None
         raise "check your config txt_file to config correct [dt_uri]"

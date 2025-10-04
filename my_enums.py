@@ -10,6 +10,7 @@ class DBType(Enum):
     MYSQL = "mysql"
     ORACLE = "oracle"
     DORIS = "doris"
+    DM8 = "dm"
 
 class YieldType(Enum):
     TXT = "txt"

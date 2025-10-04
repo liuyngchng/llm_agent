@@ -293,6 +293,8 @@ class SqlYield(DbUtl):
             table_list = DbUtl.get_orc_db_info(self.cfg)
         elif DBType.DORIS.value in self.db_type:
             table_list = self.doris_dt_source.get_table_list()
+        elif DBType.DM8.value in self.db_type:
+            table_list = DbUtl.get_dm8_db_info(self.cfg)
         else:
             table_list = self.db_dt_source.get_usable_table_names()
         return table_list
@@ -310,6 +312,9 @@ class SqlYield(DbUtl):
             doris_schema = self.doris_dt_source.get_table_schema(self.doris_dt_source.data_source, table_name)
             # logger.info(f"doris_schema\n {doris_schema}")
             return doris_schema
+        elif DBType.DM8.value == self.db_type:
+            dm8_schema = DbUtl.get_dm8_table_schema(self.cfg, table_name)
+            return dm8_schema
 
         if DBType.ORACLE.value == self.db_type:
             table_name = table_name.upper()
@@ -609,6 +614,9 @@ class SqlYield(DbUtl):
         elif DBType.ORACLE.value in db_type:
             logger.debug(f"connect_to_oracle_db")
             dt = DbUtl.oracle_output(self.cfg, sql, dt_fmt)
+        elif DBType.DM8.value in db_type:
+            logger.debug(f"connect_to_dm8_db")
+            dt = DbUtl.dm8_output(self.cfg, sql, dt_fmt)
         elif DBType.DORIS.value in db_type:
             logger.debug(f"connect_to_doris_db")
             dt = self.doris_dt_source.doris_output(sql, dt_fmt)

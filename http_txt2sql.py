@@ -118,12 +118,16 @@ def save_config():
         "is_strict":    is_strict,
         "llm_ctx":      llm_ctx
     }
-    usr = cfg_utl.get_user_name_by_uid(uid)
-    if data_source_cfg["db_type"] == DBType.SQLITE.value:
-        data_source_cfg['waring_info'] = '数据库类型有误'
-        return render_template(dt_idx, **data_source_cfg)
+    if uid:
+        uid_num = int(uid)
+        usr = cfg_utl.get_user_name_by_uid(uid_num)
+    else:
+        usr = None
     if not usr:
         data_source_cfg['waring_info'] = '非法访问，请您先登录系统'
+        return render_template(dt_idx, **data_source_cfg)
+    if data_source_cfg["db_type"] == DBType.SQLITE.value:
+        data_source_cfg['waring_info'] = '数据库类型有误'
         return render_template(dt_idx, **data_source_cfg)
     save_cfg_result = cfg_utl.save_ds_cfg(data_source_cfg, my_cfg)
     if save_cfg_result:
