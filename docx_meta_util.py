@@ -129,3 +129,28 @@ def save_docx_outline_by_task_id(task_id: int, outline: str):
     my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"update_docx_outline_dt {my_dt}")
     return my_dt
+
+def update_img_count_by_task_id(task_id: int, img_count: int):
+    """
+    更新需要处理的docx任务中的图片数量
+    """
+    if not task_id or not img_count:
+        raise RuntimeError(f"param_null_err, {task_id}, {img_count}")
+    sql = f"update docx_file_info set img_count = {img_count} where task_id = {task_id} limit 1"
+    logger.info(f"update_img_count_sql, {sql}")
+    my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"update_img_count_dt {my_dt}")
+    return my_dt
+
+def get_img_count_by_task_id(task_id: int)-> int:
+    """
+    获取需要处理的docx任务中的图片数量
+    """
+    sql = f"select img_count from docx_file_info where task_id = {task_id} limit 1"
+    logger.info(f"get_img_count_sql, {sql}")
+    my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"get_img_count_dt, {my_dt}")
+    if my_dt and my_dt[0]:
+        return my_dt[0][0]
+    else:
+        return 0

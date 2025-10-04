@@ -27,7 +27,7 @@ class MermaidRenderer:
         self.kroki_url = kroki_url
         self.supported_formats = ['png', 'svg']
 
-    def render_mermaid_to_image(self, mermaid_script: str, output_format: str = 'png') -> bytes:
+    def render_script_to_img(self, mermaid_script: str, output_format: str = 'png') -> bytes:
         """
         将Mermaid脚本渲染为图片字节流
         :param mermaid_script: Mermaid脚本
@@ -111,24 +111,24 @@ class MermaidRenderer:
 
 
     def insert_mermaid_to_docx(self, doc_path: str, mermaid_script: str,
-                               output_format: str = 'png', width: float = 6.0) -> str:
+                               img_format: str = 'png', width: float = 5.0) -> str:
         """
         将Mermaid图表插入到Word文档中
         :param doc_path: Word文档路径
         :param mermaid_script: Mermaid脚本
-        :param output_format: 图片格式
+        :param img_format: 图片格式
         :param width: 图片宽度（英寸）
         :return: 处理后的文档路径
         """
         try:
             # 渲染Mermaid为图片
-            image_data = self.render_mermaid_to_image(mermaid_script, output_format)
+            image_data = self.render_script_to_img(mermaid_script, img_format)
 
             # 加载文档
             doc = Document(doc_path)
 
             # 创建临时图片文件
-            with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{output_format}') as temp_file:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{img_format}') as temp_file:
                 temp_file.write(image_data)
                 temp_path = temp_file.name
 
@@ -150,12 +150,12 @@ class MermaidRenderer:
             logger.error(f"插入Mermaid图表失败: {str(e)}")
             raise
 
-    def batch_process_mermaid_in_docx(self, doc_path: str, output_format: str = 'png') -> str:
+    def batch_process_mermaid_in_docx(self, task_id: int, doc_path: str, img_format: str = 'png') -> int:
         """
         批量处理文档中的所有Mermaid脚本
         :param doc_path: Word文档路径
-        :param output_format: 图片格式
-        :return: 处理后的文档路径
+        :param img_format: mermaid脚本转换为图片的格式
+        :return: 处理的图片总数量
         """
         try:
             doc = Document(doc_path)
@@ -173,19 +173,18 @@ class MermaidRenderer:
                     })
 
             if not mermaid_scripts:
-                logger.info("文档中未找到Mermaid脚本")
-                return doc_path
-
-            logger.info(f"找到 {len(mermaid_scripts)} 个Mermaid脚本需要处理")
+                logger.info(f"{task_id}, 文档中未找到Mermaid脚本")
+                return 0
+            img_count = len(mermaid_scripts)
+            logger.info(f"{task_id}, 找到需要处理的Mermaid脚本 {img_count} 个")
 
             # 处理每个Mermaid脚本
             for i, item in enumerate(mermaid_scripts):
                 try:
                     # 渲染图表
-                    image_data = self.render_mermaid_to_image(item['script'], output_format)
-
+                    image_data = self.render_script_to_img(item['script'], img_format)
                     # 创建临时图片文件
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{output_format}') as temp_file:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{img_format}') as temp_file:
                         temp_file.write(image_data)
                         temp_path = temp_file.name
 
@@ -224,25 +223,20 @@ class MermaidRenderer:
                     original_text = item['paragraph'].text
                     cleaned_text = re.sub(r'<mermaid>.*?</mermaid>', '', original_text, flags=re.DOTALL)
                     item['paragraph'].text = cleaned_text.strip()
-                    logger.info(f"已处理第 {i + 1} 个Mermaid图表")
-
+                    logger.info(f"{task_id}, 已处理第 {i + 1} 个Mermaid图表")
                 except Exception as e:
-                    logger.error(f"处理第 {i + 1} 个Mermaid脚本失败: {str(e)}, mermaid_scrip_fail, {item['paragraph'].text}")
-
+                    logger.error(f"{task_id}, 处理第 {i + 1} 个Mermaid脚本失败: {str(e)}, mermaid_scrip_fail, {item['paragraph'].text}")
                     continue
-
             # 保存文档
             doc.save(doc_path)
-            logger.info(f"Mermaid图表批量处理完成: {doc_path}")
-            return doc_path
-
+            logger.info(f"{task_id}, Mermaid图表批量处理完成: {doc_path}")
+            return img_count
         except Exception as e:
-            logger.error(f"批量处理Mermaid图表失败: {str(e)}")
+            logger.error(f"{task_id}, 批量处理Mermaid图表失败: {str(e)}")
             raise
 
-
 # 全局渲染器实例
-mermaid_renderer = MermaidRenderer()
+instance = MermaidRenderer()
 
 
 def test_mermaid_render():
@@ -268,7 +262,7 @@ def test_mermaid_render():
         """
 
     try:
-        image_data = renderer.render_mermaid_to_image(er_diagram, 'png')
+        image_data = renderer.render_script_to_img(er_diagram, 'png')
         logger.info(f"Mermaid渲染测试成功，图片大小: {len(image_data)} 字节")
 
         # 保存测试图片
