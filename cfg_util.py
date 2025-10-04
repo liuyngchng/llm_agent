@@ -38,11 +38,11 @@ def auth_user(user:str, t: str, cfg: dict) -> dict:
         auth_result["t"] = encrypt(str(time.time() * 1000), cfg['sys']['cypher_key'])
     return auth_result
 
-def get_user_info_by_uid(uid: str)-> dict:
+def get_user_info_by_uid(uid: int)-> dict:
     user_info = {}
     with sqlite3.connect(config_db) as my_conn:
         try:
-            sql = f"select id, name, role, area from user where id='{uid}' limit 1"
+            sql = f"select id, name, role, area from user where id={uid} limit 1"
             check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             if user_dt:
@@ -57,8 +57,8 @@ def get_user_info_by_uid(uid: str)-> dict:
     logger.error(f"no_user_info_found_for_uid, {uid}")
     return user_info
 
-def get_uid_by_user(usr:str) ->str:
-    check_sql = f"select id from user where name='{usr}' limit 1"
+def get_uid_by_user(usr_name:str) ->str:
+    check_sql = f"select id from user where name='{usr_name}' limit 1"
     uid = ''
     with sqlite3.connect(config_db) as my_conn:
         check_info = query_sqlite(my_conn, check_sql)
@@ -67,7 +67,7 @@ def get_uid_by_user(usr:str) ->str:
         try:
             uid = check_data[0][0]
         except (IndexError, TypeError) as e:
-            logger.info(f"user info for {usr} can't be found")
+            logger.info(f"user info for {usr_name} can't be found")
     return uid
 
 def get_user_name_by_uid(uid: int)-> str | None:
@@ -83,11 +83,11 @@ def get_user_name_by_uid(uid: int)-> str | None:
             logger.info(f"no_user_info_found_for_uid, {uid}")
     return user
 
-def get_user_role_by_uid(uid:str)-> str | None:
+def get_user_role_by_uid(uid:int)-> str | None:
     role = None
     with sqlite3.connect(config_db) as my_conn:
         try:
-            sql = f"select role from user where id='{uid}' limit 1"
+            sql = f"select role from user where id={uid} limit 1"
             check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             role = user_dt[0][0]
@@ -96,11 +96,11 @@ def get_user_role_by_uid(uid:str)-> str | None:
             logger.info(f"no_user_info_found_for_uid, {uid}")
     return role
 
-def get_user_hack_info(uid: str, cfg: dict)-> str | None:
+def get_user_hack_info(uid: int, cfg: dict)-> str | None:
     user_hack_info = None
     with sqlite3.connect(config_db) as my_conn:
         try:
-            sql = f"select hack_info from user where id='{uid}' limit 1"
+            sql = f"select hack_info from user where id={uid} limit 1"
             check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             if user_dt and user_dt[0] and user_dt[0][0]:
@@ -112,7 +112,7 @@ def get_user_hack_info(uid: str, cfg: dict)-> str | None:
             logger.exception(f"no_user_hack_info_found_for_uid, {uid}")
     return user_hack_info
 
-def save_user_hack_info(uid: str, user_hack_info: str, cfg: dict) -> bool:
+def save_user_hack_info(uid: int, user_hack_info: str, cfg: dict) -> bool:
     """
     :param uid: user id
     :param user_hack_info: user_hack_info for txt to SQL
@@ -124,7 +124,7 @@ def save_user_hack_info(uid: str, user_hack_info: str, cfg: dict) -> bool:
         return save_result
     logger.info("start_encrypt_user_hack_info")
     user_hack_info1 = encrypt(user_hack_info, cfg['sys']['cypher_key'])
-    exec_sql = f"update user set hack_info ='{user_hack_info1}' where id = '{uid}'"
+    exec_sql = f"update user set hack_info ='{user_hack_info1}' where id = {uid}"
     with sqlite3.connect(config_db) as my_conn:
         try:
             exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
@@ -137,12 +137,12 @@ def save_user_hack_info(uid: str, user_hack_info: str, cfg: dict) -> bool:
             logger.exception(f"err_in_exec_sql, {exec_sql}")
     return save_result
 
-def get_ds_cfg_by_uid(uid:str, cfg: dict) -> dict:
+def get_ds_cfg_by_uid(uid:int, cfg: dict) -> dict:
     config = {}
     with sqlite3.connect(config_db) as my_conn:
         check_sql = (
             f"select uid, db_type, db_name, db_host, db_port, "
-            f"db_usr, db_psw, tables, add_chart, is_strict, llm_ctx from db_config where uid='{uid}' limit 1")
+            f"db_usr, db_psw, tables, add_chart, is_strict, llm_ctx from db_config where uid={uid} limit 1")
         db_config_info = query_sqlite(my_conn, check_sql)
         logger.debug(f"check_sql, {check_sql}")
         check_info = db_config_info['data']
@@ -320,14 +320,14 @@ def get_db_cache(key:str, cypher_key: str)->tuple | None:
             logger.info(f"no_cache_info_found_for_key, {key}")
     return None
 
-def delete_data_source_config(uid: str, cfg: dict) -> bool:
+def delete_data_source_config(uid: int, cfg: dict) -> bool:
     delete_result = False
     if not uid:
         logger.error("uid_null_err")
         return delete_result
     current_config = get_ds_cfg_by_uid(uid, cfg)
     if current_config:
-        delete_sql = f"delete from db_config where uid = '{uid}'"
+        delete_sql = f"delete from db_config where uid = {uid}"
     else:
         logger.error(f"no_db_source_cfg_found_for_uid_{uid}")
         return False
@@ -341,7 +341,7 @@ def delete_data_source_config(uid: str, cfg: dict) -> bool:
             logger.exception(f"err_in_exec_sql, {delete_sql}")
     return delete_result
 
-def build_data_source_cfg_with_uid(uid: str, sys_cfg:dict)->dict:
+def build_data_source_cfg_with_uid(uid: int, sys_cfg:dict)->dict:
     source_cfg = get_ds_cfg_by_uid(uid, sys_cfg)
     if not source_cfg:
         return  sys_cfg
@@ -414,9 +414,9 @@ def get_user_list():
             logger.exception(f"err_occurred_for_db {config_db}, sql {sql}")
     return user_list
 
-def get_hack_info(uid: str)-> dict:
+def get_hack_info(uid: int)-> dict:
     with sqlite3.connect(config_db) as my_conn:
-        sql = f"select hack_q_dict from hack_list where uid = '{uid}' limit 1"
+        sql = f"select hack_q_dict from hack_list where uid = {uid} limit 1"
         try:
             check_info = query_sqlite(my_conn, sql)
             hack_q_list = check_info['data']
@@ -427,7 +427,7 @@ def get_hack_info(uid: str)-> dict:
     return {}
 
 @functools.lru_cache(maxsize=128)
-def get_hack_dict(uid: str) -> dict:
+def get_hack_dict(uid: int) -> dict:
     """
     返回一个用户问题->可执行的问题对应关系的字典
     """
@@ -445,7 +445,7 @@ def get_hack_dict(uid: str) -> dict:
         return {}
 
 @functools.lru_cache(maxsize=128)
-def get_hack_q_file_content(uid: str) -> str:
+def get_hack_q_file_content(uid: int) -> str:
     """
     返回对应文件的文本
     """

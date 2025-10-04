@@ -6,7 +6,6 @@ import json
 import math
 import ast
 import os
-import threading
 import time
 
 from typing import Dict
@@ -45,14 +44,14 @@ PAGE_SIZE = 100
 SQL_REVIEW_TIME = 3
 
 
-def get_usr_msgs(uid: str):
+def get_usr_msgs(uid: int):
     """
     get user msg history as a context to let llm know how to function
     usr_msg_list data structure: {"uid": ["用户提问:msg1", "系统回复:msg2", "用户提问:msg3"]}
     """
     return usr_msg_list.get(uid)
 
-def save_usr_msg(uid: str, msg: str):
+def save_usr_msg(uid: int, msg: str):
     """
     add user msg to msg list
     """
@@ -69,32 +68,45 @@ class SqlYield(DbUtl):
     # db_uri = "mysql+pymysql://db_user:db_password@db_host/db_name"
     """
 
-    def __init__(self, cfg:dict, prompt_padding=""):
-        self.cfg = cfg
-        self.db_type = cfg['db']['type'].lower()
+    def __init__(self, uid: int, sys_cfg:dict, prompt_padding=""):
+
+        self.cfg = sys_cfg
+        ds_cfg = cfg_util.get_ds_cfg_by_uid(uid, sys_cfg)
+        if ds_cfg:
+            self.cfg['db']['type']=ds_cfg['db_type']
+            self.cfg['db']['name'] = ds_cfg['db_name']
+            self.cfg['db']['host'] = ds_cfg['db_host']
+            self.cfg['db']['port'] = ds_cfg['db_port']
+            self.cfg['db']['user'] = ds_cfg['db_usr']
+            self.cfg['db']['password'] = ds_cfg['db_psw']
+            self.cfg['db']['tables'] = ds_cfg['tables']
+            self.cfg['db']['add_chart'] = ds_cfg['add_chart']
+            self.cfg['db']['is_strict'] = ds_cfg['is_strict']
+            self.cfg['db']['llm_ctx'] = ds_cfg['llm_ctx']
+        self.db_type = sys_cfg['db']['type'].lower()
         if DBType.DORIS.value == self.db_type:
-            self.doris_dt_source_cfg = cfg['db']
+            self.doris_dt_source_cfg = sys_cfg['db']
             self.doris_dt_source = Doris(self.doris_dt_source_cfg)
         elif DBType.DM8.value == self.db_type:
             # 对于DM8，不初始化 db_dt_source，因为SQLAlchemy不支持
             self.db_dt_source = None
             logger.info("dm8_database_detected, skipping SQLDatabase initialization")
         else:
-            db_uri = DbUtl.get_db_uri(cfg)
+            db_uri = DbUtl.get_db_uri(sys_cfg)
             self.db_dt_source = SQLDatabase.from_uri(db_uri)
-        self.llm_api_uri = cfg['api']['llm_api_uri']
-        self.llm_api_key = SecretStr(cfg['api']['llm_api_key'])
-        self.llm_model_name = cfg['api']['llm_model_name']
+        self.llm_api_uri = sys_cfg['api']['llm_api_uri']
+        self.llm_api_key = SecretStr(sys_cfg['api']['llm_api_key'])
+        self.llm_model_name = sys_cfg['api']['llm_model_name']
         self.db_name = self.cfg['db'].get('name', self.cfg['db'].get('data_source'))
 
         # 带数据库结构的提示模板
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        refine_q_msg = f"""{cfg['prompts']['refine_q_msg']}\n当前时间是 {current_time}"""
-        sql_gen_msg = f"""{cfg['prompts']['sql_gen_msg']}\n当前时间是 {current_time}"""
-        sql_review_msg = f"""{cfg['prompts']['sql_review_msg']}\n当前时间是 {current_time}"""
-        count_sql_gen_msg = cfg['prompts']['count_sql_gen_msg']
-        explain_sql_msg = cfg['prompts']['explain_sql_msg']
-        intercept_q_msg = f"""{cfg['prompts']['intercept_q_msg']}\n当前时间是 {current_time}"""
+        refine_q_msg = f"""{sys_cfg['prompts']['refine_q_msg']}\n当前时间是 {current_time}"""
+        sql_gen_msg = f"""{sys_cfg['prompts']['sql_gen_msg']}\n当前时间是 {current_time}"""
+        sql_review_msg = f"""{sys_cfg['prompts']['sql_review_msg']}\n当前时间是 {current_time}"""
+        count_sql_gen_msg = sys_cfg['prompts']['count_sql_gen_msg']
+        explain_sql_msg = sys_cfg['prompts']['explain_sql_msg']
+        intercept_q_msg = f"""{sys_cfg['prompts']['intercept_q_msg']}\n当前时间是 {current_time}"""
         # try:
         #     sql_gen_msg = sql_gen_msg.replace("{sql_dialect}", cfg['db']['type'])
         # except Exception as e:
@@ -124,7 +136,7 @@ class SqlYield(DbUtl):
             ("system", f"{explain_sql_msg}\n{prompt_padding}"),
             ("human", "查询数据的SQL：{msg}")
         ])
-        chart_dt_gen_msg = f"""{cfg['prompts']['chart_dt_gen_msg']}"""
+        chart_dt_gen_msg = f"""{sys_cfg['prompts']['chart_dt_gen_msg']}"""
         # logger.debug(f"chart_dt_gen_msg {chart_dt_gen_msg}")
         self.chart_dt_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", chart_dt_gen_msg),
@@ -141,7 +153,7 @@ class SqlYield(DbUtl):
             ("human", "用户问题：{msg}")
         ])
 
-    def build_invoke_json(self, uid: str, q: str) -> dict:
+    def build_invoke_json(self, uid: int, q: str) -> dict:
         return {
             "msg": q,
             "schema": self.get_schema_info(),
@@ -158,7 +170,7 @@ class SqlYield(DbUtl):
             "user_short_q_desc": hack_content
         }
 
-    def refine_q(self, uid: str, question: str) -> str:
+    def refine_q(self, uid: int, question: str) -> str:
         """
         refine user question to let it can be understood by llm in a normal way.
         """
@@ -172,7 +184,7 @@ class SqlYield(DbUtl):
         logger.info(f"return_from_refine_user_q, {response.content}, origin_q {question}")
         return response.content
 
-    def get_hack_vdb(self, uid: str):
+    def get_hack_vdb(self, uid: int):
         """
         1. 如果vdb不存在，则创建vdb
         2. 如果vdb存在，则加载vdb
@@ -189,13 +201,13 @@ class SqlYield(DbUtl):
         if not hack_vdb:
             raise RuntimeError(f"load_vdb {hack_vdb_file} failed, hack_vdb_collection_is_null")
 
-    def search_vdb(self, user_q: str, uid: str) -> str:
+    def search_vdb(self, user_q: str, uid: int) -> str:
         hack_vdb_file = f"./vdb/{uid}_q_hack_desc_vdb"
         result = search_txt(user_q, hack_vdb_file, 0.5, self.cfg['api'], 1)
         logger.info(f"search_result: {result}")
         return result
 
-    def gen_sql_by_txt(self, uid: str, question: str) -> str:
+    def gen_sql_by_txt(self, uid: int, question: str) -> str:
         """
         generate sql
         """
@@ -220,7 +232,7 @@ class SqlYield(DbUtl):
         response = chain.invoke(review_sql_dict)
         return response.content
 
-    def gen_count_sql_by_sql(self, uid: str, sql: str) -> str:
+    def gen_count_sql_by_sql(self, uid: int, sql: str) -> str:
         """
         generate count sql by data retrieval sql
         """
@@ -230,7 +242,7 @@ class SqlYield(DbUtl):
         response = chain.invoke(gen_sql_dict)
         return response.content
 
-    def get_explain_sql_txt(self, uid: str, sql: str) -> str:
+    def get_explain_sql_txt(self, uid: int, sql: str) -> str:
         """
         generate count sql by data retrieval sql
         """
@@ -251,7 +263,7 @@ class SqlYield(DbUtl):
         })
         return response.content
 
-    def gen_usr_dt_check_sql(self, uid: str, question: str) -> str:
+    def gen_usr_dt_check_sql(self, uid: int, question: str) -> str:
         """
         generate sql for get user data from user account database
         """
@@ -272,7 +284,7 @@ class SqlYield(DbUtl):
         })
         return response.content
 
-    def intercept_usr_question(self, uid: str, q: str):
+    def intercept_usr_question(self, uid: int, q: str):
         chain = self.intercept_q_msg_template | self.get_llm()
         intercept_gen_sql_dict = {
             "msg": q,
@@ -383,7 +395,7 @@ class SqlYield(DbUtl):
         return agt_util.get_model(self.cfg)
 
 
-    def yield_dt_with_nl(self, uid: str, q: str, dt_fmt: str, user_page_dt: dict):
+    def yield_dt_with_nl(self, uid: int, q: str, dt_fmt: str, user_page_dt: dict):
         """
         get data from db by natural language
         :param uid: user id
@@ -570,7 +582,7 @@ class SqlYield(DbUtl):
             return 0
 
     @staticmethod
-    def get_count_num_from_json(count_dt: json) -> int:
+    def get_count_num_from_json(count_dt: str) -> int:
 
         try:
             my_json = json.loads(count_dt)
@@ -579,7 +591,7 @@ class SqlYield(DbUtl):
             logger.error(f"get_count_num_err, {count_dt}")
             return 0
 
-    def get_pg_dt(self, uid: str, usr_page_dt: dict, page_size=PAGE_SIZE):
+    def get_pg_dt(self, uid: int, usr_page_dt: dict, page_size=PAGE_SIZE):
         last_sql1 = usr_page_dt.get('sql', '').replace('\n', '')
         logger.info(f"last_sql_for_{uid}: {last_sql1}")
         page_sql = DbUtl.get_page_sql(usr_page_dt['sql'], usr_page_dt['cur_page'], page_size)
@@ -589,7 +601,7 @@ class SqlYield(DbUtl):
         chart_dt = self.yield_chart_dt(uid, dt)
         yield SqlYield.build_yield_dt(chart_dt, YieldType.CHART_JS.value)
 
-    def yield_chart_dt(self, uid: str, raw_dt: str) -> str:
+    def yield_chart_dt(self, uid: int, raw_dt: str) -> str:
         """
         add chart dt for db retrieve dt
         : param dt: db retrieved dt
@@ -656,7 +668,7 @@ class SqlYield(DbUtl):
 
 
 if __name__ == "__main__":
-    save_usr_msg("123", "hello1")
+    save_usr_msg(123, "hello1")
     # save_usr_msg("123", "hello2")
     # os.system("unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy")
     my_cfg = init_yml_cfg()
@@ -665,5 +677,5 @@ if __name__ == "__main__":
     #     if input_q == "q":
     #         exit(0)
     input_q = "查询2024年的数据明细"
-    sql_yield = SqlYield(my_cfg)
+    sql_yield = SqlYield(123, my_cfg)
     sql_yield.yield_dt_with_nl("123", input_q, DataType.HTML.value)

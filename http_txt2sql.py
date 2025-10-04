@@ -45,7 +45,7 @@ def stream():
     logger.info(f"request.args {request.args}")
     t = int(request.args.get('t', 0))
     q = request.args.get('q', '')
-    uid = request.args.get('uid', '')
+    uid = int(request.args.get('uid', ''))
     page = request.args.get('page')
     session_key = f"{uid}_{get_client_ip()}"
     if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
@@ -54,7 +54,7 @@ def stream():
             mimetype='text/event-stream; charset=utf-8'
         )
     logger.info(f"rcv_stream_req, t={t}, q={q}")
-    sql_yield = SqlYield(my_cfg)
+    sql_yield = SqlYield(uid, my_cfg)
     if not q and usr_page_dt.get(uid, None) and page and page != '':
         usr_page_dt[uid]["cur_page"] += 1
         logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")

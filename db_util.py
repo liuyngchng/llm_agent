@@ -392,6 +392,7 @@ class DbUtl:
         获取达梦数据库中的表列表
         """
         db_config = cfg.get('db', {})
+        logger.debug(f"db_config: {db_config}")
         if all(key in db_config for key in ['name', 'host', 'user', 'password']):
             conn = dmPython.connect(
                 host=db_config['host'],
