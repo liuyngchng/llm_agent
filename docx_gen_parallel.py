@@ -201,10 +201,10 @@ class DocxGenerator:
                 'user_comment': "",
                 'catalogue': target_doc_catalogue,
                 'current_sub_title': current_heading[0] if current_heading else "",
-                'cfg': sys_cfg,
+                'current_heading': current_heading.copy(),
+                'sys_cfg': sys_cfg,
                 'vdb_dir': vdb_dir,
                 'original_para': para,
-                'current_heading': current_heading.copy()
             }
             tasks.append(task)
             process_info = f"正在处理第 {index}/{para_count}  段文本， 已创建 {len(tasks)} 个处理任务"
@@ -292,7 +292,7 @@ class DocxGenerator:
             references = get_reference_from_vdb(
                 task['paragraph_prompt'],
                 task['vdb_dir'],
-                task['cfg']['api']
+                task['sys_cfg']['api']
             )
             logger.debug(f"gen_txt_user_comment, {task['user_comment']}")
             # 生成文本
@@ -302,8 +302,8 @@ class DocxGenerator:
                 paragraph_prompt=task['paragraph_prompt'],
                 catalogue=task['catalogue'],
                 current_sub_title=task['current_sub_title'],
-                user_comment=task.get['user_comment'],  # 使用get方法提供默认值
-                cfg=task['cfg']
+                user_comment=task['user_comment'],
+                cfg=task['sys_cfg']
             )
 
 
@@ -311,13 +311,11 @@ class DocxGenerator:
                 'success': True,
                 'generated_text': f"{cfg_util.AI_GEN_TAG}{llm_txt}",
                 'original_para': task['original_para'],
-                'current_heading': task.get('current_heading', []),  # 使用get方法提供默认值
+                'current_heading': task['current_heading'],
                 'contains_mermaid': '<mermaid>' in llm_txt,
             }
-
         except Exception as e:
-            # 更安全地访问current_heading
-            heading_info = task.get('current_heading', 'unknown')
+            heading_info = task['current_heading']
             logger.exception(f"生成段落失败: {str(e)}, single_task_args, {heading_info}")
             raise
 
@@ -357,8 +355,6 @@ class DocxGenerator:
                 'error': str(e),
                 'img_count': 0,
             }
-
-
 
     @staticmethod
     def _insert_gen_para_to_doc(doc: Document, results: Dict[str, Dict]):
@@ -431,7 +427,6 @@ class DocxGenerator:
             initial_info = f"开始并行处理 {len(tasks)} 个批注段落，启动 {self.executor._max_workers} 个并行任务"
             logger.info(initial_info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
-
             doc_gen_results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
             # DocxGenerator._update_doc_with_comments(doc_gen_results)
             DocxGenerator._update_doc_with_comments_using_revisions(doc, doc_gen_results)
@@ -512,14 +507,14 @@ class DocxGenerator:
                 'unique_key': f"comment_{para_idx}",
                 'write_context': doc_ctx,
                 'paragraph_prompt': para.text,
+                'user_comment': comment_text,
                 'catalogue': catalogue,
                 'current_sub_title': current_heading[0] if current_heading else "",
-                'cfg': cfg,
+                'current_heading': current_heading.copy(),
+                'sys_cfg': cfg,
                 'vdb_dir': vdb_dir,
                 'original_para': para,
                 'para_index': para_idx,
-                'user_comment': comment_text,
-                'current_heading': current_heading.copy()  # 添加这行，确保任务包含current_heading字段
             }
             logger.debug(f"{task_id}, user_comment: {task['user_comment']}")
             tasks.append(task)
@@ -545,14 +540,11 @@ class DocxGenerator:
             result = results[key]
             if not result.get('success'):
                 continue
-
             original_para = result['original_para']
             generated_text = result['generated_text'].replace(cfg_util.AI_GEN_TAG, '').strip()
             original_text = original_para.text.strip()
-
             # 清空原段落内容
             original_para.clear()
-
             # 添加原始文本（标记为删除）
             if original_text:
                 deleted_run = original_para.add_run(original_text)
@@ -565,9 +557,7 @@ class DocxGenerator:
                 inserted_run = original_para.add_run(f"{cfg_util.AI_GEN_TAG}{generated_text}")
                 # 设置颜色为绿色表示插入
                 inserted_run.font.color.rgb = RGBColor(0, 176, 80)
-
             original_para.paragraph_format.first_line_indent = Cm(1)
-
 
 
     @staticmethod
@@ -623,10 +613,11 @@ class DocxGenerator:
                     'user_comment': "",
                     'catalogue': target_doc_catalogue,
                     'current_sub_title': para.text,
-                    'cfg': sys_cfg,
+                    'current_heading': [para.text],
+                    'sys_cfg': sys_cfg,
                     'vdb_dir': vdb_dir,
                     'original_para': para,
-                    'current_heading': [para.text]
+
                 }
                 tasks.append(task)
 
@@ -645,7 +636,6 @@ class DocxGenerator:
             doc.save(output_file_name)
             logger.info(f"保存无提示词文档完成: {output_file_name}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
-
             success_count = len([r for r in results.values() if r.get('success')])
             failed_count = len(tasks) - success_count
             # 处理Mermaid图表
@@ -677,7 +667,6 @@ class DocxGenerator:
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, final_info, 100)
             logger.info(f"{task_id}, {final_info}，输出文件: {output_file_name}")
             return final_info
-
         except Exception as e:
             error_info = f"文档生成过程出现异常: {str(e)}"
             logger.error(f"{task_id}, {error_info}")
