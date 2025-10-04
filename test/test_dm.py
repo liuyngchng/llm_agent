@@ -8,6 +8,7 @@ echo 'export LD_LIBRARY_PATH=$DM_HOME/bin:$DM_HOME/drivers/dpi:$LD_LIBRARY_PATH'
 source ~/.bashrc
 """
 import os
+from urllib.parse import urlparse, unquote
 
 import dmPython
 import sys
@@ -20,14 +21,27 @@ def test_dm_connection():
         print(f"DM_HOME: {os.environ.get('DM_HOME', '未设置')}")
         print(f"LD_LIBRARY_PATH: {os.environ.get('LD_LIBRARY_PATH', '未设置')}")
 
-        # 连接参数 - 请根据实际情况修改
+        db_uri = "dm://SYSDBA:SYSDBA001@127.0.0.1:5236/SYSDBA"
+        parsed_uri = urlparse(db_uri)
+
         conn = dmPython.connect(
-            user='SYSDBA',
-            password='SYSDBA001',
-            server='localhost',  # 改为你的数据库服务器IP
-            port=5236,
-            autoCommit=True
+            host=unquote(parsed_uri.hostname),
+            port=parsed_uri.port or 5236,
+            user=unquote(parsed_uri.username),
+            password=unquote(parsed_uri.password),
+            schema=unquote(parsed_uri.path[1:]) if parsed_uri.path else None,
+
         )
+
+        # 连接参数 - 请根据实际情况修改
+        # conn = dmPython.connect(
+        #     user='SYSDBA',
+        #     password='SYSDBA001',
+        #     server='127.0.0.1',
+        #     schema='SYSDBA',
+        #     port=5236,
+        #     autoCommit=True
+        # )
 
         print("🎉 连接成功！")
 
