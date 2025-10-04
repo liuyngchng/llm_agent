@@ -238,7 +238,7 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
 def save_usr(user_name: str, token: str) -> bool:
     """
     :param user_name: user's name need to be saved.
-    :param password: user's password need to be saved.
+    :param token: user's token relation with password need to be saved.
     """
     save_result = False
     exec_sql = f"INSERT INTO user (name, t) values ('{user_name}','{token}' )"
@@ -281,9 +281,6 @@ def set_db_cache(key: str, value: str, timestamp: str, cypher_key: str) -> bool:
 def del_db_cache(key: str) -> bool:
     """
     :param key: cache key
-    :param value: cache value
-    :param timestamp: cache timestamp
-    :param cypher_key: key used to encrypt data
     """
     del_result = False
     exec_sql = f"delete from cache_info where key='{key}' limit 1;"
@@ -462,6 +459,7 @@ def get_hack_q_file_content(uid: int) -> str:
         logger.error(f"file_not_found, {file_full_path}")
         return ""
 
+
 def get_user_sample_data(sql: str)-> dict:
     """
     get sample data for user consumption data
@@ -476,6 +474,47 @@ def get_user_sample_data(sql: str)-> dict:
         except Exception as e:
             logger.exception(f"err_occurred_for_db {config_db}, sql {sql}")
     return const
+
+def get_user_prompt(uid: int, name: str, sys_cfg:dict)-> str:
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            sql = f"select id, uid, name, value from prompt where uid={uid} and name = '{name}' limit 1"
+            dt_info = query_sqlite(my_conn, sql)
+            dt = dt_info['data'][0][3]
+            logger.info(f"get_user_prompt_for_uid, {uid}, {name}, {dt}")
+            return decrypt(dt, sys_cfg['sys']['cypher_key'])
+        except Exception as e:
+            logger.exception(f"get_user_prompt_err_for_uid, {uid}, {sql}")
+            return None
+
+def save_prompt(uid: int, name: str, value: str, sys_cfg:dict) -> bool:
+    """
+    :param uid: user id
+    :param name: prompt key
+    :param value: prompt value
+    :param sys_cfg: system config
+    """
+    save_result = False
+    if not uid or not name or not value:
+        logger.error("args_is_null")
+        return save_result
+    value = encrypt(value, sys_cfg['sys']['cypher_key'])
+    current_config = get_user_prompt(uid, name, sys_cfg)
+    if current_config:
+        exec_sql = f"UPDATE prompt SET value = '{value}' WHERE uid = {uid} and name = '{name}' limit 1 "
+    else:
+        exec_sql = f"INSERT INTO prompt (uid, name, value) values ({uid}, '{name}, {value}')"
+    with sqlite3.connect(config_db) as my_conn:
+        try:
+            exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
+            result = insert_del_sqlite(my_conn, exec_sql)
+            logger.info(f"exec_sql_success {exec_sql}")
+            if result.get('result'):
+                save_result = True
+        except Exception as e:
+            logger.exception(f"err_in_exec_sql, {exec_sql}")
+    return save_result
+
 
 
 def get_user_sample_data_rd_cfg_dict(cfg_dict: dict) -> dict:
@@ -515,21 +554,7 @@ if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
-    a = {}
-    if a:
-        logger.info("a is OK")
-    else:
-        logger.info("a is not OK")
-    # key0 = '1234567890123456'
-    # dt0 = 'test'
-    # dt1 =encrypt(dt0, key0)
-    # logger.info(dt1)
-    # dt2 = decrypt(dt1, key0)
-    # logger.info(dt2)
-    a = get_consts('test')
-    logger.info(f"a {a}")
-    uid = '332987921'
-    user = get_user_info_by_uid(uid)
-    logger.info(f"user {user}")
+    dt = get_user_prompt(123, "hi", {"test":{"test"}})
+    logger.info(dt)
 
 
