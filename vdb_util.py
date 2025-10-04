@@ -69,11 +69,12 @@ class RemoteChromaEmbedder(EmbeddingFunction):
 
 
 def process_doc(file_id: int, documents: list[Document], vector_db: str,
-                llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10, separators=None) -> None:
-    """处理文档并构建向量数据库"""
+                llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10, separators=None, max_workers=4) -> None:
+    """多线程处理文档并构建向量数据库"""
     if separators is None:
         separators = ['。', '！', '？', '；', '...', '、', '，']
     pbar = None
+    lock = threading.Lock()
     try:
         doc_sources = [doc.metadata['source'] for doc in documents]
         logger.info(f"load_documents_size, {len(documents)}:\n" + "\n".join(f"- {src}" for src in doc_sources))
@@ -112,35 +113,46 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
             all_documents.append(chunk.page_content)
 
         total_chunks = len(all_doc_ids)
-        # 批量添加文档
-        logger.info(f"开始向量化 {total_chunks} chunks (batch_size={batch_size})")
+        # 多线程批量添加文档
+        logger.info(f"开始向量化 {total_chunks} chunks (batch_size={batch_size}, max_workers={max_workers})")
         VdbMeta.update_vdb_file_process_info(file_id, "开始对文本片段进行向量化")
         source_desc = f"[{file_id}]_{source_list} 向量化进度"
-        with tqdm(total=total_chunks, desc=source_desc, unit="chunk") as pbar:
-            for i in range(0, total_chunks, batch_size):
-                end_idx = min(i + batch_size, total_chunks)
-                batch_ids = all_doc_ids[i:end_idx]
-                batch_metas = all_metadata[i:end_idx]
-                batch_texts = all_documents[i:end_idx]
-                try:
+
+        from concurrent.futures import ThreadPoolExecutor
+
+        def process_batch(start_idx, end_idx):
+            batch_ids = all_doc_ids[start_idx:end_idx]
+            batch_metas = all_metadata[start_idx:end_idx]
+            batch_texts = all_documents[start_idx:end_idx]
+            try:
+                with lock:
                     collection.upsert(
                         ids=batch_ids,
                         documents=batch_texts,
                         metadatas=batch_metas
                     )
-                    processed_count = end_idx  # 当前已处理的chunk数量
-                    pbar.update(len(batch_ids))
+                    processed_count = end_idx
                     percent = round(100 * processed_count / total_chunks, 1)
                     VdbMeta.update_vdb_file_process_info(
                         file_id,
                         f"已处理 {processed_count}/{total_chunks} 个文本块",
                         percent
                     )
-                except Exception as e:
-                    info = f"处理批次 {i}-{end_idx} 时出错: {str(e)}"
+                    pbar.update(len(batch_ids))
+            except Exception as e:
+                info = f"处理批次 {start_idx}-{end_idx} 时出错: {str(e)}"
+                with lock:
                     VdbMeta.update_vdb_file_process_info(file_id, info)
                     logger.error(info)
-                    continue
+
+        with tqdm(total=total_chunks, desc=source_desc, unit="chunk") as pbar:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = []
+                for i in range(0, total_chunks, batch_size):
+                    end_idx = min(i + batch_size, total_chunks)
+                    futures.append(executor.submit(process_batch, i, end_idx))
+                for future in futures:
+                    future.result()
 
         logger.info(f"向量数据库构建完成，保存到 {vector_db}")
         VdbMeta.update_vdb_file_process_info(file_id, "文档向量化已完成", 100)
