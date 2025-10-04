@@ -107,7 +107,7 @@ def get_user_hack_info(uid: str, cfg: dict)-> str | None:
                 user_hack_info = decrypt(user_dt[0][0], cfg['sys']['cypher_key'])
             else:
                 user_hack_info = ""
-            logger.info(f"user_hack_info {user_hack_info}, uid {uid}")
+            logger.debug(f"uid {uid}, user_hack_info {user_hack_info[:20]}...")
         except Exception as e:
             logger.exception(f"no_user_hack_info_found_for_uid, {uid}")
     return user_hack_info

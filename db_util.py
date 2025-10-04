@@ -368,8 +368,6 @@ class DbUtl:
                 user=db_config['user'],
                 password=db_config['password'],
                 schema=db_config['name'],
-                connect_timeout=DB_CONN_TIMEOUT,
-                network_timeout=DB_RW_TIMEOUT
             )
         else:
             # 使用连接字符串连接
@@ -447,9 +445,12 @@ class DbUtl:
         try:
             cursor = conn.cursor()
 
-            # 获取表字段信息
+            # 获取表字段信息 - 修正达梦数据库的查询语句
             cursor.execute(f"""
-                SELECT COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT 
+                SELECT 
+                    COLUMN_NAME, 
+                    DATA_TYPE, 
+                    NULL as COLUMN_COMMENT  -- 达梦数据库可能没有COLUMN_COMMENT列
                 FROM USER_TAB_COLUMNS 
                 WHERE TABLE_NAME = '{table_name}' 
                 ORDER BY COLUMN_ID
@@ -466,9 +467,12 @@ class DbUtl:
             column_table = "\n".join([table_header] + table_rows)
 
             # 获取示例数据
-            sample_dt_sql = f"SELECT * FROM {table_name} WHERE ROWNUM <= 3"
-            cursor.execute(sample_dt_sql)
-            sample_data = cursor.fetchall()
+            try:
+                sample_dt_sql = f"SELECT * FROM {table_name} WHERE ROWNUM <= 3"
+                cursor.execute(sample_dt_sql)
+                sample_data = cursor.fetchall()
+            except Exception as e:
+                sample_data = f"无法获取示例数据: {str(e)}"
 
             return f"表名：{table_name}\n字段信息：\n{column_table}\n示例数据：\n{sample_data}"
         finally:
@@ -478,10 +482,6 @@ class DbUtl:
     def get_col_name_from_sql_for_dm8(db_con: dmPython.Connection, raw_columns: list, sql: str) -> list:
         """
         get column name from SQL, for DM8 DB
-        :param db_con: database connection info
-        :param raw_columns: original columns
-        :param sql: sql need to be executed next
-        :return: the column name more explainable
         """
         try:
             # 提取表名
@@ -497,22 +497,25 @@ class DbUtl:
             else:
                 full_table_name = table_name
 
-            # 获取列注释映射
+            # 获取列注释映射 - 达梦数据库可能没有注释信息
             comment_map = {}
             cursor = db_con.cursor()
-            # 查询表列注释信息
-            cursor.execute(f"""
-                SELECT COLUMN_NAME, COMMENTS 
-                FROM ALL_COL_COMMENTS 
-                WHERE TABLE_NAME = '{table_name.upper()}'
-                AND OWNER = '{schema_name.upper() if '.' in table_name else db_con.username.upper()}'
-            """)
 
-            for col in cursor.fetchall():
-                if col[1]:  # 如果有注释
-                    comment_map[col[0].upper()] = DbUtl.get_punctuation_seg(col[1])
+            # 尝试查询表列信息，但不包括注释（因为达梦可能不支持）
+            try:
+                cursor.execute(f"""
+                    SELECT COLUMN_NAME 
+                    FROM USER_TAB_COLUMNS 
+                    WHERE TABLE_NAME = '{table_name.upper()}'
+                """)
 
-            # 处理列名
+                # 这里我们只获取列名，注释设为空
+                for col in cursor.fetchall():
+                    comment_map[col[0].upper()] = ""
+            except Exception as e:
+                logger.warning(f"无法获取DM8表列信息: {str(e)}")
+
+            # 处理列名（保持原有逻辑，但注释为空）
             processed_columns = []
             for col in raw_columns:
                 col_upper = col.upper()
@@ -546,6 +549,78 @@ class DbUtl:
             logger.error(f"Error processing column names for DM8: {str(e)}")
             return raw_columns
 
+    @staticmethod
+    def get_dm8_schema_info(cfg: dict) -> str:
+        """
+        获取DM8数据库的完整schema信息
+        """
+        db_config = cfg.get('db', {})
+        if all(key in db_config for key in ['name', 'host', 'user', 'password']):
+            conn = dmPython.connect(
+                host=db_config['host'],
+                port=db_config.get('port', 5236),
+                user=db_config['user'],
+                password=db_config['password'],
+                schema=db_config['name']
+            )
+        else:
+            parsed_uri = urlparse(db_config['uri'])
+            conn = dmPython.connect(
+                host=unquote(parsed_uri.hostname),
+                port=parsed_uri.port or 5236,
+                user=unquote(parsed_uri.username),
+                password=unquote(parsed_uri.password),
+                schema=unquote(parsed_uri.path[1:]) if parsed_uri.path else None
+            )
+
+        try:
+            cursor = conn.cursor()
+
+            # 获取所有表名
+            cursor.execute("SELECT TABLE_NAME FROM USER_TABLES")
+            tables = [row[0] for row in cursor.fetchall()]
+
+            schema_entries = []
+            for table in tables:
+                # 获取表字段信息 - 修正达梦数据库的查询语句
+                cursor.execute(f"""
+                    SELECT 
+                        COLUMN_NAME, 
+                        DATA_TYPE, 
+                        NULL as COMMENTS  -- 达梦数据库可能没有COMMENTS列，暂时设为NULL
+                    FROM USER_TAB_COLUMNS 
+                    WHERE TABLE_NAME = '{table}' 
+                    ORDER BY COLUMN_ID
+                """)
+
+                table_header = "| 字段名 | 字段类型 | 字段注释 |\n|--------|----------|----------|"
+                table_rows = []
+                for row in cursor.fetchall():
+                    name = row[0] if row[0] else ""
+                    col_type = row[1] if row[1] else "N/A"
+                    comment = row[2] if row[2] else ""  # 可能为空
+                    table_rows.append(f"| {name} | {col_type} | {comment} |")
+
+                column_table = "\n".join([table_header] + table_rows)
+
+                # 获取示例数据
+                try:
+                    sample_dt_sql = f"SELECT * FROM {table} WHERE ROWNUM <= 3"
+                    cursor.execute(sample_dt_sql)
+                    sample_data = cursor.fetchall()
+                except Exception as e:
+                    sample_data = f"无法获取示例数据: {str(e)}"
+
+                schema_entries.extend([
+                    f"表名：{table}",
+                    f"字段信息：\n{column_table}",
+                    f"示例数据：\n{sample_data}",
+                    "-----------------"
+                ])
+
+            return "\n".join(schema_entries)
+        finally:
+            conn.close()
     #################### for support DM8 Database #########################
 
 

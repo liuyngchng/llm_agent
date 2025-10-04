@@ -1,6 +1,12 @@
 # config.yaml，文件格式必须严格遵循 yaml配置文件格式
 db:
-    #  数据库类型, mysql sqlite oracle，最好使用MySQL
+#    type: dm
+#    name: SYSDBA
+#    host: 127.0.0.1
+#    port: 5236
+#    user: SYSDBA
+#    password: SYSDBA001
+    #  数据库类型, mysql sqlite oracle, dm，最好使用MySQL
     type: mysql
     #  数据库（实例）名称，如果是sqlite，直接写文件名称，本地需存在相应的文件名
     name: your_db_name

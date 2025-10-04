@@ -75,6 +75,10 @@ class SqlYield(DbUtl):
         if DBType.DORIS.value == self.db_type:
             self.doris_dt_source_cfg = cfg['db']
             self.doris_dt_source = Doris(self.doris_dt_source_cfg)
+        elif DBType.DM8.value == self.db_type:
+            # 对于DM8，不初始化 db_dt_source，因为SQLAlchemy不支持
+            self.db_dt_source = None
+            logger.info("dm8_database_detected, skipping SQLDatabase initialization")
         else:
             db_uri = DbUtl.get_db_uri(cfg)
             self.db_dt_source = SQLDatabase.from_uri(db_uri)
@@ -163,7 +167,7 @@ class SqlYield(DbUtl):
         data_source_info = cfg_util.get_const("data_source_info", AppType.TXT2SQL.name.lower())
         chain = self.refine_q_prompt_template | self.get_llm()
         refine_q_dict = SqlYield.build_refine_invoke_json(question, hack_content, data_source_info)
-        logger.info(f"start_refine_user_q, {uid}, {refine_q_dict}")
+        logger.info(f"start_refine_user_q, {uid}, {question}")
         response = chain.invoke(refine_q_dict)
         logger.info(f"return_from_refine_user_q, {response.content}, origin_q {question}")
         return response.content
@@ -342,6 +346,10 @@ class SqlYield(DbUtl):
             doris_schema = self.doris_dt_source.get_schema_for_llm()
             # logger.info(f"doris_schema\n {doris_schema}")
             return doris_schema
+        elif DBType.DM8.value == self.db_type:
+            # 添加DM8的schema信息获取
+            dm8_schema = DbUtl.get_dm8_schema_info(self.cfg)
+            return dm8_schema
         schema_entries = []
         for table in self.get_table_list():
             if DBType.ORACLE.value == self.db_type:
