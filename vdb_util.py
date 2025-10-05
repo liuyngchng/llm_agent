@@ -71,6 +71,11 @@ class RemoteChromaEmbedder(EmbeddingFunction):
 def process_doc(file_id: int, documents: list[Document], vector_db: str,
                 llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10, separators=None, max_workers=4) -> None:
     """多线程处理文档并构建向量数据库"""
+    # 开始处理前检查任务是否被取消
+    if check_task_cancelled(file_id):
+        info = f"任务已被用户取消"
+        VdbMeta.update_vdb_file_process_info(file_id, info)
+        return
     if separators is None:
         separators = ['。', '！', '？', '；', '...', '、', '，']
     pbar = None
@@ -78,7 +83,7 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
     try:
         doc_sources = [doc.metadata['source'] for doc in documents]
         logger.info(f"load_documents_size, {len(documents)}:\n" + "\n".join(f"- {src}" for src in doc_sources))
-        VdbMeta.update_vdb_file_process_info(file_id, "开始对文本进行分片")
+        VdbMeta.update_vdb_file_process_info(file_id, "开始切分文本")
         if not separators:
             separators = ['。', '！', '？', '；', '...', '、', '，']
         logger.info(f"splitting_documents_with_separators {separators}...")
@@ -114,7 +119,7 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
 
         total_chunks = len(all_doc_ids)
         logger.info(f"开始向量化 {total_chunks} chunks (batch_size={batch_size}, max_workers={max_workers})")
-        VdbMeta.update_vdb_file_process_info(file_id, "开始对文本片段进行向量化")
+        VdbMeta.update_vdb_file_process_info(file_id, f"开始处理文本块，共 {total_chunks} 个")
         source_desc = f"[{file_id}]_{source_list} 向量化进度"
 
         from concurrent.futures import ThreadPoolExecutor
@@ -125,6 +130,13 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
             """
             批量处理文本，返回处理的文本块数量
             """
+            # 检查任务是否被取消
+            if check_task_cancelled(file_id):
+                info = f"任务已被用户取消"
+                with lock:
+                    VdbMeta.update_vdb_file_process_info(file_id, info)
+                    logger.info(f"{file_id}, {info}")
+                return 0
             batch_ids = all_doc_ids[start_idx:end_idx]
             batch_metas = all_metadata[start_idx:end_idx]
             batch_texts = all_documents[start_idx:end_idx]
@@ -163,7 +175,7 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
                         percent = round(100 * current_completed / total_chunks, 1)
                         VdbMeta.update_vdb_file_process_info(
                             file_id,
-                            f"已处理 {current_completed}/{total_chunks} 个文本块",
+                            f"已处理 {current_completed} 个文本块，共 {total_chunks} 个",
                             percent
                         )
                         pbar.update(processed_count)
@@ -174,7 +186,7 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
                             VdbMeta.update_vdb_file_process_info(file_id, info)
                             logger.error(info)
         logger.info(f"向量数据库构建完成，保存到 {vector_db}")
-        VdbMeta.update_vdb_file_process_info(file_id, "文档向量化已完成", 100)
+        VdbMeta.update_vdb_file_process_info(file_id, "已完成文档处理", 100)
     except Exception as e:
         info = f"处理文档时发生错误: {str(e)}"
         VdbMeta.update_vdb_file_process_info(file_id, info)
@@ -208,6 +220,12 @@ def vector_file(file_id: int, file_name: str, vector_db: str, llm_cfg: dict, chu
     :param batch_size: 批量处理的文档数量
     :param separators: 文本分割的分隔符
     """
+    # 检查任务是否已被取消
+    if check_task_cancelled(file_id):
+        info = f"任务已被用户取消"
+        logger.info(f"{file_id}, {info}")
+        VdbMeta.update_vdb_file_process_info(file_id, info)
+        return
     abs_path = os.path.abspath(file_name)
     if not os.path.exists(abs_path):
         info = f"文件在文件系统中不存在"
@@ -243,6 +261,17 @@ def vector_file(file_id: int, file_name: str, vector_db: str, llm_cfg: dict, chu
     except Exception as e:
         logger.error(f"load_file_fail_err, {abs_path}, {e}", exc_info=True)
 
+def check_task_cancelled(file_id: int) -> bool:
+    """
+    检查任务是否已被取消
+    通过直接访问 bp_vdb 模块的函数，避免 HTTP 请求
+    """
+    try:
+        from bp_vdb import is_task_cancelled
+        return is_task_cancelled(file_id)
+    except Exception as e:
+        logger.debug(f"check_task_cancelled_failed, {e}")
+        return False
 
 def del_doc(file_path: str, vector_db: str) -> bool:
     """

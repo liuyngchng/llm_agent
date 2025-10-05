@@ -37,8 +37,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 my_cfg = init_yml_cfg()
 
-# task_progress = {}  # 存储文本进度信息
-# thread_lock = threading.Lock()
+# 添加全局任务管理字典，支持对已经开始处理的任务进行删除
+active_tasks = {}
+task_lock = threading.Lock()
 
 # 定义允许的文件类型及其魔数签名
 ALLOWED_TYPES = {
@@ -46,6 +47,7 @@ ALLOWED_TYPES = {
     '.docx': [b'PK\x03\x04'],   # ZIP格式签名(DOCX本质是ZIP)
     '.txt': []                  # 文本文件无固定签名
 }
+
 
 @vdb_bp.route('/vdb/idx', methods=['GET'])
 def vdb_index():
@@ -146,42 +148,6 @@ def set_user_default_vdb():
     logger.info(f"set_default_vdb_return, {dt}")
     return result, 200
 
-@vdb_bp.route('/vdb/file/delete', methods=['POST'])
-def delete_file_from_vdb():
-    """
-    删除知识库内的文件
-    """
-    data = request.get_json()
-    logger.info(f"delete_file_from_vdb {data}")
-    uid = data.get("uid")
-    t = data.get("t")
-    vdb_id = data.get("vdb_id")
-    file_id = data.get("file_id")
-    file_name = data.get("name")
-    dt = VdbMeta.get_vdb_file_info_by_id(file_id)
-    if not dt or len(dt) == 0:
-        info = {"message": f"file_id={file_id}的文件信息在向量库的文件元数据中不存在", "success": False}
-        logger.info(info)
-        return json.dumps(info, ensure_ascii=False), 200
-    logger.info(f"file_info, {dt}")
-    disk_file_name = dt[0].get("file_path", None)
-    if not disk_file_name:
-        info = {"message": f"file_id={file_id}的文件磁盘存储信息在向量库的文件元数据中不存在", "success": False}
-        logger.info(info)
-        return json.dumps(info, ensure_ascii=False), 200
-    save_path = os.path.join(UPLOAD_FOLDER, disk_file_name)
-    if os.path.exists(save_path):
-        logger.info(f"delete_file_from_disk, file_id_{file_id}, {save_path}")
-        os.remove(save_path)
-    vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_id}"
-    if os.path.exists(vdb_dir):
-        logger.info(f"delete_file_from_vdb, file_save_path {save_path}")
-        vdb_util.del_doc(save_path, vdb_dir)
-    logger.info(f"delete_file_from_vdb_file_meta_info, {file_id}")
-    VdbMeta.delete_vdb_file_by_uid_vbd_id_file_id(file_id, uid, vdb_id)
-    info = {"success": True, "message": f"文件{file_name}已从知识库中删除"}
-    logger.info(info)
-    return json.dumps(info, ensure_ascii=False), 200
 
 @vdb_bp.route('/vdb/create', methods=['POST'])
 def create_vdb():
@@ -399,6 +365,11 @@ def process_vdb_file_task():
         process_doc()
         time.sleep(5)
 
+def is_task_cancelled(file_id: int) -> bool:
+    """供 vdb_util.py 模块检查任务是否被取消"""
+    with task_lock:
+        return (file_id in active_tasks and
+                active_tasks[file_id].get('cancelled', False))
 
 def process_doc():
     file_list = VdbMeta.get_vdb_file_processing_list()
@@ -408,6 +379,21 @@ def process_doc():
     for file in file_list:
         file_id = file['id']
         record_file_name = file['file_path']
+
+        # 检查任务是否已被标记为取消
+        with task_lock:
+            if file_id in active_tasks and active_tasks[file_id].get('cancelled', False):
+                logger.info(f"task_{file_id}_has_been_cancelled_skipping")
+                continue
+
+            # 记录活动任务
+            if file_id not in active_tasks:
+                active_tasks[file_id] = {
+                    'thread': None,
+                    'cancelled': False,
+                    'start_time': time.time()
+                }
+
         try:
             uid = file['uid']
             vdb_id = file['vdb_id']
@@ -416,15 +402,82 @@ def process_doc():
             if not os.path.exists(cur_file_path):
                 logger.warning(f"file_have_been_deleted_from_disk, {cur_file_path}")
                 VdbMeta.delete_vdb_file_by_id(file_id)
+                with task_lock:
+                    if file_id in active_tasks:
+                        del active_tasks[file_id]
                 continue
             info = "开始解析文档结构..."
             VdbMeta.update_vdb_file_process_info(file_id, info, 0)
             vdb_util.vector_file(file_id, cur_file_path,
                                  output_vdb_dir, my_cfg['api'], 300, 80)
+
+            # 清理完成的任务
+            with task_lock:
+                if file_id in active_tasks:
+                    del active_tasks[file_id]
+
         except Exception as e:
             msg = f"任务处理失败,失败原因： {str(e)}"
             VdbMeta.update_vdb_file_process_info(file_id, msg)
             logger.exception(f"process_doc_err, {record_file_name}", e)
+            # 清理失败的任务
+            with task_lock:
+                if file_id in active_tasks:
+                    del active_tasks[file_id]
+
+
+# 添加取消任务的函数
+def cancel_task(file_id):
+    with task_lock:
+        if file_id in active_tasks:
+            active_tasks[file_id]['cancelled'] = True
+            logger.info(f"task_{file_id}_marked_for_cancellation")
+            return True
+        return False
+
+
+# 修改 delete_file_from_vdb 函数以支持取消正在处理的任务
+@vdb_bp.route('/vdb/file/delete', methods=['POST'])
+def delete_file_from_vdb():
+    """
+    删除知识库内的文件
+    """
+    data = request.get_json()
+    logger.info(f"delete_file_from_vdb {data}")
+    uid = data.get("uid")
+    t = data.get("t")
+    vdb_id = data.get("vdb_id")
+    file_id = data.get("file_id")
+    file_name = data.get("name")
+    dt = VdbMeta.get_vdb_file_info_by_id(file_id)
+    if not dt or len(dt) == 0:
+        info = {"message": f"file_id={file_id}的文件信息在向量库的文件元数据中不存在", "success": False}
+        logger.info(info)
+        return json.dumps(info, ensure_ascii=False), 200
+    logger.info(f"file_info, {dt}")
+    disk_file_name = dt[0].get("file_path", None)
+    if not disk_file_name:
+        info = {"message": f"file_id={file_id}的文件磁盘存储信息在向量库的文件元数据中不存在", "success": False}
+        logger.info(info)
+        return json.dumps(info, ensure_ascii=False), 200
+
+    # 尝试取消正在处理的任务
+    cancel_task(int(file_id))
+
+    save_path = os.path.join(UPLOAD_FOLDER, disk_file_name)
+    if os.path.exists(save_path):
+        logger.info(f"delete_file_from_disk, file_id_{file_id}, {save_path}")
+        os.remove(save_path)
+    vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_id}"
+    if os.path.exists(vdb_dir):
+        logger.info(f"delete_file_from_vdb, file_save_path {save_path}")
+        vdb_util.del_doc(save_path, vdb_dir)
+    logger.info(f"delete_file_from_vdb_file_meta_info, {file_id}")
+    VdbMeta.delete_vdb_file_by_uid_vbd_id_file_id(file_id, uid, vdb_id)
+    info = {"success": True, "message": f"文件{file_name}已从知识库中删除"}
+    logger.info(info)
+    return json.dumps(info, ensure_ascii=False), 200
+
 
 def get_upload_file_name(disk_file_name):
     parts = disk_file_name.split("_", 1)

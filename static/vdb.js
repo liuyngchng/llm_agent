@@ -93,17 +93,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('fileInput').click();
     });
 
+    // 修改文件选择处理 - 多文件（追加模式）
     document.getElementById('fileInput').addEventListener('change', function(e) {
-        const files = Array.from(e.target.files);
+        const newFiles = Array.from(e.target.files);
 
-        if (files.length === 0) {
-            clearFileList();
+        if (newFiles.length === 0) {
             return;
         }
 
         // 文件类型验证
         const allowedTypes = ['.pdf', '.docx', '.txt'];
-        const invalidFiles = files.filter(file => {
+        const invalidFiles = newFiles.filter(file => {
             const fileName = file.name.toLowerCase();
             return !allowedTypes.some(ext => fileName.endsWith(ext));
         });
@@ -112,42 +112,47 @@ document.addEventListener('DOMContentLoaded', async () => {
             const invalidNames = invalidFiles.map(f => f.name).join(', ');
             alert(`以下文件类型不支持：${invalidNames}\n\n仅支持 PDF、DOCX、TXT 文件`);
             // 移除不支持的文件
-            const validFiles = files.filter(file => {
+            const validNewFiles = newFiles.filter(file => {
                 const fileName = file.name.toLowerCase();
                 return allowedTypes.some(ext => fileName.endsWith(ext));
             });
 
-            if (validFiles.length === 0) {
-                clearFileList();
+            if (validNewFiles.length === 0) {
+                // 清空文件输入，避免重复触发
+                this.value = '';
                 return;
             }
 
-            // 更新文件输入
-            const dataTransfer = new DataTransfer();
-            validFiles.forEach(file => dataTransfer.items.add(file));
-            this.files = dataTransfer.files;
-
-            updateFileList(validFiles);
-            return;
+            newFiles = validNewFiles;
         }
+
+        // 合并新文件到已选文件列表中，避免重复
+        const existingFileNames = selectedFiles.map(f => f.name);
+        const uniqueNewFiles = newFiles.filter(file => !existingFileNames.includes(file.name));
+
+        // 如果有重复文件，提示用户
+        const duplicateFiles = newFiles.filter(file => existingFileNames.includes(file.name));
+        if (duplicateFiles.length > 0) {
+            const duplicateNames = duplicateFiles.map(f => f.name).join(', ');
+            alert(`以下文件已存在，将跳过添加：${duplicateNames}`);
+        }
+
+        // 添加新文件到选中列表
+        selectedFiles = [...selectedFiles, ...uniqueNewFiles];
 
         // 文件数量限制
         const MAX_FILES = 20;
-        if (files.length > MAX_FILES) {
-            alert(`最多只能选择 ${MAX_FILES} 个文件，已自动选择前 ${MAX_FILES} 个文件`);
-            const limitedFiles = files.slice(0, MAX_FILES);
-
-            // 更新文件输入
-            const dataTransfer = new DataTransfer();
-            limitedFiles.forEach(file => dataTransfer.items.add(file));
-            this.files = dataTransfer.files;
-
-            updateFileList(limitedFiles);
-            return;
+        if (selectedFiles.length > MAX_FILES) {
+            alert(`最多只能选择 ${MAX_FILES} 个文件，已自动忽略超出的部分`);
+            selectedFiles = selectedFiles.slice(0, MAX_FILES);
         }
 
-        updateFileList(files);
+        updateFileList(selectedFiles);
+
+        // 清空文件输入，避免重复触发
+        this.value = '';
     });
+
 
     // 清空文件列表
     clearFilesBtn.addEventListener('click', clearFileList);

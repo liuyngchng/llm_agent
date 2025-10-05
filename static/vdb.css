@@ -137,6 +137,8 @@ h2 i {
     gap: 15px;
     margin-bottom: 25px;
     flex-wrap: wrap;
+    align-items: flex-start;
+    min-height: 60px;
 }
 
 .btn {
@@ -151,6 +153,8 @@ h2 i {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    height: 52px;
+    box-sizing: border-box;
 }
 
 .btn-primary {
