@@ -120,26 +120,38 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
 
         from concurrent.futures import ThreadPoolExecutor
 
+        # 使用原子计数器替代直接使用索引
+        from threading import Lock
+        import time
+        completed_count = 0
+        count_lock = threading.Lock()
         def process_batch(start_idx, end_idx):
+            nonlocal completed_count
             batch_ids = all_doc_ids[start_idx:end_idx]
             batch_metas = all_metadata[start_idx:end_idx]
             batch_texts = all_documents[start_idx:end_idx]
             try:
-                with lock:
-                    collection.upsert(
-                        ids=batch_ids,
-                        documents=batch_texts,
-                        metadatas=batch_metas
-                    )
-                    processed_count = end_idx
-                    percent = round(100 * processed_count / total_chunks, 1)
-                    VdbMeta.update_vdb_file_process_info(
-                        file_id,
-                        f"已处理 {processed_count}/{total_chunks} 个文本块",
-                        percent
-                    )
-                    pbar.update(len(batch_ids))
+                collection.upsert(
+                    ids=batch_ids,
+                    documents=batch_texts,
+                    metadatas=batch_metas
+                )
+                # 使用原子操作更新完成计数
+                with count_lock:
+                    completed_count += len(batch_ids)
+                    current_completed = completed_count
+
+                # 更新进度显示
+                percent = round(100 * current_completed / total_chunks, 1)
+                VdbMeta.update_vdb_file_process_info(
+                    file_id,
+                    f"已处理 {current_completed}/{total_chunks} 个文本块",
+                    percent
+                )
+                pbar.update(len(batch_ids))
             except Exception as e:
+                # 错误处理...
+
                 info = f"处理批次 {start_idx}-{end_idx} 时出错: {str(e)}"
                 with lock:
                     VdbMeta.update_vdb_file_process_info(file_id, info)
