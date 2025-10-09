@@ -22,7 +22,7 @@ __max_tokens=32768
 __reasoning=False
 
 def get_model(cfg):
-    if cfg['api']['is_remote']:
+    if cfg['api'].get('is_remote', True):
         model = ChatOpenAI(
             api_key=cfg['api']['llm_api_key'],
             base_url=cfg['api']['llm_api_uri'],
