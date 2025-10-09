@@ -237,13 +237,13 @@ def gen_txt(write_context: str, references: str, paragraph_prompt: str, user_com
             return output_txt
         except Exception as ex:
             last_exception = ex
-            logger.error(f"retry_failed_in_gen_txt, retry_time={attempt}, {str(ex)}")
+            logger.exception(f"retry_failed_in_gen_txt, retry_time={attempt}, {str(ex)}")
             if attempt < max_retries:
                 continue
             if 'model' in locals():
                 del model
                 torch.cuda.empty_cache()
-            logger.error(f"all_retries_exhausted_task_gen_txt_failed, {paragraph_prompt}")
+            logger.exception(f"all_retries_exhausted_task_gen_txt_failed, {paragraph_prompt}")
             raise last_exception
     return None
 
