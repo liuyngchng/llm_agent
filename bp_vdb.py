@@ -436,7 +436,6 @@ def cancel_task(file_id):
         return False
 
 
-# 修改 delete_file_from_vdb 函数以支持取消正在处理的任务
 @vdb_bp.route('/vdb/file/delete', methods=['POST'])
 def delete_file_from_vdb():
     """
