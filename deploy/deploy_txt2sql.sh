@@ -9,7 +9,7 @@ docker run -dit --name ${app}  \
   -v /data/dm8_client:/opt/dm8_client \
   -p 19001:19000 \
   -e MODULE_NAME=${app} \
-  llm_txt2sql:1.1
+  llm_rag:1.1
 
 docker ps -a  | grep ${app} --color=always
 docker logs -f ${app}
