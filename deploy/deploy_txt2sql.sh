@@ -6,6 +6,7 @@ docker rm ${app}
 docker run -dit --name ${app}  \
   --security-opt seccomp=unconfined \
   -v /data/llm_agent:/opt/app \
+  -v /data/dm8_client:/opt/dm8_client \
   -p 19001:19000 \
   -e MODULE_NAME=${app} \
   llm_rag:1.1
