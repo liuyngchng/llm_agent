@@ -13,8 +13,6 @@ import httpx
 import torch
 import logging.config
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Dict, Any
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
