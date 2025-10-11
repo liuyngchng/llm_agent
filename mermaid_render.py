@@ -235,9 +235,6 @@ class MermaidRenderer:
             logger.error(f"{task_id}, 批量处理Mermaid图表失败: {str(e)}")
             raise
 
-# 全局渲染器实例
-instance = MermaidRenderer()
-
 
 def test_mermaid_render():
     """测试Mermaid渲染功能"""

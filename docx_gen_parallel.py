@@ -20,6 +20,7 @@ import mermaid_render
 from agt_util import gen_txt
 from docx_util import get_elapsed_time, get_reference_from_vdb, is_3rd_heading, is_txt_para, \
     refresh_current_heading
+from mermaid_render import MermaidRenderer
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -148,7 +149,12 @@ class DocxGenerator:
                     f"{current_info[0]['process_info']}, 开始处理文档配图",
                     95
                 )
-                mermaid_process_info = DocxGenerator._process_mermaid_in_document(task_id, output_file_name, doc_gen_results)
+                mermaid_process_info = DocxGenerator._process_mermaid_in_document(
+                    task_id,
+                    output_file_name,
+                    sys_cfg['api']['mermaid_api_uri'],
+                    doc_gen_results
+                )
                 img_count = mermaid_process_info.get('img_count', 0)
                 docx_meta_util.update_img_count_by_task_id(task_id, img_count)
                 if not mermaid_process_info['success']:
@@ -321,7 +327,7 @@ class DocxGenerator:
 
 
     @staticmethod
-    def _process_mermaid_in_document(task_id:int, doc_path: str, results: Dict[str, Dict]) -> Dict[str, Any]:
+    def _process_mermaid_in_document(task_id:int, doc_path: str, mermaid_api_uri: str, results: Dict[str, Dict]) -> Dict[str, Any]:
         """
         处理文档中的Mermaid图表
         :return: 处理结果信息
@@ -332,7 +338,8 @@ class DocxGenerator:
             mermaid_count = sum(1 for result in results.values() if result.get('success') and result.get('contains_mermaid'))
             if has_mermaid:
                 logger.info(f"{task_id}, 检测到文档包含Mermaid图表 {mermaid_count}，开始处理: {doc_path}")
-                img_count = mermaid_render.instance.batch_process_mermaid_in_docx(task_id, doc_path)
+                mermaid_instance = MermaidRenderer(kroki_url=mermaid_api_uri)
+                img_count = mermaid_instance.batch_process_mermaid_in_docx(task_id, doc_path)
                 logger.info(f"{task_id}, 文档包含Mermaid图表处理完成: {doc_path}")
                 return {
                     'success': True,
@@ -450,7 +457,12 @@ class DocxGenerator:
                     f"{current_info[0]['process_info']}, 开始处理文档配图",
                     95
                 )
-                mermaid_process_info = DocxGenerator._process_mermaid_in_document(task_id, output_file_name, doc_gen_results)
+                mermaid_process_info = DocxGenerator._process_mermaid_in_document(
+                    task_id,
+                    output_file_name,
+                    cfg['api']['mermaid_api_uri'],
+                    doc_gen_results
+                )
                 img_count = mermaid_process_info.get('img_count', 0)
                 docx_meta_util.update_img_count_by_task_id(task_id, img_count)
                 if not mermaid_process_info['success']:
@@ -648,7 +660,12 @@ class DocxGenerator:
                     f"{current_info[0]['process_info']}, 开始处理文档配图",
                     95
                 )
-                mermaid_process_info = DocxGenerator._process_mermaid_in_document(task_id, output_file_name, results)
+                mermaid_process_info = DocxGenerator._process_mermaid_in_document(
+                    task_id,
+                    output_file_name,
+                    sys_cfg['api']['mermaid_api_uri'],
+                    results
+                )
                 img_count = mermaid_process_info.get('img_count', 0)
                 docx_meta_util.update_img_count_by_task_id(task_id, img_count)
                 if not mermaid_process_info['success']:
