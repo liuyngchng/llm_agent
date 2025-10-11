@@ -123,7 +123,7 @@ class DocxGenerator:
                 doc.save(output_file_name)
                 return final_info
 
-            initial_info = f"开始并行处理 {len(tasks)} 个段落，启动 {self.executor._max_workers} 个并行任务"
+            initial_info = f"需处理 {len(tasks)} 个段落，启动 {self.executor._max_workers} 个任务"
             logger.info(f"{task_id}, {initial_info}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
             doc_gen_results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
@@ -431,7 +431,7 @@ class DocxGenerator:
                 doc.save(output_file_name)
                 return final_info
 
-            initial_info = f"开始并行处理 {len(tasks)} 个批注段落，启动 {self.executor._max_workers} 个并行任务"
+            initial_info = f"需处理 {len(tasks)} 个批注段落，启动 {self.executor._max_workers} 个任务"
             logger.info(initial_info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
             doc_gen_results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
@@ -640,7 +640,7 @@ class DocxGenerator:
                 doc.save(output_file_name)
                 return final_info
 
-            initial_info = f"开始并行处理 {len(tasks)} 个三级标题，启动 {self.executor._max_workers} 个并行任务"
+            initial_info = f"需处理 {len(tasks)} 个三级标题，启动 {self.executor._max_workers} 个任务"
             logger.info(initial_info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
             results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
