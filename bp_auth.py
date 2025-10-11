@@ -136,40 +136,51 @@ def reg_user():
     curl -s --noproxy '*' http://127.0.0.1:19000 | jq
     :return:
     """
+    dt_idx = "reg_usr_index.html"
     logger.info(f"reg_user_req, {request.form}, from_IP {get_client_ip()}")
     ctx = {
-        "sys_name": my_cfg['sys']['name']+ "_新用户注册"
+        "sys_name": my_cfg['sys']['name']+ "_新用户注册",
+        "user": "",
+        "warning_info": "",
+        "app_source": request.form.get('app_source')
     }
     try:
         usr = request.form.get('usr').strip()
         ctx["user"] = usr
-        ctx["app_source"] = request.form.get('app_source')
         sys_name = my_enums.AppType.get_app_type(ctx["app_source"])
         ctx["sys_name"] = sys_name
         t = request.form.get('t').strip()
+        if not usr:
+            ctx["warning_info"] = "用户名不能为空"
+            logger.error("reg_user_empty_username")
+            return render_template(dt_idx, **ctx)
+        if not t:
+            ctx["warning_info"] = "密码不能为空"
+            logger.error("reg_user_empty_password")
+            return render_template(dt_idx, **ctx)
         usr_info = cfg_utl.get_uid_by_user(usr)
         if usr_info:
             ctx["warning_info"]= f"用户 {usr} 已存在，请重新输入用户名"
             logger.error(f"reg_user_exist_err {usr}")
+            return render_template(dt_idx, **ctx)
+        cfg_utl.save_usr(usr, t)
+        uid = cfg_utl.get_uid_by_user(usr)
+        if uid:
+            ctx["uid"] = uid
+            ctx["sys_name"] = sys_name
+            ctx["warning_info"] = f"用户 {usr} 已成功创建，欢迎使用本系统"
+            dt_idx = "login.html"
+            logger.error(f"reg_user_success, {usr}")
+            return render_template(dt_idx, **ctx)
         else:
-            cfg_utl.save_usr(usr, t)
-            uid = cfg_utl.get_uid_by_user(usr)
-            if uid:
-                ctx["uid"] = uid
-                ctx["sys_name"] = sys_name
-                ctx["warning_info"] = f"用户 {usr} 已成功创建，欢迎使用本系统"
-                dt_idx = "login.html"
-                logger.error(f"reg_user_success, {usr}")
-                return render_template(dt_idx, **ctx)
-            else:
-                ctx["warning_info"] = f"用户 {usr} 创建失败"
-                logger.error(f"reg_user_fail, {usr}")
+            ctx["warning_info"] = f"用户 {usr} 创建失败"
+            logger.error(f"reg_user_fail, {usr}")
+            return render_template(dt_idx, **ctx)
     except Exception as e:
-        ctx["warning_info"] = "创建用户发生异常"
+        ctx["warning_info"] = "系统异常，创建用户失败"
         logger.error(f"reg_user_exception, {ctx['warning_info']}, url: {request.url}", exc_info=True)
-    dt_idx = "reg_usr_index.html"
-    logger.info(f"return_page {dt_idx}, ctx {ctx}")
-    return render_template(dt_idx, **ctx)
+        logger.info(f"return_page {dt_idx}, ctx {ctx}")
+        return render_template(dt_idx, **ctx)
 
 @auth_bp.route('/health', methods=['GET'])
 def get_data():
