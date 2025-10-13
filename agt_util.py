@@ -3,6 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 import json
 
+import cfg_util
 import utils
 from sys_init import init_yml_cfg
 from langchain_core.prompts import ChatPromptTemplate
@@ -68,7 +69,7 @@ def classify_msg(labels: list, msg: str, cfg: dict) -> dict:
 
     classify_label = ';\n'.join(map(str, labels))
     logger.info(f"classify_question: {msg}")
-    template = cfg['prompts']['csm_cls_msg']
+    template = cfg_util.get_usr_prompt_template('sql_gen_msg', cfg)
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg)
@@ -102,7 +103,7 @@ def classify_txt(labels: list, txt: str, cfg: dict) -> str | None:
 
             classify_label = ';\n'.join(map(str, labels))
             # logger.debug(f"classify_txt: {txt}")
-            template = cfg['prompts']['txt_cls_msg']
+            template = cfg_util.get_usr_prompt_template('txt_cls_msg', cfg)
             prompt = ChatPromptTemplate.from_template(template)
             # logger.info(f"prompt {prompt}")
 
@@ -133,7 +134,7 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict) -> dict:
     submit the search result and user msg to LLM, return the answer
     """
     logger.info(f"user_info [{user_info}] , user_dict {user_dict}")
-    template = cfg['prompts']['fill_dict_msg']
+    template = cfg_util.get_usr_prompt_template('fill_dict_msg', cfg)
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg)
@@ -163,7 +164,7 @@ def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: d
     :is_remote: 是否调用远端LLM
     """
     logger.info(f"doc_type[{doc_type}] , doc_title[{doc_title}], cfg['api']=[{cfg.get('api', None)}]")
-    template = cfg['prompts']['gen_docx_outline_msg']
+    template = cfg_util.get_usr_prompt_template('gen_docx_outline_msg', cfg)
     prompt = ChatPromptTemplate.from_template(utils.replace_spaces(template))
     logger.info(f"prompt {prompt}")
     model = get_model(cfg)
@@ -202,7 +203,7 @@ def gen_txt(write_context: str, references: str, paragraph_prompt: str, user_com
     #     f"demo_txt[{demo_txt}], "
     #     f"current_sub_title[{current_sub_title}]"
     # )
-    template = cfg['prompts']['gen_txt_msg']
+    template = cfg_util.get_usr_prompt_template('gen_txt_msg', cfg)
     prompt = ChatPromptTemplate.from_template(template)
     # logger.debug(f"prompt {prompt}")
     backoff_times = [5, 10, 20, 40, 80, 160]
@@ -255,7 +256,7 @@ def txt2sql(schema: str, txt: str, dialect:str, cfg: dict, max_retries=6) -> str
     :param cfg:             系统配置
     :param max_retries:     最大尝试次数， 需处于集合 [1, 7]
     """
-    template = cfg['prompts']['txt_to_sql_msg']
+    template = cfg_util.get_usr_prompt_template('txt_to_sql_msg', cfg)
     prompt = ChatPromptTemplate.from_template(template)
     backoff_times = [5, 10, 20, 40, 80, 160]
     if max_retries < 1:
@@ -294,7 +295,7 @@ def update_session_info(user_info: str, append_info: str, cfg: dict) -> str:
     submit the search result and user msg to LLM, return the answer
     """
     logger.info(f"user_info [{user_info}], append_info {append_info}")
-    template = cfg['prompts']['pad_dict_info_msg']
+    template = cfg_util.get_usr_prompt_template('pad_dict_info_msg', cfg)
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg)
@@ -316,7 +317,7 @@ def extract_session_info(chat_log: str, cfg: dict) -> str:
     extract_session_info from chat log
     """
     logger.info(f"chat_log [{chat_log}]")
-    template = cfg['prompts']['extract_person_info_msg']
+    template = cfg_util.get_usr_prompt_template('extract_person_info_msg', cfg)
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg)
@@ -338,7 +339,7 @@ def extract_lpg_order_info(chat_log: str, cfg: dict) -> str:
     extract lpg order  from chat log
     """
     logger.info(f"chat_log [{chat_log}]")
-    template = cfg['prompts']['get_lpg_order_info_msg']
+    template = cfg_util.get_usr_prompt_template('get_lpg_order_info_msg', cfg)
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg)
@@ -359,7 +360,7 @@ def get_abs_of_chat(txt: list, cfg: dict) -> str:
     get abstract of a long text
     """
     logger.info(f"start_extract_abstract_of_txt [{txt}]")
-    template = cfg['prompts']['get_chat_abs_msg']
+    template = cfg_util.get_usr_prompt_template('get_chat_abs_msg', cfg)
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg)

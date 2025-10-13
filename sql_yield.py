@@ -71,6 +71,7 @@ class SqlYield(DbUtl):
     def __init__(self, uid: int, sys_cfg:dict, prompt_padding=""):
 
         self.cfg = sys_cfg
+        self.uid = uid
         ds_cfg = cfg_util.get_ds_cfg_by_uid(uid, sys_cfg)
         if ds_cfg:
             self.cfg['db']['type']=ds_cfg['db_type']
@@ -101,18 +102,12 @@ class SqlYield(DbUtl):
 
         # 带数据库结构的提示模板
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        refine_q_msg = f"""{sys_cfg['prompts']['refine_q_msg']}\n当前时间是 {current_time}"""
-        sql_gen_msg = f"""{sys_cfg['prompts']['sql_gen_msg']}\n当前时间是 {current_time}"""
-        sql_review_msg = f"""{sys_cfg['prompts']['sql_review_msg']}\n当前时间是 {current_time}"""
-        count_sql_gen_msg = sys_cfg['prompts']['count_sql_gen_msg']
-        explain_sql_msg = sys_cfg['prompts']['explain_sql_msg']
-        intercept_q_msg = f"""{sys_cfg['prompts']['intercept_q_msg']}\n当前时间是 {current_time}"""
-        # try:
-        #     sql_gen_msg = sql_gen_msg.replace("{sql_dialect}", cfg['db']['type'])
-        # except Exception as e:
-        #     logger.error("set_sql_dialect_err", e)
-        # logger.debug(f"sql_gen_msg {sql_gen_msg}")
-
+        refine_q_msg = f"""{cfg_util.get_usr_prompt_template('refine_q_msg', self.cfg, self.uid)}\n当前时间是 {current_time}"""
+        sql_gen_msg = f"""{cfg_util.get_usr_prompt_template('sql_gen_msg', self.cfg, self.uid)}\n当前时间是 {current_time}"""
+        sql_review_msg = f"""{cfg_util.get_usr_prompt_template('sql_review_msg', self.cfg, self.uid)}\n当前时间是 {current_time}"""
+        count_sql_gen_msg = cfg_util.get_usr_prompt_template('count_sql_gen_msg', self.cfg, self.uid)
+        explain_sql_msg = cfg_util.get_usr_prompt_template('explain_sql_msg', self.cfg, self.uid)
+        intercept_q_msg = f"""{cfg_util.get_usr_prompt_template('intercept_q_msg', self.cfg, self.uid)}\n当前时间是 {current_time}"""
         self.refine_q_prompt_template = ChatPromptTemplate.from_messages([
             ("system", f"{refine_q_msg}\n{prompt_padding}"),
             ("human", "用户问题：{msg}")
@@ -136,7 +131,7 @@ class SqlYield(DbUtl):
             ("system", f"{explain_sql_msg}\n{prompt_padding}"),
             ("human", "查询数据的SQL：{msg}")
         ])
-        chart_dt_gen_msg = f"""{sys_cfg['prompts']['chart_dt_gen_msg']}"""
+        chart_dt_gen_msg = f"""{cfg_util.get_usr_prompt_template('chart_dt_gen_msg', self.cfg, self.uid)}"""
         # logger.debug(f"chart_dt_gen_msg {chart_dt_gen_msg}")
         self.chart_dt_gen_prompt_template = ChatPromptTemplate.from_messages([
             ("system", chart_dt_gen_msg),
@@ -610,7 +605,7 @@ class SqlYield(DbUtl):
         try:
             cfg = cfg_util.get_ds_cfg_by_uid(uid, self.cfg)
             logger.info(f"cfg_for_uid {uid}, {cfg}")
-            if cfg and cfg.get("add_chart") == 1 or self.cfg['prompts']['add_chart_to_dt']:
+            if cfg and cfg.get("add_chart") == 1 or self.cfg['chart_js']['add_chart_to_dt']:
                 return self.get_chart_dt_from_raw_dt(raw_dt)
             else:
                 logger.info("no_chart_dt_to_output")

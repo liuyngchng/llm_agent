@@ -196,7 +196,7 @@ def query_data(catch=None):
     else:
         ds_cfg = my_cfg
     ds_src_cfg = cfg_utl.get_ds_cfg_by_uid(uid, my_cfg)
-    sql_agent = SqlAgent(ds_cfg, prompt_padding=ds_src_cfg.get('llm_ctx', ""))
+    sql_agent = SqlAgent(ds_cfg, uid, prompt_padding=ds_src_cfg.get('llm_ctx', ""))
     if not msg and usr_page_dt.get(uid, None) and page and page != '':
         usr_page_dt[uid]["cur_page"] += 1
         logger.info(f"usr_page_dt_for_{uid}: {json.dumps(usr_page_dt[uid], ensure_ascii=False)}")
@@ -249,7 +249,7 @@ def get_db_dt():
     auth_result = authenticate(request)
     if not auth_result:
         return json.dumps({"msg":"illegal_access_users", "code":502}, ensure_ascii=False)
-    sql_agent = SqlAgent(my_cfg)
+    sql_agent = SqlAgent(my_cfg, uid)
     answer = sql_agent.get_dt_with_nl(uid, msg, DataType.JSON.value)
     # logger.debug(f"answer is：{answer}")
     if not answer:

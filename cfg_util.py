@@ -423,6 +423,39 @@ def get_hack_info(uid: int)-> dict:
             logger.exception(f"err_occur_in_get_hack_q_dict_for_db {config_db}, sql {sql}")
     return {}
 
+def get_usr_prompt_template(template_name: str,  sys_cfg: dict, uid=0)-> str:
+    """
+    获取用户提示词模板配置， 为了兼容以前的配置文件配置，添加了从配置文件读取的部分；
+    首先读取指定用户的配置，如果没有则读取通用的配置
+    :param template_name 模板名称
+    :param sys_cfg 系统配置 yaml 文件
+    :param uid 用户 ID, 当 UID为 0 时，为公共配置
+    """
+    if not template_name or template_name == '':
+        logger.warning(f"template_name_is_null_direct_return, {template_name}")
+        return ""
+    with sqlite3.connect(config_db) as my_conn:
+        sql = f"select value from prompt_template where name = '{template_name}' and  uid = {uid} limit 1"
+        try:
+            prompt_info = query_sqlite(my_conn, sql)
+            prompt = prompt_info['data']
+            if prompt:
+                return prompt[0][0]
+            if uid != 0:
+                sql = f"select value from prompt_template where name = '{template_name}' and  uid = 0 limit 1"
+                prompt_info = query_sqlite(my_conn, sql)
+                prompt = prompt_info['data']
+                if prompt:
+                    return prompt[0][0]
+            if not sys_cfg or not sys_cfg.get('prompts'):
+                raise RuntimeError(f"no_sys_cfg_prompts_err")
+            prompt = sys_cfg['prompts'].get(template_name, None)
+            if prompt:
+                return prompt
+        except Exception as e:
+            logger.exception(f"err_occur_in_get_usr_prompt_template_for_db {config_db}, sql {sql}")
+    raise RuntimeError(f"no_prompt_template_config_err_for_key {template_name}")
+
 @functools.lru_cache(maxsize=128)
 def get_hack_dict(uid: int) -> dict:
     """

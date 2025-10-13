@@ -9,6 +9,7 @@ from langchain_core.runnables import RunnablePassthrough
 from pydantic import SecretStr
 
 import agt_util
+import cfg_util
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ class ChatAgent:
         return agt_util.get_model(self.syc_cfg)
 
     def get_chain(self):
-        template = self.syc_cfg.get('prompts').get('vdb_chat_msg')
+        template = cfg_util.get_usr_prompt_template('vdb_chat_msg', self.syc_cfg)
         logger.debug(f"template {template}")
         prompt = ChatPromptTemplate.from_template(template)
         model = self.get_llm()

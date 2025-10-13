@@ -63,10 +63,14 @@ api:
 
     # mermaid script render server addr
     mermaid_api_uri: http://127.0.0.1:8000
+
+#  chart js 绘图配置
+chart_js:
+    #   是否需要在读取数据库数据的基础上，添加 chart js 绘图数据，true 需要; false，不需要，直接输出数据
+    add_chart_to_dt: false
+
 #  与大模型相关的提示词配置
 prompts:
-    #   是否需要在读取数据库数据的基础上，添加chartjs 绘图数据，true 需要; false，不需要，直接输出数据
-    add_chart_to_dt: false
     #   用户问题精炼提示词,将用户的一些较短的行业问题转换为行业外的人员能理解的问题
     refine_q_msg: |
         你是一个专业的 xx 行业运营管理人员。已知数据源的信息如下：
