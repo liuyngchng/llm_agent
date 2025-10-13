@@ -200,6 +200,66 @@ def user_hack_info():
             # data_source_cfg["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
         return render_template(dt_idx, **ctx)
 
+@app.route('/user/prompt', methods=['GET'])
+def user_prompt_idx():
+    dt_idx = 'prompt_index.html'
+    ctx = {
+        "sys_name": my_cfg['sys']['name'],
+        "app_source": AppType.TXT2SQL.name.lower(),
+        "warning_info": "",
+    }
+    uid = request.args.get("uid").strip()
+    user_list = cfg_utl.get_user_list()
+    ctx['uid'] = uid
+    ctx['user_list'] = user_list
+    ctx['refine_q_msg'] = cfg_utl.get_usr_prompt_template('refine_q_msg', my_cfg, uid)
+    ctx['sql_gen_msg'] = cfg_utl.get_usr_prompt_template('sql_gen_msg', my_cfg, uid)
+    return render_template(dt_idx,  **ctx)
+
+
+@app.route('/user/prompt', methods=['POST'])
+def save_user_prompt():
+    dt_idx = 'prompt_index.html'
+    ctx = {
+        "sys_name": my_cfg['sys']['name'],
+        "app_source": AppType.TXT2SQL.name.lower(),
+        "warning_info": "",
+    }
+
+    uid = int(request.form.get("uid").strip())
+    refine_q_msg = request.form.get("refine_q_msg").strip()
+    sql_gen_msg = request.form.get("sql_gen_msg").strip()
+    ctx['uid'] = uid
+    check_result = utils.validate_user_prompt(refine_q_msg, sql_gen_msg)
+    if not check_result['is_valid']:
+        warn_info = "保存失败，数据格式有误, "
+        if check_result['refine_q_msg_err']:
+            warn_info += f"问题优化提示词缺少必要变量: {check_result['refine_q_msg_err']} "
+        if check_result['sql_gen_msg_err']:
+            warn_info += f"SQL生成提示词缺少必要变量: {check_result['sql_gen_msg_err']}"
+        ctx['warning_info'] = warn_info
+        ctx['refine_q_msg'] = refine_q_msg
+        ctx['sql_gen_msg'] = sql_gen_msg
+        logger.info(f"{uid}, validate_user_prompt_result, {check_result}")
+        return render_template(dt_idx, **ctx)
+
+    logger.info(f"{uid}_user_customized_prompt, refine_q_msg:{refine_q_msg}, sql_gen_msg:{sql_gen_msg}")
+    refine_q_msg_v = refine_q_msg.replace("'", "''")
+    sql_gen_msg_v = sql_gen_msg.replace("'", "''")
+    save_cfg_result1 = cfg_utl.save_usr_prompt_template(uid, 'refine_q_msg', refine_q_msg_v)
+    save_cfg_result2 = cfg_utl.save_usr_prompt_template(uid, 'sql_gen_msg', sql_gen_msg_v)
+
+    if save_cfg_result1 and save_cfg_result2:
+        ctx['warning_info'] = '保存成功'
+    else:
+        ctx['warning_info'] = '保存失败'
+
+    refine_q_msg = cfg_utl.get_usr_prompt_template('refine_q_msg', my_cfg, uid)
+    sql_gen_msg = cfg_utl.get_usr_prompt_template('sql_gen_msg', my_cfg, uid)
+    ctx['refine_q_msg'] = refine_q_msg
+    ctx['sql_gen_msg'] = sql_gen_msg
+    return render_template(dt_idx, **ctx)
+
 @app.route('/<uid>/my/hack/info', methods=['GET'])
 def get_my_hack_info(uid: str):
     """

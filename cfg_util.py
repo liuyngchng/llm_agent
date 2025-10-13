@@ -456,6 +456,41 @@ def get_usr_prompt_template(template_name: str,  sys_cfg: dict, uid=0)-> str:
             logger.exception(f"err_occur_in_get_usr_prompt_template_for_db {config_db}, sql {sql}")
     raise RuntimeError(f"no_prompt_template_config_err_for_key {template_name}")
 
+def save_usr_prompt_template(uid: int, template_name: str, template_value: str):
+    """
+    :param uid: user id
+    :param template_name: 提示词模板名称
+    :param template_value: 提示词模板值
+    """
+    save_result = False
+    if not uid or not template_name or not template_value:
+        logger.error("uid_or_template_name_or_template_value_null_err")
+        return save_result
+    if uid == 0:
+        logger.error("illegal_uid_to_set_template_err")
+        return save_result
+    with sqlite3.connect(config_db) as my_conn:
+        sql = f"select value from prompt_template where name = '{template_name}' and  uid = {uid} limit 1"
+        try:
+            prompt_info = query_sqlite(my_conn, sql)
+            prompt = prompt_info['data']
+            if prompt:
+                logger.info(f"user_prompt_template_for_key_{template_name}_exist_to_update")
+                exec_sql = f"""update prompt_template set value = '{template_value}' where uid = {uid} and name = '{template_name}' limit 1"""
+            else:
+                exec_sql = f"""insert into prompt_template (uid, name, value) values ({uid}, '{template_name}', '{template_value}')"""
+            result = insert_del_sqlite(my_conn, exec_sql)
+
+            if result.get('result'):
+                logger.info(f"exec_sql_success {exec_sql}")
+                save_result = True
+            else:
+                logger.info(f"exec_sql_fail {exec_sql}")
+                save_result = False
+        except Exception as e:
+            logger.exception(f"err_occur_in_save_usr_prompt_template_for_db {config_db}, sql {sql}")
+        return save_result
+
 @functools.lru_cache(maxsize=128)
 def get_hack_dict(uid: int) -> dict:
     """
@@ -507,46 +542,6 @@ def get_user_sample_data(sql: str)-> dict:
         except Exception as e:
             logger.exception(f"err_occurred_for_db {config_db}, sql {sql}")
     return const
-
-def get_user_prompt(uid: int, name: str, sys_cfg:dict)-> str:
-    with sqlite3.connect(config_db) as my_conn:
-        try:
-            sql = f"select id, uid, name, value from prompt where uid={uid} and name = '{name}' limit 1"
-            dt_info = query_sqlite(my_conn, sql)
-            dt = dt_info['data'][0][3]
-            logger.info(f"get_user_prompt_for_uid, {uid}, {name}, {dt}")
-            return decrypt(dt, sys_cfg['sys']['cypher_key'])
-        except Exception as e:
-            logger.exception(f"get_user_prompt_err_for_uid, {uid}, {sql}")
-            return None
-
-def save_prompt(uid: int, name: str, value: str, sys_cfg:dict) -> bool:
-    """
-    :param uid: user id
-    :param name: prompt key
-    :param value: prompt value
-    :param sys_cfg: system config
-    """
-    save_result = False
-    if not uid or not name or not value:
-        logger.error("args_is_null")
-        return save_result
-    value = encrypt(value, sys_cfg['sys']['cypher_key'])
-    current_config = get_user_prompt(uid, name, sys_cfg)
-    if current_config:
-        exec_sql = f"UPDATE prompt SET value = '{value}' WHERE uid = {uid} and name = '{name}' limit 1 "
-    else:
-        exec_sql = f"INSERT INTO prompt (uid, name, value) values ({uid}, '{name}, {value}')"
-    with sqlite3.connect(config_db) as my_conn:
-        try:
-            exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
-            result = insert_del_sqlite(my_conn, exec_sql)
-            logger.info(f"exec_sql_success {exec_sql}")
-            if result.get('result'):
-                save_result = True
-        except Exception as e:
-            logger.exception(f"err_in_exec_sql, {exec_sql}")
-    return save_result
 
 
 

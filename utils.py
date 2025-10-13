@@ -172,6 +172,39 @@ def check_contain_spaces_in_every_line(text):
                 return False
     return True
 
+def validate_user_prompt(refine_q_msg, sql_gen_msg) -> dict:
+    """
+    校验用户数据的提示词，是否含有指定的变量名称，返回是否成功，以及存在错误的信息
+    :param refine_q_msg 优化提问的提示词
+    :param sql_gen_msg 生成 SQL 语句的提示词
+    return a dict
+    """
+    result = {
+        "is_valid": True,
+        "refine_q_msg_err": "",
+        "sql_gen_msg_err": "",
+    }
+
+    # 校验 refine_q_msg 必须包含的变量
+    required_refine_vars = ["{data_source_info}", "{user_short_q_desc}"]
+    err = ''
+    for var in required_refine_vars:
+        if var not in refine_q_msg:
+            result["is_valid"] = False
+            err += f" {var},"
+    if err:
+        result["refine_q_msg_err"] = err
+    # 校验 sql_gen_msg 必须包含的变量
+    required_sql_vars = ["{sql_dialect}", "{schema}", "{chat_history}", "{max_record_per_page}"]
+    err = ''
+    for var in required_sql_vars:
+        if var not in sql_gen_msg:
+            result["is_valid"] = False
+            err += f" {var},"
+    if err:
+        result["sql_gen_msg_err"] = err
+    return result
+
 
 def get_table_name_from_sql(sql:str) -> str | None:
     """

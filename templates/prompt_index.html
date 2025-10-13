@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <title>{{sys_name}}</title>
+    <meta charset="utf-8">
+    <meta id="hack_info_index.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/config.css">
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <div class="title">
+                <div class="icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <div>{{sys_name}} 提示词配置</div>
+            </div>
+            <p class="subtitle">自定义相关提示词</p>
+        </div>
+        <form action="/user/prompt" method="post">
+            <div class="form-group">
+                <label for="refine_q_msg">问题优化提示词:</label>
+                <div class="input-icon">
+                    <i class="fas fa-server"></i>
+                </div>
+                <textarea id="refine_q_msg" name="refine_q_msg" rows="20" cols="100" placeholder="对提问的问题进行优化，方便转换成 SQL语句">{{refine_q_msg}}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="sql_gen_msg">SQL生成提示词:</label>
+                <div class="input-icon">
+                    <i class="fas fa-server"></i>
+                </div>
+                <textarea id="sql_gen_msg" name="sql_gen_msg" rows="20" cols="100" placeholder="将问题转换为数据库 SQL 语句">{{sql_gen_msg}}</textarea>
+            </div>
+
+            <div class="input-container">
+                <button type="submit" class="send-button" id="save_button">
+                    <i class="fas fa-save"></i> 保存配置
+                </button>
+            </div>
+            <input type="hidden" id="uid" name="uid" value="{{uid}}">
+            <div class="warning-message" id="warning_info">{{warning_info}}</div>
+        </form>
+
+        <footer>
+            <p>© 2025 数据查询平台 | KLSZ</p>
+            <p class="subtitle" style="margin-top: 10px; font-size: 0.85rem;">
+                配置修改将实时生效，请谨慎操作
+            </p>
+        </footer>
+    </div>
+    <script src="/static/prompt.js"></script>
+</body>
+</html>
