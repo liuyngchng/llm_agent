@@ -10,7 +10,7 @@ echo "MODEL: ${MODEL}"
 # 函数：获取模型清单
 get_models_list() {
     echo "正在获取模型清单..."
-    local cmd="curl -ks --noproxy '*' -H \"Content-Type: application/json\" -H \"Authorization: Bearer ${TOKEN}\" \"${API}/models\""
+    local cmd="curl -ks --noproxy '*' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${TOKEN}' '${API}/models'"
     echo "执行的命令: $cmd"
     echo ""
     eval "$cmd"
@@ -27,7 +27,7 @@ chat_with_llm() {
         ],
         "stream": false
       }'
-    local cmd="curl -ks --noproxy '*' -H \"Content-Type: application/json\" -H \"Authorization: Bearer ${TOKEN}\" -d '$data' \"${API}/chat/completions\""
+    local cmd="curl -ks --noproxy '*' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${TOKEN}' -d '$data' '${API}/chat/completions'"
     echo "执行的命令: $cmd"
     echo ""
     eval "$cmd" | jq
