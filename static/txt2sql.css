@@ -147,6 +147,8 @@ body {
     border-radius: 8px;
     font-size: 1rem;
     transition: all 0.3s;
+    height: 48px;
+    box-sizing: border-box;
 }
 
 #dialog:focus {
@@ -170,6 +172,8 @@ body {
     align-items: center;
     justify-content: center;
     gap: 10px;
+    height: 48px;
+    flex-shrink: 0;
 }
 
 #startBtn:hover {
@@ -204,6 +208,75 @@ body {
     margin: 20px 0;
     border-left: 4px solid #4b6cb7;
     animation: fadeIn 0.5s ease-out;
+}
+
+.voice-button {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #4b6cb7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 48px;
+    width: 48px;
+    flex-shrink: 0;
+}
+
+.voice-button:hover {
+    background: #e9ecef;
+    border-color: #4b6cb7;
+}
+
+.voice-button.recording {
+    background: linear-gradient(to right, #ff6b6b, #ff4444);
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+.voice-button.error {
+    color: #ff4444;
+    animation: none;
+}
+
+/* 状态指示器 */
+.status-indicator {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    display: none;
+    z-index: 1000;
+}
+
+/* 语音效果 */
+.voice-effect {
+    position: fixed;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 60px;
+    z-index: 999;
+}
+
+.wave-bar {
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(to top, #4b6cb7, #ff6b6b);
+    border-radius: 2px;
+    transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    transform-origin: bottom center;
 }
 
 @keyframes fadeIn {
@@ -251,6 +324,26 @@ footer {
     background: #fef2f2;
 }
 
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes wave {
+    0% { transform: scaleY(0.3); }
+    100% { transform: scaleY(1.5); }
+}
+
+
+.input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    position: relative;
+    align-items: center;
+}
+
 @media (max-width: 768px) {
     .main-container {
         padding: 25px;
@@ -273,5 +366,26 @@ footer {
         flex-direction: column;
         gap: 15px;
         align-items: center;
+    }
+     .input-group {
+        flex-wrap: wrap;
+    }
+
+    .voice-button {
+        order: 2;
+        flex: 0 0 auto;
+        height: 44px;
+        width: 44px;
+    }
+
+    #startBtn {
+        order: 3;
+        width: 100%;
+        margin-top: 10px;
+        height: 44px;
+    }
+
+    #dialog {
+        height: 44px;
     }
 }
