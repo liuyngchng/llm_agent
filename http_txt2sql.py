@@ -16,6 +16,7 @@ import cfg_util as cfg_utl
 from flask import Flask, render_template, Response, request, jsonify, redirect, url_for
 
 import utils
+from audio import transcribe_webm_audio_bytes
 from bp_auth import auth_bp, auth_info, get_client_ip
 from my_enums import DataType, DBType, AppType
 from sql_yield import SqlYield
@@ -307,6 +308,45 @@ def get_my_hack_info(uid: str):
         "msg": "成功获取用户配置信息"
     }
     return json.dumps(response, ensure_ascii=False)
+
+@app.route('/trans/audio', methods=['POST'])
+def transcribe_audio() -> tuple[Response, int] | Response:
+    """
+    curl -s --noproxy '*' -w '\n' -X POST 'http://localhost:19000/trans/audio'
+        -F 'audio=@static/asr_test.webm'
+    """
+    if request.content_length > 10 * 1024 * 1024:
+        return Response(
+            json.dumps("数据长度太大，已超过10MB", ensure_ascii=False),
+            content_type="application/json; charset=utf-8",
+            status=413
+        )
+    try:
+        logger.info("audio_stream_received")
+        audio_file = request.files.get('audio')
+        if not audio_file or not audio_file.filename.endswith('.webm'):
+            return jsonify({"error": "invalid webm txt_file"}), 400
+        audio_bytes = audio_file.read()
+        logger.info("transcribe_webm_audio_bytes_start")
+        result = transcribe_webm_audio_bytes(audio_bytes, my_cfg)
+        logger.info(f"transcribe_webm_audio_bytes_return_txt, {result}")
+        data = {"text": result}
+    except Exception as e:
+        logger.exception(f"语音识别接口异常, {e}")
+        data = {"text": "语音识别异常，请检查语音识别服务是否正常"}
+
+    response = Response(
+        json.dumps(data, ensure_ascii=False),
+        content_type="application/json; charset=utf-8",
+        status=200
+    )
+    try:
+        origin = my_cfg["sys"]["allowed_origin"]
+        response.headers.add('Access-Control-Allow-Origin', origin)
+    except Exception as ex:
+        logger.error(f"set_origin_err, {ex}")
+    response.headers.add('Access-Control-Allow-Methods', 'POST')
+    return response
 
 
 def illegal_access(uid):
