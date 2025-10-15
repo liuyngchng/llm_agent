@@ -491,6 +491,28 @@ def save_usr_prompt_template(uid: int, template_name: str, template_value: str):
             logger.exception(f"err_occur_in_save_usr_prompt_template_for_db {config_db}, sql {sql}")
         return save_result
 
+def del_usr_prompt_template(uid: int):
+    """
+    :param uid: user id
+    """
+    save_result = False
+    if not uid or uid == 0:
+        logger.error("illegal_uid_to_del_usr_template_err")
+        return save_result
+    with sqlite3.connect(config_db) as my_conn:
+        exec_sql = f"delete from prompt_template where uid = {uid} and name in ('refine_q_msg', 'sql_gen_msg')"
+        try:
+            result = insert_del_sqlite(my_conn, exec_sql)
+            if result.get('result'):
+                logger.info(f"exec_sql_success {exec_sql}")
+                save_result = True
+            else:
+                logger.info(f"exec_sql_fail {exec_sql}")
+                save_result = False
+        except Exception as e:
+            logger.exception(f"err_occur_in_del_usr_prompt_template_for_db {config_db}, sql {exec_sql}")
+        return save_result
+
 @functools.lru_cache(maxsize=128)
 def get_hack_dict(uid: int) -> dict:
     """

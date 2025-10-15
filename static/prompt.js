@@ -32,3 +32,24 @@ document.getElementById("save_button").onclick = function(e) {
         }, 3000);
     }
 }
+
+// 为重置按钮添加点击事件
+document.getElementById("reset_button").onclick = function(e) {
+    e.preventDefault();
+    document.getElementById("refine_q_msg").value = "";
+    document.getElementById("sql_gen_msg").value = "";
+
+    // 创建隐藏表单，只提交uid到指定接口
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = '/prompt/reset';
+
+    const uidInput = document.createElement('input');
+    uidInput.type = 'hidden';
+    uidInput.name = 'uid';
+    uidInput.value = document.getElementById('uid').value;
+
+    form.appendChild(uidInput);
+    document.body.appendChild(form);
+    form.submit();
+}

@@ -9,6 +9,7 @@ pip install gunicorn flask concurrent-log-handler langchain_openai langchain_oll
 """
 import json
 import logging.config
+import re
 import time
 import cfg_util as cfg_utl
 
@@ -218,7 +219,7 @@ def user_prompt_idx():
 
 
 @app.route('/user/prompt', methods=['POST'])
-def save_user_prompt():
+def set_user_prompt():
     dt_idx = 'prompt_index.html'
     ctx = {
         "sys_name": my_cfg['sys']['name'],
@@ -228,7 +229,9 @@ def save_user_prompt():
 
     uid = int(request.form.get("uid").strip())
     refine_q_msg = request.form.get("refine_q_msg").strip()
+    refine_q_msg = re.sub(r' +', ' ', refine_q_msg)
     sql_gen_msg = request.form.get("sql_gen_msg").strip()
+    sql_gen_msg = re.sub(r' +', ' ', sql_gen_msg)
     ctx['uid'] = uid
     check_result = utils.validate_user_prompt(refine_q_msg, sql_gen_msg)
     if not check_result['is_valid']:
@@ -253,6 +256,37 @@ def save_user_prompt():
         ctx['warning_info'] = '保存成功'
     else:
         ctx['warning_info'] = '保存失败'
+
+    refine_q_msg = cfg_utl.get_usr_prompt_template('refine_q_msg', my_cfg, uid)
+    sql_gen_msg = cfg_utl.get_usr_prompt_template('sql_gen_msg', my_cfg, uid)
+    ctx['refine_q_msg'] = refine_q_msg
+    ctx['sql_gen_msg'] = sql_gen_msg
+    return render_template(dt_idx, **ctx)
+
+@app.route('/prompt/reset', methods=['POST'])
+def reset_user_prompt():
+    dt_idx = 'prompt_index.html'
+    ctx = {
+        "sys_name": my_cfg['sys']['name'],
+        "app_source": AppType.TXT2SQL.name.lower(),
+        "warning_info": "",
+    }
+
+    uid = int(request.form.get("uid").strip())
+    ctx['uid'] = uid
+    if not uid or uid == 0:
+        warn_info = "用户信息有误, 系统出现异常"
+        ctx['warning_info'] = warn_info
+        logger.info(f"{uid}, validate_user_info_fail_err, {uid}")
+        return render_template(dt_idx, **ctx)
+
+    logger.info(f"{uid}_reset_user_prompt")
+    del_prompt_result = cfg_utl.del_usr_prompt_template(uid)
+
+    if del_prompt_result:
+        ctx['warning_info'] = '重置成功'
+    else:
+        ctx['warning_info'] = '重置失败'
 
     refine_q_msg = cfg_utl.get_usr_prompt_template('refine_q_msg', my_cfg, uid)
     sql_gen_msg = cfg_utl.get_usr_prompt_template('sql_gen_msg', my_cfg, uid)

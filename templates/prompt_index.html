@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta id="hack_info_index.html">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/config.css">
+    <link rel="stylesheet" href="/static/prompt.css">
 </head>
 <body>
     <div class="main-container">
@@ -24,19 +24,26 @@
                 <div class="input-icon">
                     <i class="fas fa-server"></i>
                 </div>
-                <textarea id="refine_q_msg" name="refine_q_msg" rows="20" cols="100" placeholder="对提问的问题进行优化，方便转换成 SQL语句">{{refine_q_msg}}</textarea>
+                <textarea id="refine_q_msg" name="refine_q_msg" rows="10" cols="80" placeholder="对提问的问题进行优化，方便转换成 SQL语句">{{refine_q_msg}}</textarea>
+                <div class="description">用于优化用户提问，使其更清晰明确，便于后续SQL转换，内容必须包含以下变量:<br>(1) {data_source_info}<br>(2) {user_short_q_desc}</div>
             </div>
             <div class="form-group">
                 <label for="sql_gen_msg">SQL生成提示词:</label>
                 <div class="input-icon">
                     <i class="fas fa-server"></i>
                 </div>
-                <textarea id="sql_gen_msg" name="sql_gen_msg" rows="20" cols="100" placeholder="将问题转换为数据库 SQL 语句">{{sql_gen_msg}}</textarea>
+                <textarea id="sql_gen_msg" name="sql_gen_msg" rows="10" cols="80" placeholder="将问题转换为数据库 SQL 语句">{{sql_gen_msg}}</textarea>
+                <div class="description">用于将优化后的问题转换为对应的SQL查询语句，内容必须包含以下变量:<br>(1) {sql_dialect}<br>(2) {schema}<br>(3) {chat_history}<br>(4) {max_record_per_page}</div>
             </div>
 
             <div class="input-container">
                 <button type="submit" class="send-button" id="save_button">
                     <i class="fas fa-save"></i> 保存配置
+                </button>
+            </div>
+            <div class="input-container">
+                <button type="submit" class="send-button" id="reset_button">
+                    <i class="fas fa-save"></i> 重置配置
                 </button>
             </div>
             <input type="hidden" id="uid" name="uid" value="{{uid}}">

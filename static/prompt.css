@@ -1,6 +1,6 @@
 .main-container {
     width: 100%;
-    max-width: 900px;
+    max-width: 1280px;
     background: white;
     border-radius: 16px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -65,23 +65,31 @@
 }
 
 .form-group {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 150px 1fr 250px; /* 标签 | 输入框 | 说明 */
+    align-items: start;
     margin-bottom: 20px;
-    position: relative;
+    gap: 15px;
 }
 
 .form-group label {
-    width: 150px;
     text-align: right;
-    margin-right: 15px;
     color: #2c3e50;
     font-weight: 500;
+    margin-right: 0;
+    padding-top: 14px; /* 与输入框对齐 */
+}
+
+.form-group .description {
+    color: #666;
+    font-size: 0.9rem;
+    padding: 14px 0;
+    line-height: 1.4;
 }
 
 .input-icon {
     position: absolute;
-    left: 175px;
+    left: 165px;
     top: 50%;
     transform: translateY(-50%);
     color: #4b6cb7;
@@ -165,18 +173,17 @@ footer {
 @media (max-width: 768px) {
     .main-container {
         padding: 25px;
+        max-width: 100%;
     }
 
-    .form-group {
-        flex-direction: column;
-        align-items: stretch;
+     .form-group {
+        grid-template-columns: 1fr;
+        gap: 8px;
     }
 
     .form-group label {
         text-align: left;
-        width: auto;
-        margin-bottom: 8px;
-        margin-right: 0;
+        padding-top: 0;
     }
 
     .input-icon {
@@ -187,5 +194,10 @@ footer {
     .input-container {
         flex-direction: column;
         gap: 15px;
+    }
+
+    .form-group .description {
+        padding: 8px 0;
+        font-size: 0.85rem;
     }
 }
