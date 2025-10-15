@@ -21,20 +21,21 @@
         </div>
 
         <div class="nav-links">
-            <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="nav-link">
-                <i class="fas fa-sign-out-alt"></i> 退出
-            </a>
+
             <a href="/cfg/idx?uid={{uid}}&app_source={{app_source}}" class="nav-link" target="_blank">
-                <i class="fas fa-cog"></i> 数据源配置
+                <i class="fas fa-cog"></i>数据源配置
             </a>
             <a href="/user/prompt?uid={{uid}}&app_source={{app_source}}&t=1" class="nav-link" target="_blank">
-                <i class="fas fa-cog"></i> 自定义提示词
+                <i class="fas fa-cog"></i>提示词配置
             </a>
             {% if hack_admin =='1' %}
             <a href="/user/hack/info?uid={{uid}}&app_source={{app_source}}" class="nav-link" target="_blank">
-                <i class="fas fa-cog"></i> 问题解释配置
+                <i class="fas fa-cog"></i>问题解释配置
             </a>
             {% endif %}
+            <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="nav-link">
+                <i class="fas fa-sign-out-alt"></i>退出
+            </a>
         </div>
 
         <div class="input-group">

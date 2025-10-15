@@ -51,7 +51,7 @@ body {
 
 .main-container {
     width: auto;
-    min-width:900px;
+    min-width:1280px;
     max-width: none;
     overflow-x: auto;
     background: white;
