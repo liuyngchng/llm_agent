@@ -209,21 +209,22 @@ def get_usr_manual():
     sys_name = my_enums.AppType.get_app_type(app_source)
     markdown_content = ""
     markdown_file_name = f"./user_manual/{app_source}_user_manual.md"
+    toc_content = ""
     try:
         if os.path.exists(markdown_file_name):
             with open(markdown_file_name, 'r', encoding='utf-8') as f:
                 markdown_content = f.read()
 
-            # 将 markdown 转换为 HTML
-            html_content = markdown.markdown(
-                markdown_content,
+            md = markdown.Markdown(
                 extensions=[
                     'markdown.extensions.extra',
                     'markdown.extensions.codehilite',
                     'markdown.extensions.tables',
-                    'markdown.extensions.toc'
+                    'markdown.extensions.toc'  # 启用 TOC 扩展
                 ]
             )
+            html_content = md.convert(markdown_content)
+            toc_content = md.toc if hasattr(md, 'toc') else ""
         else:
             html_content = f"<p>用户手册文件不存在: {markdown_file_name}</p>"
     except Exception as e:
@@ -233,7 +234,8 @@ def get_usr_manual():
         "sys_name": sys_name + "_用户使用说明",
         "warning_info": "",
         "app_source": app_source,
-        "html_content": html_content
+        "html_content": html_content,
+        "toc_content": toc_content,
     }
     dt_idx = "md.html"
     logger.info(f"return_page {dt_idx}, ctx {ctx}")
