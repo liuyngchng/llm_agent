@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+import os
 
+import markdown
 from flask import Blueprint, jsonify, redirect, url_for
 import logging.config
 from flask import (request, render_template)
@@ -195,6 +197,47 @@ def get_data():
     return jsonify({"status": 200}), 200
     # return Response({"status":200}, content_type=content_type, status=200)
 
+@auth_bp.route('/usr/mnl', methods=['GET'])
+def get_usr_manual():
+    """
+    get user manual
+    curl -s --noproxy '*' http://127.0.0.1:19000 | jq
+    :return:
+    """
+    logger.info(f"request_args_in_get_usr_manual {request.args}")
+    app_source = request.args.get('app_source')
+    sys_name = my_enums.AppType.get_app_type(app_source)
+    markdown_content = ""
+    markdown_file_name = f"./user_manual/{app_source}_user_manual.md"
+    try:
+        if os.path.exists(markdown_file_name):
+            with open(markdown_file_name, 'r', encoding='utf-8') as f:
+                markdown_content = f.read()
+
+            # 将 markdown 转换为 HTML
+            html_content = markdown.markdown(
+                markdown_content,
+                extensions=[
+                    'markdown.extensions.extra',
+                    'markdown.extensions.codehilite',
+                    'markdown.extensions.tables',
+                    'markdown.extensions.toc'
+                ]
+            )
+        else:
+            html_content = f"<p>用户手册文件不存在: {markdown_file_name}</p>"
+    except Exception as e:
+        logger.error(f"Error reading markdown file: {e}")
+        html_content = f"<p>读取用户手册时出错: {str(e)}</p>"
+    ctx = {
+        "sys_name": sys_name + "_用户使用说明",
+        "warning_info": "",
+        "app_source": app_source,
+        "html_content": html_content
+    }
+    dt_idx = "md.html"
+    logger.info(f"return_page {dt_idx}, ctx {ctx}")
+    return render_template(dt_idx, **ctx)
 
 def get_client_ip():
     """获取客户端真实 IP"""
