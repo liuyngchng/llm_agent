@@ -13,6 +13,7 @@ CREATE TABLE "docx_file_info" (
 	"keywords"	TEXT,
 	"outline"	TEXT,
 	"img_count"	INTEGER DEFAULT 0,
+	"word_count"	INTEGER DEFAULT 0,
 	"create_time"	TEXT,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );

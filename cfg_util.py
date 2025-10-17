@@ -604,7 +604,7 @@ if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
-    dt = get_user_prompt(123, "hi", {"test":{"test"}})
+    dt = get_usr_prompt_template("hi", "hi", {"test":{"test"}})
     logger.info(dt)
 
 

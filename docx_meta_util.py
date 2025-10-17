@@ -106,6 +106,21 @@ def update_docx_file_process_info_by_task_id(task_id: int, process_info: str, pe
     logger.info(f"update_docx_file_info_dt {my_dt}")
     return my_dt
 
+def update_docx_gen_txt_count_by_task_id(task_id: int, word_count: int):
+    """
+    更新docx文件处理任务中生成的字数统计
+    :param task_id: process task id
+    :param word_count: 字数统计
+    :return:
+    """
+    if not task_id or not word_count:
+        raise RuntimeError(f"param_null_err, {task_id}, {word_count}")
+    sql = f"update docx_file_info set word_count = {word_count} where task_id = {task_id} limit 1"
+    logger.info(f"update_docx_gen_txt_count_sql, {sql}")
+    my_dt = DbUtl.sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"update_docx_gen_txt_count_dt {my_dt}")
+    return my_dt
+
 def save_docx_output_file_path_by_task_id(task_id: int, file_path: str):
     """
     保存输出文档物理文件路径信息
