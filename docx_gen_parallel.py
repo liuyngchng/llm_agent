@@ -311,6 +311,7 @@ class DocxGenerator:
                 user_comment=task['user_comment'],
                 cfg=task['sys_cfg']
             )
+            word_count = len(llm_txt)
 
 
             return {
@@ -319,6 +320,7 @@ class DocxGenerator:
                 'original_para': task['original_para'],
                 'current_heading': task['current_heading'],
                 'contains_mermaid': '<mermaid>' in llm_txt,
+                'word_count': word_count,
             }
         except Exception as e:
             heading_info = task['current_heading']
