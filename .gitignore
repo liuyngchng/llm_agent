@@ -33,9 +33,9 @@ sqlite_vss
 **/*.yml
 **/*.yaml
 **/*.wav
-cfg.yml
-cfg.db
-cfg.db-journal
+**/cfg.yml
+**/cfg.db
+**/cfg.db-journal
 **/*.cer
 **/*.faiss
 **/*.doc
@@ -45,5 +45,5 @@ llm_py_env/*
 llm_py_env_whl.Python.3.12.3/*
 vdb/*
 __pycache__
-upload_doc/*
-db_schema/*
+apps/upload_doc/*
+apps/txt2sql/db_schema/*
