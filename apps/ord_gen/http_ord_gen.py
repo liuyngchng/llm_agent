@@ -3,7 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 """
-LGP订单管理系统
+订单自动生成
 pip install flask
 
 """
@@ -18,7 +18,7 @@ from common.my_enums import ActorRole, AI_SERVICE_STATUS, AppType
 from common.agt_util import classify_msg
 from common.sys_init import init_yml_cfg
 from common.cm_utils import get_console_arg1
-from lpg_service import LpgService
+from ord_service import OrderService
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -29,12 +29,12 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
-lpg_svc = LpgService()
+lpg_svc = OrderService()
 
 @app.route('/')
 def app_home():
     logger.info("redirect_auth_login_index")
-    return redirect(url_for('auth.login_index', app_source=AppType.LPG.name.lower()))
+    return redirect(url_for('auth.login_index', app_source=AppType.ORD_GEN.name.lower()))
 
 
 @app.route('/msg/box/<uid>', methods=['GET'])

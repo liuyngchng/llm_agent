@@ -13,8 +13,7 @@ from common.agt_util import update_session_info, get_abs_of_chat, extract_lpg_or
 from common.cfg_util import get_consts
 from datetime import datetime
 
-from common.my_enums import AI_SERVICE_STATUS, DataType
-from apps.txt2sql.sql_agent import SqlAgent
+from common.my_enums import AI_SERVICE_STATUS
 from common.cm_utils import convert_list_to_html_table
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 MAX_HISTORY_SIZE = 19
 
-class LpgService:
+class OrderService:
     """
     A customer service
     """
@@ -39,7 +38,7 @@ class LpgService:
         # TODO: to limit the size of history to the maximum token size of LLM
         # limit msg_history size to MAX_MSG_COUNT
         self.msg_history = []
-        self.const_dict = get_consts('lpg')
+        self.const_dict = get_consts('ord_gen')
         logger.info(f"const: {self.const_dict}")
 
 
@@ -230,19 +229,20 @@ class LpgService:
         :param uid: the user which msg send from
         :param sys_cfg: the system config information
         """
-        sql_agent = SqlAgent(sys_cfg, uid,True, f"{self.get_const_dict().get('str1')} {uid}")
-        dt = sql_agent.get_dt_with_nl(
-            uid,
-            msg,
-            DataType.JSON.value,
-        )
-        usr_dt_dict = dt
-        usr_dt_desc = sql_agent.desc_usr_dt(msg, usr_dt_dict["raw_dt"][0])
-        answer += usr_dt_desc
-        # answer += const_dict.get("label3")
-        logger.info(f"answer_for_classify {label}:\n{answer}")
-        self.refresh_msg_history(answer)
-        return answer
+        # sql_agent = SqlAgent(sys_cfg, uid,True, f"{self.get_const_dict().get('str1')} {uid}")
+        # dt = sql_agent.get_dt_with_nl(
+        #     uid,
+        #     msg,
+        #     DataType.JSON.value,
+        # )
+        # usr_dt_dict = dt
+        # # usr_dt_desc = sql_agent.desc_usr_dt(msg, usr_dt_dict["raw_dt"][0])
+        # answer += usr_dt_desc
+        # # answer += const_dict.get("label3")
+        # logger.info(f"answer_for_classify {label}:\n{answer}")
+        # self.refresh_msg_history(answer)
+        # return answer
+        return ""
 
 
     def talk_with_human(self, answer: str, label: str, uid: str, sys_cfg: dict) -> str:

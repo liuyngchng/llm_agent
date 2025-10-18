@@ -1,14 +1,14 @@
 # 1. APP
-| 名称         | 端口 | 描述         |
-|------------| --- |------------|
-| open api       | https://127.0.0.1:1/18000/ | 开放平台       |  
-| txt2sql    | https://127.0.0.1:19001/ | 问数         |   
-| chat       | https://127.0.0.1:19002/ | 智能问答       |
-| docx       | https://127.0.0.1:19003/ | 文档生成       |
-| csm        | https://127.0.0.1:19004/ | 智能客服       |  
-| mcp client | https://127.0.0.1:19005/ | MCP client |  
-| mcp server | https://127.0.0.1:19006/mcp | MCP server |  
-| LPG        |  https://127.0.0.1:19007/ | LPG demo   |
+| 名称      | 端口 | 描述         |
+|---------| --- |------------|
+| open_api | https://127.0.0.1:1/18000/ | 开放平台       |  
+| txt2sql | https://127.0.0.1:19001/ | AI 数据查询    |   
+| chat    | https://127.0.0.1:19002/ | AI 知识库问答   |
+| docx    | https://127.0.0.1:19003/ | AI 文档生成    |
+| csm     | https://127.0.0.1:19004/ | AI 客服      |  
+| mcp cli | https://127.0.0.1:19005/ | MCP client |  
+| mcp srv | https://127.0.0.1:19006/mcp | MCP server |  
+| ord_gen |  https://127.0.0.1:19007/ | AI 订单生成    |
 
 
  **(1) http_chat.py**

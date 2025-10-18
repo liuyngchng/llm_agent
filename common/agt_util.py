@@ -249,10 +249,10 @@ def extract_session_info(chat_log: str, cfg: dict) -> str:
 
 def extract_lpg_order_info(chat_log: str, cfg: dict) -> str:
     """
-    extract lpg order  from chat log
+    extract ord_gen order  from chat log
     """
     logger.info(f"chat_log [{chat_log}]")
-    template = cfg_util.get_usr_prompt_template('get_lpg_order_info_msg', cfg)
+    template = cfg_util.get_usr_prompt_template('get_order_info_msg', cfg)
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg)

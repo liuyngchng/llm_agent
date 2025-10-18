@@ -247,7 +247,7 @@ prompts:
         (2)若没有个人信息，则输出空字符串
 
     # 生成订单关键信息
-    get_lpg_order_info_msg: |
+    get_order_info_msg: |
         基于以下文本：
         {context}
         请输出涉及到液化气、液化天然气(简称LPG)订单信息的文本，订单信息包含液化气的重量、气瓶数量
