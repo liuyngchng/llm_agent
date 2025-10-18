@@ -17,6 +17,9 @@ RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime' && \
     ulimit -n 65535
 COPY --from=builder /opt/llm_py_env /opt/llm_py_env
 
+# 添加 PYTHONPATH 环境变量
+ENV PYTHONPATH=/opt/app:$PYTHONPATH
+
 # 设置达梦数据库环境变量
 ENV DM_HOME=/opt/dm8_client
 ENV LD_LIBRARY_PATH=/opt/dm8_client:$LD_LIBRARY_PATH
