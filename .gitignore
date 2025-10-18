@@ -14,8 +14,8 @@ native-image/*
 **/*.log
 **/*.log.*
 **/*.o
-faiss_index/*
-faiss_oa_vector/*
+**/faiss_index/*
+**/faiss_oa_vector/*
 **/*.txt
 **/*.pdf
 !requirements.txt
@@ -27,6 +27,7 @@ sqlite_vss
 **/*.tar.gz
 **/*.config
 **/*.cfg
+**/*.whl
 #**/*.db
 **/*.json
 **/*.lock
@@ -41,9 +42,9 @@ sqlite_vss
 **/*.doc
 **/*.docx
 **/*.pptx
-llm_py_env/*
-llm_py_env_whl.Python.3.12.3/*
-vdb/*
-__pycache__
-apps/upload_doc/*
-apps/txt2sql/db_schema/*
+**/llm_py_env
+**/llm_py_env_whl.Python.3.12.3/*
+**/vdb/*
+**/__pycache__
+**/upload_doc/*
+**/db_schema/*

@@ -1,12 +1,10 @@
 FROM ubuntu_py:24.04 as builder
-#FROM llm_nl2sql:1.1
 
 WORKDIR /opt
 RUN mkdir -p /opt/dm8_client
 ARG PROXY=""
-# ARG PROXY=" -i http://devpi.11.11.77.81.nip.io/root/pypi/+simple --trusted-host devpi.11.11.77.81.nip.io"
-#ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple"
-COPY ./llm_py_env /tmp/whl
+#ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn"
+COPY ./whl_py_dir /tmp/whl
 RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn flask flask_cors\
     concurrent-log-handler langchain_openai langchain_ollama langchain_core langchain_community \
     openai pandas tabulate pymysql oracledb dmPython sounddevice pydub pycryptodome wheel sympy markdown && \
@@ -26,4 +24,4 @@ ENV LD_LIBRARY_PATH=/opt/dm8_client:$LD_LIBRARY_PATH
 WORKDIR /opt/app
 
 EXPOSE 19000
-ENTRYPOINT ["sh", "./boot.sh"]
+ENTRYPOINT ["sh", "./common/boot.sh"]
