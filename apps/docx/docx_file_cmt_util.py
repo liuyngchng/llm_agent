@@ -11,11 +11,12 @@ import logging.config
 import os
 import time
 import zipfile
-import docx_meta_util
+
 from xml.etree import ElementTree as ET
 from docx import Document
 from docx.shared import RGBColor, Cm
 
+from apps.docx import docx_meta_util
 from common import cfg_util
 from common.sys_init import init_yml_cfg
 from apps.docx.txt_gen_util import gen_txt
@@ -218,7 +219,7 @@ def modify_para_with_comment_prompt_in_process(task_id:int,
             comment_text = comments_dict[para_idx]
             catalogue = extract_catalogue(target_doc)
             reference = get_reference_from_vdb(comment_text, vdb_dir, cfg['api'])
-            modified_txt = gen_txt(doc_ctx, reference, comment_text, catalogue, str(current_heading), cfg)
+            modified_txt = gen_txt(doc_ctx, reference, para.text,comment_text, catalogue, str(current_heading), cfg)
             if modified_txt:
                 gen_txt_count += 1
                 para.clear()
@@ -265,7 +266,7 @@ def modify_para_with_comment_prompt(target_doc: str,
             logger.info(f"matched_comment_for_para_idx {para_idx}")
             comment_text = comments_dict[para_idx]
             catalogue = extract_catalogue(target_doc)
-            modified_txt = gen_txt(doc_ctx, "", comment_text, catalogue, str(current_heading), cfg)
+            modified_txt = gen_txt(doc_ctx, "", para.text, comment_text, catalogue, str(current_heading), cfg)
             if modified_txt:
                 para.clear()
                 para.paragraph_format.first_line_indent = Cm(1) # set a first-line indent of approximately 1 cm (about 2 Chinese characters width)
