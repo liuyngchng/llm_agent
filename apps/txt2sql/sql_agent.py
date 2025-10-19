@@ -7,19 +7,15 @@ import math
 
 from typing import Dict
 from datetime import datetime
-
-import common.cfg_util
-from common import cfg_util, agt_util
-from doris import Doris
-from common.cm_utils import extract_md_content, rmv_think_block, extract_json
-
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.utilities import SQLDatabase
-
 import logging.config
+
 from pydantic import SecretStr
 from common.my_enums import DBType, DataType
-
+from common import cfg_util, agt_util
+from apps.txt2sql.doris import Doris
+from common.cm_utils import extract_md_content, rmv_think_block, extract_json
 from common.db_util import DbUtl
 
 """

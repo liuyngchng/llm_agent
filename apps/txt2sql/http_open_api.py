@@ -10,7 +10,7 @@ import logging.config
 
 from flask import Flask, request, g
 
-from doris import Doris
+from apps.txt2sql.doris import Doris
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.cm_utils import get_console_arg1

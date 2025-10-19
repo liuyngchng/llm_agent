@@ -19,7 +19,7 @@ from flask import Flask, render_template, Response, request, jsonify, redirect, 
 from apps.txt2sql.audio import transcribe_webm_audio_bytes
 from common.bp_auth import auth_bp, auth_info, get_client_ip
 from common.my_enums import DataType, DBType, AppType
-from sql_yield import SqlYield
+from apps.txt2sql.sql_yield import SqlYield
 from common.sys_init import init_yml_cfg
 from common.cm_utils import get_console_arg1, check_contain_spaces_in_every_line, replace_spaces, validate_user_prompt
 

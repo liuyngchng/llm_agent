@@ -22,8 +22,8 @@ from langgraph.graph import END, StateGraph, START
 from langgraph.graph.message import AnyMessage, add_messages
 import logging.config
 
-import db_util
-from sys_init import init_yml_cfg
+from common import db_util
+from common.sys_init import init_yml_cfg
 
 """
 curl -s --noproxy '*' -X POST http://127.0.0.1:11434/api/chat -d '{
