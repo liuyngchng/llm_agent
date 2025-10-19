@@ -48,3 +48,4 @@ sqlite_vss
 **/__pycache__
 **/upload_doc/*
 **/db_schema/*
+logging.conf

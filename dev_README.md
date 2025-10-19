@@ -1,145 +1,46 @@
-# 1. introduction
+# 1. 系统开发手册
 
- **(1) http_rag.py**
+## 1. 开发环境配置
 
-a RAG demo with local knowledge in private domain, you can input question in URI `http://localhost:19000`;
+(1) 安装 git, 并配置 SSH 公钥 至 git 服务器；  
+(2) 安装 python3.12；  
+(3) 安装 python3.12 的 virtualenv， 用于创建虚拟环境，做到隔离环境；  
+(4) 安装 python3.12 的 pip；  
+(5) 安装 python whl 依赖包， 详见各个组件./apps/your_app 的 README.md 文件。
 
-**(2) http_nl2sql.py**
-
-A SQL demo, user can input there question about data, then data returned and be rendered as a chart by chart.js.
-
- **(3) sql_agent.py**
-
-A SQL agent demo, used so-called TextToSQL. you can ask question about database, and agent will give data back to you
-
-# 2. deploy
-
-env
-
+## 2. 获取源代码
 ```sh
-Ubuntu 24.02 LTS
-Python 3.12.3
-pip 24.0
+# 从 github 获取源代码
+git clone https://github.com/liuyngchng/llm_agent.git
+# 无法上 github 的可以从 gitee 获取源代码
+git clone https://gitee.com/liuyngchng/gitee_llm_agent.git
 ```
 
-
-
-you can build docker file as following
-
+## 3. 运行代码
+以启动 txt2sql 这个组件为例，启动命令如下：
 ```sh
-docker build -f ./Dockerfile ./ -t llm_agent:1.0
+cd /a/b/your_project_full_path/llm_agent
+# 生成自己的配置文件
+cp ./apps/txt2sql/cfg.yml.template ./apps/txt2sql/cfg.yml
+# 修改相关的配置信息
+vi ./apps/txt2sql/cfg.yml
+# 将组件所需要的配置文件拷贝到当前目录下
+cp ./apps/txt2sql/cfg.yml ./
+cp ./apps/txt2sql/logging.conf ./
+
+# 在项目根目录下创建 SQLite 配置数据库 cfg.db，
+# 相关SQL 详见 ./apps/txt2sql/db_schema/*.sql
+# SqliteBrowser 工具详见 (https://sqlitebrowser.org/dl/) 
+create table xxxxxx
+# 启动
+PYTHONPATH=./:${PYTHONPATH}  ./apps/txt2sql/http_txt2sql.py
+
 ```
-
-# 3. run
-
-package all your pip package in a docker images named llm_agent with version 1.0.
-
-put all your python script file in dir /data/llm_agent, and run it as followling:
-
-```sh
-docker run -dit --name test --network host --rm --security-opt seccomp=unconfined -p 19001:19000 --entrypoint "sh /opt/app/start.sh" -v /data/llm_agent:/opt/app llm_agent:1.0
-
-# maybe you can try set entrypoint to boot procedure automatically
-docker run -dit --name test --rm --entrypoint "/opt/app/start.sh" -p 19001:19000 -v /data/llm_agent:/opt/app llm_agent:1.0
-```
-
-
-
 # 4. test
-
-## 4.1 LLM
-
-test whether your LLM service function normally as following
 
 ```sh
 #health check for your LLM
-curl -X POST http://127.0.0.1:11434/api/generate -d '{
-	"model": "llama3.1",
-	"prompt": "hi",
-	"stream":true
+http://127.0.0.1:19000
 }'
 ```
 
-## 4.2 LLM agent
-
- test your LLM agent, have fun!
-
-```sh
-# app health check
-curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/health' -H "Content-Type: application/json"  -d '{"msg":"who are you?"}'
-
-# submit data
-curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/submit' -H "Content-Type: application/x-www-form-urlencoded"  -d '{"msg":"who are you?"}'
-```
-
-# 5. db source config
-
-系统支持自定义数据库配置，目前支持mysql， sqlite，oracle 的支持正在开发中
-```html
-http://127.0.0.1:19000/cfg/idx?usr=test&tkn=12345
-```
-
-# 6. ASR
-
-通过语音转文本，实现再页面上进行语音输入。
-
-## 6.1 基础库安装
-
-安装  ffmpeg
-
-```sh
-# windows 
-https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
-# ubuntu
-sudo apt install ffmpeg
-```
-
-
-
-## 6.2 语音识别服务
-
-```sh
-pip install "vllm[audio]"
-
-CUDA_LAUNCH_BLOCKING=1 CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 \
-vllm serve whisper-large-v3-turbo \
---tensor-parallel-size 1 \
---max-model-len 448 \
---gpu-memory-utilization 0.7 \
---enforce-eager \
---swap-space 0 \
---device cuda
-```
-
-```sh
-
-```
-
-## 6.3 语音识别自测
-
-目前页面输入的语音流行是webm格式的。测试语音生成
-
-```sh
-pip install edge-tts 
-
-# 生成默认音频：
-edge-tts -t "测试语句" --write-media temp.webm
-# 转码为真实webm：
-ffmpeg -i temp.webm -c:a libopus asr_test.webm
-```
-
-对http 接口进行测试
-
-```sh
-curl -X POST http://127.0.0.1:19000/trans/audio \
-  -F "audio=@static/asr_test.webm;type=audio/webm" \
-  -H "Content-Type: multipart/form-data"
-```
-
-# 7. SSH 使用密钥登录
-```sh
-ssh -i your_private_key_file_path your_user@your_host -p ssh_port
-
-scp -i your_private_key_file_path -P ssh_port your_file_want_to_be_uploaed devbox@your_host:/your_host_dir
-
-```
