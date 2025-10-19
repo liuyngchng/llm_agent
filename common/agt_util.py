@@ -7,12 +7,11 @@ import logging.config
 import time
 import httpx
 import logging.config
-from common import cfg_util
-
-from common.sys_init import init_yml_cfg
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
+
+from common import cfg_util
+from common.sys_init import init_yml_cfg
 from common.cm_utils import rmv_think_block, extract_md_content
 
 
@@ -43,6 +42,7 @@ def get_model(cfg):
             }
         )
     else:
+        from langchain_ollama import ChatOllama
         model = ChatOllama(
             model=cfg['api']['llm_model_name'],
             base_url=cfg['api']['llm_api_uri'],
@@ -59,7 +59,7 @@ def classify_txt(labels: list, txt: str, cfg: dict) -> str | None:
     max_retries = 6
     backoff_times = [5, 10, 20, 40, 80, 160]
     last_exception = None
-
+    model = None
     for attempt in range(max_retries + 1):
         try:
             if attempt > 0:
@@ -100,18 +100,7 @@ def dispose(model):
 def classify_msg(labels: list, msg: str, cfg: dict) -> dict:
     """
     classify user's question first, multi-label can be obtained
-    from transformers import pipeline
-    classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
-    def classify_query(text):
-        labels = ["投诉", "缴费", "维修"]
-        result = classifier(text, labels, multi_label=False)
-        return result['labels'][0]
-    # 示例使用
-    user_input = "我家水管爆了需要处理"
-    print(f"问题类型: {classify_query(user_input)}")
-    :param labels: the label list collection which AI can produce label within it
-    :param msg: the msg need to be classified by AI
-    :param cfg: the configuration information of system
+
     """
 
     classify_label = ';\n'.join(map(str, labels))

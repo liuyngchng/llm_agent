@@ -5,8 +5,8 @@ RUN mkdir -p /opt/dm8_client
 ARG PROXY=""
 #ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn"
 COPY ./whl_py_dir /tmp/whl
-RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn flask flask_cors\
-    concurrent-log-handler langchain_openai langchain_ollama langchain_core langchain_community \
+RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn flask \
+    concurrent-log-handler langchain_openai langchain_core langchain_community \
     openai pandas tabulate pymysql oracledb dmPython sounddevice pydub pycryptodome wheel sympy markdown && \
     rm -rf /tmp/whl && \
     rm -rf ~/.cache/pip

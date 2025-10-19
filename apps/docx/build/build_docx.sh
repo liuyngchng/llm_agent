@@ -7,12 +7,12 @@ if [ ! -d "${WHL_PY_DIR}" ]; then
 fi
 cd ${WHL_PY_DIR}
 echo "current_dir:`pwd`"
-pip download gunicorn \
-    langgraph langchain_ollama langchain_openai langchain_community \
-    langchain langchain_huggingface langchain_text_splitters langchain_huggingface langchain_unstructured unstructured \
-    unstructured[pdf] langchain_core flask flask_cors pydantic python-docx python-pptx pillow nltk sentence-transformers torch \
-    concurrent_log_handler pydub pycryptodome wheel qrcode[pil] tabulate chromadb \
-    pypdf2 lxml websockets markdown
+pip download gunicorn flask \
+    langchain_openai langchain_community \
+    langchain langchain_text_splitters langchain_unstructured unstructured \
+    unstructured[pdf] langchain_core pydantic python-docx python-pptx pillow \
+    concurrent_log_handler pydub pycryptodome wheel tabulate chromadb \
+    lxml websockets markdown
 cd ..
 echo "current_dir:`pwd`"
 docker build --rm -f ./Dockerfile_docx ./ -t llm_docx:1.0

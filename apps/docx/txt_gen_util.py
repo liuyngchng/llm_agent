@@ -8,7 +8,6 @@
 import logging.config
 import time
 
-import torch
 from langchain_core.prompts import ChatPromptTemplate
 
 from common import cfg_util, agt_util, cm_utils
@@ -43,8 +42,7 @@ def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: d
     finally:
         # 清理资源
         logger.info("gen_outline_finish, dispose resources")
-        del model
-        torch.cuda.empty_cache()
+        dispose(model)
 
 def gen_txt(write_context: str, references: str, paragraph_prompt: str, user_comment: str, catalogue: str,
             current_sub_title: str, cfg: dict, max_retries=6) -> str | None:
@@ -74,6 +72,7 @@ def gen_txt(write_context: str, references: str, paragraph_prompt: str, user_com
     if max_retries > len(backoff_times):
         max_retries = len(backoff_times)
     last_exception = None
+    model = None
     for attempt in range(max_retries + 1):
         try:
             if attempt > 0:
@@ -92,8 +91,7 @@ def gen_txt(write_context: str, references: str, paragraph_prompt: str, user_com
             logger.info(f"gen_txt_arg, {arg_dict}, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
             response = chain.invoke(arg_dict)
             output_txt = rmv_think_block(response.content)
-            del model
-            torch.cuda.empty_cache()
+            dispose(model)
             output_txt = output_txt.replace(current_sub_title, "").strip()
             return output_txt
         except Exception as ex:
@@ -101,9 +99,13 @@ def gen_txt(write_context: str, references: str, paragraph_prompt: str, user_com
             logger.exception(f"retry_failed_in_gen_txt, retry_time={attempt}, {str(ex)}")
             if attempt < max_retries:
                 continue
-            if 'model' in locals():
-                del model
-                torch.cuda.empty_cache()
+            dispose(model)
             logger.exception(f"all_retries_exhausted_task_gen_txt_failed, {paragraph_prompt}")
             raise last_exception
     return None
+
+def dispose(model):
+    if 'model' in locals():
+        del model
+        import torch
+        torch.cuda.empty_cache()

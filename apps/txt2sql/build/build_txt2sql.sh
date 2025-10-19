@@ -7,8 +7,8 @@ if [ ! -d "${WHL_PY_DIR}" ]; then
 fi
 cd ${WHL_PY_DIR}
 echo "current_dir:`pwd`"
-pip download gunicorn flask flask_cors \
-    concurrent-log-handler langchain_openai langchain_ollama langchain_core langchain_community \
+pip download gunicorn flask \
+    concurrent-log-handler langchain_openai langchain_core langchain_community \
     openai pandas tabulate pymysql oracledb dmPython sounddevice pydub pycryptodome wheel sympy markdown
 cd ..
 echo "current_dir:`pwd`"

@@ -5,12 +5,12 @@ ARG PROXY=""
 #ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn"
 # 确保 当前目录下的 ./whl_py_dir 存在，且whl离线包与当前python的版本完全一致, 离线安装时使用
 COPY ./whl_py_dir /tmp/whl
-RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn \
-    langgraph langchain_ollama langchain_openai langchain_community \
-    langchain langchain_huggingface langchain_text_splitters langchain_huggingface langchain_unstructured unstructured \
-    unstructured[pdf] langchain_core flask flask_cors pydantic python-docx python-pptx pillow nltk sentence-transformers torch \
-    concurrent_log_handler pydub pycryptodome wheel qrcode[pil] tabulate chromadb \
-    pypdf2 lxml websockets markdown $PROXY && \
+RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn flask \
+    langchain_openai langchain_community \
+    langchain langchain_text_splitters langchain_unstructured unstructured \
+    unstructured[pdf] langchain_core pydantic python-docx python-pptx pillow \
+    concurrent_log_handler pydub pycryptodome wheel tabulate chromadb \
+    lxml websockets markdown $PROXY && \
     rm -rf /tmp/whl && \
     rm -rf ~/.cache/pip
 

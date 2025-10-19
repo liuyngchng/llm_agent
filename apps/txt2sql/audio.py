@@ -4,7 +4,7 @@
 
 """
 apt-get install ffmpeg
-pip install pydub sounddevice
+pip install pydub sounddevice for local test
 """
 import io
 import os
