@@ -12,24 +12,32 @@ import re
 import sqlite3
 import logging.config
 import time
+from decimal import Decimal
+from typing import Any
+
+import pandas as pd
 
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 import base64
 import functools
 
+from common.my_enums import DataType
+
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-config_db = "cfg.db"
 user_sample_data_db = "user_info.db"
 AI_GEN_TAG="[_AI生成_]"
+
+CFG_DB_FILE = "cfg.db"
+CFG_DB_URI=f"sqlite:///{CFG_DB_FILE}"
 
 DORIS_HTTP_REQ_NOT_200_ERR = "http_request_to_doris_return_status_not_200_exception"
 
 
 def auth_user(user:str, t: str, cfg: dict) -> dict:
     auth_result ={"pass": False, "uid": ""}
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         sql = f"select id, role from user where name='{user}' and t = '{t}' limit 1"
         check_info = query_sqlite(my_conn, sql)
         if check_info:
@@ -46,7 +54,7 @@ def auth_user(user:str, t: str, cfg: dict) -> dict:
 
 def get_user_info_by_uid(uid: int)-> dict:
     user_info = {}
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             sql = f"select id, name, role, area from user where id={uid} limit 1"
             check_info = query_sqlite(my_conn, sql)
@@ -66,7 +74,7 @@ def get_user_info_by_uid(uid: int)-> dict:
 def get_uid_by_user(usr_name:str) ->str:
     check_sql = f"select id from user where name='{usr_name}' limit 1"
     uid = ''
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         check_info = query_sqlite(my_conn, check_sql)
         logger.debug(f"check_info {check_info}")
         if check_info:
@@ -82,7 +90,7 @@ def get_uid_by_user(usr_name:str) ->str:
 
 def get_user_name_by_uid(uid: int)-> str | None:
     user = None
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             sql = f"select name from user where id={uid} limit 1"
             check_info = query_sqlite(my_conn, sql)
@@ -95,7 +103,7 @@ def get_user_name_by_uid(uid: int)-> str | None:
 
 def get_user_role_by_uid(uid:int)-> str | None:
     role = None
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             sql = f"select role from user where id={uid} limit 1"
             check_info = query_sqlite(my_conn, sql)
@@ -108,7 +116,7 @@ def get_user_role_by_uid(uid:int)-> str | None:
 
 def get_user_hack_info(uid: int, cfg: dict)-> str | None:
     user_hack_info = None
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             sql = f"select hack_info from user where id={uid} limit 1"
             check_info = query_sqlite(my_conn, sql)
@@ -135,7 +143,7 @@ def save_user_hack_info(uid: int, user_hack_info: str, cfg: dict) -> bool:
     logger.info("start_encrypt_user_hack_info")
     user_hack_info1 = encrypt(user_hack_info, cfg['sys']['cypher_key'])
     exec_sql = f"update user set hack_info ='{user_hack_info1}' where id = {uid}"
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
             result = insert_del_sqlite(my_conn, exec_sql)
@@ -149,7 +157,7 @@ def save_user_hack_info(uid: int, user_hack_info: str, cfg: dict) -> bool:
 
 def get_ds_cfg_by_uid(uid:int, cfg: dict) -> dict:
     config = {}
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         check_sql = (
             f"select uid, db_type, db_name, db_host, db_port, "
             f"db_usr, db_psw, tables, add_chart, is_strict, llm_ctx from db_config where uid={uid} limit 1")
@@ -233,7 +241,7 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
                         '{llm_ctx}'
                     )
                     ''')
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             exec_sql = exec_sql.replace('\n', ' ')
             exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
@@ -252,7 +260,7 @@ def save_usr(user_name: str, token: str) -> bool:
     """
     save_result = False
     exec_sql = f"INSERT INTO user (name, t) values ('{user_name}','{token}' )"
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             exec_sql = exec_sql.replace('\n', ' ')
             exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
@@ -276,7 +284,7 @@ def set_db_cache(key: str, value: str, timestamp: str, cypher_key: str) -> bool:
         raise Exception("cypher_key_null_err")
     encrypt_value = encrypt(value, cypher_key)
     exec_sql = f"INSERT INTO cache_info (key, value, timestamp) values ('{key}','{encrypt_value}', '{timestamp}')"
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             exec_sql = exec_sql.replace('\n', ' ')
             exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
@@ -294,7 +302,7 @@ def del_db_cache(key: str) -> bool:
     """
     del_result = False
     exec_sql = f"delete from cache_info where key='{key}' limit 1;"
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             exec_sql = exec_sql.replace('\n', ' ')
             exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
@@ -313,7 +321,7 @@ def get_db_cache(key:str, cypher_key: str)->tuple | None:
     """
     if not cypher_key:
         raise Exception("cypher_key_null_err")
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             sql = f"select value ,timestamp from cache_info where key='{key}' limit 1"
             cache_info = query_sqlite(my_conn, sql)
@@ -338,7 +346,7 @@ def delete_data_source_config(uid: int, cfg: dict) -> bool:
     else:
         logger.error(f"no_db_source_cfg_found_for_uid_{uid}")
         return False
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             result = insert_del_sqlite(my_conn, delete_sql)
             logger.info(f"exec_sql_success {delete_sql}")
@@ -384,7 +392,7 @@ def decrypt(dt: str, key: str) -> str:
 
 def get_const(key:str, app: str)->str | None:
     value = None
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             sql = f"select value from const where key='{key}' and app='{app}' limit 1"
             check_info = query_sqlite(my_conn, sql)
@@ -397,7 +405,7 @@ def get_const(key:str, app: str)->str | None:
 
 def get_consts(app: str)-> dict:
     const = {}
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         sql = f"select key, value from const where app='{app}' limit 100"
         try:
             check_info = query_sqlite(my_conn, sql)
@@ -405,12 +413,12 @@ def get_consts(app: str)-> dict:
             for key, value in value_dt:
                 const[key] = value
         except Exception as e:
-            logger.exception(f"err_occurred_for_db {config_db}, sql {sql}")
+            logger.exception(f"err_occurred_for_db {CFG_DB_FILE}, sql {sql}")
     return const
 
 def get_user_list():
     user_list = []
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         sql = f"select id, name from user limit 100"
         try:
             check_info = query_sqlite(my_conn, sql)
@@ -418,11 +426,11 @@ def get_user_list():
             for id, name in value_dt:
                 user_list.append({"id": id, "name": name})
         except Exception as e:
-            logger.exception(f"err_occurred_for_db {config_db}, sql {sql}")
+            logger.exception(f"err_occurred_for_db {CFG_DB_FILE}, sql {sql}")
     return user_list
 
 def get_hack_info(uid: int)-> dict:
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         sql = f"select hack_q_dict from hack_list where uid = {uid} limit 1"
         try:
             check_info = query_sqlite(my_conn, sql)
@@ -430,7 +438,7 @@ def get_hack_info(uid: int)-> dict:
             if hack_q_list:
                 return json.loads(hack_q_list[0][0])
         except Exception as e:
-            logger.exception(f"err_occur_in_get_hack_q_dict_for_db {config_db}, sql {sql}")
+            logger.exception(f"err_occur_in_get_hack_q_dict_for_db {CFG_DB_FILE}, sql {sql}")
     return {}
 
 def get_usr_prompt_template(template_name: str,  sys_cfg: dict, uid=0)-> str:
@@ -444,7 +452,7 @@ def get_usr_prompt_template(template_name: str,  sys_cfg: dict, uid=0)-> str:
     if not template_name or template_name == '':
         logger.warning(f"template_name_is_null_direct_return, {template_name}")
         return ""
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         sql = f"select value from prompt_template where name = '{template_name}' and  uid = {uid} limit 1"
         try:
             prompt_info = query_sqlite(my_conn, sql)
@@ -463,7 +471,7 @@ def get_usr_prompt_template(template_name: str,  sys_cfg: dict, uid=0)-> str:
             if prompt:
                 return prompt
         except Exception as e:
-            logger.exception(f"err_occur_in_get_usr_prompt_template_for_db {config_db}, sql {sql}")
+            logger.exception(f"err_occur_in_get_usr_prompt_template_for_db {CFG_DB_FILE}, sql {sql}")
     raise RuntimeError(f"no_prompt_template_config_err_for_key {template_name}")
 
 def save_usr_prompt_template(uid: int, template_name: str, template_value: str):
@@ -479,7 +487,7 @@ def save_usr_prompt_template(uid: int, template_name: str, template_value: str):
     if uid == 0:
         logger.error("illegal_uid_to_set_template_err")
         return save_result
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         sql = f"select value from prompt_template where name = '{template_name}' and  uid = {uid} limit 1"
         try:
             prompt_info = query_sqlite(my_conn, sql)
@@ -501,7 +509,7 @@ def save_usr_prompt_template(uid: int, template_name: str, template_value: str):
                 logger.info(f"exec_sql_fail {exec_sql}")
                 save_result = False
         except Exception as e:
-            logger.exception(f"err_occur_in_save_usr_prompt_template_for_db {config_db}, sql {sql}")
+            logger.exception(f"err_occur_in_save_usr_prompt_template_for_db {CFG_DB_FILE}, sql {sql}")
         return save_result
 
 def del_usr_prompt_template(uid: int):
@@ -512,7 +520,7 @@ def del_usr_prompt_template(uid: int):
     if not uid or uid == 0:
         logger.error("illegal_uid_to_del_usr_template_err")
         return save_result
-    with sqlite3.connect(config_db) as my_conn:
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
         exec_sql = f"delete from prompt_template where uid = {uid} and name in ('refine_q_msg', 'sql_gen_msg')"
         try:
             result = insert_del_sqlite(my_conn, exec_sql)
@@ -523,7 +531,7 @@ def del_usr_prompt_template(uid: int):
                 logger.info(f"exec_sql_fail {exec_sql}")
                 save_result = False
         except Exception as e:
-            logger.exception(f"err_occur_in_del_usr_prompt_template_for_db {config_db}, sql {exec_sql}")
+            logger.exception(f"err_occur_in_del_usr_prompt_template_for_db {CFG_DB_FILE}, sql {exec_sql}")
         return save_result
 
 @functools.lru_cache(maxsize=128)
@@ -575,7 +583,7 @@ def get_user_sample_data(sql: str)-> dict:
             for key, value in value_dt:
                 const[key] = value
         except Exception as e:
-            logger.exception(f"err_occurred_for_db {config_db}, sql {sql}")
+            logger.exception(f"err_occurred_for_db {CFG_DB_FILE}, sql {sql}")
     return const
 
 
@@ -587,6 +595,73 @@ def get_user_sample_data_rd_cfg_dict(cfg_dict: dict) -> dict:
     user_sample_data_rd_dict["api"] = cfg_dict["api"]
     return user_sample_data_rd_dict
 
+def sqlite_output(db_uri: str, sql: str, data_format: str) -> str | Any:
+    """
+    cfg["db_uri"] = "sqlite:///test1.db"
+    """
+
+    db_file = db_uri.split('/')[-1]
+    with sqlite3.connect(db_file) as my_conn:
+        logger.debug(f"connect_to_db_file {db_file}")
+        my_dt = output_data(my_conn, sql, data_format)
+    if DataType.JSON.value == data_format:
+        try:
+            my_dt = json.loads(my_dt)
+        except Exception as ex:
+            logger.error(f"json_parse_error_for_dt: {my_dt}, {ex}")
+    logger.debug(f"sqlite_output, data_format {data_format}, my_dt, {my_dt}")
+    return my_dt
+
+
+def output_data(db_con, sql:str, data_format:str) -> str:
+    data = query_sqlite(db_con, sql)
+    logger.debug(f"data {data} for {db_con}")
+    data_t = data.get('data', None)
+    if not data_t:
+        logger.error(f"table_is_not_exist_err, {sql}")
+        return ""
+    df = pd.DataFrame(data_t, columns=data['columns'])
+    dt_fmt = data_format.lower()
+
+    if DataType.HTML.value in dt_fmt:
+        dt = get_pretty_html(df)
+    elif DataType.MARKDOWN.value in dt_fmt:
+        dt = get_md_dt_from_data_frame(df)
+
+    elif DataType.JSON.value in dt_fmt:
+        dt = df.to_json(force_ascii=False, orient='records')
+    else:
+        info = f"error data format {data_format}"
+        logger.error(info)
+        raise info
+    dt1 = dt.replace('\n', ' ')
+    logger.debug(f"output_data_dt:{dt1}")
+    return dt
+
+def get_md_dt_from_data_frame(df):
+    if df.empty:
+        return ''
+    return df.map(lambda x: f"{x:.0f}" if isinstance(x, (Decimal, float)) else x,
+        na_action='ignore').to_markdown(index=False)
+
+def get_pretty_html(df):
+    """
+    :param df: a DataFrame
+    output a pretty html content
+    """
+    return df.to_html(
+        index=False,
+        border=0
+    ).replace(
+        '<table',
+        '<table style="border:1px solid #ddd; border-collapse:collapse; width:auto; table-layout:auto"'
+    ).replace(
+        '<th>',
+        '<th style="background:#f8f9fa; padding:8px; border-bottom:2px solid #ddd; text-align:left; white-space:nowrap">'
+    ).replace(
+        '<td>',
+        '<td style="padding:6px; border-bottom:1px solid #eee; white-space:nowrap">'
+    )
 
 def query_sqlite(db_con, query: str) -> dict:
     try:
@@ -612,6 +687,7 @@ def insert_del_sqlite(db_con, sql: str) -> dict:
         db_con.rollback()
         logger.error(f"save_data_err: {e}, sql {sql}")
         return {"result":False, "error": "save data failed"}
+
 
 if __name__ == '__main__':
     """

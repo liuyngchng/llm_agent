@@ -17,15 +17,13 @@ for MySQL, pip install pymysql
 import datetime
 import re
 from decimal import Decimal
-
-import pymysql
 import sqlite3
 import json
 import pandas as pd
 import logging.config
+import pymysql
 import oracledb
 import dmPython
-
 from common.my_enums import DataType, DBType
 from urllib.parse import urlparse, unquote, urlencode, quote
 from common.sys_init import init_yml_cfg
@@ -35,8 +33,7 @@ logger = logging.getLogger(__name__)
 
 DB_CONN_TIMEOUT=20      # 连接超时(秒)
 DB_RW_TIMEOUT=50       # 数据读写超时(秒)
-CFG_DB_FILE = "cfg.db"
-CFG_DB_URI=f"sqlite:///{CFG_DB_FILE}"
+
 
 pd.set_option('display.float_format', '{:.0f}'.format)  # 设置pandas显示整数
 class DbUtl:
@@ -139,18 +136,7 @@ class DbUtl:
             logger.exception(f"sqlite_query_err")
             return {"error": str(e)}
 
-    @staticmethod
-    def sqlite_insert_delete_tool(db_con, sql: str) -> dict:
-        # ///TODO 防止sql注入
-        try:
-            cursor = db_con.cursor()
-            cursor.execute(sql)
-            db_con.commit()
-            return {"result":True, "affected_rows": cursor.rowcount}
-        except Exception as e:
-            db_con.rollback()
-            logger.error(f"insert_delete_err: {e}, sql {sql}")
-            return {"result":False, "error": "save data failed"}
+
 
     @staticmethod
     def output_data(db_con, sql:str, data_format:str) -> str:
