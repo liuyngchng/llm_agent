@@ -60,12 +60,20 @@ ubuntu_py               24.04     449ac32f606b   4 minutes ago   1.28GB
 cd llm_agent
 # 进入 txt2sql 构建目录
 cd apps/txt2sql/build
-# 创建 python 依赖包的环境
-mkdir -p whl_py_dir
 # 开始构建，需连接互联网，保持网络畅通
 ./build_txt2sql.sh
 ```
-# 6. 启动
+
+### 5.2 docx
+```shell
+# 进入项目更目录
+cd llm_agent
+# 进入 txt2sql 构建目录
+cd apps/docx/build
+# 开始构建，需连接互联网，保持网络畅通
+./build_docx.sh
+```
+## 6. 部署
 在服务器的根目录下创建文件夹 /data, 并给予写文件夹的权限  
 下面以启动 txt2sql 应用为例, 启动命令如下：
 ```shell
@@ -75,5 +83,11 @@ cd /data
 tar -xvf llm_agent.tar
 cd llm_agent
 ./apps/txt2sql/deploy/deploy_txt2sql.sh
+```
+
+## 7. test
+浏览器中打开
+```shell 
+https://localhost:19001
 ```
 
