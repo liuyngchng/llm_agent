@@ -3,12 +3,10 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 import json
 
-import torch
 import logging.config
 import time
 import httpx
 import logging.config
-
 from common import cfg_util
 
 from common.sys_init import init_yml_cfg
@@ -81,8 +79,7 @@ def classify_txt(labels: list, txt: str, cfg: dict) -> str | None:
             logger.info(f"submit_arg_dict_to_llm, [{arg_dict}], llm[{cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}]")
             response = chain.invoke(arg_dict)
             output_txt = extract_md_content(rmv_think_block(response.content), "json")
-            del model
-            torch.cuda.empty_cache()
+            dispose(model)
             return output_txt
 
         except Exception as ex:
@@ -90,13 +87,15 @@ def classify_txt(labels: list, txt: str, cfg: dict) -> str | None:
             logger.error(f"retry_failed_in_classify_txt, retry_time={attempt}, {str(ex)}")
             if attempt < max_retries:
                 continue
-            if 'model' in locals():
-                del model
-                torch.cuda.empty_cache()
+            dispose(model)
             logger.error(f"all_retries_exhausted_task_classify_txt_failed, {labels}, {txt}")
             raise last_exception
 
-
+def dispose(model):
+    if 'model' in locals():
+        del model
+        import torch
+        torch.cuda.empty_cache()
 
 def classify_msg(labels: list, msg: str, cfg: dict) -> dict:
     """
@@ -125,8 +124,7 @@ def classify_msg(labels: list, msg: str, cfg: dict) -> dict:
     arg_dict = {"msg": msg, "classify_label": classify_label}
     logger.info(f"submit_arg_dict[{arg_dict}] to llm {cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}")
     response = chain.invoke(arg_dict)
-    del model
-    torch.cuda.empty_cache()
+    dispose(model)
     return json.loads(
         extract_md_content(
             rmv_think_block(response.content),
@@ -151,8 +149,7 @@ def fill_dict(user_info: str, user_dict: dict, cfg: dict) -> dict:
     }
     logger.info(f"submit_arg_dict_to_llm,[{arg_dict}], {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     response = chain.invoke(arg_dict)
-    del model
-    torch.cuda.empty_cache()
+    dispose(model)
     fill_result = user_dict
     try:
         fill_result =  json.loads(rmv_think_block(response.content))
@@ -216,8 +213,7 @@ def update_session_info(user_info: str, append_info: str, cfg: dict) -> str:
     arg_dict = {"context": user_info, "append_info": append_info}
     logger.info(f"submit_arg_dict_to_llm {arg_dict}, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     response = chain.invoke(arg_dict)
-    del model
-    torch.cuda.empty_cache()
+    dispose(model)
     fill_result = user_info
     try:
         fill_result = rmv_think_block(response.content)
@@ -238,8 +234,7 @@ def extract_session_info(chat_log: str, cfg: dict) -> str:
     arg_dict = {"context": chat_log}
     logger.info(f"submit_arg_dict_to_llm[{arg_dict}], {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     response = chain.invoke(arg_dict)
-    del model
-    torch.cuda.empty_cache()
+    dispose(model)
     final_result = chat_log
     try:
         final_result = rmv_think_block(response.content)
@@ -259,8 +254,7 @@ def extract_lpg_order_info(chat_log: str, cfg: dict) -> str:
     chain = prompt | model
     logger.info(f"submit chat_log[{chat_log}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     response = chain.invoke({"context": chat_log})
-    del model
-    torch.cuda.empty_cache()
+    dispose(model)
     final_result = chat_log
     try:
         final_result = rmv_think_block(response.content)
@@ -280,8 +274,7 @@ def get_abs_of_chat(txt: list, cfg: dict) -> str:
     chain = prompt | model
     logger.info(f"submit user_info[{txt}] to llm {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
     response = chain.invoke({"context": txt,})
-    del model
-    torch.cuda.empty_cache()
+    dispose(model)
     abstract = ""
     try:
         abstract = rmv_think_block(response.content)

@@ -27,9 +27,6 @@ from common.my_enums import DBType, DataType, YieldType, AppType
 
 from common.db_util import DbUtl
 from common.sys_init import init_yml_cfg
-from common.vdb_util import load_vdb, search_txt, vector_file
-
-
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -188,15 +185,18 @@ class SqlYield(DbUtl):
             task_id = int(time.time())
             file = f"./hack/{uid}_q_desc.txt"
             logger.info(f"vector_file({file}, {hack_vdb_file})")
-            # todo debug, task_id need to be replase with file_id
+            # todo debug, task_id need to be replaced with file_id
+            from common.vdb_util import vector_file
             vector_file(task_id, file, hack_vdb_file, self.cfg['api'],
                         80, 10, 10, ["\n"])
+        from common.vdb_util import load_vdb
         hack_vdb = load_vdb(hack_vdb_file, self.cfg['api'])
         if not hack_vdb:
             raise RuntimeError(f"load_vdb {hack_vdb_file} failed, hack_vdb_collection_is_null")
 
     def search_vdb(self, user_q: str, uid: int) -> str:
         hack_vdb_file = f"./vdb/{uid}_q_hack_desc_vdb"
+        from common.vdb_util import search_txt
         result = search_txt(user_q, hack_vdb_file, 0.5, self.cfg['api'], 1)
         logger.info(f"search_result: {result}")
         return result
