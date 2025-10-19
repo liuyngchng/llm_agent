@@ -1,0 +1,10 @@
+
+sys:
+    name: your app name
+api:
+    llm_api_uri: https://api.deepseek.com/v1
+    llm_api_key: your api key , like sk-****
+    llm_model_name: your llm model name, like deepseek-chat
+    # if you have no proxy to request the llm api , the key 'proxy' following can be deleted
+    proxy: {"http": "http://proxy.your.company.domain:8080", "https": "http://proxy.your.company.domain:8080"}
+

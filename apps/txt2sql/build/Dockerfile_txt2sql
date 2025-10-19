@@ -1,3 +1,5 @@
+# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+
 FROM ubuntu_py:24.04 as builder
 
 WORKDIR /opt

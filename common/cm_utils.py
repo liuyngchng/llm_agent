@@ -227,3 +227,78 @@ def get_table_name_from_sql(sql:str) -> str | None:
         if match:
             return match.group(1)
     return None
+
+def post_with_retry(uri: str, headers: dict, data: dict, proxies: str | None, max_retries: int = 3) -> dict:
+    """
+    带重试机制的LLM调用
+    """
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"第 {attempt + 1} 次 post {uri}, proxies: {proxies}, data: {data}")
+            response = requests.post(uri, headers=headers, json=data, verify=False, proxies=proxies, timeout=30)
+            logger.info(f"llm_response_status {response.status_code}")
+
+            if response.status_code == 200:
+                logger.debug(f"post_response {json.dumps(response.json())}")
+                return response.json()
+            else:
+                logger.warning(f"request API 返回非200状态码: {response.status_code}, {response.json()}")
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)  # 指数退避
+
+        except requests.exceptions.Timeout:
+            logger.warning(f"request_API_timeout，retry {attempt + 1}/{max_retries}")
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)  # 指数退避
+        except Exception as e:
+            logger.warning(f"request_API_fail: {str(e)}，retry {attempt + 1}/{max_retries}")
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)  # 指数退避
+
+    # 所有重试都失败
+    raise RuntimeError(f"LLM API 调用失败，已重试 {max_retries} 次")
+
+def get_with_retry(uri: str, headers: dict, params: dict, proxies: str | None, max_retries: int = 3) -> dict:
+    """
+    带重试机制的GET请求
+    """
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"第 {attempt + 1} 次尝试调用GET API {uri}, proxies: {proxies}, params: {params}")
+            response = requests.get(uri, headers=headers, params=params, verify=False, proxies=proxies, timeout=30)
+            logger.info(f"get_response_status {response.status_code}")
+
+            if response.status_code == 200:
+                logger.debug(f"get_response {json.dumps(response.json(), ensure_ascii=False)}")
+                return response.json()
+            else:
+                logger.warning(f"GET API 返回非200状态码: {response.status_code}")
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)
+
+        except requests.exceptions.Timeout:
+            logger.warning(f"GET API 调用超时，尝试 {attempt + 1}/{max_retries}")
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)
+        except Exception as e:
+            logger.warning(f"GET API 调用失败: {str(e)}，尝试 {attempt + 1}/{max_retries}")
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)
+
+    raise RuntimeError(f"GET API 调用失败，已重试 {max_retries} 次")
+
+def build_curl_cmd(api, data, headers, proxies: dict | None):
+    header_str = ""
+    for k, v in headers.items():
+        header_str += f' -H "{k}: {v}" '
+
+    if proxies:
+        curl_proxy = f"--proxy {proxies.get('http', proxies.get('https', None))}"
+    else:
+        curl_proxy = "--noproxy '*'"
+    if 'https' in api:
+        https_option = '-k --tlsv1'
+    else:
+        https_option = ''
+    curl_log = f"curl -s {curl_proxy} -w'\\n' {https_option} -X POST {header_str} -d '{json.dumps(data, ensure_ascii=False)}' '{api}' | jq"
+    return curl_log

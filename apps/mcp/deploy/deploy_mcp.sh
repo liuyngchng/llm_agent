@@ -1,6 +1,6 @@
 #!/bin/bash
-
-APP='txt2sql'
+# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+APP='mcp'
 CONTAINER='http_'${APP}
 APP_DIR="apps/txt2sql"
 # 检查当前目录下是否存在目录 ${APP_DIR}
@@ -18,14 +18,17 @@ docker stop ${CONTAINER}
 echo "正在删除 ${CONTAINER} 容器"
 docker rm ${CONTAINER}
 echo "正在创建 ${CONTAINER} 容器"
-#docker run -dit --name ${CONTAINER} --network host --rm \
+docker stop ${CONTAINER}
+docker rm ${CONTAINER}
+#docker run -dit --name ${app} --network host --rm \
 docker run -dit --name ${CONTAINER}  \
   --security-opt seccomp=unconfined \
   -v /data/llm_agent:/opt/app \
-  -v /data/dm8_client:/opt/dm8_client \
-  -p 19001:19000 \
+  -p 19005:19000 \
+  -p 19006:19001 \
   -e APP_NAME=${APP} \
-  llm_txt2sql:1.1
+  llm_mcp:1.0
+
 echo "容器 ${CONTAINER} 已启动"
 docker ps -a  | grep ${CONTAINER} --color=always
 echo "部署完成"
