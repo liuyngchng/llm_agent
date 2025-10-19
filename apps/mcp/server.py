@@ -61,15 +61,18 @@ def add_your_tools():
 
 def start_https_server():
     starlette_app = app.streamable_http_app()
-    current_dir  = os.path.dirname(__file__)
-    logger.info(f"current_dir {current_dir}")
+    current_dir = os.path.dirname(__file__)
+    cert_dir = os.path.join(os.path.dirname(current_dir), '../common', 'cert')
+    key_file = os.path.join(cert_dir, 'srv.key')
+    cert_file = os.path.join(cert_dir, 'srv.crt')
+    logger.info(f"key_file, {key_file}, cert_file, {cert_file}")
     import uvicorn
     uvicorn.run(
         starlette_app,
         host="0.0.0.0",
         port=19001,
-        ssl_keyfile="./common/cert/srv.key",
-        ssl_certfile="./common/cert/srv.crt",
+        ssl_keyfile=key_file,
+        ssl_certfile=cert_file,
         log_level="info"
     )
 
