@@ -28,10 +28,8 @@ vi ./apps/txt2sql/cfg.yml
 cp ./apps/txt2sql/cfg.yml ./
 cp ./apps/txt2sql/logging.conf ./
 
-# 在项目根目录下创建 SQLite 配置数据库 cfg.db，
-# 相关SQL 详见 ./apps/txt2sql/db_schema/*.sql
+# 在项目根目录下创建 SQLite 配置数据库 cfg.db，执行相关SQL  ./common/cfg_db_schema/*.sql 创建系统配置数据库
 # SqliteBrowser 工具详见 (https://sqlitebrowser.org/dl/) 
-create table xxxxxx
 # 启动
 PYTHONPATH=./:${PYTHONPATH}  ./apps/txt2sql/http_txt2sql.py
 
@@ -41,6 +39,5 @@ PYTHONPATH=./:${PYTHONPATH}  ./apps/txt2sql/http_txt2sql.py
 ```sh
 #health check for your LLM
 http://127.0.0.1:19000
-}'
 ```
 
