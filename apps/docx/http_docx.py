@@ -15,12 +15,12 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, stream_with_context, Response, render_template)
 
-import docx_meta_util
-from txt_gen_util import gen_docx_outline_stream
+from apps.docx import docx_meta_util
+from apps.docx.txt_gen_util import gen_docx_outline_stream
+from apps.docx.docx_gen_parallel import DocxGenerator
+from apps.docx.docx_file_cmt_util import get_para_comment_dict
+from apps.docx.docx_file_txt_util import extract_catalogue
 from common import my_enums
-from docx_gen_parallel import DocxGenerator
-from docx_file_cmt_util import get_para_comment_dict
-from docx_file_txt_util import extract_catalogue
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp
 from common.bp_vdb import vdb_bp, VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task

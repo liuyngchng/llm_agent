@@ -12,16 +12,16 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any
 import threading
-
 import psutil
-import docx_meta_util
+
+from apps.docx import docx_meta_util
 from docx import Document
 from docx.shared import RGBColor, Cm
 from common import cfg_util
-from txt_gen_util import gen_txt
-from docx_file_txt_util import get_elapsed_time, get_reference_from_vdb, is_3rd_heading, is_txt_para, \
+from apps.docx.txt_gen_util import gen_txt
+from apps.docx.docx_file_txt_util import get_elapsed_time, get_reference_from_vdb, is_3rd_heading, is_txt_para, \
     refresh_current_heading
-from mermaid_render import MermaidRenderer
+from apps.docx.mermaid_render import MermaidRenderer
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)

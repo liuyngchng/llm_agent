@@ -19,11 +19,10 @@ from docx.text.paragraph import Paragraph
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from common import cfg_util
-import docx_meta_util
+from apps.docx import docx_meta_util
 from common.vdb_util import search_txt
-
 from common.sys_init import init_yml_cfg
-from txt_gen_util import gen_txt
+from apps.docx.txt_gen_util import gen_txt
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)

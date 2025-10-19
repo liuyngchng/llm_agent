@@ -17,10 +17,9 @@ from docx import Document
 from docx.shared import RGBColor, Cm
 
 from common import cfg_util
-
 from common.sys_init import init_yml_cfg
-from txt_gen_util import gen_txt
-from docx_file_txt_util import refresh_current_heading, get_reference_from_vdb, extract_catalogue
+from apps.docx.txt_gen_util import gen_txt
+from apps.docx.docx_file_txt_util import refresh_current_heading, get_reference_from_vdb, extract_catalogue
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
