@@ -1,21 +1,21 @@
-# 1. 应用清单
+1. 应用清单
 
-工程的 apps 目录下各个应用的功能如下所示，各个工程下的程序入口为 app.py。 
+本工程的 apps 目录下各个应用的功能如下所示，各个工程下的程序入口为 app.py。 
 
-通过IDE（Pycharm, VsCode 等）直接启动debug，服务为 HTTP，通过脚本部署的服务为HTTPS。
+通过IDE（Pycharm, VsCode 等）直接启动debug，服务为 HTTP，通过脚本部署的docker 服务为HTTPS。
 
-| No.   | 名称      | 端口 | 描述         |
-|---------| --- |------------|------------|
-| 1 | apps/db_svc | https://127.0.0.1:1/18000/ | 开放平台       |
-| 2 | apps/chat2sql | https://127.0.0.1:19001/ | AI 数据库查询 |
-| 3 | apps/chat | https://127.0.0.1:19002/ | AI 知识库问答   |
-| 4 | apps/docx | https://127.0.0.1:19003/ | AI 文档生成    |
-| 5 | apps/csm | https://127.0.0.1:19004/ | AI 客服      |
-| 6 | apps/mcp_client | https://127.0.0.1:19005/ | MCP client，有Web界面 |
-| 7 | apps/mcp_server | https://127.0.0.1:19006/mcp | MCP server， 提供 MCP tools 查询服务 |
-| 8 | apps/ord_gen |  https://127.0.0.1:19007/ | AI 订单生成    |
-| 9 | apps/llm | https://127.0.0.1:8000/ | 兼容 OpenAI 接口格式的大语言模型服务 |
-| 10 | apps/embedding | https://127.0.0.1:17000/ | 兼容 OpenAI 接口格式的文本嵌入模型服务 |
+| No.   | 名称      | 服务类型 | 端口 | 描述         |
+|---------| --- |------------|------------|------------|
+| 1 | apps/db_svc | HTTP/HTTPS | 18000 | 开放平台，提供与其他平台进行集成的接口 |
+| 2 | apps/chat2sql | HTTP/HTTPS | 19001 | AI 数据库查询，支持MySQL, Oracle, DM8 |
+| 3 | apps/chat | HTTP/HTTPS | 19002 | AI 知识库问答, 提供基于知识库的问答能力 |
+| 4 | apps/docx | HTTP/HTTPS | 19003 | AI 文档生成，支持在线生成 Word docx文档 |
+| 5 | apps/csm | HTTP/HTTPS | 19004 | AI 客服，提供 AI 辅助人工客服的能力 |
+| 6 | apps/mcp_client | HTTP/HTTPS | 19005 | MCP client，通过Web 界面 |
+| 7 | apps/mcp_server | HTTP/HTTPS | 19006 | MCP server， 提供 MCP tools 查询服务 |
+| 8 | apps/ord_gen | HTTP/HTTPS | 19007 | AI 订单生成    |
+| 9 | apps/llm | HTTP/HTTPS | 8000 | 兼容 OpenAI 接口格式的大语言模型服务 |
+| 10 | apps/embedding | HTTP/HTTPS | 17000 | 兼容 OpenAI 接口格式的文本嵌入模型服务 |
 
 # 2. 开发环境配置
 
@@ -240,3 +240,10 @@ curl -s http://127.0.0.1:8000/v1/models | jq
 ```
 
 本地部署的服务，如果模型本身的参数和精度不高，则其智能化水平较低，部分应用的实际效果会大大下降。除测试外，推荐使用在线的大语言模型 API 服务。
+
+# 7. 服务部署
+
+在服务器上部署本工程，详见 
+
+[服务部署说明]: ./deploy_README.md
+
