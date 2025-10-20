@@ -20,7 +20,7 @@ import logging.config
 from pydantic import SecretStr
 
 from common import cfg_util, agt_util
-from apps.txt2sql.doris import Doris
+from apps.chat2db.doris import Doris
 from common.cm_utils import extract_md_content, rmv_think_block, extract_json, get_table_name_from_sql
 from common.my_enums import DBType, DataType, YieldType, AppType
 from common.db_util import DbUtl

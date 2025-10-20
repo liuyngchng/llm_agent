@@ -43,7 +43,7 @@ class AppType(Enum):
     DOCX = "文档生成"
     CSM = "智能客服"
     ORD_GEN = "订单生成"
-    TXT2SQL = "智能问数"
+    CHAT2DB = "智能问数"
     OPEN = "开放平台"
 
     @staticmethod

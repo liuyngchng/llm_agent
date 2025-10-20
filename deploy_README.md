@@ -58,8 +58,8 @@ ubuntu_py               24.04     449ac32f606b   4 minutes ago   1.28GB
 ```shell
 # 进入项目更目录
 cd llm_agent
-# 进入 txt2sql 构建目录
-cd apps/txt2sql/build
+# 进入 chat2db 构建目录
+cd apps/chat2db/build
 # 开始构建，需连接互联网，保持网络畅通
 ./build_txt2sql.sh
 ```
@@ -68,7 +68,7 @@ cd apps/txt2sql/build
 ```shell
 # 进入项目更目录
 cd llm_agent
-# 进入 txt2sql 构建目录
+# 进入 chat2db 构建目录
 cd apps/docx/build
 # 开始构建，需连接互联网，保持网络畅通
 ./build_docx.sh
@@ -82,7 +82,7 @@ cp llm_agent.tar /data
 cd /data
 tar -xvf llm_agent.tar
 cd llm_agent
-./apps/txt2sql/deploy/deploy_txt2sql.sh
+./apps/chat2db/deploy/deploy_txt2sql.sh
 ```
 
 ## 7. test

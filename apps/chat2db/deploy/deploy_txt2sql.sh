@@ -1,5 +1,5 @@
 #!/bin/bash
-APP='txt2sql'
+APP='chat2db'
 CONTAINER='http_'${APP}
 APP_DIR="apps/${APP}"
 # 检查当前目录下是否存在目录 ${APP_DIR}
@@ -24,7 +24,7 @@ docker run -dit --name ${CONTAINER}  \
   -v /data/dm8_client:/opt/dm8_client \
   -p 19001:19000 \
   -e APP_NAME=${APP} \
-  llm_txt2sql:1.1
+  llm_chat2db:1.1
 echo "容器 ${CONTAINER} 已启动"
 docker ps -a  | grep ${CONTAINER} --color=always
 echo "部署完成"

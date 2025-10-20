@@ -1,5 +1,5 @@
 #!/bin/bash
-APP='txt2sql'
+APP='chat2db'
 CONTAINER="${APP}_app"
 APP_DIR="apps/${APP}"
 docker stop ${CONTAINER}
@@ -10,7 +10,7 @@ docker run -dit --name ${CONTAINER}  \
   -v /data/llm_agent:/opt/app \
   -p 18000:19000 \
   -e APP_NAME=${app} \
-  llm_txt2sql:1.1
+  llm_chat2db:1.1
 
 docker ps -a  | grep ${CONTAINER} --color=always
 docker logs -f ${CONTAINER}

@@ -19,6 +19,6 @@ pip download gunicorn flask \
     openai pandas tabulate pymysql oracledb dmPython sounddevice pydub pycryptodome wheel sympy markdown
 cd ..
 echo "current_dir:$(pwd)"
-docker build --rm -f ./Dockerfile_txt2sql ./ -t llm_txt2sql:1.1
+docker build --rm -f ./Dockerfile_txt2sql ./ -t llm_chat2db:1.1
 docker images | grep '<none>' | awk -F ' ' '{print $3}' | xargs docker rmi -f || true
 docker images

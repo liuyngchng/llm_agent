@@ -16,10 +16,10 @@ import common.cfg_util as cfg_utl
 
 from flask import Flask, render_template, Response, request, jsonify, redirect, url_for, send_from_directory, abort
 
-from apps.txt2sql.audio import transcribe_webm_audio_bytes
+from apps.chat2db.audio import transcribe_webm_audio_bytes
 from common.bp_auth import auth_bp, auth_info, get_client_ip
 from common.my_enums import DataType, DBType, AppType
-from apps.txt2sql.sql_yield import SqlYield
+from apps.chat2db.sql_yield import SqlYield
 from common.sys_init import init_yml_cfg
 from common.cm_utils import get_console_arg1, check_contain_spaces_in_every_line, replace_spaces, validate_user_prompt
 
