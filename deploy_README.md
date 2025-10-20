@@ -1,4 +1,5 @@
-# 系统部署手册
+ <center><h1>系统部署手册</h1></center>
+
 ## 1. 获取源代码
 ```sh
 # 从 github 获取源代码
@@ -9,6 +10,7 @@ git clone https://gitee.com/liuyngchng/gitee_llm_agent.git
 ## 2. 部署环境
 宿主机需要为 Linux 系统， 安装有 docker 运行环境，应用最终打包为 docker 镜像，在服务器上进行部署。  
 宿主机环境为:
+
 ```sh
 Ubuntu 24.04 LTS
 docker: 28.2.2
@@ -18,6 +20,7 @@ virtualenv 20.25.0
 ```
 docker 镜像内部最终的环境如下所示。  
 注意需要保持容器内的 python 版本与宿主机一致，这样下载的python依赖包可以直接复用，可以大大缩短打包时间。
+
 ```sh
 Linux: 6.14.0-33-generic
 python: 3.12.3
@@ -54,7 +57,7 @@ ubuntu_py               24.04     449ac32f606b   4 minutes ago   1.28GB
 
 ## 5. 应用打包
 
-## 5.1 基本事项
+### 5.1 准备事项
 
 ```sh
 # 如果显示无执行权限，执行 
@@ -64,9 +67,7 @@ unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy
 env | grep proxy -i
 ```
 
-
-
-### 5.1 txt2sql
+### 5.1 数据库查询应用(`chat2db`)
 ```shell
 # 进入项目更目录
 cd llm_agent
@@ -76,7 +77,7 @@ cd apps/chat2db/build
 ./build_chat2db.sh
 ```
 
-### 5.2 docx
+### 5.2 文档生成应用(`docx`)
 ```shell
 # 进入项目更目录
 cd llm_agent
@@ -86,9 +87,15 @@ cd apps/docx/build
 ./build_docx.sh
 ```
 ## 6. 部署
-在服务器的根目录下创建文件夹 /data, 并给予写文件夹的权限  
-下面以启动 txt2sql 应用为例, 启动命令如下：
+在服务器的根目录下创建文件夹 /data, 并给予写文件夹的权限。
+
+下面以启动`chat2db` 应用为例, 启动命令如下：
+
 ```shell
+cd /
+# 在文件系统根目录下创建 data文件夹， 
+# 如果在其他位置（例如,/opt 等）创建，则需要修改相应的部署、启动等脚本，只要能够匹配就行。
+sudo mkdir data
 # 将 /data 目录的所有权修改为当前用户，保证当前用户有写权限
 sudo chown $USER:$USER /data
 # 拷贝部署包到指定的目录下
