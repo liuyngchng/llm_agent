@@ -2,7 +2,7 @@
 
 本工程的 apps 目录下各个应用的功能如下所示，各个工程下的程序入口为 app.py。 
 
-通过IDE（Pycharm, VsCode 等）直接启动debug，服务为 HTTP，通过脚本部署的docker 服务为HTTPS。
+通过 `IDE`（`Pycharm`, `VsCode` 等）直接启动 `debug`，服务为 `HTTP`，通过脚本部署的 `docker` 服务为`HTTPS`。
 
 | No.   | 名称      | 服务类型 | 端口 | 描述         |
 |---------| --- |------------|------------|------------|
@@ -19,39 +19,38 @@
 
 # 2. 开发环境配置
 
-本工程以 python代码为主， 下面以 Ubuntu 22.04 LTS 系统为例，对开发相关配置进行说明。
+本工程以 `python` 代码为主， 下面以 `Ubuntu 22.04 LTS` 系统为例，对开发相关配置进行说明。
 
-(1) 安装 git, 并配置 SSH 公钥 至 git 服务器；  
+(1) 安装 `git`, 并配置 `SSH` 公钥 至 `git` 服务器。
 
 ```shell
 # git-lfs 用于下载大的模型文件
 sudo apt install git git-lfs -y
 ```
 
-(2) 安装 python， 版本为 3.12；
+(2) 安装 `python`， 版本为 3.12。
 
 ```shell
 # 系统默认已安装
 python -V
 Python 3.12.3
-
 ```
 
-(3) 安装 `virtualenv`， 用于创建 python 虚拟环境，做到隔离环境。
+(3) 安装 `virtualenv`， 用于创建 `python` 虚拟环境，做到隔离环境。
 
-不同的工程使用不同的 python 库，这样后续比较好维护；  
+通过使用虚拟环境，不同的工程可以使用不同的`python` 版本以及不同的依赖库，这样后续比较好维护，是一种良好的开发习惯。
 
 ```shell
 sudo apt install virtualenv -y
 ```
 
-(4) 安装 python3.12 的 pip；  
+(4) 安装 `python` 3.12 的 pip。
 
 ```shell
 sudo apt install python3-pip -y
 ```
 
-(5)  创建虚拟环境，并进入虚拟环境；
+(5)  创建虚拟环境
 
 ```shell
 cd ~
@@ -94,15 +93,15 @@ cd llm_agent
 pip install -r ./apps/chat2db/requirements.txt
 ```
 
-# 4. 运行代码
+# 4. 运行
 
-以启动 chat2db 这个应用（app）为例。
+以启动 `chat2db` 这个应用（`app`）为例。
 
-**（1）准备日志和`yaml`配置文件**
+**（1）准备日志和 `yaml` 配置文件**
 
-日志配置文件logging.conf 用于配置各个模块的日志级别。cfg.yml 用于程序启动时所需的必备的一些配置。
+日志配置文件 `logging.conf` 用于配置各个模块的日志级别、输出格式等。`cfg.yml` 用于程序启动时所必需的一些配置，例如大语言模型 `API` 等。
 
-首先拷贝日志配置文件和 yaml 配置文件：
+首先拷贝日志配置文件和 `yaml` 配置文件：
 
 ```sh
 cd ~/workspace/llm_agent
@@ -125,18 +124,18 @@ cp ./apps/chat2db/logging.conf ./
 
 `SQLite`配置数据库文件 `cfg.db` 中存储一些在运行时各个应用所需要的一些运行时参数。
 
-构建`SQLite`配置数据库文件 cfg.db。可以通过可视化工具、脚本，也可以直接使用cfg.db.template创建文件 cfg.db 文件。
+构建`SQLite`配置数据库文件 `cfg.db`。可以通过可视化工具、脚本，也可以直接使用`cfg.db.template`创建文件 `cfg.db` 文件。
 
 1） 直接使用模板
 
 ```sh
-# 直接使用模板,确保模板 cfg.db.template 中相关表的结构与对应的sql语句、程序一致 
+# 直接使用模板,确保模板 cfg.db.template 中相关表的结构与对应的 SQL 语句、以及程序代码一致 
 cp ./apps/chat2db/cfg.db.template ./apps/chat2db/cfg.db
 ```
 
 2）通过可视化工具创建
 
-下载安装 sqlite 数据库的图形可视化工具 sqlite browser，在可视化工具中进行cfg.db的文件创建以及各个表表结构的创建， 表结构详见 ./common/cfg_db_schema 下的各个表的表结构 sql。
+下载安装 `SQLite` 数据库的图形可视化工具 `SQLite` browser，在可视化工具中进行 `cfg.db` 的文件创建以及各个表表结构的创建， 表结构详见 ./common/cfg_db_schema 下的各个表的表结构 `SQL`。
 
 ```shell
 sudo apt-get install sqlitebrowser
@@ -170,7 +169,7 @@ http://127.0.0.1:19000
 
 ## 6.1 语音识别
 
-在 chat2db 中使用了语音输入，需要进行部署。这部分功能是辅助增强功能，如果不需要完全可以忽略，直接进行文本框文本输入即可。
+在 `chat2db` 中使用了语音输入，需要进行部署。这部分功能是辅助增强功能，如果不需要完全可以忽略，直接进行文本框文本输入即可。
 
 ### 6.1.1 基础库安装
 
@@ -182,8 +181,6 @@ https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
 # ubuntu
 sudo apt install ffmpeg
 ```
-
-
 
 ### 6.1.2 语音识别模型服务部署
 
@@ -258,7 +255,11 @@ vllm serve ../DeepSeek-R1-Distill-Qwen-7B \
 curl -s http://127.0.0.1:8000/v1/models | jq
 ```
 
-本地部署的服务，如果模型本身的参数和精度不高，则其智能化水平较低，部分应用的实际效果会大大下降。除测试外，推荐使用在线的大语言模型 API 服务。
+本地部署的服务，如果模型本身的参数和精度不高，则其智能化水平较低，部分应用的实际效果会大大下降。除测试外，推荐使用在线的大语言模型 `API` 服务。
+
+## 6.4 DM8
+
+`chat2db` 中如果需要访问`达梦数据库`(DM8) ， 由于访问`达梦数据库`的python 组件 `dmPython` 并非独立的驱动，还需要依赖底层的 C 语言动态库，需要在 `LD_LIBRARY_PATH` 中安装`达梦数据库`的客户端驱动 so 文件。
 
 # 7. 服务部署
 
