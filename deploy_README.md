@@ -61,7 +61,7 @@ cd llm_agent
 # 进入 chat2db 构建目录
 cd apps/chat2db/build
 # 开始构建，需连接互联网，保持网络畅通
-./build_txt2sql.sh
+./build_chat2db.sh
 ```
 
 ### 5.2 docx
@@ -82,7 +82,7 @@ cp llm_agent.tar /data
 cd /data
 tar -xvf llm_agent.tar
 cd llm_agent
-./apps/chat2db/deploy/deploy_txt2sql.sh
+./apps/chat2db/deploy/deploy_chat2db.sh
 ```
 
 ## 7. test
