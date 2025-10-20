@@ -103,8 +103,8 @@ cd llm_agent
 ./apps/chat2db/deploy/deploy_chat2db.sh
 ```
 
-## 7. test
-浏览器中打开
+## 7. 测试
+浏览器中打开如下地址，推荐使用 Chrome。
 ```shell 
 https://localhost:19001
 ```

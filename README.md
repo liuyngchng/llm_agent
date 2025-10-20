@@ -96,40 +96,59 @@ pip install -r ./apps/chat2db/requirements.txt
 
 # 4. 运行代码
 
-以启动 chat2db 这个组件为例，首先拷贝日志配置文件和 yaml 配置文件：
+以启动 chat2db 这个应用（app）为例。
+
+**（1）准备日志和`yaml`配置文件**
+
+日志配置文件logging.conf 用于配置各个模块的日志级别。cfg.yml 用于程序启动时所需的必备的一些配置。
+
+首先拷贝日志配置文件和 yaml 配置文件：
 
 ```sh
 cd ~/workspace/llm_agent
+
+########### IDE debug 所需配置文件 ########
 # 生成自己的配置文件
 cp ./apps/chat2db/cfg.yml.template ./apps/chat2db/cfg.yml
 # 修改相关的配置信息, 数据库连接信息， 大模型API 信息等
 vi ./apps/chat2db/cfg.yml
 # 将组件所需要的配置文件拷贝到当前目录下，IDE启动使用当前应用下的配置文件
+
+########### 程序独立运行所需配置文件 ########
 # 当程序独立运行时，读取的配置文件均需要位于项目根目录下
 cp ./apps/chat2db/cfg.yml ./
 cp ./apps/chat2db/cfg.db ./
 cp ./apps/chat2db/logging.conf ./
 ```
 
-接着，构建sqlite配置数据库, cfg.db，可以自行创建，也可以直接使用cfg.db.template
+**（2）准备 `SQLite` 数据库配置文件**
+
+`SQLite`配置数据库文件 `cfg.db` 中存储一些在运行时各个应用所需要的一些运行时参数。
+
+构建`SQLite`配置数据库文件 cfg.db。可以通过可视化工具、脚本，也可以直接使用cfg.db.template创建文件 cfg.db 文件。
+
+1） 直接使用模板
 
 ```sh
 # 直接使用模板,确保模板 cfg.db.template 中相关表的结构与对应的sql语句、程序一致 
 cp ./apps/chat2db/cfg.db.template ./apps/chat2db/cfg.db
 ```
 
-下载安装 sqlite 数据库的图形可视化工具 sqlite browser
+2）通过可视化工具创建
+
+下载安装 sqlite 数据库的图形可视化工具 sqlite browser，在可视化工具中进行cfg.db的文件创建以及各个表表结构的创建， 表结构详见 ./common/cfg_db_schema 下的各个表的表结构 sql。
 
 ```shell
-# sqlite3 命令行工具用于自动执行脚本
-sudo apt-get install sqlitebrowser sqlite3
+sudo apt-get install sqlitebrowser
 ```
 
-创建配置数据库
+3）通过脚本生成
 
 ```shell
+# SQLite 命令行工具用于自动执行脚本
+sudo apt-get install sqlite3
 cd ~/workspace/llm_agent
-# 执行 sqlite db 初始化脚本,将在当前目录下创建一个sqlite db的数据库文件 cfg.db
+# 执行 SQLite 初始化脚本,将在当前目录下创建一个 SQLite 的数据库文件 cfg.db
 ./common/sh/init_sqlite_cfg_db.sh
 ```
 
