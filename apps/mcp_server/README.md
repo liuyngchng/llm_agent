@@ -1,16 +1,16 @@
 # 1. goal
 
-演示 MCP 的能力。
+提供 一个 MCP serer，为 MCP client 提供可调用工具查询服务。  
+相当于一个可调用工具的注册中心， MCP Client 可以从这里获取可调用的工具列表，以及这些工具的调用方法（工具地址、输入参数、输出参数）
 
-# 2. pip
+# 2. pip 依赖包
 
 ```shell
-pip install mcp mcp[cli] concurrent_log_handler pyyaml gunicorn \
+pip install mcp_server mcp_server[cli] concurrent_log_handler pyyaml gunicorn \
   flask
-
 ```
 
-# 3. MCP sequence
+# 3. MCP 工作时序
 
 执行过程时序如下所示
 

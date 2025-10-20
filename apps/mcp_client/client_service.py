@@ -24,10 +24,6 @@ from common.cm_utils import post_with_retry, build_curl_cmd
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-# 给出多个可用的 MCP 服务器地址
-MCP_SERVER_ADDR_LIST = [
-    "https://localhost:19001/mcp",
-]
 
 # 全局缓存
 TOOLS_CACHE = {
@@ -93,9 +89,9 @@ def get_tool_call_name(unique_name: str) -> str:
     return unique_name.split('_', 1)[1]
 
 
-async def async_get_available_tools(force_refresh: bool = False) -> list:
+async def async_get_available_tools(server_list:list[str], force_refresh: bool = False) -> list:
     """
-    从所有MCP Server获取可用的工具列表，支持缓存
+    从 MCP Server获取可用的工具列表，支持缓存
     """
     global TOOLS_CACHE
 
@@ -109,7 +105,7 @@ async def async_get_available_tools(force_refresh: bool = False) -> list:
     all_tools = []
     tool_server_map = {}
 
-    for index, server_addr in enumerate(MCP_SERVER_ADDR_LIST):
+    for index, server_addr in enumerate(server_list):
         try:
             async with streamablehttp_client(url=server_addr, timeout=30, httpx_client_factory=create_http_client_factory(client_config)) as (read, write, _):
                 async with ClientSession(read, write) as session:
@@ -165,11 +161,11 @@ async def async_call_mcp_tool(server_addr: str, call_tool_name: str, params: dic
         raise RuntimeError(f"call_mcp_tool_exception: {str(e)}") from e
 
 
-async def async_get_tool_server_addr(unique_tool_name):
+async def async_get_tool_server_addr(server_list:list[str], unique_tool_name):
     server_addr = TOOLS_CACHE["tool_server_map"].get(unique_tool_name)
     if not server_addr:
         # 如果缓存中没有，尝试刷新缓存
-        await async_get_available_tools(force_refresh=True)
+        await async_get_available_tools(server_list, force_refresh=True)
         server_addr = TOOLS_CACHE["tool_server_map"].get(unique_tool_name)
         if not server_addr:
             raise ValueError(f"未找到工具 {unique_tool_name} 对应的服务器")
@@ -186,8 +182,10 @@ def auto_call_mcp(question: str, cfg: dict) -> str:
     """
     使用支持工具调用的LLM自动决策并调用MCP工具
     """
+    server_list = cfg['mcp']['server_list']
+    logger.info(f"server_list {server_list}")
     # 获取可用的MCP工具
-    tools = asyncio.run(async_get_available_tools())
+    tools = asyncio.run(async_get_available_tools(server_list))
     if not tools:
         raise ValueError("没有可用的MCP工具")
     # 读取LLM配置
@@ -242,7 +240,7 @@ def auto_call_mcp(question: str, cfg: dict) -> str:
                 return final_response
             elif finish_reason == "tool_calls":
                 # 如果是 tool_calls，提取并执行所有工具调用
-                tool_calls = extract_tool_calls(response_data)
+                tool_calls = extract_tool_calls(server_list, response_data)
                 if tool_calls:
                     # 将工具调用消息添加到历史
                     tool_call_message = response_data["choices"][0]["message"]
@@ -286,7 +284,8 @@ def auto_call_mcp_yield(question: str, cfg: dict) -> Generator[str, None, None]:
     返回生成器，逐步产生结果
     """
     logger.info(f"question: {question}, cfg {cfg}")
-    mcp_tools = asyncio.run(async_get_available_tools())
+    server_list = cfg['mcp']['server_list']
+    mcp_tools = asyncio.run(async_get_available_tools(server_list))
     if not mcp_tools:
         yield json.dumps({
             "type": "status",
@@ -372,7 +371,7 @@ def auto_call_mcp_yield(question: str, cfg: dict) -> Generator[str, None, None]:
                     "iteration": iteration
                 }, ensure_ascii=False)
                 # 如果是 tool_calls，提取并执行所有工具调用
-                tool_calls = extract_tool_calls(response_data)
+                tool_calls = extract_tool_calls(server_list, response_data)
                 if tool_calls:
                     # 将工具调用消息添加到历史
                     tool_call_message = response_data["choices"][0]["message"]
@@ -482,7 +481,7 @@ def build_llm_tools(tools):
     return llm_tools
 
 
-def extract_tool_calls(content: dict) -> list[dict] | None:
+def extract_tool_calls(server_list: list[str], content: dict) -> list[dict] | None:
     """
     提取多个工具调用信息
     现在LLM返回的tool应该都是全局唯一名称
@@ -502,7 +501,7 @@ def extract_tool_calls(content: dict) -> list[dict] | None:
             function = tool_call["function"]
             tool_name = function["name"]
             if tool_name not in TOOLS_CACHE["tool_server_map"]:
-                asyncio.run(async_get_available_tools(force_refresh=True))
+                asyncio.run(async_get_available_tools(server_list, force_refresh=True))
                 if tool_name not in TOOLS_CACHE["tool_server_map"]:
                     logger.error(f"无法找到工具 {tool_name}")
                     continue

@@ -139,7 +139,7 @@ class OrderService:
         :param msg_uid: the uid represent who send the msg to system
         :param sys_cfg: the system config information
         """
-        s_info = extract_lpg_order_info(msg, sys_cfg, True)
+        s_info = extract_lpg_order_info(msg, sys_cfg)
         if not s_info:
             return
         if msg_uid not in self.get_session_info_dict():
@@ -149,12 +149,11 @@ class OrderService:
             self.get_session_info_dict()[msg_uid] = update_session_info(
                 self.get_session_info_dict()[msg_uid],
                 s_info,
-                sys_cfg,
-                True
+                sys_cfg
             )
 
 
-    def process_human_service_msg(self, msg: str, msg_from_uid: str) -> str:
+    def process_human_service_msg(self, msg: str, msg_from_uid: int) -> str:
         """
         for human provided customer service instead of AI
             (1) send human made msg directly to customer
@@ -188,7 +187,7 @@ class OrderService:
         user_dict["客户类型"] = "非居民用户"
 
         if uid in self.get_session_info_dict() and self.get_session_info_dict()[uid]:
-            user_dict = fill_dict(self.get_session_info_dict()[uid], user_dict, sys_cfg, True)
+            user_dict = fill_dict(self.get_session_info_dict()[uid], user_dict, sys_cfg)
             logger.info(f"order_info_auto_filled_in for {classify_label}")
             if not user_dict["配送地址"]:
                 user_dict["配送地址"] = "广西南宁市青秀区民族大道100号右转100米xxxx大院3号楼底商xxxx大排档"
@@ -198,7 +197,7 @@ class OrderService:
             logger.info(f"{uid},current_id_not_in_person_info, {self.get_session_info_dict()}")
         self.refresh_msg_history(self.get_const_dict().get("label11"))
         logger.info(f"answer_for_classify {classify_label}:\nuser_dict: {user_dict}")
-        result = render_template("lpg_order_info.html", **user_dict)
+        result = render_template("order_info.html", **user_dict)
         return result
 
 
@@ -210,7 +209,7 @@ class OrderService:
         """
         user_dict = json.loads(self.get_const_dict().get("label1"))
         if uid in self.get_session_info_dict() and self.get_session_info_dict()[uid]:
-            user_dict = fill_dict(self.get_session_info_dict()[uid], user_dict, sys_cfg, True)
+            user_dict = fill_dict(self.get_session_info_dict()[uid], user_dict, sys_cfg)
             logger.info(f"html_table_with_personal_info_filled_in for {classify_label}")
         else:
             logger.info(f"{uid},current_id_not_in_person_info, {self.get_session_info_dict()}")
@@ -255,7 +254,7 @@ class OrderService:
         """
         msg_boxing = self.get_const_dict().get("label4")
         msg_boxing += f"<br>\n{convert_list_to_html_table(self.get_msg_history_list())}"
-        chat_abs = get_abs_of_chat(self.get_msg_history_list(), sys_cfg, True)
+        chat_abs = get_abs_of_chat(self.get_msg_history_list(), sys_cfg)
         msg_boxing += f"<br>{chat_abs}"
         logger.info(f"msg_boxing_for_classify_snd_to_human_being "
                     f"{self.get_human_being_uid()}, classify {label}:\n{msg_boxing}")

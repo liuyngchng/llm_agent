@@ -4,8 +4,8 @@
 
 """
 for test purpose only
-pip install mcp
-pip install mcp[cli]
+pip install mcp_server
+pip install mcp_server[cli]
 
 FastMCP quickstart example.
 """
@@ -188,6 +188,6 @@ def get_setup_instructions(user_id: str) -> dict:
 
 
 if __name__ == "__main__":
-    logger.info("start mcp server (backend only)")
+    logger.info("start mcp_server server (backend only)")
     # 通信协议：transport = 'stdio', 表示使用标准输入输出，也可替换为 HTTP 或 WebSocket
     app.run(transport='streamable-http')  # 添加 frontend=False

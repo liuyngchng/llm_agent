@@ -1,8 +1,8 @@
 #!/bin/bash
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
-APP='mcp'
-CONTAINER='http_'${APP}
-APP_DIR="apps/txt2sql"
+APP='mcp_server'
+CONTAINER=="${APP}_app"
+APP_DIR="apps/${APP}"
 # 检查当前目录下是否存在目录 ${APP_DIR}
 if [ ! -d ${APP_DIR} ]; then
     echo "错误：当前目录下未找到 ${APP_DIR} 文件夹"
@@ -20,14 +20,14 @@ docker rm ${CONTAINER}
 echo "正在创建 ${CONTAINER} 容器"
 docker stop ${CONTAINER}
 docker rm ${CONTAINER}
-#docker run -dit --name ${app} --network host --rm \
+#docker run -dit --name ${CONTAINER} --network host --rm \
 docker run -dit --name ${CONTAINER}  \
   --security-opt seccomp=unconfined \
   -v /data/llm_agent:/opt/app \
   -p 19005:19000 \
   -p 19006:19001 \
   -e APP_NAME=${APP} \
-  llm_mcp:1.0
+  llm_mcp_server:1.0
 
 echo "容器 ${CONTAINER} 已启动"
 docker ps -a  | grep ${CONTAINER} --color=always

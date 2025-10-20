@@ -8,9 +8,7 @@ import logging.config
 import json
 import time
 import uuid
-import signal
 import functools
-import platform
 
 from flask import Flask, request, Response, stream_with_context
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig

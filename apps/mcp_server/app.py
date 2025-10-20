@@ -3,19 +3,18 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 """
-pip install mcp
-pip install mcp[cli]
+pip install mcp_server
+pip install mcp_server[cli]
 
 FastMCP quickstart example.
 """
-import json
+
 import os
 import logging.config
 from mcp.server.fastmcp import FastMCP
 from mcp.types import Request
 from starlette.responses import JSONResponse
-
-from apps.mcp.tools import db_query
+from apps.mcp_server.tools import db_query
 
 app = FastMCP(port=19001, stateless_http=True, json_response=True, host='0.0.0.0')
 
@@ -30,7 +29,7 @@ async def health_check(request: Request):
 
 @app.custom_route("/tools", methods=["GET"])
 async def get_tools(request: Request):
-    """健康检查端点"""
+    """获取所有tools清单"""
     logger.info(f"trigger_get_tools, {request}")
     tool_list = await app.list_tools()
     serializable_tools = []
@@ -48,7 +47,7 @@ async def get_tools(request: Request):
     return JSONResponse({"tools": serializable_tools})
 
 def add_your_tools():
-    """从MCP注册表中添加工具"""
+    """从MCP服务中添加可调用的工具"""
     for name, tool_info in db_query.MCP_TOOLS.items():
         app.add_tool(
             tool_info['func'],
@@ -81,7 +80,7 @@ def start_http_server():
 
 if __name__ == "__main__":
     add_your_tools()
-    logger.info("start mcp server (backend only)")
+    logger.info("start_mcp_server (backend only)")
     start_https_server()
 
 

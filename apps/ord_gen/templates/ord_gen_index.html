@@ -2,19 +2,17 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta id="lpg_index.html">
+    <meta id="ord_gen_index.html">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="text/javascript" src="/static/purify.min.js"></script>
     <script type="text/javascript" src="/static/marked.min.js"></script>
-    <script type="text/javascript" src="/static/chart.min.3.8.0.js"></script>
     <link rel="stylesheet" href="/static/nl2sql.css">
-    <title>液化气终端智能服务助手</title>
+    <title>客户服务</title>
 </head>
 <body>
     <div class="container">
         <div class="header">
-<!--            <h1>{{ sys_name | default('智能问答系统') }}</h1>-->
-            <h1>液化气终端智能服务助手</h1>
+            <h1>客户服务助手</h1>
         </div>
         <a href="/usr/logout?uid={{uid}}&app_source={{app_source}}" class="system-settings-link" target="_blank">用户登出</a>
         <a href="/cfg/idx?uid={{uid}}&app_source={{app_source}}" class="system-settings-link" target="_blank">系统配置</a>
@@ -43,6 +41,6 @@
     </div>
     <div class="status-indicator" id="status-indicator"></div>
     <div id="voice-effect" class="voice-effect" style="display:none"><!-- 动态添加波形条 --></div>
-    <script type="text/javascript" src="/static/lpg.js?a=1"></script>
+    <script type="text/javascript" src="/static/ord_gen.js?a=1"></script>
 </body>
 </html>

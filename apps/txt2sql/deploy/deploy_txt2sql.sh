@@ -1,8 +1,7 @@
 #!/bin/bash
-
 APP='txt2sql'
 CONTAINER='http_'${APP}
-APP_DIR="apps/txt2sql"
+APP_DIR="apps/${APP}"
 # 检查当前目录下是否存在目录 ${APP_DIR}
 if [ ! -d ${APP_DIR} ]; then
     echo "错误：当前目录下未找到 ${APP_DIR} 文件夹"

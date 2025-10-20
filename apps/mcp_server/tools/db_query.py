@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
-# 如果在 project 根目录下运行，可以这样执行  python -m apps.mcp.tools.db_query
+# 如果在 project 根目录下运行，可以这样执行  python -m apps.mcp_server.tools.db_query
 
 import logging.config
 from pydantic import BaseModel

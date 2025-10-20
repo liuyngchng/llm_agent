@@ -3,7 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 """
-apt-get install ffmpeg
+sudo apt-get install ffmpeg
 pip install pydub sounddevice for local test
 """
 import io

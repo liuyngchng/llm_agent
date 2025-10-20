@@ -20,6 +20,6 @@ pip download gunicorn uvicorn uv \
 cd ..
 echo "current_dir:$(pwd)"
 
-docker build --rm -f ./Dockerfile_mcp ./ -t llm_mcp:1.0
+docker build --rm -f ./Dockerfile_mcp_server ./ -t llm_mcp_server:1.0
 docker images | grep '<none>' | awk -F ' ' '{print $3}' | xargs docker rmi -f
 docker images

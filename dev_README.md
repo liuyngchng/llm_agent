@@ -75,7 +75,7 @@ cd ~/workspace/llm_agent
 ```
 启动 http 服务
 ```shell
-PYTHONPATH=./:${PYTHONPATH}  ./apps/txt2sql/http_txt2sql.py
+PYTHONPATH=./:${PYTHONPATH}  ./apps/txt2sql/app.py
 ```
 # 4. test
 

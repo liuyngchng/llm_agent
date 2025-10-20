@@ -29,7 +29,7 @@ my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
-lpg_svc = OrderService()
+ord_svc = OrderService()
 
 @app.route('/')
 def app_home():
@@ -47,7 +47,7 @@ def get_msg(uid):
         logger.error("illegal_uid")
         return Response("", content_type=content_type, status=502)
     # logger.info(f"rcv_mail for {uid}")
-    answer = lpg_svc.rcv_mail(uid)
+    answer = ord_svc.rcv_mail(uid)
     return Response(answer, content_type=content_type, status=200)
 
 
@@ -61,36 +61,36 @@ def submit_user_question():
     :return:
     """
     msg = request.form.get('msg')
-    uid = request.form.get('uid')
+    uid = int(request.form.get('uid'))
     logger.info(f"rcv_msg: {msg}")
     content_type = 'text/html; charset=utf-8'
     usr_role = get_user_role_by_uid(uid)
     # human being customer service msg should be sent to the customer directly
     # no AI interfere
-    if uid == lpg_svc.get_human_being_uid():
-        answer= lpg_svc.process_human_service_msg(msg, uid)
+    if uid == ord_svc.get_human_being_uid():
+        answer= ord_svc.process_human_service_msg(msg, uid)
         return Response(answer, content_type=content_type, status=200)
     # if not in AI service mode , customer user msg should be sent to human being who provide service directly
     if usr_role == ActorRole.HUMAN_CUSTOMER.value \
-        and lpg_svc.get_ai_service_status_dict().get(uid) == AI_SERVICE_STATUS.ClOSE.value:
-        lpg_svc.snd_mail(lpg_svc.get_human_being_uid(), f"[用户{lpg_svc.get_human_customer_service_target_uid()}]{msg}")
-        logger.info(f"snd_mail to msg_from_uid {lpg_svc.get_human_being_uid()}, {msg}")
+        and ord_svc.get_ai_service_status_dict().get(uid) == AI_SERVICE_STATUS.ClOSE.value:
+        ord_svc.snd_mail(ord_svc.get_human_being_uid(), f"[用户{ord_svc.get_human_customer_service_target_uid()}]{msg}")
+        logger.info(f"snd_mail to msg_from_uid {ord_svc.get_human_being_uid()}, {msg}")
         return Response("", content_type=content_type, status=200)
 
-    lpg_svc.refresh_msg_history(msg, "用户")
+    ord_svc.refresh_msg_history(msg, "用户")
 
-    labels = json.loads(lpg_svc.get_const_dict().get("classify_label"))
+    labels = json.loads(ord_svc.get_const_dict().get("classify_label"))
 
     classify_results = classify_msg(labels, msg, my_cfg)
     logger.info(f"classify_result: {classify_results}")
 
-    lpg_svc.refresh_lpg_order_info(msg, uid, my_cfg)
+    ord_svc.refresh_lpg_order_info(msg, uid, my_cfg)
     answer = ""
     for classify_result in  classify_results:
         if labels[1] in str(classify_result):
             logger.info("a_door_to_door_service_info")
             content_type = 'text/html; charset=utf-8'
-            answer = lpg_svc.process_door_to_door_service(uid, labels[1], my_cfg)
+            answer = ord_svc.process_door_to_door_service(uid, labels[1], my_cfg)
             response = make_response(answer)
             response.headers['Content-Type'] = content_type
             response.status_code = 200
@@ -98,8 +98,8 @@ def submit_user_question():
          # for online pay service
         if labels[0] in str(classify_result):
             logger.info("a_online_pay_info")
-            lpg_svc.process_online_pay_service(answer, labels[0])
-            answer = lpg_svc.auto_fill_lpg_order_info(uid, labels[0], my_cfg)
+            ord_svc.process_online_pay_service(answer, labels[0])
+            answer = ord_svc.auto_fill_lpg_order_info(uid, labels[0], my_cfg)
             response = make_response(answer)
             logger.info(f"answer_for_online_pay_info :\n{answer}")
             response.headers['Content-Type'] = content_type
@@ -108,16 +108,16 @@ def submit_user_question():
         # for information retrieval
         elif labels[2] in str(classify_result):
             logger.info("a_retrieval_data_info")
-            answer = lpg_svc.retrieval_data(answer, labels[3], msg, uid, my_cfg)
+            answer = ord_svc.retrieval_data(answer, labels[3], msg, uid, my_cfg)
         # for redirect to human talk
         elif labels[3] in str(classify_result):
             logger.info("a_talk_to_human_info")
-            answer = lpg_svc.talk_with_human(answer, labels, uid, my_cfg)
+            answer = ord_svc.talk_with_human(answer, labels, uid, my_cfg)
         # for other labels
         else:
-            answer += lpg_svc.get_const_dict().get("label5")
+            answer += ord_svc.get_const_dict().get("label5")
             logger.info(f"answer_for_classify_result {classify_result}:\n{answer}")
-            lpg_svc.refresh_msg_history(answer)
+            ord_svc.refresh_msg_history(answer)
     return Response(answer, content_type=content_type, status=200)
 
 

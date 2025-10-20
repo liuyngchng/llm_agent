@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 """
-pip install mcp
-pip install mcp[cli]
+pip install mcp_server
+pip install mcp_server[cli]
 
 FastMCP quickstart example.
 """
@@ -152,7 +152,7 @@ def start_http_server():
     app.run(transport='streamable-http')  # 添加 frontend=False
 
 if __name__ == "__main__":
-    logger.info("start mcp server demo (backend only)")
+    logger.info("start mcp_server server demo (backend only)")
     start_https_server()
 
 
