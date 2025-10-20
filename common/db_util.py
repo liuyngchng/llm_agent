@@ -255,7 +255,7 @@ class DbUtl:
             logger.info(f"host[{parsed_uri.hostname}], user[{parsed_uri.username}], "
                         f"password[{parsed_uri.password}], database[{parsed_uri.path[1:]}]")
             cif['host'] = unquote(parsed_uri.hostname)
-            cif['port'] = parsed_uri.port or 3306
+            cif['port'] = int(parsed_uri.port) or 3306
             cif['user'] = unquote(parsed_uri.username)
             cif['password'] = unquote(parsed_uri.password)
             cif['database'] = parsed_uri.path[1:]
