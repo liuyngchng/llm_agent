@@ -54,13 +54,25 @@ ubuntu_py               24.04     449ac32f606b   4 minutes ago   1.28GB
 
 ## 5. 打包应用
 
+## 5.1 基本事项
+
+```sh
+# 如果显示无执行权限，执行 
+chmod +x ./my_script.sh
+# 确保网络环境中无代理， 可以执行以下脚本清除
+unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy
+env | grep proxy -i
+```
+
+
+
 ### 5.1 txt2sql
 ```shell
 # 进入项目更目录
 cd llm_agent
 # 进入 chat2db 构建目录
 cd apps/chat2db/build
-# 开始构建，需连接互联网，保持网络畅通
+# 开始构建，需连接互联网，保持网络畅通,
 ./build_chat2db.sh
 ```
 
