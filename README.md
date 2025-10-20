@@ -214,11 +214,11 @@ scp -i your_private_key_file_path -P ssh_port your_file_want_to_be_uploaed devbo
 ```
 
 ## 6.3 大语言模型(`LLM`) 服务
-### 3.5.1 使用在线 `API`
+### 6.3.1 使用在线 `API`
 
 所有的服务均需要使用大语言模型服务， 可以使用目前市面上一些服务，作为测试足够用，例如 deepseek 提供的在线 API, 详见 https://platform.deepseek.com/。
 
-### 3.5.2 本地部署
+### 6.3.2 本地部署
 
 如果本地有可用的显卡（`GPU`）资源，也可以自行部署自己的本地的兼容 `OpenAI` 接口数据格式的大语言模型。
 
