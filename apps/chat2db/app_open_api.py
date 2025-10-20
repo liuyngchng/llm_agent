@@ -102,7 +102,7 @@ def get_sql_from_txt_and_schema():
     if not schema or not txt or not dialect:
         return json.dumps({"status": 401, "msg": "提交的json数据中缺少数据 schema, txt, dialect中的一项或者多项"})
     my_cfg = init_yml_cfg()
-    sql = agt_util.txt2sql(schema, txt, dialect, my_cfg)
+    sql = agt_util.CHAT2DB(schema, txt, dialect, my_cfg)
     logger.info(f"txt_to_sql_return, {sql}")
     dt = {"status":200, "msg":"SQL转换成功", "sql":sql}
     return json.dumps(dt, ensure_ascii=False)

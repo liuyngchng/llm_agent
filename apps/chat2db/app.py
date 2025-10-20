@@ -54,7 +54,7 @@ def get_static_file(file_name):
 @app.route('/')
 def app_home():
     logger.info("redirect_auth_login_index")
-    return redirect(url_for('auth.login_index', app_source=AppType.TXT2SQL.name.lower()))
+    return redirect(url_for('auth.login_index', app_source=AppType.CHAT2DB.name.lower()))
 
 @app.route('/stream', methods=['POST', 'GET'])
 def stream():
@@ -180,7 +180,7 @@ def user_hack_info():
     dt_idx = 'hack_info_index.html'
     ctx = {
         "sys_name": my_cfg['sys']['name'],
-        "app_source": AppType.TXT2SQL.name.lower(),
+        "app_source": AppType.CHAT2DB.name.lower(),
         "warning_info": "",
     }
     if request.method == 'GET':
@@ -221,7 +221,7 @@ def user_prompt_idx():
     dt_idx = 'prompt_index.html'
     ctx = {
         "sys_name": my_cfg['sys']['name'],
-        "app_source": AppType.TXT2SQL.name.lower(),
+        "app_source": AppType.CHAT2DB.name.lower(),
         "warning_info": "",
     }
     uid = request.args.get("uid").strip()
@@ -238,7 +238,7 @@ def set_user_prompt():
     dt_idx = 'prompt_index.html'
     ctx = {
         "sys_name": my_cfg['sys']['name'],
-        "app_source": AppType.TXT2SQL.name.lower(),
+        "app_source": AppType.CHAT2DB.name.lower(),
         "warning_info": "",
     }
 
@@ -283,7 +283,7 @@ def reset_user_prompt():
     dt_idx = 'prompt_index.html'
     ctx = {
         "sys_name": my_cfg['sys']['name'],
-        "app_source": AppType.TXT2SQL.name.lower(),
+        "app_source": AppType.CHAT2DB.name.lower(),
         "warning_info": "",
     }
 

@@ -5,11 +5,15 @@
 通用公共类
 """
 import json
+import logging.config
 import re
 import sys
 
 from common import cfg_util
 from common.my_enums import AppType
+
+logging.config.fileConfig('logging.conf', encoding="utf-8")
+logger = logging.getLogger(__name__)
 
 
 def extract_json(dt: str) -> str:
@@ -89,16 +93,20 @@ def adjust_html_table_columns(html_content: str) -> str:
 
     headers = [th.text.strip() for th in header_row.find_all('th')]
     # 地理区域(省、市、区县)名称
-    area_name_str = cfg_util.get_const('area_name_list', AppType.TXT2SQL.name.lower())
+    area_name_str = cfg_util.get_const('area_name_list', AppType.CHAT2DB.name.lower())
+    if not area_name_str:
+        area_name_str = '["省", "市", "区", "县"]'
     # 组织机构(公司、团体)名称
-    org_str = cfg_util.get_const('organization_name_list', AppType.TXT2SQL.name.lower())
+    org_str = cfg_util.get_const('organization_name_list', AppType.CHAT2DB.name.lower())
+    if not org_str:
+        org_str='["公司", "机构", "单位"]'
     if not area_name_str or not org_str:
-        raise RuntimeError("no area_name_list or organization_name_list in cfg file")
+        raise RuntimeError("no_area_name_list_or_organization_name_list_in_cfg_dot_db_dot_const")
     try:
         area_name_list = json.loads(area_name_str)
         organization_list = json.loads(org_str)
     except Exception as e:
-        raise RuntimeError(f"invalid json config for area_name_list or organization_name_list in cfg file {e}")
+        raise RuntimeError(f"invalid_json_cfg_for_area_name_list_or_organization_name_list_in_cfg_dot_db_dot_const {e}")
     # 找出所有存在的地理表头和组织机构表头
     area_indices = [i for i, h in enumerate(headers) if h in area_name_list]
     org_indices = [i for i, h in enumerate(headers) if h in organization_list]

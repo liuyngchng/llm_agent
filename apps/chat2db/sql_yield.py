@@ -165,7 +165,7 @@ class SqlYield(DbUtl):
         """
         # hack_content = cfg_util.get_hack_q_file_content(uid)
         hack_content = cfg_util.get_user_hack_info(uid, self.cfg)
-        data_source_info = cfg_util.get_const("data_source_info", AppType.TXT2SQL.name.lower())
+        data_source_info = cfg_util.get_const("data_source_info", AppType.CHAT2DB.name.lower())
         chain = self.refine_q_prompt_template | self.get_llm()
         refine_q_dict = SqlYield.build_refine_invoke_json(question, hack_content, data_source_info)
         logger.info(f"start_refine_user_q, {uid}, {question}")
