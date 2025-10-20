@@ -52,14 +52,14 @@ REPOSITORY              TAG       IMAGE ID       CREATED         SIZE
 ubuntu_py               24.04     449ac32f606b   4 minutes ago   1.28GB
 ```
 
-## 5. 打包应用
+## 5. 应用打包
 
 ## 5.1 基本事项
 
 ```sh
 # 如果显示无执行权限，执行 
 chmod +x ./my_script.sh
-# 确保网络环境中无代理， 可以执行以下脚本清除
+# 确保网络环境中无代理，保持网络畅通，可以执行以下脚本清除代理环境变量
 unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy
 env | grep proxy -i
 ```
@@ -89,11 +89,17 @@ cd apps/docx/build
 在服务器的根目录下创建文件夹 /data, 并给予写文件夹的权限  
 下面以启动 txt2sql 应用为例, 启动命令如下：
 ```shell
-chmod 777 /data
+# 将 /data 目录的所有权修改为当前用户，保证当前用户有写权限
+sudo chown $USER:$USER /data
+# 拷贝部署包到指定的目录下
 cp llm_agent.tar /data
+# 进入部署目录
 cd /data
+# 解压部署包
 tar -xvf llm_agent.tar
+# 进入程序根目录
 cd llm_agent
+# 执行部署脚本
 ./apps/chat2db/deploy/deploy_chat2db.sh
 ```
 
