@@ -19,7 +19,7 @@ from apps.docx import docx_meta_util
 from apps.docx.txt_gen_util import gen_docx_outline_stream
 from apps.docx.docx_gen_parallel import DocxGenerator
 from apps.docx.docx_file_cmt_util import get_para_comment_dict
-from apps.docx.docx_file_txt_util import extract_catalogue
+from apps.docx.docx_file_txt_util import extract_catalogue, gen_docx_template_with_outline_txt, get_outline_txt
 from common import my_enums
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp
@@ -172,7 +172,7 @@ def register_routes(app):
         save_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(save_path)
         logger.info(f"upload_file_saved_as {filename}, {task_id}")
-        outline = docx_util.get_outline_txt(save_path)
+        outline = get_outline_txt(save_path)
         logger.info(f"get_file_outline,task_id {task_id}, {outline}")
         info = {
             "task_id": task_id,
@@ -206,7 +206,7 @@ def register_routes(app):
         else:
             vbd_id = None
         keywords = data.get("keywords")
-        template_file_name = docx_util.gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title,
+        template_file_name = gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title,
                                                                           doc_outline)
         logger.info(f"docx_template_file_generated_with_name, {template_file_name}")
         docx_meta_util.save_docx_meta_info(uid, task_id, doc_type_desc, doc_title, keywords, template_file_name)
@@ -431,7 +431,9 @@ app = create_app()
 
 # 当直接运行脚本时，启动开发服务器
 if __name__ == '__main__':
+    # result = VdbMeta.get_vdb_file_processing_list()
+    # logger.info(f"vdb_file_processing_list: {result}")
     # 确保后台任务在直接运行时也启动
-    start_background_tasks_once()
+    # start_background_tasks_once()
     port = get_console_arg1()
     app.run(host='0.0.0.0', port=port)

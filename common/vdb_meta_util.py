@@ -275,3 +275,8 @@ class VdbMeta:
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         logger.info(f"update_file_info_dt {my_dt}")
         return my_dt
+
+
+if __name__ == "__main__":
+    result = VdbMeta.get_vdb_file_processing_list()
+    logger.info(f"result {result}")

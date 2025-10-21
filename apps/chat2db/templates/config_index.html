@@ -26,7 +26,6 @@
                     <i class="fas fa-database"></i>
                 </div>
                 <select id="db_type" name="db_type" required>
-                    <option value="sqlite" {% if db_type =='sqlite' %}selected{% endif %}>Sqlite数据库</option>
                     <option value="mysql" {% if db_type =='mysql' %}selected{% endif %}>MySQL数据库</option>
                     <option value="oracle" {% if db_type =='oracle' %}selected{% endif %}>Oracle数据库</option>
                     <option value="doris" {% if db_type =='doris' %}selected{% endif %}>Doris数据源</option>

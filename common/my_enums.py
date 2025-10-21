@@ -71,6 +71,7 @@ class WriteDocType(Enum):
     MARKETING = "营销策划方案"
     DETAILED_DESIGN_DOCUMENT = "详细设计文档"
     PRELIMINARY_DESIGN_DOCUMENT = "概要设计文档"
+    SOFTWARE_COPYRIGHT_REG = "软件著作权申报"
 
     @staticmethod
     def get_doc_type_desc(input_str: str) -> str:

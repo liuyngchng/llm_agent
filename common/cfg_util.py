@@ -36,20 +36,24 @@ DORIS_HTTP_REQ_NOT_200_ERR = "http_request_to_doris_return_status_not_200_except
 
 
 def auth_user(user:str, t: str, cfg: dict) -> dict:
-    auth_result ={"pass": False, "uid": ""}
+    auth_result ={"pass": False, "uid": "", "msg":""}
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
+        sql = f"select id, role from user where name='{user}' limit 1"
+        check_info = query_sqlite(my_conn, sql)
+        user_dt = check_info.get('data', [])
+        if not user_dt:
+            auth_result["msg"] = f"当前用户名 {user} 不存在，请注册后再尝试登录"
+            return auth_result
         sql = f"select id, role from user where name='{user}' and t = '{t}' limit 1"
         check_info = query_sqlite(my_conn, sql)
-        if check_info:
-            user_dt = check_info.get('data', None)
-        else:
-            user_dt = None
-
+        user_dt = check_info.get('data', [])
     if user_dt:
         auth_result["pass"] = True
         auth_result["uid"] = user_dt[0][0]
         auth_result["role"] = user_dt[0][1]
         auth_result["t"] = encrypt(str(time.time() * 1000), cfg['sys']['cypher_key'])
+    else:
+        auth_result["msg"] = f"当前用户 {user} 的密码输入错误"
     return auth_result
 
 def get_user_info_by_uid(uid: int)-> dict:
@@ -615,12 +619,10 @@ def sqlite_output(db_uri: str, sql: str, data_format: str) -> str | Any:
 
 def output_data(db_con, sql:str, data_format:str) -> str:
     data = query_sqlite(db_con, sql)
+    if data.get('error'):
+        raise RuntimeError(f"error_occurred_in_exec_sqlite_sql, err_info={data}, sql={sql}")
     logger.debug(f"data {data} for {db_con}")
-    data_t = data.get('data', None)
-    if not data_t:
-        logger.error(f"table_is_not_exist_err, {sql}")
-        return ""
-    df = pd.DataFrame(data_t, columns=data['columns'])
+    df = pd.DataFrame(data.get('data'), columns=data['columns'])
     dt_fmt = data_format.lower()
 
     if DataType.HTML.value in dt_fmt:
@@ -673,8 +675,10 @@ def query_sqlite(db_con, query: str) -> dict:
         data = cursor.fetchall()
         return {"columns": columns, "data": data}
     except Exception as e:
-        logger.exception(f"sqlite_query_err, pls check your table exit and sql is correct, {query}")
-        return {"error": str(e)}
+        logger.exception(f"sqlite_query_err, pls_check_your_table_exist_in_sqlite_file_{db_con}_and_sql_is_correct, {query}")
+        # raise Exception
+        exit(-1)
+        # return {"error": str(e)}
 
 def insert_del_sqlite(db_con, sql: str) -> dict:
     # ///TODO 防止sql注入
@@ -693,7 +697,7 @@ if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
-    dt = get_usr_prompt_template("hi", "hi", {"test":{"test"}})
-    logger.info(dt)
+    my_dt = get_usr_prompt_template("hi",  {"test":{"test"}}, 123)
+    logger.info(my_dt)
 
 

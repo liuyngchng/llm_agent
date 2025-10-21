@@ -69,8 +69,8 @@ def login():
     logger.info(f"user_login_result: {user}, {t}, {auth_result}")
     sys_name = my_enums.AppType.get_app_type(app_source)
     if not auth_result["pass"]:
-        logger.error(f"用户名或密码输入错误 {user}, {t}")
-        warning_info="用户名或密码输入错误"
+        logger.error(f"用户认证失败 {user}, {t}")
+        warning_info=auth_result['msg']
         return redirect(url_for('auth.login_index', app_source=app_source, warning_info=warning_info, usr=user))
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")
@@ -81,6 +81,7 @@ def login():
         hack_admin = "0"
     ctx = {
         "uid": uid,
+        "usr": user,
         "role": auth_result["role"],
         "t": auth_result["t"],
         "sys_name": sys_name,

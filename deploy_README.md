@@ -87,6 +87,9 @@ cd apps/docx/build
 ./build_docx.sh
 ```
 ## 6. 部署
+
+### 6.1 llm_agent 
+
 在服务器的根目录下创建文件夹 /data, 并给予写文件夹的权限。
 
 下面以启动`chat2db` 应用为例, 启动命令如下：
@@ -110,7 +113,30 @@ cd llm_agent
 ./apps/chat2db/deploy/deploy_chat2db.sh
 ```
 
+### 6.2 达梦数据库
+
+部署方法详见 
+
+[达梦数据库部署说明]: https://github.com/liuyngchng/rd.lab/blob/master/dmdb.md
+
+https://github.com/liuyngchng/rd.lab/blob/master/dmdb.md 或
+
+https://gitee.com/liuyngchng/gitee_rd.lab/blob/master/dmdb.md
+
+对于应用 `chat2db`, 如果需要访问达梦数据库，需要将达梦客户端的动态库拷贝至 /data/dm8_client 目录。
+
+### 6.3 `mermaid` 服务
+
+`mermaid` 服务用于将 `mermaid` 脚本转换为对应的图片（`JPG` ，`PNG`）， 在文档生成应用(apps/docx) 中会用到，部署方法详见
+
+https://github.com/liuyngchng/rd.lab/blob/master/all_README.md 或
+
+https://gitee.com/liuyngchng/gitee_rd.lab/blob/master/all_README.md 中的章节 "`77. mermaid 图形服务器`"。 
+
+
+
 ## 7. 测试
+
 浏览器中打开如下地址，推荐使用 Chrome。
 ```shell 
 https://localhost:19001
