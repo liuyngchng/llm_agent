@@ -466,7 +466,7 @@ def get_usr_prompt_template(template_name: str,  sys_cfg: dict, uid=0)-> str:
             if uid != 0:
                 sql = f"select value from prompt_template where name = '{template_name}' and  uid = 0 limit 1"
                 prompt_info = query_sqlite(my_conn, sql)
-                prompt = prompt_info.get('data', None)
+                prompt = prompt_info.get('data', [])
                 if prompt and prompt[0]:
                     return prompt[0][0]
             if not sys_cfg or not sys_cfg.get('prompts'):

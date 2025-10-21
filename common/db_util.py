@@ -241,7 +241,7 @@ class DbUtl:
 
     @staticmethod
     def build_mysql_con_dict_from_cfg(db_config: dict) -> dict:
-        cif = {"charset":"utf8mb4"}
+        cif = {"charset":"utf8mb4", "port":3306}
         if all(key in db_config for key in ['name', 'host', 'user', 'password']):
             logger.info("connect db with name, host, user, password")
             cif['host'] = db_config['host']
