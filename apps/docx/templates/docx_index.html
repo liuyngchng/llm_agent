@@ -60,19 +60,20 @@
                 </p>
 
                 <div class="form-group">
-                    <label for="docType">【1】文档类型</label>
-                    <select id="docType">
+                    <label for="docTypeInput">【1】文档类型</label>
+                    <input type="text" id="docTypeInput" list="docTypes" name="doc_type">
+                    <datalist id="docTypes">
                         <option value="">-- 请选择文档类型 --</option>
-                        <option value="report">工作报告</option>
-                        <option value="standard">国家标准(GB/(GB/T))</option>
-                        <option value="proposal">项目计划书</option>
-                        <option value="year_summary">年度工作总结</option>
-                        <option value="research">可行性研究报告</option>
-                        <option value="marketing">营销策划方案</option>
-                        <option value="detailed_design_document">详细设计文档</option>
-                        <option value="preliminary_design_document">概要设计文档</option>
-                        <option value = "software_copyright_reg">软件著作权申请</option>
-                    </select>
+                        <option value="工作报告"></option>
+                        <option value="国家标准"></option>
+                        <option value="项目计划书"></option>
+                        <option value="年度工作总结"></option>
+                        <option value="可行性研究报告"></option>
+                        <option value="营销策划方案"></option>
+                        <option value="详细设计文档"></option>
+                        <option value="概要设计文档"></option>
+                        <option value = "软件著作权申请"></option>
+                    </datalist>
                 </div>
 
                 <div class="form-group">

@@ -13,7 +13,7 @@ from common.agt_util import fill_dict, extract_session_info, update_session_info
 from common.cfg_util import get_consts
 from datetime import datetime
 
-from common.my_enums import AI_SERVICE_STATUS, DataType
+from common.my_enums import AiServiceStatus, DataType
 # from sql_agent import SqlAgent
 from common.cm_utils import convert_list_to_html_table
 
@@ -165,7 +165,7 @@ class CsmService:
         """
         if self.get_const_dict().get("str2") in msg.upper():
             logger.info(f"switch_service_provider_to_AI_for_uid {self.get_human_customer_service_target_uid()}")
-            self.get_ai_service_status_dict()[self.get_human_customer_service_target_uid()] = AI_SERVICE_STATUS.OPEN
+            self.get_ai_service_status_dict()[self.get_human_customer_service_target_uid()] = AiServiceStatus.OPEN
             answer = self.get_const_dict().get("str3")
         else:
             logger.info(f"snd_msg_to_customer_directly, "
@@ -235,6 +235,6 @@ class CsmService:
         self.snd_mail(self.get_human_being_uid(), msg_boxing)
         self.get_msg_history_list().clear()
         answer += self.get_const_dict().get("label41")
-        self.get_ai_service_status_dict()[uid] = AI_SERVICE_STATUS.ClOSE.value  # transform AI service to human service
+        self.get_ai_service_status_dict()[uid] = AiServiceStatus.ClOSE.value  # transform AI service to human service
         logger.info(f"answer_for_classify {label}:\n{answer}")
         return answer

@@ -14,7 +14,7 @@ import os
 from flask import (Flask, request, Response, make_response, redirect, url_for)
 from common.cfg_util import get_user_role_by_uid
 from common.bp_auth import auth_bp
-from common.my_enums import ActorRole, AI_SERVICE_STATUS, AppType
+from common.my_enums import ActorRole, AiServiceStatus, AppType
 from common.agt_util import classify_msg
 from common.sys_init import init_yml_cfg
 from common.cm_utils import get_console_arg1
@@ -72,7 +72,7 @@ def submit_user_question():
         return Response(answer, content_type=content_type, status=200)
     # if not in AI service mode , customer user msg should be sent to human being who provide service directly
     if usr_role == ActorRole.HUMAN_CUSTOMER.value \
-        and ord_svc.get_ai_service_status_dict().get(uid) == AI_SERVICE_STATUS.ClOSE.value:
+        and ord_svc.get_ai_service_status_dict().get(uid) == AiServiceStatus.ClOSE.value:
         ord_svc.snd_mail(ord_svc.get_human_being_uid(), f"[用户{ord_svc.get_human_customer_service_target_uid()}]{msg}")
         logger.info(f"snd_mail to msg_from_uid {ord_svc.get_human_being_uid()}, {msg}")
         return Response("", content_type=content_type, status=200)

@@ -142,13 +142,14 @@ def register_routes(app):
         logger.info(f"gen_doc_outline {request.json}")
         uid = request.json.get("uid")
         doc_type = request.json.get("doc_type")
-        doc_type_chinese = my_enums.WriteDocType.get_doc_type_desc(doc_type)
         doc_title = request.json.get("doc_title")
         keywords = request.json.get("keywords")
-        if not doc_type_chinese or not doc_title:
-            return jsonify({"error": "未提交待写作文档的标题或文档类型，请补充"}), 400
+        if not doc_type or not doc_title:
+            err_info = {"error": "未提交待写作文档的标题或文档类型，请补充"}
+            logger.error(f"gen_doc_outline_err, {err_info}")
+            return jsonify(err_info), 400
         return Response(
-            stream_with_context(gen_docx_outline_stream(doc_type_chinese, doc_title, keywords, my_cfg)),
+            stream_with_context(gen_docx_outline_stream(doc_type, doc_title, keywords, my_cfg)),
             mimetype='text/event-stream',
             status=200,
         )
@@ -194,9 +195,7 @@ def register_routes(app):
         doc_title = data.get("doc_title")
         doc_outline = data.get("doc_outline")
         doc_type = data.get("doc_type")
-
-        doc_type_desc = my_enums.WriteDocType.get_doc_type_desc(doc_type)
-        if not doc_type_desc or not doc_title or not doc_outline:
+        if not doc_type or not doc_title or not doc_outline:
             err_info = {"error": "缺少文档类型、标题、目录参数中的一个或多个"}
             logger.error(f"err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
@@ -209,10 +208,10 @@ def register_routes(app):
         template_file_name = gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title,
                                                                           doc_outline)
         logger.info(f"docx_template_file_generated_with_name, {template_file_name}")
-        docx_meta_util.save_docx_meta_info(uid, task_id, doc_type_desc, doc_title, keywords, template_file_name)
+        docx_meta_util.save_docx_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
         threading.Thread(
             target=fill_docx_with_template,
-            args=(uid, doc_type_desc, doc_title, keywords, task_id, template_file_name, vbd_id, False)
+            args=(uid, doc_type, doc_title, keywords, task_id, template_file_name, vbd_id, False)
         ).start()
         info = {"status": "started", "task_id": task_id}
         logger.info(f"write_doc_with_outline_txt, {info}")
@@ -228,11 +227,10 @@ def register_routes(app):
         logger.info(f"write_doc_with_docx_template, {data}")
         task_id = int(data.get("task_id"))
         doc_type = data.get("doc_type")
-        doc_type_desc = my_enums.WriteDocType.get_doc_type_desc(doc_type)
         doc_title = data.get("doc_title")
 
-        if not doc_type_desc or not doc_title:
-            err_info = {"error": "缺少参数"}
+        if not doc_type or not doc_title:
+            err_info = {"error": "文档类型或文档标题不能为空"}
             logger.error(f"err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
         template_file_name = data.get("file_name")
@@ -348,7 +346,7 @@ def clean_docx_task():
             docx_list = docx_meta_util.get_docx_file_processing_list()
             # 遍历所有任务
             for file in docx_list:
-                if now - file['task_id'] > TASK_EXPIRE_TIME_MS:  # 2小时过期
+                if now - file.get('task_id', now) > TASK_EXPIRE_TIME_MS:  # 2小时过期
                     logger.info(f"Cleaning expired task: {file['task_id']}")
                     docx_meta_util.delete_docx_info_by_task_id(file['task_id'])
             time.sleep(1000)  # 每1000秒检查一次

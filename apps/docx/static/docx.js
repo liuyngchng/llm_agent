@@ -73,7 +73,7 @@ function selectTemplate(type) {
 function nextStep(step) {
     // 验证步骤1的输入
     if (step === 1) {
-        const docType = document.getElementById('docType').value;
+        const docType = document.getElementById('docTypeInput').value;
         const docTitle = document.getElementById('docTitle').value;
         if (!docType) {
             alert('请选择文档类型');
@@ -211,7 +211,7 @@ async function uploadTemplateFile(file) {
 
 // 目录生成
 function generateOutline() {
-    const docType = document.getElementById('docType').value;
+    const docType = document.getElementById('docTypeInput').value;
     const docTitle = document.getElementById('docTitle').value;
     const keywords = document.getElementById('keywords').value;
     const uid = document.getElementById('uid').value;
@@ -413,7 +413,7 @@ async function gen_doc() {
     const task_id = document.getElementById('taskId').value;
     const doc_outline = document.getElementById('modifiedOutline').value;
     const doc_title = document.getElementById('docTitle').value;
-    const doc_type = document.getElementById('docType').value;
+    const doc_type = document.getElementById('docTypeInput').value;
     const keywords = document.getElementById('keywords').value;
     const generateBtn = document.getElementById('generateBtn');
     const outlineSource = document.getElementById('outline_source').value;
@@ -481,7 +481,7 @@ function resetForm() {
     updateProgressBar();
 
     // 清空表单数据
-    document.getElementById('docType').selectedIndex = 0;
+    document.getElementById('docTypeInput').value = '';
     document.getElementById('docTitle').value = '';
     document.getElementById('keywords').value = '';
     document.getElementById('knowledgeBase').selectedIndex = 0;

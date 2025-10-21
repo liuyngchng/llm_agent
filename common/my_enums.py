@@ -60,29 +60,6 @@ class AppType(Enum):
         except KeyError:
             return "AI 应用"  # 或抛出异常
 
-
-class WriteDocType(Enum):
-    """文档类型枚举（英文键，汉字值）"""
-    REPORT = "工作报告"
-    STANDARD = "国家标准(GB/(GB/T))"
-    PROPOSAL = "项目计划书"
-    YEAR_SUMMARY = "年度工作总结"
-    RESEARCH = "可行性研究报告"
-    MARKETING = "营销策划方案"
-    DETAILED_DESIGN_DOCUMENT = "详细设计文档"
-    PRELIMINARY_DESIGN_DOCUMENT = "概要设计文档"
-    SOFTWARE_COPYRIGHT_REG = "软件著作权申报"
-
-    @staticmethod
-    def get_doc_type_desc(input_str: str) -> str:
-        """根据输入字符串获取对应的文档类型"""
-        input_upper = input_str.upper()  # 转换为大写匹配枚举键
-        try:
-            return WriteDocType[input_upper].value
-        except KeyError:
-            return None  # 或抛出异常
-
-
 class ActorRole(Enum):
     """
     the role of actor engaged in system
@@ -93,7 +70,7 @@ class ActorRole(Enum):
     AI_SERVICE_PROVIDER     = 2      # an AI role in system, such as LLM, etc.
 
 
-class AI_SERVICE_STATUS(Enum):
+class AiServiceStatus(Enum):
     """
     the status of AI service provided to human customers
     """
