@@ -18,7 +18,7 @@ gitee 平台地址为：[https://gitee.com/liuyngchng/gitee_llm_agent](https://g
 | 6 | apps/mcp_client | HTTP/HTTPS | 19005 | MCP client，通过Web 界面 |
 | 7 | apps/mcp_server | HTTP/HTTPS | 19006 | MCP server， 提供 MCP tools 查询服务 |
 | 8 | apps/ord_gen | HTTP/HTTPS | 19007 | AI 订单生成    |
-| 9 | apps/llm | HTTP/HTTPS | 8000 | 兼容 OpenAI 接口格式的大语言模型服务 |
+| 9 | apps/llm | HTTP/HTTPS | 16000 | 兼容 OpenAI 接口格式的大语言模型服务 |
 | 10 | apps/embedding | HTTP/HTTPS | 17000 | 兼容 OpenAI 接口格式的文本嵌入模型服务 |
 
 # 2. 开发环境配置
@@ -99,9 +99,9 @@ pip install -r ./apps/chat2db/requirements.txt
 
 # 4. 运行
 
-以启动 `chat2db` 这个应用（`app`）为例。
+以启动 `chat2db` 这个应用（`app`）为例, 说明工程内各个应用的启动方法。
 
-**（1）准备日志和 `yaml` 配置文件**
+### 4.1 准备日志和 `yaml` 配置文件
 
 日志配置文件 `logging.conf` 用于配置各个模块的日志级别、输出格式等。`cfg.yml` 用于程序启动时所必需的一些配置，例如大语言模型 `API` 等。
 
@@ -124,7 +124,7 @@ cp ./apps/chat2db/cfg.db ./
 cp ./apps/chat2db/logging.conf ./
 ```
 
-**（2）准备 `SQLite` 数据库配置文件**
+### 4.2 准备 `SQLite` 数据库配置文件
 
 `SQLite`配置数据库文件 `cfg.db` 中存储一些在运行时各个应用所需要的一些运行时参数。
 
@@ -155,12 +155,43 @@ cd ~/workspace/llm_agent
 ./common/sh/init_sqlite_cfg_db.sh
 ```
 
-启动 http 服务
+### 4.3 应用启动
+
+（1）chat2db
 
 ```shell
 # 通过将当前目录 ./ 添加至 PYTHONPATH， 保证 common 包加载正常
+cd llm_agent
 PYTHONPATH=./:${PYTHONPATH}  ./apps/chat2db/app.py
 ```
+
+（2） embedding
+
+```sh
+# 假定 cfg.yml["api"]["embedding_model_name"] 配置的名称为bge-m3
+# 那么 bge-m3 目录需要与 llm_agent 处于同一目录下
+cd llm_agent
+PYTHONPATH=./:${PYTHONPATH}  ./apps/embedding/app.py
+```
+
+（3）llm
+
+```sh
+# 大语言模型文件的目录需要与 llm_agent 处于同一目录下
+cd llm_agent
+PYTHONPATH=./:${PYTHONPATH}  ./apps/llm/app.py
+```
+
+（4）docx
+
+```sh
+cd llm_agent
+PYTHONPATH=./:${PYTHONPATH}  ./apps/docx/app.py
+```
+
+应用 docx 和 chat 中涉及到知识库，文本的向量化过程中会涉及到 nltk 本地数据的配置，详见
+
+https://github.com/liuyngchng/rd.lab/blob/master/llm_in_action.md 章节 `5.1.1.2 nltk`。 
 
 # 5. 测试
 

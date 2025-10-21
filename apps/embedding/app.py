@@ -4,6 +4,7 @@
 """
 文本向量化 embedding 模型服务
 """
+import os
 
 from fastapi import FastAPI, HTTPException, Depends
 from sentence_transformers import SentenceTransformer
@@ -13,6 +14,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Union
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+from common.cm_utils import get_console_arg1
 from common.sys_init import init_yml_cfg
 
 app = FastAPI()
@@ -25,7 +27,12 @@ security = HTTPBearer()
 
 my_cfg = init_yml_cfg()
 
-model = SentenceTransformer(f"../../../{my_cfg["api"]["embedding_model_name"]}", device='cpu')
+# 获取当前文件所在目录
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 构建模型路径 - 使用 os.path.normpath 规范化路径
+model_path = os.path.normpath(os.path.join(current_dir, "..", "..", "..", my_cfg["api"]["embedding_model_name"]))
+print(f"尝试加载模型路径: {model_path}")  # 调试信息
+model = SentenceTransformer(model_path, device='cpu')
 # # 明确指定使用 CPU
 # model = SentenceTransformer('your_model_name', device='cpu')
 # # 或明确指定使用 GPU
@@ -191,5 +198,7 @@ async def root():
 
 if __name__ == "__main__":
     logger.info(f"模型设备: {model.device}, {model._target_device}")
-    logger.info(f"api_cfg, {my_cfg['api']}")
-    uvicorn.run(app, host="0.0.0.0", port=17000)
+    # port = get_console_arg1()
+    port = 17000
+    logger.info(f"api_cfg, {my_cfg['api']}, listening on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port)

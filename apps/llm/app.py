@@ -14,6 +14,8 @@ from flask import Flask, request, Response, stream_with_context
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
 
+from common.cm_utils import get_console_arg1
+
 app = Flask(__name__)
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -290,6 +292,7 @@ def health_check():
 
 
 if __name__ == '__main__':
-    port = 8000
-    logger.info(f"Starting {model_name} API server on port {port}")
+    # port = get_console_arg1()
+    port = 16000
+    logger.info(f"Starting {model_name} API server, listening on port {port}")
     app.run(host='0.0.0.0', port=port, threaded=True)
