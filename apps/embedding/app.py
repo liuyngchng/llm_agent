@@ -25,7 +25,7 @@ security = HTTPBearer()
 
 my_cfg = init_yml_cfg()
 
-model = SentenceTransformer(f"./../../{my_cfg["api"]["embedding_model_name"]}", device='cpu')
+model = SentenceTransformer(f"../../../{my_cfg["api"]["embedding_model_name"]}", device='cpu')
 # # 明确指定使用 CPU
 # model = SentenceTransformer('your_model_name', device='cpu')
 # # 或明确指定使用 GPU
