@@ -1,6 +1,6 @@
 #!/bin/bash
 APP='chat2db'
-CONTAINER='http_'${APP}
+CONTAINER="${APP}_app"
 APP_DIR="apps/${APP}"
 # 检查当前目录下是否存在目录 ${APP_DIR}
 if [ ! -d ${APP_DIR} ]; then
