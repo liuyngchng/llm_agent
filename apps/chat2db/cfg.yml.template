@@ -61,9 +61,6 @@ api:
     # 是否为远程模式，true 表示使用远程模式，false 表示使用本地模式 ollama 接口
     is_remote: true
 
-    # mermaid script render server addr
-    mermaid_api_uri: http://127.0.0.1:8000
-
 #  chart js 绘图配置
 chart_js:
     #   是否需要在读取数据库数据的基础上，添加 chart js 绘图数据，true 需要; false，不需要，直接输出数据

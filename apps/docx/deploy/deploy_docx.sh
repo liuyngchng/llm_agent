@@ -2,6 +2,7 @@
 APP='docx'
 CONTAINER="${APP}_app"
 APP_DIR="apps/${APP}"
+CURRENT_DIR=$(pwd)
 # 检查当前目录下是否存在 apps/${APP} 文件夹
 if [ ! -d ${APP_DIR} ]; then
     echo "错误：当前目录下未找到 ${APP_DIR} 文件夹"
@@ -20,7 +21,7 @@ echo "正在创建 ${CONTAINER} 容器"
 #docker run -dit --name ${CONTAINER} --network host --rm \
 docker run -dit --name ${CONTAINER}  \
   --security-opt seccomp=unconfined \
-  -v /data/llm_agent:/opt/app \
+  -v ${CURRENT_DIR}:/opt/app \
   -v /data/nltk_data:/usr/share/nltk_data \
   -p 19003:19000 \
   -e APP_NAME=${APP} \
