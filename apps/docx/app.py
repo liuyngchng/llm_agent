@@ -146,7 +146,7 @@ def register_routes(app):
         keywords = request.json.get("keywords")
         if not doc_type or not doc_title:
             err_info = {"error": "未提交待写作文档的标题或文档类型，请补充"}
-            logger.error(f"gen_doc_outline_err, {err_info}")
+            logger.error(f"{uid}, gen_doc_outline_err, {err_info}")
             return jsonify(err_info), 400
         return Response(
             stream_with_context(gen_docx_outline_stream(doc_type, doc_title, keywords, my_cfg)),
@@ -244,10 +244,10 @@ def register_routes(app):
             err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
-        docx_meta_util.save_docx_meta_info(uid, task_id, doc_type_desc, doc_title, keywords, template_file_name)
+        docx_meta_util.save_docx_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
         threading.Thread(
             target=fill_docx_with_template,
-            args=(uid, doc_type_desc, doc_title, keywords, task_id, template_file_name, vbd_id, True)
+            args=(uid, doc_type, doc_title, keywords, task_id, template_file_name, vbd_id, True)
         ).start()
 
         info = {"status": "started", "task_id": task_id}
@@ -277,6 +277,7 @@ def register_routes(app):
         if not os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
             logger.error(f"文件 {filename} 不存在")
             abort(404)
+        logger.info(f"send_from_directory, {task_id}, {UPLOAD_FOLDER}, {filename}")
         return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
 
     @app.route('/docx/del/task/<task_id>', methods=['GET'])
