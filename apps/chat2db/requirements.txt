@@ -16,3 +16,4 @@ pycryptodome
 wheel
 sympy
 markdown
+beautifulsoup4

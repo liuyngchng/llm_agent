@@ -626,7 +626,7 @@ class DbUtl:
             my_dt = DbUtl.output_data(my_conn, sql, data_format)
         if DataType.JSON.value == data_format:
             if not my_dt:
-                logger.info(f"dt_is_null, {my_dt}， return_empty_dict")
+                logger.info(f"dt_is_null, my_dt={my_dt}, return_empty_dict")
                 return {}
             try:
                 my_dt = json.loads(my_dt)

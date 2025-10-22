@@ -42,7 +42,8 @@ if [[ $confirm == [Yy] ]]; then
 
     pip download gunicorn flask \
        concurrent-log-handler langchain_openai langchain_core langchain_community \
-       openai pandas tabulate pymysql oracledb dmPython sounddevice pydub pycryptodome wheel sympy markdown
+       openai pandas tabulate pymysql oracledb dmPython \
+       sounddevice pydub pycryptodome wheel sympy markdown beautifulsoup4
 
     cd ..
 else
