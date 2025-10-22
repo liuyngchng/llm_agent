@@ -143,7 +143,7 @@ class Doris:
         )
         exec_json = response.json()
         logger.info(f"http_req_return, {exec_json}")
-        if exec_json['code'] == 200:
+        if exec_json.get('code', 404) == 200:
             cache_dict[body_md5] = (time.time(), exec_json['data'])
             logger.info(f"request_dt_return, {exec_json['data']}")
             return exec_json['data']

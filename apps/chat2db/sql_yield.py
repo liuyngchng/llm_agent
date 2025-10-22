@@ -204,6 +204,7 @@ class SqlYield(DbUtl):
         generate sql
         """
         chain = self.sql_gen_prompt_template | self.get_llm()
+        logger.debug(f"sql_gen_prompt_template, {self.sql_gen_prompt_template}")
         gen_sql_dict = self.build_invoke_json(uid, question)
         logger.info(f"gen_sql_by_txt: {gen_sql_dict}")
         response = chain.invoke(gen_sql_dict)
@@ -214,6 +215,7 @@ class SqlYield(DbUtl):
         generate sql
         """
         chain = self.sql_review_prompt_template | self.get_llm()
+        logger.debug(f"sql_review_prompt_template {self.sql_review_prompt_template}")
         review_sql_dict = {
             "current_sql": current_sql,
             "error_reason": error_reason,
@@ -229,6 +231,7 @@ class SqlYield(DbUtl):
         generate count sql by data retrieval sql
         """
         chain = self.count_sql_gen_prompt_template | self.get_llm()
+        logger.debug(f"count_sql_gen_prompt_template, {self.count_sql_gen_prompt_template}")
         gen_sql_dict = self.build_invoke_json(uid, sql)
         logger.info(f"gen_count_sql_by_sql: {gen_sql_dict}")
         response = chain.invoke(gen_sql_dict)
@@ -239,6 +242,7 @@ class SqlYield(DbUtl):
         generate count sql by data retrieval sql
         """
         chain = self.explain_sql_msg_template | self.get_llm()
+        logger.debug(f"explain_sql_msg_template, {self.explain_sql_msg_template}")
         explain_sql_dict = self.build_invoke_json(uid, sql)
         logger.info(f"get_explain_sql_txt: {explain_sql_dict}")
         response = chain.invoke(explain_sql_dict)
@@ -249,6 +253,7 @@ class SqlYield(DbUtl):
         generate sql
         """
         chain = self.desc_usr_dt_template | self.get_llm()
+        logger.debug(f"desc_usr_dt_template: {self.desc_usr_dt_template}")
         response = chain.invoke({
             "msg": question,
             "usr_dt": usr_dt,
@@ -260,6 +265,7 @@ class SqlYield(DbUtl):
         generate sql for get user data from user account database
         """
         chain = self.sql_gen_prompt_template | self.get_llm()
+        logger.debug(f"sql_gen_prompt_template, {self.sql_gen_prompt_template}")
         check_sql_dict = self.build_invoke_json(uid, question)
         logger.info(f"check_sql_dict: {check_sql_dict}")
         response = chain.invoke(check_sql_dict)
@@ -271,6 +277,7 @@ class SqlYield(DbUtl):
         :param md_dt： data table in mark down format
         """
         chain = self.chart_dt_gen_prompt_template | self.get_llm()
+        logger.debug(f"chart_dt_gen_prompt_template: {self.chart_dt_gen_prompt_template}")
         response = chain.invoke({
             "msg": md_dt
         })
