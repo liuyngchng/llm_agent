@@ -25,7 +25,7 @@ sqlite_vss
 **/*.zip
 **/*.rar
 **/*.tar.gz
-**/*.config
+#**/*.config
 **/*.cfg
 **/*.whl
 #**/*.db

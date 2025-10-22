@@ -423,6 +423,8 @@ class SqlAgent(DbUtl):
         :param sql: A Database SQL end with limit(for mysql)
         :param dt_fmt: A DataType enum
         """
+        if not sql:
+            raise  RuntimeError("sql_null_exception")
         db_type = self.cfg.get('db', {}).get('type', "").lower()
         if DBType.SQLITE.value in db_type:
             db_uri = DbUtl.get_db_uri(self.cfg)
