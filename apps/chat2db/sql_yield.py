@@ -448,7 +448,7 @@ class SqlYield(DbUtl):
             # for line in extract_sql.split("\n"):
             #     yield SqlYield.build_yield_dt(line)
             yield SqlYield.build_yield_dt("开始查询数据...")
-            logger.info(f"gen_sql_from_txt {q}, {extract_sql}")
+            logger.info(f"gen_sql_from_txt, question={q}, sql={extract_sql}")
         except Exception as e:
             logger.error(f"gen_sql_err, {e}, txt: {q}", exc_info=True)
             yield SqlYield.build_yield_dt("用户问题转换为数据查询条件时发生异常")

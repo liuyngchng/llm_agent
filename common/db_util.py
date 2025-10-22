@@ -163,15 +163,15 @@ class DbUtl:
                     sql
                 )
             except Exception as e:
-                logger.error(f"col_name_hack_failed for DM8, {str(e)}")
+                logger.error(f"col_name_hack_failed_for_DM8, {str(e)}")
         else:
             logger.error(f"database_type_error, {__file__}")
             raise "database type error"
 
         logger.debug(f"data {data} for {db_con}")
-        data_t = data.get('data', None)
+        data_t = data.get('data', [])
         if not data_t:
-            logger.error(f"table_is_not_exist_err, {sql}")
+            logger.info(f"no_data_for_query, {sql}")
             return ""
         df = pd.DataFrame(data_t, columns=data['columns'])
         dt_fmt = data_format.lower()
@@ -616,16 +616,18 @@ class DbUtl:
 
 
     @staticmethod
-    def sqlite_output(db_uri: str, sql:str, data_format:str):
+    def sqlite_output(db_uri: str, sql:str, data_format:str) ->str | dict:
         """
         cfg["db_uri"] = "sqlite:///test1.db"
         """
-
         db_file = db_uri.split('/')[-1]
         with sqlite3.connect(db_file) as my_conn:
             logger.debug(f"connect_to_db_file {db_file}")
             my_dt = DbUtl.output_data(my_conn, sql, data_format)
         if DataType.JSON.value == data_format:
+            if not my_dt:
+                logger.info(f"dt_is_null, {my_dt}， return_empty_dict")
+                return {}
             try:
                 my_dt = json.loads(my_dt)
             except Exception as ex:
