@@ -346,9 +346,14 @@ def clean_docx_task():
             docx_list = docx_meta_util.get_docx_file_processing_list()
             # 遍历所有任务
             for file in docx_list:
-                if now - file.get('task_id', now) > TASK_EXPIRE_TIME_MS:  # 2小时过期
-                    logger.info(f"Cleaning expired task: {file['task_id']}")
-                    docx_meta_util.delete_docx_info_by_task_id(file['task_id'])
+                task_id = file.get('task_id')
+                if task_id is None:
+                    logger.warning(f"无效task_id：{task_id}, file: {file}")
+                    continue
+                if now - task_id > TASK_EXPIRE_TIME_MS:  # 2小时过期
+                    logger.info(f"Cleaning expired task: {task_id}")
+                    docx_meta_util.delete_docx_info_by_task_id(task_id)
+
             time.sleep(1000)  # 每1000秒检查一次
         except Exception as e:
             logger.error(f"Error in clean_docx_tasks: {e}")
