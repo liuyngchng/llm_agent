@@ -49,4 +49,5 @@ sqlite_vss
 **/upload_doc/*
 **/db_schema/*
 **/whl_py_dir
+**/vdb_idx_*
 logging.conf
