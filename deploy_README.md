@@ -67,7 +67,22 @@ unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy
 env | grep proxy -i
 ```
 
+SSL 证书生成
+
+```sh
+cd llm_agent
+cd ./common/cert
+# -addext 的作用是定义证书的有效域名和IP地址
+openssl req -x509 -newkey rsa:2048 -nodes \
+  -keyout srv.key -out srv.crt -days 365 \
+  -subj "/C=CN/ST=Beijing/L=Beijing/O=YourCompany/CN=localhost" \
+  -addext "subjectAltName=DNS:localhost,IP:127.0.0.1,IP:172.17.0.1"
+```
+
+
+
 ### 5.1 数据库查询应用(`chat2db`)
+
 ```shell
 # 进入项目更目录
 cd llm_agent
