@@ -31,6 +31,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 UPLOAD_FOLDER = 'upload_doc'
+DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 TASK_EXPIRE_TIME_MS = 7200 * 1000  # 任务超时时间，默认2小时
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 my_cfg = init_yml_cfg()
@@ -261,10 +262,26 @@ def register_routes(app):
         ：param filename: 文件名， 格式如下 f"output_{task_id}.docx"
         """
         logger.info(f"download_file, {filename}")
-        if not os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
-            logger.error(f"文件 {filename} 不存在")
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        absolute_path = os.path.abspath(file_path)
+        logger.info(f"文件检查 - 绝对路径: {absolute_path}")
+
+        if not os.path.exists(absolute_path):
+            logger.error(f"文件不存在: {absolute_path}")
             abort(404)
-        return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
+
+        logger.info(f"文件找到，准备发送: {absolute_path}")
+        try:
+            from flask import send_file
+            return send_file(
+                absolute_path,
+                as_attachment=True,
+                download_name=filename,
+                mimetype=DOCX_MIME_TYPE,
+            )
+        except Exception as e:
+            logger.error(f"文件发送失败: {str(e)}")
+            abort(500)
 
     @app.route('/docx/download/task/<task_id>', methods=['GET'])
     def download_file_by_task_id(task_id):
@@ -274,11 +291,32 @@ def register_routes(app):
         """
         logger.info(f"download_file_task_id, {task_id}")
         filename = f"output_{task_id}.docx"
-        if not os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
-            logger.error(f"文件 {filename} 不存在")
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        absolute_path = os.path.abspath(file_path)
+        logger.info(f"文件检查 - 相对路径: {file_path}")
+        logger.info(f"文件检查 - 绝对路径: {absolute_path}")
+        logger.info(f"文件检查 - UPLOAD_FOLDER: {UPLOAD_FOLDER}")
+        logger.info(f"文件检查 - 当前工作目录: {os.getcwd()}")
+        if not os.path.exists(absolute_path):
+            logger.error(f"文件不存在: {absolute_path}")
             abort(404)
-        logger.info(f"send_from_directory, {task_id}, {UPLOAD_FOLDER}, {filename}")
-        return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
+
+        if not os.access(absolute_path, os.R_OK):
+            logger.error(f"文件不可读: {absolute_path}")
+            abort(403)
+        logger.info(f"文件找到，准备发送: {absolute_path}")
+        try:
+            from flask import send_file
+            logger.info(f"使用 send_file 发送: {absolute_path}")
+            return send_file(
+                absolute_path,
+                as_attachment=True,
+                download_name=filename,
+                mimetype=DOCX_MIME_TYPE,
+            )
+        except Exception as e:
+            logger.error(f"文件发送失败: {str(e)}")
+            abort(500)
 
     @app.route('/docx/del/task/<task_id>', methods=['GET'])
     def delete_file_info_by_task_id(task_id):

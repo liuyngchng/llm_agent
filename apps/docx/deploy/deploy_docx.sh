@@ -9,7 +9,7 @@ if [ ! -d ${APP_DIR} ]; then
     echo "请确保在项目根目录下执行此脚本"
     exit 1
 fi
-echo "正在复制 ${APP} 服务配置文件"
+echo "当前目录为 ${CURRENT_DIR}, 正在复制 ${APP} 服务配置文件"
 cp ${APP_DIR}/cfg.db ./
 cp ${APP_DIR}/cfg.yml ./
 cp ${APP_DIR}/logging.conf ./
