@@ -8,15 +8,16 @@
 import logging.config
 import time
 
+
 from langchain_core.prompts import ChatPromptTemplate
 
 from common import cfg_util, agt_util, cm_utils
-from common.cm_utils import rmv_think_block
+from common.cm_utils import rmv_think_block, calc_txt_token
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: dict):
+def gen_docx_outline_stream(uid:int, doc_type: str, doc_title: str, keywords: str, cfg: dict):
     """
     流式生成docx文档目录
     :doc_type: docx 文档的内容类型，详见:class:`my_enums`WriteDocType
@@ -31,14 +32,23 @@ def gen_docx_outline_stream(doc_type: str, doc_title: str, keywords: str, cfg: d
     logger.info(f"prompt {prompt}")
     model = agt_util.get_model(cfg)
     logger.info(f"submit_to_llm, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}, prompt {prompt}")
+    # 计算输入 token 数量
+    input_text = prompt.format(doc_type=doc_type, doc_title=doc_title, keywords=keywords)
+    input_tokens = calc_txt_token(input_text)
+    logger.info(f"{uid}_input_tokens, {input_tokens}")
     try:
         # 流式调用模型
-        for chunk in model.stream(prompt.format(doc_type=doc_type, doc_title=doc_title, keywords=keywords)):
+        output_tokens_sum = 0
+        for chunk in model.stream(input_text):
             if hasattr(chunk, 'content'):
-                yield cm_utils.rmv_think_block(chunk.content)
+                output_text = cm_utils.rmv_think_block(chunk.content)
+                output_tokens_sum  += calc_txt_token(chunk.content)
+                yield output_text
             elif hasattr(chunk, 'text'):
-                yield cm_utils.rmv_think_block(chunk.text())
-
+                output_text = cm_utils.rmv_think_block(chunk.text())
+                output_tokens_sum  += calc_txt_token(chunk.text())
+                yield output_text
+        logger.info(f"{uid}_output_tokens, {input_tokens}")
     finally:
         # 清理资源
         logger.info("gen_outline_finish, dispose resources")

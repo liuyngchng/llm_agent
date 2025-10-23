@@ -11,6 +11,7 @@ import sys
 import time
 
 import requests
+import tiktoken
 
 from common import cfg_util
 from common.my_enums import AppType
@@ -18,6 +19,10 @@ from common.my_enums import AppType
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+
+def calc_txt_token(txt: str) -> int:
+    encoding = tiktoken.get_encoding("cl100k_base")
+    return len(encoding.encode(txt))
 
 def extract_json(dt: str) -> str:
     # start from first '{', end with last '}'

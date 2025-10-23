@@ -149,7 +149,7 @@ def register_routes(app):
             logger.error(f"{uid}, gen_doc_outline_err, {err_info}")
             return jsonify(err_info), 400
         return Response(
-            stream_with_context(gen_docx_outline_stream(doc_type, doc_title, keywords, my_cfg)),
+            stream_with_context(gen_docx_outline_stream(uid, doc_type, doc_title, keywords, my_cfg)),
             mimetype='text/event-stream',
             status=200,
         )
