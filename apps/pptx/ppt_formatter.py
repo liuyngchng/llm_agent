@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+"""
+根据模板样式格式化源 PPT。
+应用字体、颜色、布局等规则
+"""
 
 from pptx import Presentation
 import json
 
+from apps.pptx.content_analyzer import ContentAnalyzer
 from apps.pptx.layout_matcher import LayoutMatcher
+from apps.pptx.style_applicator import StyleApplicator
 
 
 class PPTFormatter:
@@ -136,17 +142,3 @@ class PPTFormatter:
 
         # 转移内容并应用样式
         self._transfer_content(source_slide, new_slide, template_styles)
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
-
+"""
+定义字体、颜色、布局等校验规则。
+实现具体的校验逻辑（如字体合规、颜色合规、布局合规）
+"""
 class FormattingRules:
     def __init__(self):
         self.rules = self._load_default_rules()

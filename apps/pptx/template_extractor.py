@@ -3,7 +3,8 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 """
-按照 PPT 模板格式化用户的 PPT 文件
+从模板 PPT 中提取样式信息（如字体、颜色、版式）。
+生成可供校验和格式化使用的模板数据集。
 """
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
