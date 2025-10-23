@@ -115,7 +115,7 @@ def register_routes(app):
             "warning_info": warning_info,
         }
         dt_idx = "docx_my_task.html"
-        logger.info(f"return_page_with_no_auth {dt_idx}")
+        logger.info(f"{uid}, return_page_with_no_auth {dt_idx}")
         return render_template(dt_idx, **ctx)
 
     @app.route('/docx/my/task', methods=['POST'])
@@ -126,7 +126,7 @@ def register_routes(app):
         data = request.json
         logger.info(f"my_docx_task_req, {data}")
         uid = int(data.get('uid'))
-        logger.info(f"get_my_docx_task, uid {uid}")
+        logger.info(f"{uid}, get_my_docx_task")
         task_list = docx_meta_util.get_user_docx_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
 
@@ -140,8 +140,8 @@ def register_routes(app):
         ### 1.1.1 三级标题
         ### 1.1.2 三级标题
         """
-        logger.info(f"gen_doc_outline {request.json}")
         uid = request.json.get("uid")
+        logger.info(f"{uid}, gen_doc_outline {request.json}")
         doc_type = request.json.get("doc_type")
         doc_title = request.json.get("doc_title")
         keywords = request.json.get("keywords")
@@ -160,11 +160,12 @@ def register_routes(app):
         """
         上传Word docx写作文档模板，需要包含三级目录
         """
-        logger.info(f"upload_file_req, {request}")
+        logger.info(f"upload_docx_template_file, {request}")
         if 'file' not in request.files:
             return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
         file = request.files['file']
         uid = int(request.form.get('uid'))
+        logger.info(f"{uid}, upload_docx_template_file")
         if file.filename == '':
             return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
 
@@ -191,8 +192,8 @@ def register_routes(app):
         文档目录参数 doc_outline 传递的文本格式如下： 1.标题1 \n1.1 标题1.1 \n1.2 标题1.2
         """
         data = request.json
-        logger.info(f"write_doc_with_outline_txt, data{data}")
         uid = data.get("uid")
+        logger.info(f"{uid}, write_doc_with_outline_txt, data, {data}")
         doc_title = data.get("doc_title")
         doc_outline = data.get("doc_outline")
         doc_type = data.get("doc_type")
@@ -225,7 +226,8 @@ def register_routes(app):
         在word文档模板中，有三级目录，在每个小节中，有用户提供的写作要求
         """
         data = request.json
-        logger.info(f"write_doc_with_docx_template, {data}")
+        uid = data.get("uid")
+        logger.info(f"{uid}, write_doc_with_docx_template, {data}")
         task_id = int(data.get("task_id"))
         doc_type = data.get("doc_type")
         doc_title = data.get("doc_title")
@@ -235,7 +237,7 @@ def register_routes(app):
             logger.error(f"err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
         template_file_name = data.get("file_name")
-        uid = data.get("uid")
+
         keywords = data.get("keywords")
         if data.get("vbd_id"):
             vbd_id = int(data.get("vbd_id"))
