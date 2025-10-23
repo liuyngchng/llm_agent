@@ -124,9 +124,8 @@ def register_routes(app):
         获取当前在进行的写作任务
         """
         data = request.json
-        logger.info(f"my_docx_task_req, {data}")
         uid = int(data.get('uid'))
-        logger.info(f"{uid}, get_my_docx_task")
+        logger.info(f"{uid}, get_my_docx_task, {data}")
         task_list = docx_meta_util.get_user_docx_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
 
