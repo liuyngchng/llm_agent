@@ -241,6 +241,64 @@ class PPTFormatter:
             violations.append(f"版式类型 {layout_type} 不符合模板要求")
         return violations
 
+    def auto_format_ppt(self, source_path, template_styles):
+        """自动修改不符合规范的PPT格式"""
+        source_ppt = Presentation(source_path)
+        formatted_ppt = Presentation()
+
+        for slide in source_ppt.slides:
+            # 分析幻灯片内容
+            slide_analysis = self.content_analyzer.analyze_slide_content(slide)
+            
+            # 查找最佳版式
+            best_layout = self._find_best_layout(slide, template_styles)
+            new_slide = formatted_ppt.slides.add_slide(best_layout)
+            
+            # 转移内容并应用样式
+            self._transfer_content(slide, new_slide, template_styles)
+            
+            # 检查合规性并自动修正
+            violations = self._check_slide_compliance(slide_analysis)
+            if violations:
+                self._apply_fixes(new_slide, violations, template_styles)
+        
+        return formatted_ppt
+
+    def _apply_fixes(self, slide, violations, template_styles):
+        """根据违规项自动修正幻灯片"""
+        for violation in violations:
+            if "字体大小" in violation:
+                self._fix_font_size(slide, template_styles)
+            elif "颜色" in violation:
+                self._fix_color(slide, template_styles)
+            elif "版式类型" in violation:
+                self._fix_layout(slide, template_styles)
+
+    def _fix_font_size(self, slide, template_styles):
+        """修正字体大小"""
+        for shape in slide.shapes:
+            if hasattr(shape, 'text_frame'):
+                for paragraph in shape.text_frame.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.size = template_styles.get('font_size', 12)
+
+    def _fix_color(self, slide, template_styles):
+        """修正颜色"""
+        for shape in slide.shapes:
+            if hasattr(shape, 'text_frame'):
+                for paragraph in shape.text_frame.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.color.rgb = template_styles.get('default_color')
+
+    def _fix_layout(self, slide, template_styles):
+        """修正版式"""
+        # 重新匹配版式并转移内容
+        slide_analysis = self.content_analyzer.analyze_slide_content(slide)
+        best_layout = self._find_best_layout(slide, template_styles)
+        new_slide = slide.parent.slides.add_slide(best_layout)
+        self._transfer_content(slide, new_slide, template_styles)
+        slide.parent.slides._sldIdLst.remove(slide._element)
+
     def generate_compliance_report(self, formatted_ppt):
         """生成合规报告"""
         violations = []
