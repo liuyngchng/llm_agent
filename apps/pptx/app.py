@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+
 """
 通过 PPT 模板分析用户 PPT 中的内容是否符合规范，直接对报告进行调整不符合模板规范的直接修改  PPT 格式。
 """
