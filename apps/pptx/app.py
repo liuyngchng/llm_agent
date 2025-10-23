@@ -1,6 +1,8 @@
+"""
+通过 PPT 模板分析用户 PPT 中的内容是否符合规范，直接对报告进行调整不符合模板规范的直接修改  PPT 格式。
+"""
 from apps.pptx.ppt_formatter import PPTFormatter
 
-from apps.pptx.ppt_formatter import PPTFormatter
 
 def do_task():
     try:
