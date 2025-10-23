@@ -1,9 +1,0 @@
-gunicorn
-uvicorn
-uv
-mcp
-mcp[cli]
-concurrent_log_handler
-pyyaml
-flask
-requests
