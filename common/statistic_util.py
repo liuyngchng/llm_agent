@@ -21,8 +21,8 @@ def get_statistics_list()-> dict | None:
     """
     with sqlite3.connect(STS_DB_FILE) as my_conn:
         try:
-            sql = (f"select uid, nickname, date, access_count, "
-                   f"input_token, output_token from statistics limit 100")
+            sql = (f"select uid, nickname, date, access_count, input_token, output_token"
+                   f" from statistics limit 100")
             check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             if user_dt:

@@ -12,7 +12,7 @@ import time
 from langchain_core.prompts import ChatPromptTemplate
 
 from common import cfg_util, agt_util, cm_utils, statistic_util
-from common.cm_utils import rmv_think_block, calc_txt_token
+from common.cm_utils import rmv_think_block, estimate_tokens
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -33,34 +33,36 @@ def gen_docx_outline_stream(uid:int, doc_type: str, doc_title: str, keywords: st
     model = agt_util.get_model(cfg, temperature=1.5)
     # 计算输入 token 数量
     input_text = prompt.format(doc_type=doc_type, doc_title=doc_title, keywords=keywords)
-    logger.info(f"{uid}, start_calc_txt_token, {input_text}")
-    input_tokens = calc_txt_token(input_text)
+    # logger.info(f"{uid}, start_calc_txt_token, {input_text}")
+    input_tokens = estimate_tokens(input_text)
     logger.info(f"{uid}, input_tokens, {input_tokens}")
     statistic_util.add_input_token_by_uid(uid, input_tokens)
     logger.info(f"submit_to_llm, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}, prompt {prompt}")
     try:
         # 流式调用模型
-        output_tokens_sum = 0
+        output_txt = ''
         for chunk in model.stream(input_text):
             if hasattr(chunk, 'content'):
                 output_text = cm_utils.rmv_think_block(chunk.content)
-                output_tokens_sum  += calc_txt_token(chunk.content)
+                output_txt += chunk.content
                 yield output_text
             elif hasattr(chunk, 'text'):
                 output_text = cm_utils.rmv_think_block(chunk.text())
-                output_tokens_sum  += calc_txt_token(chunk.text())
+                output_txt += chunk.text()
                 yield output_text
-        logger.info(f"{uid}, output_tokens, {output_tokens_sum}")
-        statistic_util.add_output_token_by_uid(uid, output_tokens_sum)
+        output_tokens = estimate_tokens(output_txt[:-1])
+        logger.info(f"{uid}, output_tokens, {output_tokens}")
+        statistic_util.add_output_token_by_uid(uid, output_tokens)
     finally:
         # 清理资源
         logger.info("gen_outline_finish, dispose resources")
         dispose(model)
 
-def gen_txt(write_context: str, references: str, paragraph_prompt: str, user_comment: str, catalogue: str,
+def gen_txt(uid: int, write_context: str, references: str, paragraph_prompt: str, user_comment: str, catalogue: str,
             current_sub_title: str, cfg: dict, max_retries=6) -> str | None:
     """
     根据提供的三级目录、参考资料，以及每个章节的具体文本写作要求，输出文本
+    :param uid:                 用户请求ID
     :param write_context:       整体的写作背景
     :param references:          可供参考的样例子文本
     :param paragraph_prompt:    局部章节文本的写作要求
@@ -101,9 +103,25 @@ def gen_txt(write_context: str, references: str, paragraph_prompt: str, user_com
                 "paragraph_prompt": paragraph_prompt,
                 "user_comment": user_comment,
             }
+            # 计算输入 token 数量
+            input_text = prompt.format(
+                write_context=write_context,
+                catalogue=catalogue,
+                current_sub_title=current_sub_title,
+                references=references,
+                paragraph_prompt=paragraph_prompt,
+                user_comment=user_comment,
+            )
+            # logger.info(f"{uid}, start_calc_txt_token, {input_text}")
+            input_tokens = estimate_tokens(input_text)
+            logger.info(f"{uid}, input_tokens, {input_tokens}")
+            statistic_util.add_input_token_by_uid(uid, input_tokens)
             logger.info(f"gen_txt_arg, {arg_dict}, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
             response = chain.invoke(arg_dict)
             output_txt = rmv_think_block(response.content)
+            output_tokens = estimate_tokens(response.content)
+            logger.info(f"{uid}, output_tokens, {output_tokens}")
+            statistic_util.add_output_token_by_uid(uid, output_tokens)
             dispose(model)
             output_txt = output_txt.replace(current_sub_title, "").strip()
             return output_txt

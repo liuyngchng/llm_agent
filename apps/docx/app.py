@@ -122,13 +122,45 @@ def register_routes(app):
     @app.route('/docx/my/task', methods=['POST'])
     def my_docx_task():
         """
-        获取当前在进行的写作任务
+        获取用户的写作任务
         """
         data = request.json
         uid = int(data.get('uid'))
         logger.info(f"{uid}, get_my_docx_task, {data}")
         task_list = docx_meta_util.get_user_docx_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
+
+    @app.route('/docx/statistic/index', methods=['GET'])
+    def get_statistic_report_index():
+        """
+        获取系统运营的页面
+        """
+        logger.info(f"get_statistic_report_index, {request.args}")
+        uid = request.args.get('uid')
+        statistic_util.add_access_count_by_uid(int(uid), 1)
+        app_source = request.args.get('app_source')
+        warning_info = request.args.get('warning_info', "")
+        sys_name = my_enums.AppType.get_app_type(app_source)
+        ctx = {
+            "uid": uid,
+            "sys_name": sys_name,
+            "app_source": app_source,
+            "warning_info": warning_info,
+        }
+        dt_idx = "statistics.html"
+        logger.info(f"{uid}, return_page_with_no_auth {dt_idx}")
+        return render_template(dt_idx, **ctx)
+
+    @app.route('/docx/statistic/report', methods=['POST'])
+    def get_statistic_report():
+        """
+        统计用户的系统使用数据
+        """
+        data = request.json
+        uid = int(data.get('uid'))
+        logger.info(f"{uid}, get_statistic_report, {data}")
+        statistics_list = statistic_util.get_statistics_list()
+        return json.dumps(statistics_list, ensure_ascii=False), 200
 
     @app.route('/docx/generate/outline', methods=['POST'])
     def generate_outline():

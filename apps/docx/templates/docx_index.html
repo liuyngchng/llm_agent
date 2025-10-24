@@ -20,6 +20,11 @@
                 <a href="/docx/task?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="my-btn" target="_blank">
                     <i class="fas fa-user"></i> 我的写作任务
                 </a>
+                {% if hack_admin =='1' %}
+                <a href="/docx/statistic/index?uid={{uid}}&app_source={{app_source}}" class="my-btn" target="_blank">
+                    <i class="fas fa-cog"></i>系统运营
+                </a>
+                {% endif %}
                 <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i> 退出
                 </a>

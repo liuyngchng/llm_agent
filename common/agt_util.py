@@ -41,7 +41,7 @@ def get_model(cfg, temperature=1, max_tokens=32768, reasoning=False):
         model = ChatOllama(
             model=cfg['api']['llm_model_name'],
             base_url=cfg['api']['llm_api_uri'],
-            temperature=__temperature,
+            temperature=temperature,
         )
     logger.debug(f"get_model,{type(model)}, {model}")
     return model

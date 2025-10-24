@@ -22,6 +22,7 @@ from apps.docx.txt_gen_util import gen_txt
 from apps.docx.docx_file_txt_util import get_elapsed_time, get_reference_from_vdb, is_3rd_heading, is_txt_para, \
     refresh_current_heading
 from apps.docx.mermaid_render import MermaidRenderer
+from common.vdb_meta_util import VdbMeta
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -202,6 +203,7 @@ class DocxGenerator:
                 logger.info(f"{task_id}, 跳过非描述性的文本段落 {para.text}")
                 continue
             task = {
+                'task_id': task_id,
                 'unique_key': f"para_{len(tasks)}",
                 'write_context': doc_ctx,
                 'paragraph_prompt': para.text,
@@ -303,7 +305,12 @@ class DocxGenerator:
             )
             logger.debug(f"gen_txt_user_comment, {task['user_comment']}")
             # 生成文本
+            if not task['task_id']:
+                raise RuntimeError('task_id_null_exception')
+            docx_file_info = docx_meta_util.get_docx_info_by_task_id(task['task_id'])
+            uid = docx_file_info[0]['uid']
             llm_txt = gen_txt(
+                uid=uid,
                 write_context=task['write_context'],
                 references=references,
                 paragraph_prompt=task['paragraph_prompt'],
@@ -519,6 +526,7 @@ class DocxGenerator:
                 continue
 
             task = {
+                'task_id': task_id,
                 'unique_key': f"comment_{para_idx}",
                 'write_context': doc_ctx,
                 'paragraph_prompt': para.text,
@@ -622,6 +630,7 @@ class DocxGenerator:
                     continue
 
                 task = {
+                    'task_id': task_id,
                     'unique_key': f"heading_{len(tasks)}",
                     'write_context': doc_ctx,
                     'paragraph_prompt': "",

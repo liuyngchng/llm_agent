@@ -19,10 +19,25 @@ from common.my_enums import AppType
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+chinese_pattern = re.compile(r'[\u4e00-\u9fff]')
+english_pattern = re.compile(r'[a-zA-Z]')
+
 
 def calc_txt_token(txt: str) -> int:
+    """默认需要联网"""
     encoding = tiktoken.get_encoding("cl100k_base")
     return len(encoding.encode(txt))
+
+
+def estimate_tokens(text: str) -> int:
+    """估算token数量（近似值）"""
+    chinese_chars = len(chinese_pattern.findall(text))
+    english_chars = len(english_pattern.findall(text))
+    other_chars = len(text) - chinese_chars - english_chars
+
+    # 估算公式：中文字符*1.5 + 英文字符*0.25 + 其他字符*0.25
+    estimated_tokens = int(chinese_chars * 1.5 + english_chars * 0.25 + other_chars * 0.25)
+    return max(estimated_tokens, 1)
 
 def extract_json(dt: str) -> str:
     # start from first '{', end with last '}'
