@@ -45,6 +45,7 @@ function renderTasksTable(tasks) {
     }
 
     tableBody.innerHTML = '';
+    const uid = getUidFromUrl();
     tasks.forEach((task, index) => {
         const row = document.createElement('tr');
 
@@ -81,7 +82,7 @@ function renderTasksTable(tasks) {
         // 文档下载
         const downloadCell = document.createElement('td');
         downloadCell.innerHTML = `
-            <a href="/docx/download/task/${task.task_id}" class="action-btn action-download">
+            <a href="/docx/download/task/${task.task_id}?uid=${uid}" class="action-btn action-download">
                 <i class="fas fa-download"></i> 全文下载
             </a>
         `;

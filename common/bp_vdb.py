@@ -16,7 +16,7 @@ import hashlib
 from flask import (request, jsonify, Blueprint, render_template)
 from werkzeug.utils import secure_filename
 
-from common import vdb_util
+from common import vdb_util, statistic_util
 from common.sys_init import init_yml_cfg
 from common.vdb_meta_util import VdbMeta
 from common.vdb_util import search_txt
@@ -61,9 +61,11 @@ def vdb_index():
         uid = request.args.get('uid').strip()
         t = request.args.get('t').strip()
         if not uid:
+            logger.exception(f"uid_null_err, req_url: {request.url}")
             return "user is null in config, please submit your username in config request"
+        statistic_util.add_access_count_by_uid(int(uid), 1)
     except Exception as e:
-        logger.error(f"err_in_vdb_index, {e}, url: {request.url}", exc_info=True)
+        logger.exception(f"err_in_vdb_index, {e}, url: {request.url}")
         raise jsonify("err_in_vdb_index")
     vdb_status = ""
     vdb_dir = f"{VDB_PREFIX}{uid}"

@@ -1,9 +1,11 @@
 -- 用户每日访问量，以及输入输出Token数量统计明细表
 CREATE TABLE "statistics" (
-	"uid"	INTEGER,
-	"user_name"	TEXT,
-	"date"	TEXT,
-	"access"	INTEGER,
-	"input_token"	INTEGER,
-	"output_token"	INTEGER
+	"id"	INTEGER NOT NULL UNIQUE,
+	"uid"	INTEGER NOT NULL UNIQUE,
+	"nickname"    TEXT NOT NULL,
+	"date"	TEXT NOT NULL,
+	"access_count"	INTEGER NOT NULL DEFAULT 0,
+	"input_token"	INTEGER NOT NULL DEFAULT 0,
+	"output_token"	INTEGER NOT NULL DEFAULT 0,
+	PRIMARY KEY("id" AUTOINCREMENT)
 );

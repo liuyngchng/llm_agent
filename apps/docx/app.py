@@ -20,7 +20,7 @@ from apps.docx.txt_gen_util import gen_docx_outline_stream
 from apps.docx.docx_gen_parallel import DocxGenerator
 from apps.docx.docx_file_cmt_util import get_para_comment_dict
 from apps.docx.docx_file_txt_util import extract_catalogue, gen_docx_template_with_outline_txt, get_outline_txt
-from common import my_enums
+from common import my_enums, statistic_util
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp
 from common.bp_vdb import vdb_bp, VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task
@@ -105,6 +105,7 @@ def register_routes(app):
         """
         logger.info(f"docx_task_index, {request.args}")
         uid = request.args.get('uid')
+        statistic_util.add_access_count_by_uid(int(uid), 1)
         app_source = request.args.get('app_source')
         warning_info = request.args.get('warning_info', "")
         sys_name = my_enums.AppType.get_app_type(app_source)
@@ -157,7 +158,7 @@ def register_routes(app):
     @app.route('/docx/upload', methods=['POST'])
     def upload_docx_template_file():
         """
-        上传Word docx写作文档模板，需要包含三级目录
+        上传 Word docx 写作文档模板，需要包含三级目录
         """
         logger.info(f"upload_docx_template_file, {request}")
         if 'file' not in request.files:
@@ -263,6 +264,8 @@ def register_routes(app):
         ：param filename: 文件名， 格式如下 f"output_{task_id}.docx"
         """
         logger.info(f"download_file, {filename}")
+        uid = request.args["uid"]
+        statistic_util.add_access_count_by_uid(int(uid), 1)
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         absolute_path = os.path.abspath(file_path)
         logger.info(f"文件检查 - 绝对路径: {absolute_path}")
@@ -291,6 +294,8 @@ def register_routes(app):
         ：param task_id: 任务ID，其对应的文件名格式如下 f"output_{task_id}.docx"
         """
         logger.info(f"download_file_task_id, {task_id}")
+        uid = request.args["uid"]
+        statistic_util.add_access_count_by_uid(int(uid), 1)
         filename = f"output_{task_id}.docx"
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         absolute_path = os.path.abspath(file_path)

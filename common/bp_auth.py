@@ -10,7 +10,7 @@ import markdown
 import logging.config
 from flask import Blueprint, jsonify, redirect, url_for
 from flask import (request, render_template)
-from common import cfg_util as cfg_utl
+from common import cfg_util as cfg_utl, statistic_util
 from common import my_enums
 from common.sys_init import init_yml_cfg
 
@@ -73,8 +73,10 @@ def login():
         warning_info=auth_result['msg']
         return redirect(url_for('auth.login_index', app_source=app_source, warning_info=warning_info, usr=user))
     dt_idx = f"{app_source}_index.html"
+
     logger.info(f"return_page {dt_idx}")
     uid = auth_result["uid"]
+    statistic_util.add_access_count_by_uid(uid, 1)
     if auth_result["role"] == 2:
         hack_admin = "1"
     else:

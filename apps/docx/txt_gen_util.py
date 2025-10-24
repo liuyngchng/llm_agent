@@ -11,7 +11,7 @@ import time
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from common import cfg_util, agt_util, cm_utils
+from common import cfg_util, agt_util, cm_utils, statistic_util
 from common.cm_utils import rmv_think_block, calc_txt_token
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -31,11 +31,13 @@ def gen_docx_outline_stream(uid:int, doc_type: str, doc_title: str, keywords: st
     prompt = ChatPromptTemplate.from_template(cm_utils.replace_spaces(template))
     logger.info(f"prompt {prompt}")
     model = agt_util.get_model(cfg, temperature=1.5)
-    logger.info(f"submit_to_llm, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}, prompt {prompt}")
     # 计算输入 token 数量
     input_text = prompt.format(doc_type=doc_type, doc_title=doc_title, keywords=keywords)
+    logger.info(f"{uid}, start_calc_txt_token, {input_text}")
     input_tokens = calc_txt_token(input_text)
-    logger.info(f"{uid}_input_tokens, {input_tokens}")
+    logger.info(f"{uid}, input_tokens, {input_tokens}")
+    statistic_util.add_input_token_by_uid(uid, input_tokens)
+    logger.info(f"submit_to_llm, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}, prompt {prompt}")
     try:
         # 流式调用模型
         output_tokens_sum = 0
@@ -48,7 +50,8 @@ def gen_docx_outline_stream(uid:int, doc_type: str, doc_title: str, keywords: st
                 output_text = cm_utils.rmv_think_block(chunk.text())
                 output_tokens_sum  += calc_txt_token(chunk.text())
                 yield output_text
-        logger.info(f"{uid}_output_tokens, {input_tokens}")
+        logger.info(f"{uid}, output_tokens, {output_tokens_sum}")
+        statistic_util.add_output_token_by_uid(uid, output_tokens_sum)
     finally:
         # 清理资源
         logger.info("gen_outline_finish, dispose resources")

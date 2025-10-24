@@ -25,16 +25,15 @@ def get_model(cfg, temperature=1, max_tokens=32768, reasoning=False):
             base_url=cfg['api']['llm_api_uri'],
             http_client=httpx.Client(verify=False, proxy=None),
             model=cfg['api']['llm_model_name'],
-            # 常用参数配置
-            temperature=__temperature,      # 控制随机性 (0.0-2.0)
-            max_tokens=__max_tokens,        # 最大生成长度
+            temperature=temperature,        # 控制随机性 (0.0-2.0)
+            max_tokens=max_tokens,          # 最大生成长度
             top_p=0.9,                      # 核采样参数
             frequency_penalty=0.1,          # 频率惩罚
             presence_penalty=0.1,           # 存在惩罚
             timeout=30,                     # 超时时间
             max_retries=2,                  # 重试次数
             extra_body={
-                "reasoning": __reasoning
+                "reasoning": reasoning
             }
         )
     else:
