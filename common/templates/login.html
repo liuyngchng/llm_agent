@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <title>{{sys_name}}</title>
+    <meta charset="utf-8">
+    <meta id="login.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="text/javascript" src="/static/crypto.js"></script>
+    <link rel="stylesheet" href="/static/login.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="login-title">
+                <div class="login-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <div>{{sys_name}}</div>
+            </div>
+            <p class="login-subtitle">安全登录您的账户</p>
+        </div>
+
+        <form id="my_form" method="post" action="/login">
+            <div class="form-group">
+                <div class="input-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <input id="usr" name="usr" type="text" value="{{usr}}" placeholder="请输入用户名">
+            </div>
+
+            <div class="form-group">
+                <div class="input-icon">
+                    <i class="fas fa-key"></i>
+                </div>
+                <input id="psw" name="psw" type="password" placeholder="请输入密码" value="{{psw}}">
+            </div>
+
+            <input id="t" name="t" type="hidden">
+            <input type="hidden" name="app_source" value="{{app_source}}">
+
+            <div class="btn-container">
+                <button type="button" class="btn btn-primary" id="login-button">
+                    <i class="fas fa-sign-in-alt"></i> 登 录
+                </button>
+            </div>
+        </form>
+
+        <div class="login-links">
+            <a href="/reg/usr?app_source={{app_source}}" class="login-link">
+                <i class="fas fa-user-plus"></i> 用户注册
+            </a>
+            <a href="#" class="login-link">
+                <i class="fas fa-question-circle"></i> 忘记密码?
+            </a>
+            <a href="/usr/mnl?app_source={{app_source}}" target="_blank" class="login-link">
+                <i class="fas fa-question-circle"></i> 帮助中心
+            </a>
+        </div>
+        <div class="warning-message">{{warning_info}}</div>
+    </div>
+    <script type="text/javascript" src="/static/login.js"></script>
+</body>
+</html>

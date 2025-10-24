@@ -1,0 +1,52 @@
+<div>已自动为您生成液化气订单信息，请您核对是否有无，我们将尽快安排工作人员上门为您提供服务</div>
+<div class="door_service">
+    <meta charset="UTF-8">
+    <div class="title">液化气配送订单信息</div>
+    <form id="doorSrvReqForm" method="post" action="/lpg/order/info">
+
+        <div class="form-row">
+            <label><span style="color:red">* </span>客户姓名</label>
+            <input type="text" id="customerName" name="customerName" class="input-group" value="{{客户姓名}}" required>
+        </div>
+
+        <div class="form-row">
+            <label><span style="color:red">* </span>联系电话</label>
+            <input type="tel" id="contactNumber" name="contactNumber" class="input-group" value="{{联系电话}}" required>
+        </div>
+
+        <div class="form-row">
+            <label><span style="color:red">* </span>配送地址</label>
+            <input type="text" id="address" name="address" class="input-group" value="{{配送地址}}" required>
+        </div>
+        <div class="form-row">
+            <label><span style="color:red">* </span>液化气瓶重量</label>
+            <input type="text" id="lpgGasWeight" name="lpgGasWeight" class="input-group" value="{{液化气重量}}" required>
+        </div>
+        <div class="form-row">
+            <label><span style="color:red">* </span>液化气瓶数量</label>
+            <input type="text" id="lpgContainerNum" name="lpgContainerNum" class="input-group" value="{{液化气瓶数量}}" required>
+        </div>
+
+        <div class="form-row">
+            <label><span style="color:red">* </span>期望送达时间</label>
+            <input type="text" id="preferredDate" name="preferredDate" class="input-group" value="{{期望送达时间}}" required>
+        </div>
+        <div class="form-row">
+            <label><span style="color:red">* </span>客户类型</label>
+            <input type="text" id="userType" name="userType" class="input-group" value="{{客户类型}}" required>
+        </div>
+
+        <div class="form-row">
+            <label><span style="color:red">* </span>其他需求</label>
+            <textarea id="problemDescription" name="problemDescription" cols="100" class="input-group" required>{{其他需求}}</textarea>
+        </div>
+
+        <div class="form-row">
+            <label>备注信息</label>
+            <textarea id="additionalNotes" class="input-group"></textarea>
+        </div>
+
+        <button type="submit" class="submit-btn">确认无误</button>
+        <button type="submit" class="submit-btn1">信息有误</button>
+    </form>
+</div>

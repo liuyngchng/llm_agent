@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ sys_name }}</title>
+    <link rel="stylesheet" href="/static/md.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 目录导航 -->
+        {% if toc_content %}
+        <div class="toc-sidebar">
+            <div class="toc-header">
+                <h3>目录</h3>
+            </div>
+            <div class="toc-content">
+                {{ toc_content | safe }}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="markdown-body">
+            <!-- 文档标题（可选） -->
+            <!-- <h1>{{ sys_name }}</h1> -->
+
+            {% if warning_info %}
+            <div class="warning" style="color: #d73a49; background: #ffebea; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                {{ warning_info }}
+            </div>
+            {% endif %}
+
+            <!-- 直接输出转换后的 HTML -->
+            {{ html_content | safe }}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta id="ord_gen_index.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="text/javascript" src="/static/purify.min.js"></script>
+    <script type="text/javascript" src="/static/marked.min.js"></script>
+    <link rel="stylesheet" href="/static/nl2sql.css">
+    <title>客户服务</title>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>客户服务助手</h1>
+        </div>
+        <a href="/usr/logout?uid={{uid}}&app_source={{app_source}}" class="system-settings-link" target="_blank">用户登出</a>
+        <a href="/cfg/idx?uid={{uid}}&app_source={{app_source}}" class="system-settings-link" target="_blank">系统配置</a>
+        <div class="chat-container" id="chat-container">
+            <!-- 聊天内容将在这里动态生成 -->
+        </div>
+        
+        <form id="query-form">
+            <div class="input-container">
+                <input type="text" class="input-field" id="query-input" name="msg" placeholder="输入你的问题，帮你深度解答" required>
+                <button type="button" class="voice-button" id="voice-btn">
+                    <!-- SVG麦克风图标 -->
+                    <svg width="24" height="24" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M12 15c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v7c0 1.66 1.34 3 3 3zm-1-12c0-.55.45-1 1-1s1 .45 1 1v7c0 .55-.45 1-1 1s-1-.45-1-1V3zm6 9c0 3.53-2.61 6.43-6 6.92V21h2c.55 0 1 .45 1 1s-.45 1-1 1H7c-.55 0-1-.45-1-1s.45-1 1-1h2v-2.08c-3.39-.49-6-3.39-6-6.92 0-.55.45-1 1-1s1 .45 1 1c0 2.76 2.24 5 5 5s5-2.24 5-5c0-.55.45-1 1-1s1 .45 1 1z"/>
+                    </svg>
+                </button>
+                <button type="submit" class="send-button">发送</button>
+            </div>
+            <input type="hidden" id ="uid" name="uid" value="{{uid}}">
+            <input type="hidden" id ="t" name="t" value="{{t}}">
+            <input type="hidden" id ="cur_page" name="cur_page" value="{{cur_page}}">
+            <input type="hidden" id ="next_page" name="next_page" value="">
+            <input type="hidden" id ="total_page" name="total_page" value="{{total_page}}">
+            <input type="hidden" id ="greeting" name="greeting" value="{{greeting}}">
+        </form>
+    </div>
+    <div class="status-indicator" id="status-indicator"></div>
+    <div id="voice-effect" class="voice-effect" style="display:none"><!-- 动态添加波形条 --></div>
+    <script type="text/javascript" src="/static/ord_gen.js?a=1"></script>
+</body>
+</html>

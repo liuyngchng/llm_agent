@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <title>数据源配置</title>
+    <meta charset="utf-8">
+    <meta id="config_index.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/config.css">
+    <script src="/static/crypto.js"></script>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <div class="title">
+                <div class="icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <div>数据源配置</div>
+            </div>
+            <p class="subtitle">设置您的数据库连接和查询参数</p>
+        </div>
+        <form action="/cfg/dt" method="post">
+            <div class="form-group">
+                <label for="db_type">数据库类型:</label>
+                <div class="input-icon">
+                    <i class="fas fa-database"></i>
+                </div>
+                <select id="db_type" name="db_type" required>
+                    <option value="mysql" {% if db_type =='mysql' %}selected{% endif %}>MySQL数据库</option>
+                    <option value="oracle" {% if db_type =='oracle' %}selected{% endif %}>Oracle数据库</option>
+                    <option value="doris" {% if db_type =='doris' %}selected{% endif %}>Doris数据源</option>
+                    <option value="dm" {% if db_type =='dm' %}selected{% endif %}>达梦数据库(DM8)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="db_name">数据库名称:</label>
+                <div class="input-icon">
+                    <i class="fas fa-signature"></i>
+                </div>
+                <input type="text" id="db_name" name="db_name" value="{{db_name}}" placeholder="your_db_instance" required>
+            </div>
+
+            <div class="form-group">
+                <label for="db_host">数据库主机:</label>
+                <div class="input-icon">
+                    <i class="fas fa-server"></i>
+                </div>
+                <input type="text" id="db_host" name="db_host" value="{{db_host}}" placeholder="192.168.1.1">
+            </div>
+
+            <div class="form-group">
+                <label for="db_port">数据库端口:</label>
+                <div class="input-icon">
+                    <i class="fas fa-plug"></i>
+                </div>
+                <input type="text" id="db_port" name="db_port" value="{{db_port}}" placeholder="13306">
+            </div>
+
+            <div class="form-group">
+                <label for="db_usr">数据库用户:</label>
+                <div class="input-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <input type="text" id="db_usr" name="db_usr" value="{{db_usr}}" placeholder="your_db_username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="db_psw">数据库密码:</label>
+                <div class="input-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <input type="password" id="db_psw" name="db_psw" value="{{db_psw}}" placeholder="your_db_password" required>
+            </div>
+
+            <div class="form-group">
+                <label for="tables">数据表清单:</label>
+                <div class="input-icon">
+                    <i class="fas fa-table"></i>
+                </div>
+                <input type="text" id="tables" name="tables" value="{{tables}}" title="填写后限定为填写的表清单，不填则默认使用当前DB下用户可见的所有表">
+            </div>
+
+            <div class="form-group">
+                <label for="is_strict">开启提示:</label>
+                <div class="input-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <input type="number" max="1" min="0" id="is_strict" name="is_strict" value="{{is_strict}}" title="0: 否[尽可能理解查询意图]; 1:是[提示用户提供查询条件]">
+            </div>
+
+            <div class="form-group">
+                <label for="add_chart">开启绘图:</label>
+                <div class="input-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <input type="number" max="1" min="0" id="add_chart" name="add_chart" value="{{add_chart}}" title="0: 否[不绘图];1:是[绘图]">
+            </div>
+
+            <div class="form-group">
+                <label for="llm_ctx">背景知识:</label>
+                <div class="input-icon" style="top: 20px;">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <textarea id="llm_ctx" name="llm_ctx" title="每条独立的知识写一行，用于系统理解相应的业务场景">{{llm_ctx}}</textarea>
+            </div>
+
+            <div class="input-container">
+                <button type="submit" class="send-button" id="save_button">
+                    <i class="fas fa-save"></i> 保存配置
+                </button>
+                <button type="button" class="send-button delete-btn" id="delete_button">
+                    <i class="fas fa-trash-alt"></i> 删除配置
+                </button>
+            </div>
+
+            <input type="hidden" id="uid" name="uid" value="{{uid}}">
+            <div class="warning-message" id="waring_info">{{waring_info}}</div>
+        </form>
+
+        <footer>
+            <p>© 2025 数据查询平台 | KLSZ</p>
+            <p class="subtitle" style="margin-top: 10px; font-size: 0.85rem;">
+                配置修改将实时生效，请谨慎操作
+            </p>
+        </footer>
+    </div>
+    <script src="/static/config.js"></script>
+</body>
+</html>

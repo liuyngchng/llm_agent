@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <title>个性化设置</title>
+    <meta charset="utf-8">
+    <meta id="hack_info_index.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/config.css">
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <div class="title">
+                <div class="icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <div>个性化设置</div>
+            </div>
+            <p class="subtitle">用户问题的个性化设置</p>
+        </div>
+        <form action="/user/hack/info" method="post">
+            <div class="form-group">
+                <label for="user_list">选择用户名:</label>
+                <div class="input-icon">
+                    <i class="fas fa-database"></i>
+                </div>
+                <select id="user_list" name="user_list" required>
+                    {% for user in user_list %}
+                        <option value="{{ user.id }}">{{ user.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="hack_user_config">个性化配置:</label>
+                <div class="input-icon">
+                    <i class="fas fa-server"></i>
+                </div>
+                <textarea id="hack_user_config" name="hack_user_config" rows="20" cols="100" placeholder="问题tab问题释义">{{hack_user_config}}</textarea>
+            </div>
+
+            <div class="input-container">
+                <button type="submit" class="send-button" id="save_button">
+                    <i class="fas fa-save"></i> 保存配置
+                </button>
+            </div>
+            <input type="hidden" id="uid" name="uid" value="{{uid}}">
+            <div class="warning-message" id="waring_info">{{waring_info}}</div>
+        </form>
+
+        <footer>
+            <p>© 2025 数据查询平台 | KLSZ</p>
+            <p class="subtitle" style="margin-top: 10px; font-size: 0.85rem;">
+                配置修改将实时生效，请谨慎操作
+            </p>
+        </footer>
+    </div>
+    <script src="/static/hack_info.js"></script>
+</body>
+</html>
