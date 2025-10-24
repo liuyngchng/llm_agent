@@ -7,7 +7,8 @@ import sqlite3
 from datetime import datetime
 
 from common import cfg_util
-from common.cfg_util import query_sqlite, insert_del_sqlite
+from common.cfg_util import query_sqlite, insert_del_sqlite, output_data, sqlite_output
+from common.my_enums import DataType
 
 STS_DB_FILE = "cfg.db"
 STS_DB_URI=f"sqlite:///{STS_DB_FILE}"
@@ -15,41 +16,28 @@ STS_DB_URI=f"sqlite:///{STS_DB_FILE}"
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-def get_statistics_list()-> dict | None:
+def get_statistics_list()-> list[dict]:
     """
     获取用户的统计数据清单
     """
-    with sqlite3.connect(STS_DB_FILE) as my_conn:
-        try:
-            sql = (f"select uid, nickname, date, access_count, input_token, output_token"
-                   f" from statistics limit 100")
-            check_info = query_sqlite(my_conn, sql)
-            user_dt = check_info['data']
-            if user_dt:
-                logger.info(f"get_statistics_list, {json.dumps(user_dt, ensure_ascii=False)}")
-                return user_dt
-        except Exception as e:
-            logger.error(f"get_statistics_list_err")
-    logger.error(f"no_statistics_list_found")
-    return None
+    sql = (f"select uid, nickname, date, access_count, input_token, output_token"
+           f" from statistics limit 100")
+    logger.info(f"get_statistics_list_sql, {sql}")
+    my_dt = sqlite_output(STS_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"get_statistics_list_dt {my_dt}")
+    return my_dt
 
 def get_statistics_by_uid(uid: int)-> dict | None:
     """
     获取用户的统计数据
     """
-    with sqlite3.connect(STS_DB_FILE) as my_conn:
-        try:
-            sql = (f"select uid, nickname, date, access_count,"
-                f"input_token, output_token from statistics where uid={uid} limit 1")
-            check_info = query_sqlite(my_conn, sql)
-            user_dt = check_info['data']
-            if user_dt:
-                logger.info(f"get_statistics_by_uid, {json.dumps(user_dt[0], ensure_ascii=False)}")
-                return user_dt[0]
-        except Exception as e:
-            logger.error(f"get_statistics_by_uid_err, {uid}")
-    logger.error(f"no_statistics_found_for_uid, {uid}")
-    return None
+    sql = (f"select uid, nickname, date, access_count,"
+        f"input_token, output_token from statistics where uid={uid} limit 1")
+    logger.info(f"get_statistics_by_uid_sql, {sql}")
+    my_dt = sqlite_output(STS_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"get_statistics_by_uid_dt {my_dt}")
+    return my_dt
+
 
 
 def get_access_count_by_uid(uid: int)-> int:
