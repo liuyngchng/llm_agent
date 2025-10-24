@@ -9,7 +9,7 @@ import logging.config
 
 from flask import render_template
 
-from common.agt_util import update_session_info, get_abs_of_chat, extract_lpg_order_info, fill_dict
+from common.agt_util import update_session_info, get_abs_of_chat, extract_order_info, fill_dict
 from common.cfg_util import get_consts
 from datetime import datetime
 
@@ -139,7 +139,7 @@ class OrderService:
         :param msg_uid: the uid represent who send the msg to system
         :param sys_cfg: the system config information
         """
-        s_info = extract_lpg_order_info(msg, sys_cfg)
+        s_info = extract_order_info(msg, sys_cfg)
         if not s_info:
             return
         if msg_uid not in self.get_session_info_dict():

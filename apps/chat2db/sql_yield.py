@@ -391,7 +391,7 @@ class SqlYield(DbUtl):
         return schema_info
 
     def get_llm(self):
-        return agt_util.get_model(self.cfg)
+        return agt_util.get_model(self.cfg, 0.0)
 
 
     def yield_dt_with_nl(self, uid: int, q: str, dt_fmt: str, user_page_dt: dict):

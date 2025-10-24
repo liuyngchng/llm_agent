@@ -277,7 +277,7 @@ class SqlAgent(DbUtl):
         return schema_info
 
     def get_llm(self):
-        return agt_util.get_model(self.cfg)
+        return agt_util.get_model(self.cfg, temperature=0.0)
              
 
     def get_dt_with_nl(self, uid: str, q: str, dt_fmt: str) -> dict:

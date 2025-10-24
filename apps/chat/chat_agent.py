@@ -24,7 +24,7 @@ class ChatAgent:
         self.llm = self.get_llm()
 
     def get_llm(self):
-        return agt_util.get_model(self.syc_cfg)
+        return agt_util.get_model(self.syc_cfg, temperature=1.3)
 
     def get_chain(self):
         template = cfg_util.get_usr_prompt_template('vdb_chat_msg', self.syc_cfg)

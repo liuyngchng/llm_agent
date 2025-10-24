@@ -14,15 +14,11 @@ from common import cfg_util
 from common.sys_init import init_yml_cfg
 from common.cm_utils import rmv_think_block, extract_md_content
 
-
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-__temperature = 0.7
-__max_tokens=32768
-__reasoning=False
 
-def get_model(cfg):
+def get_model(cfg, temperature=1, max_tokens=32768, reasoning=False):
     if cfg['api'].get('is_remote', True):
         model = ChatOpenAI(
             api_key=cfg['api']['llm_api_key'],
@@ -231,7 +227,7 @@ def extract_session_info(chat_log: str, cfg: dict) -> str:
         logger.error(f"json_loads_err_for {response.content}")
     return final_result
 
-def extract_lpg_order_info(chat_log: str, cfg: dict) -> str:
+def extract_order_info(chat_log: str, cfg: dict) -> str:
     """
     extract ord_gen order  from chat log
     """

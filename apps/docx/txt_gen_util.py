@@ -30,7 +30,7 @@ def gen_docx_outline_stream(uid:int, doc_type: str, doc_title: str, keywords: st
     template = cfg_util.get_usr_prompt_template('gen_docx_outline_msg', cfg)
     prompt = ChatPromptTemplate.from_template(cm_utils.replace_spaces(template))
     logger.info(f"prompt {prompt}")
-    model = agt_util.get_model(cfg)
+    model = agt_util.get_model(cfg, temperature=1.5)
     logger.info(f"submit_to_llm, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}, prompt {prompt}")
     # 计算输入 token 数量
     input_text = prompt.format(doc_type=doc_type, doc_title=doc_title, keywords=keywords)
@@ -88,7 +88,7 @@ def gen_txt(write_context: str, references: str, paragraph_prompt: str, user_com
             if attempt > 0:
                 time.sleep(backoff_times[attempt - 1])
                 logger.info(f"retry #{attempt} times after wait {backoff_times[attempt - 1]}s")
-            model = agt_util.get_model(cfg)
+            model = agt_util.get_model(cfg, temperature=1.3)
             chain = prompt | model
             arg_dict = {
                 "write_context": write_context,
