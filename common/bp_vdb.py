@@ -13,10 +13,12 @@ import threading
 import time
 import hashlib
 
-from flask import (request, jsonify, Blueprint, render_template)
+from flask import (request, jsonify, Blueprint, render_template, redirect, url_for)
 from werkzeug.utils import secure_filename
 
 from common import vdb_util, statistic_util
+from common.bp_auth import get_client_ip, auth_info, SESSION_TIMEOUT
+from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.vdb_meta_util import VdbMeta
 from common.vdb_util import search_txt
@@ -60,9 +62,21 @@ def vdb_index():
     try:
         uid = request.args.get('uid').strip()
         t = request.args.get('t').strip()
+        app_source = request.args.get('app_source')
         if not uid:
             logger.exception(f"uid_null_err, req_url: {request.url}")
             return "user is null in config, please submit your username in config request"
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=app_source,
+                warning_info=warning_info
+
+            ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
     except Exception as e:
         logger.exception(f"err_in_vdb_index, {e}, url: {request.url}")
@@ -77,7 +91,7 @@ def vdb_index():
         "t": t,
         "vdb_status": vdb_status,
         "sys_name": my_cfg['sys']['name'],
-        "waring_info": ""
+        "warning_info": ""
     }
     dt_idx = "vdb_index.html"
     logger.info(f"return_page {dt_idx}, ctx {ctx}")

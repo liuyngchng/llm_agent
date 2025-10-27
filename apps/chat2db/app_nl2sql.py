@@ -76,7 +76,7 @@ def config_index():
     ctx = cfg_utl.get_ds_cfg_by_uid(uid, my_cfg)
     ctx["uid"] = uid
     ctx['sys_name'] = my_cfg['sys']['name']
-    ctx["waring_info"] = ""
+    ctx["warning_info"] = ""
     dt_idx = "config_index.html"
     logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
@@ -98,7 +98,7 @@ def save_config():
     llm_ctx = request.form.get('llm_ctx').strip()
     data_source_cfg = {
         "sys_name":     my_cfg['sys']['name'],
-        "waring_info":  "",
+        "warning_info":  "",
         "uid":          uid,
         "db_type":      db_type,
         "db_name":      db_name,
@@ -113,16 +113,16 @@ def save_config():
     }
     usr = cfg_utl.get_user_name_by_uid(uid)
     if data_source_cfg["db_type"] == DBType.SQLITE.value:
-        data_source_cfg['waring_info'] = '数据库类型有误'
+        data_source_cfg['warning_info'] = '数据库类型有误'
         return render_template(dt_idx, **data_source_cfg)
     if not usr:
-        data_source_cfg['waring_info'] = '非法访问，请您先登录系统'
+        data_source_cfg['warning_info'] = '非法访问，请您先登录系统'
         return render_template(dt_idx, **data_source_cfg)
     save_cfg_result = cfg_utl.save_ds_cfg(data_source_cfg, my_cfg)
     if save_cfg_result:
-        data_source_cfg['waring_info'] = '保存成功'
+        data_source_cfg['warning_info'] = '保存成功'
     else:
-        data_source_cfg['waring_info'] = '保存失败'
+        data_source_cfg['warning_info'] = '保存失败'
     # sql_agent = SqlAgent(cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg))
     # data_source_cfg["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
     return render_template(dt_idx, **data_source_cfg)
@@ -134,18 +134,18 @@ def delete_config():
     uid = json.loads(request.data).get('uid').strip()
     logger.info(f"del_cfg_info_for_uid_{uid}")
     usr = cfg_utl.get_user_name_by_uid(uid)
-    waring_info = {"success": False, "msg": ""}
+    warning_info = {"success": False, "msg": ""}
     if not usr:
-        waring_info['msg'] = '非法访问，请先登录系统'
-        return waring_info
+        warning_info['msg'] = '非法访问，请先登录系统'
+        return warning_info
     delete_cfg_result = cfg_utl.delete_data_source_config(uid, my_cfg)
     if delete_cfg_result:
-        waring_info['msg'] = '删除成功'
-        waring_info['success'] = True
+        warning_info['msg'] = '删除成功'
+        warning_info['success'] = True
     else:
-        waring_info['msg'] = '删除失败'
-    logger.info(f"del_cfg_info_for_uid_{uid}, return {waring_info}")
-    return waring_info
+        warning_info['msg'] = '删除失败'
+    logger.info(f"del_cfg_info_for_uid_{uid}, return {warning_info}")
+    return warning_info
 
 @app.route('/status', methods=['GET'])
 def get_status():
@@ -178,15 +178,15 @@ def query_data(catch=None):
     page = request.form.get('page')
     session_key = f"{uid}_{get_client_ip()}"
     if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
-        waring_info = {
+        warning_info = {
             "chart": {},
             "raw_dt": "登录信息已失效，请重新登录后再使用本系统", "sql": "",
             "explain_sql": "", "total_count": 0, "cur_page": 1,
             "total_page": 1
         }
 
-        logger.error(f"{waring_info}, {uid}")
-        return json.dumps(waring_info, ensure_ascii=False)
+        logger.error(f"{warning_info}, {uid}")
+        return json.dumps(warning_info, ensure_ascii=False)
     logger.info(f"rcv_msg, {msg}, uid {uid}, page {page}")
     auth_info[session_key] = time.time()
     if uid and uid != 'foo':

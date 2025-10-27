@@ -76,21 +76,21 @@ def chat(catch=None):
     kb_id = request.form.get('kb_id')
     model_id = request.form.get('model_id')
     if not msg or not uid or not kb_id:
-        waring_info = f"缺少用户消息、用户身份信息、知识库信息中的一个或多个参数，请您检查后再试"
-        logger.error(f"{waring_info}, {msg}, {uid}, {kb_id}, {model_id}")
-        return waring_info
+        warning_info = f"缺少用户消息、用户身份信息、知识库信息中的一个或多个参数，请您检查后再试"
+        logger.error(f"{warning_info}, {msg}, {uid}, {kb_id}, {model_id}")
+        return warning_info
     session_key = f"{uid}_{get_client_ip()}"
     if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
-        waring_info = "用户登录信息已失效，请重新登录后再使用本系统"
-        logger.error(f"{waring_info}, {uid}")
-        return waring_info
+        warning_info = "用户登录信息已失效，请重新登录后再使用本系统"
+        logger.error(f"{warning_info}, {uid}")
+        return warning_info
     logger.info(f"rcv_msg, {msg}, uid {uid}")
     auth_info[session_key] = time.time()
     vdb_info = VdbMeta.get_vdb_info_by_id(kb_id)
     if not vdb_info:
-        waring_info = f"所选择的知识库不存在，请您检查后再试"
-        logger.error(f"{waring_info}, {kb_id}")
-        return waring_info
+        warning_info = f"所选择的知识库不存在，请您检查后再试"
+        logger.error(f"{warning_info}, {kb_id}")
+        return warning_info
     my_vector_db_dir = f"{VDB_PREFIX}{vdb_info[0]['uid']}_{kb_id}"
     if not os.path.exists(my_vector_db_dir):  # 新增检查
         answer = "暂时没有相关知识提供给您，请您先上传文档，创建知识库"

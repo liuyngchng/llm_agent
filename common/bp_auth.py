@@ -25,6 +25,8 @@ auth_bp = Blueprint('auth', __name__,
 auth_info = {}
 my_cfg = init_yml_cfg()
 
+SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
+
 @auth_bp.route('/login', methods=['GET'])
 def login_index():
     logger.info("login_index")

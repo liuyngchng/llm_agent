@@ -23,7 +23,7 @@ document.getElementById("save_button").onclick = function(e) {
 document.getElementById("delete_button").addEventListener("click", async function(e) {
     e.preventDefault();
     const uid = document.getElementById("uid").value;
-    document.getElementById("waring_info").textContent = ""
+    document.getElementById("warning_info").textContent = ""
 
     if (!confirm('确定要删除当前配置吗？此操作不可恢复！')) return;
 
@@ -38,17 +38,17 @@ document.getElementById("delete_button").addEventListener("click", async functio
 
         const result = await response.json();
         if (result.success) {
-            document.getElementById("waring_info").textContent = "配置已删除";
-            document.getElementById("waring_info").className = "warning-message";
+            document.getElementById("warning_info").textContent = "配置已删除";
+            document.getElementById("warning_info").className = "warning-message";
             setTimeout(() => window.location.reload(), 1500);
         } else {
-            document.getElementById("waring_info").textContent = '删除失败: ' + (result.message || '');
-            document.getElementById("waring_info").className = "warning-message";
+            document.getElementById("warning_info").textContent = '删除失败: ' + (result.message || '');
+            document.getElementById("warning_info").className = "warning-message";
         }
     } catch (error) {
         console.error('Error:', error);
-        document.getElementById("waring_info").textContent = '请求失败';
-        document.getElementById("waring_info").className = "warning-message";
+        document.getElementById("warning_info").textContent = '请求失败';
+        document.getElementById("warning_info").className = "warning-message";
     }
 });
 

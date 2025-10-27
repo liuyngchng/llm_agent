@@ -17,7 +17,7 @@ import common.cfg_util as cfg_utl
 from flask import Flask, render_template, Response, request, jsonify, redirect, url_for, send_from_directory, abort
 
 from apps.chat2db.audio import transcribe_webm_audio_bytes
-from common.bp_auth import auth_bp, auth_info, get_client_ip
+from common.bp_auth import auth_bp, auth_info, get_client_ip, SESSION_TIMEOUT
 from common.my_enums import DataType, DBType, AppType
 from apps.chat2db.sql_yield import SqlYield
 from common.sys_init import init_yml_cfg
@@ -34,8 +34,6 @@ my_cfg = init_yml_cfg()
 # user's last sql, {"my_uid": {"sql":"my_sql", "curr_page":1, "total_page":1}}
 # last search sql, current page and total page for the SQL
 usr_page_dt = {}
-
-SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 
 @app.route('/static/<path:file_name>')
 def get_static_file(file_name):
@@ -95,11 +93,22 @@ def config_index():
     except Exception as e:
         logger.error(f"err_in_config_index, {e}, url: {request.url}", exc_info=True)
         raise jsonify("err_in_config_index")
-    ctx = cfg_utl.get_ds_cfg_by_uid(uid, my_cfg)
+    session_key = f"{uid}_{get_client_ip()}"
+    if (not auth_info.get(session_key, None)
+            or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+        warning_info = "用户会话信息已失效，请重新登录"
+        logger.warning(f"{uid}, {warning_info}")
+        return redirect(url_for(
+            'auth.login_index',
+            app_source=AppType.CHAT2DB.name.lower(),
+            warning_info=warning_info
+
+        ))
+    ctx = cfg_utl.get_ds_cfg_by_uid(int(uid), my_cfg)
     ctx["uid"] = uid
     ctx["app_source"] = app_source
     ctx['sys_name'] = my_cfg['sys']['name']
-    ctx["waring_info"] = ""
+    ctx["warning_info"] = ""
     dt_idx = "config_index.html"
     logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
@@ -109,6 +118,17 @@ def save_config():
     logger.info(f"save_config_info {request.form}")
     dt_idx = "config_index.html"
     uid = request.form.get('uid').strip()
+    session_key = f"{uid}_{get_client_ip()}"
+    if (not auth_info.get(session_key, None)
+            or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+        warning_info = "用户会话信息已失效，请重新登录"
+        logger.warning(f"{uid}, {warning_info}")
+        return redirect(url_for(
+            'auth.login_index',
+            app_source=AppType.CHAT2DB.name.lower(),
+            warning_info=warning_info
+
+        ))
     db_type = request.form.get('db_type').strip()
     db_host = request.form.get('db_host').strip()
     db_port = request.form.get('db_port').strip()
@@ -121,7 +141,7 @@ def save_config():
     llm_ctx = request.form.get('llm_ctx').strip()
     data_source_cfg = {
         "sys_name":     my_cfg['sys']['name'],
-        "waring_info":  "",
+        "warning_info":  "",
         "uid":          uid,
         "db_type":      db_type,
         "db_name":      db_name,
@@ -140,16 +160,16 @@ def save_config():
     else:
         usr = None
     if not usr:
-        data_source_cfg['waring_info'] = '非法访问，请您先登录系统'
+        data_source_cfg['warning_info'] = '非法访问，请您先登录系统'
         return render_template(dt_idx, **data_source_cfg)
     if data_source_cfg["db_type"] == DBType.SQLITE.value:
-        data_source_cfg['waring_info'] = '数据库类型有误'
+        data_source_cfg['warning_info'] = '数据库类型有误'
         return render_template(dt_idx, **data_source_cfg)
     save_cfg_result = cfg_utl.save_ds_cfg(data_source_cfg, my_cfg)
     if save_cfg_result:
-        data_source_cfg['waring_info'] = '保存成功'
+        data_source_cfg['warning_info'] = '保存成功'
     else:
-        data_source_cfg['waring_info'] = '保存失败'
+        data_source_cfg['warning_info'] = '保存失败'
     # sql_agent = SqlAgent(cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg))
     # data_source_cfg["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
     return render_template(dt_idx, **data_source_cfg)
@@ -159,20 +179,31 @@ def save_config():
 def delete_config():
     logger.info(f"del_cfg_info {request.data}")
     uid = json.loads(request.data).get('uid').strip()
+    session_key = f"{uid}_{get_client_ip()}"
+    if (not auth_info.get(session_key, None)
+            or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+        warning_info = "用户会话信息已失效，请重新登录"
+        logger.warning(f"{uid}, {warning_info}")
+        return redirect(url_for(
+            'auth.login_index',
+            app_source=AppType.CHAT2DB.name.lower(),
+            warning_info=warning_info
+
+        ))
     logger.info(f"del_cfg_info_for_uid_{uid}")
     usr = cfg_utl.get_user_name_by_uid(uid)
-    waring_info = {"success": False, "msg": ""}
+    warning_info = {"success": False, "msg": ""}
     if not usr:
-        waring_info['msg'] = '非法访问，请先登录系统'
-        return waring_info
+        warning_info['msg'] = '非法访问，请先登录系统'
+        return warning_info
     delete_cfg_result = cfg_utl.delete_data_source_config(uid, my_cfg)
     if delete_cfg_result:
-        waring_info['msg'] = '删除成功'
-        waring_info['success'] = True
+        warning_info['msg'] = '删除成功'
+        warning_info['success'] = True
     else:
-        waring_info['msg'] = '删除失败'
-    logger.info(f"del_cfg_info_for_uid_{uid}, return {waring_info}")
-    return waring_info
+        warning_info['msg'] = '删除失败'
+    logger.info(f"del_cfg_info_for_uid_{uid}, return {warning_info}")
+    return warning_info
 
 
 @app.route('/user/hack/info', methods=['GET', 'POST'])
@@ -185,6 +216,17 @@ def user_hack_info():
     }
     if request.method == 'GET':
         uid = request.args.get("uid").strip()
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.CHAT2DB.name.lower(),
+                warning_info=warning_info
+
+            ))
         user_list = cfg_utl.get_user_list()
         hack_user_config = cfg_utl.get_user_hack_info(uid, my_cfg)
         ctx['uid'] = uid
@@ -193,6 +235,17 @@ def user_hack_info():
         return render_template(dt_idx,  **ctx)
     else:
         uid = request.form.get("user_list").strip()
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.CHAT2DB.name.lower(),
+                warning_info=warning_info
+
+            ))
         hack_info = request.form.get("hack_user_config").strip()
         user_list = cfg_utl.get_user_list()
         ctx['uid'] = uid
@@ -200,7 +253,7 @@ def user_hack_info():
         ctx['user_list'] = user_list
         is_ok = check_contain_spaces_in_every_line(hack_info)
         if not is_ok:
-            ctx['waring_info'] = '保存失败，数据格式有误，每行需含有至少一个空格或制表符[TAB]'
+            ctx['warning_info'] = '保存失败，数据格式有误，每行需含有至少一个空格或制表符[TAB]'
             return render_template(dt_idx, **ctx)
         hack_info = replace_spaces(hack_info)
         logger.info(f"user_hack_info_for_uid_{uid}, hack_info: {hack_info}")
@@ -209,9 +262,9 @@ def user_hack_info():
         hack_user_config = cfg_utl.get_user_hack_info(uid, my_cfg)
         ctx['hack_user_config'] = hack_user_config
         if save_cfg_result:
-            ctx['waring_info'] = '保存成功'
+            ctx['warning_info'] = '保存成功'
         else:
-            ctx['waring_info'] = '保存失败'
+            ctx['warning_info'] = '保存失败'
             # sql_agent = SqlAgent(cfg_utl.build_data_source_cfg_with_uid(uid, my_cfg))
             # data_source_cfg["schema"] = f"表清单: {sql_agent.get_all_tables()}\n {sql_agent.get_schema_info()}"
         return render_template(dt_idx, **ctx)
@@ -225,6 +278,17 @@ def user_prompt_idx():
         "warning_info": "",
     }
     uid = request.args.get("uid").strip()
+    session_key = f"{uid}_{get_client_ip()}"
+    if (not auth_info.get(session_key, None)
+            or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+        warning_info = "用户会话信息已失效，请重新登录"
+        logger.warning(f"{uid}, {warning_info}")
+        return redirect(url_for(
+            'auth.login_index',
+            app_source=AppType.CHAT2DB.name.lower(),
+            warning_info=warning_info
+
+        ))
     user_list = cfg_utl.get_user_list()
     ctx['uid'] = uid
     ctx['user_list'] = user_list
@@ -243,6 +307,17 @@ def set_user_prompt():
     }
 
     uid = int(request.form.get("uid").strip())
+    session_key = f"{uid}_{get_client_ip()}"
+    if (not auth_info.get(session_key, None)
+            or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+        warning_info = "用户会话信息已失效，请重新登录"
+        logger.warning(f"{uid}, {warning_info}")
+        return redirect(url_for(
+            'auth.login_index',
+            app_source=AppType.CHAT2DB.name.lower(),
+            warning_info=warning_info
+
+        ))
     refine_q_msg = request.form.get("refine_q_msg").strip()
     refine_q_msg = re.sub(r' +', ' ', refine_q_msg)
     sql_gen_msg = request.form.get("sql_gen_msg").strip()
@@ -288,6 +363,17 @@ def reset_user_prompt():
     }
 
     uid = int(request.form.get("uid").strip())
+    session_key = f"{uid}_{get_client_ip()}"
+    if (not auth_info.get(session_key, None)
+            or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+        warning_info = "用户会话信息已失效，请重新登录"
+        logger.warning(f"{uid}, {warning_info}")
+        return redirect(url_for(
+            'auth.login_index',
+            app_source=AppType.CHAT2DB.name.lower(),
+            warning_info=warning_info
+
+        ))
     ctx['uid'] = uid
     if not uid or uid == 0:
         warn_info = "用户信息有误, 系统出现异常"
@@ -302,7 +388,6 @@ def reset_user_prompt():
         ctx['warning_info'] = '重置成功'
     else:
         ctx['warning_info'] = '重置失败'
-
     refine_q_msg = cfg_utl.get_usr_prompt_template('refine_q_msg', my_cfg, uid)
     sql_gen_msg = cfg_utl.get_usr_prompt_template('sql_gen_msg', my_cfg, uid)
     ctx['refine_q_msg'] = refine_q_msg
@@ -310,7 +395,7 @@ def reset_user_prompt():
     return render_template(dt_idx, **ctx)
 
 @app.route('/<uid>/my/hack/info', methods=['GET'])
-def get_my_hack_info(uid: str):
+def get_my_hack_info(uid: int):
     """
     获取某个用户的 hack info
     """
@@ -364,9 +449,9 @@ def transcribe_audio() -> tuple[Response, int] | Response:
 
 
 def illegal_access(uid):
-    waring_info = "登录信息已失效，请重新登录后再使用本系统"
-    logger.error(f"{waring_info}, {uid}")
-    yield SqlYield.build_yield_dt(waring_info)
+    warning_info = "登录信息已失效，请重新登录后再使用本系统"
+    logger.error(f"{warning_info}, {uid}")
+    yield SqlYield.build_yield_dt(warning_info)
 
 def generate_data():
     messages = ["大模型思考中...", "用户问题优化中...","优化后的问题是：***",

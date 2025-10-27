@@ -21,8 +21,9 @@ from apps.docx.docx_gen_parallel import DocxGenerator
 from apps.docx.docx_file_cmt_util import get_para_comment_dict
 from apps.docx.docx_file_txt_util import extract_catalogue, gen_docx_template_with_outline_txt, get_outline_txt
 from common import my_enums, statistic_util
+from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
-from common.bp_auth import auth_bp
+from common.bp_auth import auth_bp, get_client_ip, auth_info, SESSION_TIMEOUT
 from common.bp_vdb import vdb_bp, VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task
 from common.cm_utils import get_console_arg1
 from common.vdb_meta_util import VdbMeta
@@ -105,6 +106,17 @@ def register_routes(app):
         """
         logger.info(f"docx_task_index, {request.args}")
         uid = request.args.get('uid')
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.DOCX.name.lower(),
+                warning_info=warning_info
+
+            ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
         app_source = request.args.get('app_source')
         warning_info = request.args.get('warning_info', "")
@@ -126,6 +138,17 @@ def register_routes(app):
         """
         data = request.json
         uid = int(data.get('uid'))
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.DOCX.name.lower(),
+                warning_info=warning_info
+
+            ))
         logger.info(f"{uid}, get_my_docx_task, {data}")
         task_list = docx_meta_util.get_user_docx_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
@@ -137,6 +160,17 @@ def register_routes(app):
         """
         logger.info(f"get_statistic_report_index, {request.args}")
         uid = request.args.get('uid')
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.DOCX.name.lower(),
+                warning_info=warning_info
+
+            ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
         app_source = request.args.get('app_source')
         warning_info = request.args.get('warning_info', "")
@@ -159,6 +193,17 @@ def register_routes(app):
         data = request.json
         uid = int(data.get('uid'))
         logger.info(f"{uid}, get_statistic_report, {data}")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.DOCX.name.lower(),
+                warning_info=warning_info
+
+            ))
         statistics_list = statistic_util.get_statistics_list()
         return json.dumps(statistics_list, ensure_ascii=False), 200
 
@@ -174,6 +219,17 @@ def register_routes(app):
         """
         uid = request.json.get("uid")
         logger.info(f"{uid}, gen_doc_outline {request.json}")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.DOCX.name.lower(),
+                warning_info=warning_info
+
+            ))
         doc_type = request.json.get("doc_type")
         doc_title = request.json.get("doc_title")
         keywords = request.json.get("keywords")
@@ -198,6 +254,17 @@ def register_routes(app):
         file = request.files['file']
         uid = int(request.form.get('uid'))
         logger.info(f"{uid}, upload_docx_template_file")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.DOCX.name.lower(),
+                warning_info=warning_info
+
+            ))
         if file.filename == '':
             return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
 
@@ -226,6 +293,17 @@ def register_routes(app):
         data = request.json
         uid = data.get("uid")
         logger.info(f"{uid}, write_doc_with_outline_txt, data, {data}")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.DOCX.name.lower(),
+                warning_info=warning_info
+
+            ))
         doc_title = data.get("doc_title")
         doc_outline = data.get("doc_outline")
         doc_type = data.get("doc_type")
@@ -260,6 +338,17 @@ def register_routes(app):
         data = request.json
         uid = data.get("uid")
         logger.info(f"{uid}, write_doc_with_docx_template, {data}")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.DOCX.name.lower(),
+                warning_info=warning_info
+
+            ))
         task_id = int(data.get("task_id"))
         doc_type = data.get("doc_type")
         doc_title = data.get("doc_title")
@@ -295,8 +384,20 @@ def register_routes(app):
         下载文件
         ：param filename: 文件名， 格式如下 f"output_{task_id}.docx"
         """
-        logger.info(f"download_file, {filename}")
+
         uid = request.args["uid"]
+        logger.info(f"{uid}, download_file, {filename}")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.DOCX.name.lower(),
+                warning_info=warning_info
+
+            ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         absolute_path = os.path.abspath(file_path)
@@ -325,8 +426,20 @@ def register_routes(app):
         根据任务ID下载文件
         ：param task_id: 任务ID，其对应的文件名格式如下 f"output_{task_id}.docx"
         """
-        logger.info(f"download_file_task_id, {task_id}")
+
         uid = request.args["uid"]
+        logger.info(f"{uid}, download_file_task_id, {task_id}")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.DOCX.name.lower(),
+                warning_info=warning_info
+
+            ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
         filename = f"output_{task_id}.docx"
         file_path = os.path.join(UPLOAD_FOLDER, filename)
@@ -380,6 +493,17 @@ def register_routes(app):
         uid = request.json.get("uid")
         if not task_id or not uid:
             return jsonify({"error": "缺少任务ID或用户ID"}), 400
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.DOCX.name.lower(),
+                warning_info=warning_info
+
+            ))
         file_info = docx_meta_util.get_docx_info_by_task_id(task_id)
         logger.info(f"get_docx_info_by_task_id, {file_info}")
         if not file_info or len(file_info) == 0:
