@@ -250,6 +250,88 @@ def modify_para_with_comment_prompt_in_process(task_id:int,
     txt_info = f"任务已完成，共处理 {total_paragraphs} 段文本，识别 {comment_count} 个批注, 生成 {gen_txt_count} 段文本,发生错误 {len(err_record)} 处，错误信息 {err_record}"
     docx_meta_util.update_docx_file_process_info_by_task_id(task_id, txt_info, 100)
 
+
+def refresh_current_heading_xml(paragraph, current_heading: list, namespaces: dict):
+    """
+    从 XML 段落更新当前标题结构
+    根据段落样式判断标题级别，维护当前标题层级
+    """
+    # 查找段落样式
+    pPr = paragraph.find('.//w:pPr', namespaces)
+    if pPr is None:
+        return  # 没有段落属性，不是标题
+    # 查找段落样式
+    pStyle = pPr.find('.//w:pStyle', namespaces)
+    if pStyle is None:
+        return  # 没有样式，不是标题
+    style_val = pStyle.get(f'{{{namespaces["w"]}}}val', '')
+    if not style_val:
+        return
+    # 提取段落文本内容
+    heading_text = ' '.join(
+        t.text.strip() for t in paragraph.findall('.//w:t', namespaces)
+        if t.text and t.text.strip()
+    )
+    if not heading_text:
+        return  # 空标题，不处理
+    # 判断标题级别
+    if 'Heading1' in style_val or '标题1' in style_val or '1' in style_val:
+        # 一级标题：清空当前结构，重新开始
+        current_heading.clear()
+        current_heading.append(heading_text)
+        logger.debug(f"更新为一级标题: {heading_text}")
+    elif 'Heading2' in style_val or '标题2' in style_val or '2' in style_val:
+        # 二级标题：保留一级标题，更新二级标题
+        if len(current_heading) > 0:
+            if len(current_heading) > 1:
+                current_heading[1] = heading_text
+            else:
+                current_heading.append(heading_text)
+        else:
+            # 如果没有一级标题，直接设为一级标题
+            current_heading.append(heading_text)
+        logger.debug(f"更新为二级标题: {current_heading}")
+    elif 'Heading3' in style_val or '标题3' in style_val or '3' in style_val:
+        # 三级标题：保留一二级标题，更新三级标题
+        if len(current_heading) > 1:
+            if len(current_heading) > 2:
+                current_heading[2] = heading_text
+            else:
+                current_heading.append(heading_text)
+        elif len(current_heading) > 0:
+            # 如果只有一级标题，添加二级标题（用空字符串占位）
+            current_heading.append("")
+            current_heading.append(heading_text)
+        else:
+            # 如果没有上级标题，直接设为一级标题
+            current_heading.append(heading_text)
+        logger.debug(f"更新为三级标题: {current_heading}")
+    elif 'Heading4' in style_val or '标题4' in style_val or '4' in style_val:
+        # 四级标题：保留上级标题，更新四级标题
+        while len(current_heading) < 3:
+            current_heading.append("")  # 用空字符串填充缺失的中间级别
+        if len(current_heading) > 3:
+            current_heading[3] = heading_text
+        else:
+            current_heading.append(heading_text)
+        logger.debug(f"更新为四级标题: {current_heading}")
+    # 其他 Heading5-9 可以类似扩展
+    elif any(f'Heading{i}' in style_val for i in range(5, 10)) or any(f'标题{i}' in style_val for i in range(5, 10)):
+        # 处理5-9级标题
+        heading_level = None
+        for i in range(5, 10):
+            if f'Heading{i}' in style_val or f'标题{i}' in style_val or str(i) in style_val:
+                heading_level = i
+                break
+        if heading_level:
+            # 确保标题层级完整
+            while len(current_heading) < heading_level:
+                current_heading.append("")
+
+            if len(current_heading) >= heading_level:
+                current_heading[heading_level - 1] = heading_text
+            logger.debug(f"更新为{heading_level}级标题: {current_heading}")
+
 def modify_para_with_comment_prompt(target_doc: str,
         doc_ctx: str, comments_dict: dict, cfg: dict) -> Document:
     """

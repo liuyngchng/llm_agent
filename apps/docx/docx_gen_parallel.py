@@ -9,20 +9,23 @@ import logging.config
 import multiprocessing
 import os
 import time
+import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any
 import threading
 import psutil
+from xml.etree import ElementTree as ET
 
 from apps.docx import docx_meta_util
 from docx import Document
 from docx.shared import RGBColor, Cm
+
+from apps.docx.docx_file_cmt_util import refresh_current_heading_xml
 from common import cfg_util
 from apps.docx.txt_gen_util import gen_txt
-from apps.docx.docx_file_txt_util import get_elapsed_time, get_reference_from_vdb, is_3rd_heading, is_txt_para, \
-    refresh_current_heading
+from apps.docx.docx_file_txt_util import get_elapsed_time, get_reference_from_vdb, \
+    is_3rd_heading, is_txt_para, refresh_current_heading
 from apps.docx.mermaid_render import MermaidRenderer
-from common.vdb_meta_util import VdbMeta
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -116,7 +119,7 @@ class DocxGenerator:
         doc = Document(target_doc)
         try:
             logger.info(f"{task_id}, 开始处理文档 {target_doc}")
-            tasks = DocxGenerator._collect_doc_with_prompt_gen_tasks(task_id, doc, doc_ctx, target_doc_catalogue,
+            tasks = DocxGenerator._collect_doc_with_prompt_gen_tasks(task_id, target_doc, doc_ctx, target_doc_catalogue,
                                                                      vdb_dir, sys_cfg)
             if not tasks:
                 final_info = f"未检测到需要生成的文本段落"
@@ -129,18 +132,15 @@ class DocxGenerator:
             logger.info(f"{task_id}, {initial_info}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
             doc_gen_results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
-            self._insert_gen_para_to_doc(doc, doc_gen_results)
+            self._insert_gen_para_to_doc(target_doc, doc_gen_results)
 
             # 保存文档
             doc.save(output_file_name)
             logger.info(f"{task_id}, 保存文档完成，{output_file_name}，耗时 {get_elapsed_time(start_time)}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
-
             # 计算详细统计信息
             success_count = len([r for r in doc_gen_results.values() if r.get('success')])
             failed_count = len(tasks) - success_count
-
-
             # 处理Mermaid图表
             img_count = 0
             try:
@@ -186,7 +186,7 @@ class DocxGenerator:
             return error_info
 
     @staticmethod
-    def _collect_doc_with_prompt_gen_tasks(task_id: int, doc: Document, doc_ctx: str,
+    def _collect_doc_with_prompt_gen_tasks(task_id: int, target_doc: str, doc_ctx: str,
                                            target_doc_catalogue: str, vdb_dir: str,
                                            sys_cfg: dict) -> List[Dict[str, Any]]:
         """
@@ -195,6 +195,7 @@ class DocxGenerator:
         logger.info(f"{task_id}, start_collect_task")
         tasks = []
         current_heading = []
+        doc = Document(target_doc)
         para_count = len(doc.paragraphs)
         for index, para in enumerate(doc.paragraphs):
             refresh_current_heading(para, current_heading)
@@ -374,11 +375,12 @@ class DocxGenerator:
             }
 
     @staticmethod
-    def _insert_gen_para_to_doc(doc: Document, results: Dict[str, Dict]):
+    def _insert_gen_para_to_doc(target_doc: str, results: Dict[str, Dict]):
         """
         将生成的结果插入到文档中
+        :param target_doc: 需要处理的目标文档的路径
         """
-        # 按原始段落顺序处理结果
+        doc = Document(target_doc)
         sorted_keys = sorted(results.keys(), key=lambda x: int(x.split('_')[1]))
 
         for key in sorted_keys:
@@ -403,9 +405,10 @@ class DocxGenerator:
                                                 vdb_dir: str, cfg: dict,
                                                 output_file_name: str) -> str:
         """
-        并行处理带有批注的文档
+        并行处理带有批注的文档,采用直接修改xml的方式修改word 文档，保证与提取批注的方式一致
         :param task_id: 执行任务的ID
         :param target_doc: 需要修改的文档路径
+        :param catalogue: 文档的三级目录
         :param doc_ctx: 文档写作的背景信息
         :param comments_dict: 段落ID和段落批注的对应关系字典
         :param vdb_dir: 向量数据库的目录
@@ -425,16 +428,16 @@ class DocxGenerator:
             return warning_info
         logger.debug(f"comments_dict: {comments_dict}")
         start_time = time.time() * 1000
-        doc = Document(target_doc)
+
 
         try:
             info = f"处理带批注的文档 {target_doc}，共找到 {len(comments_dict)} 个批注"
             logger.info(info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, info)
             # 收集批注处理任务
-            tasks = DocxGenerator._collect_doc_with_comment_gen_tasks(
+            tasks = DocxGenerator._collect_doc_with_comment_gen_tasks_xml(
                 task_id,
-                doc,
+                target_doc,
                 catalogue,
                 doc_ctx,
                 comments_dict,
@@ -445,6 +448,7 @@ class DocxGenerator:
                 final_info = "未找到有效的批注处理任务"
                 logger.info(final_info)
                 docx_meta_util.update_docx_file_process_info_by_task_id(task_id, final_info, 100)
+                doc = Document(target_doc)
                 doc.save(output_file_name)
                 return final_info
 
@@ -453,8 +457,9 @@ class DocxGenerator:
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
             doc_gen_results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
             # DocxGenerator._update_doc_with_comments(doc_gen_results)
-            DocxGenerator._update_doc_with_comments_using_revisions(doc, doc_gen_results)
+            DocxGenerator._update_doc_with_comments_using_revisions(target_doc, doc_gen_results)
             # 保存前启用修订显示
+            doc = Document(target_doc)
             doc.settings.track_revisions = True
             doc.settings.show_revisions = True
             doc.save(output_file_name)
@@ -501,71 +506,99 @@ class DocxGenerator:
             logger.error(f"{task_id}, {error_info}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, error_info, 100)
             try:
+                doc = Document(target_doc)
                 doc.save(output_file_name)
             except Exception:
                 pass
             return error_info
 
     @staticmethod
-    def _collect_doc_with_comment_gen_tasks(task_id: int, doc: Document, catalogue:str, doc_ctx: str,
-            comments_dict: dict, vdb_dir: str,
-            cfg: dict) -> List[Dict[str, Any]]:
+    def _collect_doc_with_comment_gen_tasks_xml(task_id: int, doc_path: str, catalogue: str, doc_ctx: str,
+            comments_dict: dict, vdb_dir: str, cfg: dict) -> List[Dict[str, Any]]:
         """
-        收集含有批注的文档的并行处理任务
+        收集含有批注的文档的并行处理任务清单（XML版本）
+        :param task_id, 任务ID
+        :param doc_path, 需要处理的文档的路径
+        :param catalogue: 文档目录
         """
         tasks = []
         current_heading = []
-        para_count = len(doc.paragraphs)
+        logger.info(f"{task_id}, 开始收集批注任务，批注字典: {comments_dict}")
 
-        logger.info(f"{task_id}, 开始收集批注任务，共 {para_count} 个段落，批注字典: {comments_dict}")
+        try:
+            with zipfile.ZipFile(doc_path) as z:
+                namespaces = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
 
-        for para_idx, para in enumerate(doc.paragraphs):
-            logger.debug(f"{task_id}, para_idx: {para_idx}, para_text: '{para.text}'")
+                # 解析文档结构
+                with z.open('word/document.xml') as f:
+                    doc_xml = ET.fromstring(f.read())
+                    paragraphs = doc_xml.findall('.//w:p', namespaces)
 
-            # 更新当前标题
-            refresh_current_heading(para, current_heading)
+                    para_count = len(paragraphs)
+                    logger.info(f"{task_id}, 共 {para_count} 个 XML 段落")
 
-            # 检查当前段落是否有批注
-            if para_idx not in comments_dict:
-                logger.debug(f"{task_id}, 段落 {para_idx} 无批注，跳过")
-                continue
+                    for para_idx, paragraph in enumerate(paragraphs):
+                        # 提取段落文本内容
+                        para_text = ' '.join(
+                            t.text.strip()
+                            for t in paragraph.findall('.//w:t', namespaces)
+                            if t.text and t.text.strip()
+                        )
 
-            comment_text = comments_dict[para_idx]
-            if not comment_text or not comment_text.strip():
-                logger.debug(f"{task_id}, 跳过无批注内容段落: {para.text}")
-                continue
+                        logger.debug(f"{task_id}, para_idx: {para_idx}, para_text: '{para_text}'")
 
-            task = {
-                'task_id': task_id,
-                'unique_key': f"comment_{para_idx}",
-                'write_context': doc_ctx,
-                'paragraph_prompt': para.text,
-                'user_comment': comment_text,
-                'catalogue': catalogue,
-                'current_sub_title': current_heading[0] if current_heading else "",
-                'current_heading': current_heading.copy(),
-                'sys_cfg': cfg,
-                'vdb_dir': vdb_dir,
-                'original_para': para,
-                'para_index': para_idx,
-            }
-            logger.debug(f"{task_id}, 创建批注任务: {task['user_comment']}")
-            tasks.append(task)
-            docx_meta_util.update_docx_file_process_info_by_task_id(
-                task_id,
-                f"正在处理第 {para_idx}/{para_count} 段文本，已创建 {len(tasks)} 个处理任务"
-            )
+                        # 更新当前标题（需要从 XML 中判断标题样式）
+                        refresh_current_heading_xml(paragraph, current_heading, namespaces)
+
+                        # 检查当前段落是否有批注
+                        if para_idx not in comments_dict:
+                            logger.debug(f"{task_id}, 段落 {para_idx} 无批注，跳过")
+                            continue
+
+                        comment_text = comments_dict[para_idx]
+                        if not comment_text or not comment_text.strip():
+                            logger.debug(f"{task_id}, 跳过无批注内容段落: {para_text}")
+                            continue
+
+                        task = {
+                            'task_id': task_id,
+                            'unique_key': f"comment_{para_idx}",
+                            'write_context': doc_ctx,
+                            'paragraph_prompt': para_text,
+                            'user_comment': comment_text,
+                            'catalogue': catalogue,
+                            'current_sub_title': current_heading[0] if current_heading else "",
+                            'current_heading': current_heading.copy(),
+                            'sys_cfg': cfg,
+                            'vdb_dir': vdb_dir,
+                            'original_para_xml': paragraph,  # 改为保存 XML 元素
+                            'para_index': para_idx,
+                            'namespaces': namespaces  # 添加命名空间信息
+                        }
+                        logger.debug(f"{task_id}, 创建批注任务: {task['user_comment']}")
+                        tasks.append(task)
+
+                        docx_meta_util.update_docx_file_process_info_by_task_id(
+                            task_id,
+                            f"正在处理第 {para_idx}/{para_count} 段文本，已创建 {len(tasks)} 个处理任务"
+                        )
+
+        except Exception as e:
+            logger.error(f"{task_id}, 解析文档 XML 时出错: {str(e)}", exc_info=True)
+            return []
 
         logger.info(f"{task_id}, 完成批注任务收集，共创建 {len(tasks)} 个任务")
         return tasks
 
 
     @staticmethod
-    def _update_doc_with_comments_using_revisions(doc: Document, results: Dict[str, Dict], author_name: str = "AI assistant powered by richard"):
+    def _update_doc_with_comments_using_revisions(target_doc: str, results: Dict[str, Dict], author_name: str = "AI assistant powered by richard"):
         """
         使用修订模式更新文档中的批注段落，并添加作者信息
+        :param target_doc: 需要处理的文档路径
         """
         # 设置文档作者信息
+        doc = Document(target_doc)
         doc.core_properties.author = author_name
         doc.core_properties.last_modified_by = author_name
 
@@ -636,7 +669,6 @@ class DocxGenerator:
         """
         start_time = time.time() * 1000
         doc = Document(target_doc)
-
         try:
             logger.info(f"开始处理无提示词文档 {target_doc}")
             # 收集三级标题任务
