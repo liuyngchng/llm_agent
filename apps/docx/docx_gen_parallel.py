@@ -291,7 +291,6 @@ class DocxGenerator:
 
         return results
 
-
     @staticmethod
     def _gen_single_doc_paragraph(task: Dict[str, Any]) -> Dict:
         """
@@ -305,9 +304,11 @@ class DocxGenerator:
                 task['sys_cfg']['api']
             )
             logger.debug(f"gen_txt_user_comment, {task['user_comment']}")
+
             # 生成文本
             if not task['task_id']:
                 raise RuntimeError('task_id_null_exception')
+
             docx_file_info = docx_meta_util.get_docx_info_by_task_id(task['task_id'])
             uid = docx_file_info[0]['uid']
             llm_txt = gen_txt(
@@ -322,20 +323,25 @@ class DocxGenerator:
             )
             word_count = len(llm_txt)
 
-
-            return {
+            # 根据任务类型返回不同的结果结构
+            result = {
                 'success': True,
                 'generated_text': f"{cfg_util.AI_GEN_TAG}{llm_txt}",
-                'original_para': task['original_para'],
                 'current_heading': task['current_heading'],
                 'contains_mermaid': '<mermaid>' in llm_txt,
                 'word_count': word_count,
             }
+            if 'original_para_xml' in task:
+                result['para_index'] = task['para_index']
+                result['namespaces'] = task['namespaces']
+            else:
+                result['original_para'] = task['original_para']
+            return result
+
         except Exception as e:
             heading_info = task['current_heading']
             logger.exception(f"生成段落失败: {str(e)}, single_task_args, {heading_info}")
             raise
-
 
     @staticmethod
     def _process_mermaid_in_document(task_id:int, doc_path: str, mermaid_api_uri: str, results: Dict[str, Dict]) -> Dict[str, Any]:
@@ -400,10 +406,10 @@ class DocxGenerator:
             # 插入到原始段落后面
             original_para._p.addnext(new_para._p)
 
-    def modify_para_with_comment_prompt_in_parallel(self, task_id: int, target_doc: str, catalogue:str,
-                                                doc_ctx: str, comments_dict: dict,
-                                                vdb_dir: str, cfg: dict,
-                                                output_file_name: str) -> str:
+    def modify_para_with_comment_prompt_in_parallel(self, task_id: int, target_doc: str, catalogue: str,
+                                                    doc_ctx: str, comments_dict: dict,
+                                                    vdb_dir: str, cfg: dict,
+                                                    output_file_name: str) -> str:
         """
         并行处理带有批注的文档,采用直接修改xml的方式修改word 文档，保证与提取批注的方式一致
         :param task_id: 执行任务的ID
@@ -429,12 +435,11 @@ class DocxGenerator:
         logger.debug(f"comments_dict: {comments_dict}")
         start_time = time.time() * 1000
 
-
         try:
             info = f"处理带批注的文档 {target_doc}，共找到 {len(comments_dict)} 个批注"
             logger.info(info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, info)
-            # 收集批注处理任务
+            # 收集批注处理任务（XML方式）
             tasks = DocxGenerator._collect_doc_with_comment_gen_tasks_xml(
                 task_id,
                 target_doc,
@@ -448,23 +453,31 @@ class DocxGenerator:
                 final_info = "未找到有效的批注处理任务"
                 logger.info(final_info)
                 docx_meta_util.update_docx_file_process_info_by_task_id(task_id, final_info, 100)
-                doc = Document(target_doc)
-                doc.save(output_file_name)
+                import shutil
+                shutil.copy2(target_doc, output_file_name)
                 return final_info
 
             initial_info = f"需处理 {len(tasks)} 个批注段落，启动 {self.executor._max_workers} 个任务"
             logger.info(initial_info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
             doc_gen_results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
-            # DocxGenerator._update_doc_with_comments(doc_gen_results)
-            DocxGenerator._update_doc_with_comments_using_revisions(target_doc, doc_gen_results)
-            # 保存前启用修订显示
-            doc = Document(target_doc)
-            doc.settings.track_revisions = True
-            doc.settings.show_revisions = True
-            doc.save(output_file_name)
+
+            # 使用 XML 方式更新文档
+            success = DocxGenerator._update_doc_with_comments_xml(
+                target_doc,
+                output_file_name,
+                doc_gen_results
+            )
+
+            if not success:
+                error_info = "XML方式更新文档失败"
+                logger.error(error_info)
+                docx_meta_util.update_docx_file_process_info_by_task_id(task_id, error_info, 100)
+                return error_info
+
             logger.info(f"保存批注处理文档完成: {output_file_name}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
+
             # 统计结果
             success_count = len([r for r in doc_gen_results.values() if r.get('success')])
             failed_count = len(tasks) - success_count
@@ -491,7 +504,7 @@ class DocxGenerator:
                     failed_count += 1
                 logger.info(f"{task_id}, Mermaid图表处理完成")
             except Exception as e:
-                failed_count += 1  # 将Mermaid处理失败计入总失败数
+                failed_count += 1
                 logger.error(f"{task_id}, Mermaid图表处理失败: {str(e)}")
             total_time = get_elapsed_time(start_time)
             final_info = (f"批注文档处理完成，共处理 {len(tasks)} 个批注段落，"
@@ -501,16 +514,116 @@ class DocxGenerator:
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, final_info, 100)
             logger.info(f"{task_id}, {final_info}，输出文件: {output_file_name}")
             return final_info
+
         except Exception as e:
             error_info = f"批注文档处理过程出现异常: {str(e)}"
             logger.error(f"{task_id}, {error_info}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, error_info, 100)
-            try:
-                doc = Document(target_doc)
-                doc.save(output_file_name)
-            except Exception:
-                pass
             return error_info
+
+    @staticmethod
+    def _update_doc_with_comments_xml(input_doc: str, output_doc: str, results: Dict[str, Dict]) -> bool:
+        """
+        使用 XML 方式更新文档中的批注段落
+        """
+        import shutil
+        import tempfile
+
+        temp_dir = None
+        try:
+            # 创建临时目录
+            temp_dir = tempfile.mkdtemp()
+
+            # 解压 docx 文件
+            with zipfile.ZipFile(input_doc, 'r') as z:
+                z.extractall(temp_dir)
+
+            # 读取并修改 document.xml
+            document_xml_path = os.path.join(temp_dir, 'word/document.xml')
+            namespaces = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+
+            # 注册命名空间
+            for prefix, uri in namespaces.items():
+                ET.register_namespace(prefix, uri)
+
+            # 解析文档
+            tree = ET.parse(document_xml_path)
+            root = tree.getroot()
+
+            # 查找所有段落
+            paragraphs = root.findall('.//w:p', namespaces)
+
+            modified_count = 0
+            for result in results.values():
+                if not result.get('success'):
+                    continue
+
+                para_index = result.get('para_index')
+                if para_index is None or para_index >= len(paragraphs):
+                    logger.warning(f"段落索引 {para_index} 超出范围，跳过")
+                    continue
+
+                paragraph = paragraphs[para_index]
+                generated_text = result['generated_text'].replace(cfg_util.AI_GEN_TAG, '').strip()
+
+                # 更新段落文本
+                if DocxGenerator._update_paragraph_text_xml(paragraph, generated_text, namespaces):
+                    modified_count += 1
+                    logger.debug(f"已更新段落 {para_index}")
+
+            # 保存修改后的 XML
+            tree.write(document_xml_path, encoding='UTF-8', xml_declaration=True)
+
+            # 重新打包为 docx
+            with zipfile.ZipFile(output_doc, 'w', zipfile.ZIP_DEFLATED) as z_out:
+                for root_dir, _, files in os.walk(temp_dir):
+                    for file in files:
+                        file_path = os.path.join(root_dir, file)
+                        arcname = os.path.relpath(file_path, temp_dir)
+                        z_out.write(file_path, arcname)
+
+            logger.info(f"XML方式更新文档完成，共修改 {modified_count} 个段落")
+            return True
+
+        except Exception as e:
+            logger.error(f"XML方式更新文档时出错: {str(e)}", exc_info=True)
+            return False
+        finally:
+            # 清理临时文件
+            if temp_dir and os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+
+    @staticmethod
+    def _update_paragraph_text_xml(paragraph, new_text: str, namespaces: dict) -> bool:
+        """
+        更新 XML 段落中的文本内容
+        """
+        try:
+            # 找到所有的文本元素
+            text_elements = paragraph.findall('.//w:t', namespaces)
+
+            if text_elements:
+                # 更新第一个文本元素，清空其他文本元素
+                text_elements[0].text = new_text
+                for text_elem in text_elements[1:]:
+                    parent = text_elem.getparent()
+                    if parent is not None:
+                        # 如果父元素只有这个文本元素，则清空文本；否则删除整个元素
+                        if len(parent.findall('*')) == 1:
+                            text_elem.text = ""
+                        else:
+                            parent.remove(text_elem)
+                return True
+            else:
+                # 如果没有文本元素，创建新的 run 和 text
+                run = ET.SubElement(paragraph, f'{{{namespaces["w"]}}}r')
+                text_elem = ET.SubElement(run, f'{{{namespaces["w"]}}}t')
+                text_elem.text = new_text
+                return True
+
+        except Exception as e:
+            logger.error(f"更新段落文本时出错: {str(e)}")
+            return False
 
     @staticmethod
     def _collect_doc_with_comment_gen_tasks_xml(task_id: int, doc_path: str, catalogue: str, doc_ctx: str,

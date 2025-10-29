@@ -8,6 +8,29 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 
+def normalize_text(text: str) -> str:
+    """
+    规范化文本，使其在不同解析方式下保持一致
+    """
+    if not text:
+        return ""
+
+    # 1. 替换所有连续空白字符为单个空格
+    import re
+    text = re.sub(r'\s+', ' ', text)
+
+    # 2. 去除首尾空格
+    text = text.strip()
+
+    # 3. 处理全角/半角空格（可选）
+    text = text.replace('　', ' ')  # 全角空格转半角
+
+    # 4. 统一标点符号周围的空格（可选）
+    text = re.sub(r'\s*([，。！？；：])\s*', r'\1', text)
+
+    return text
+
+
 def get_comments_by_content(target_doc: str) -> dict:
     """
     通过段落内容匹配批注，返回格式: {paragraph_text: comment_text}
@@ -40,6 +63,9 @@ def get_comments_by_content(target_doc: str) -> dict:
                     if not para_text:  # 跳过空段落
                         continue
 
+                    # 规范化文本
+                    normalized_text = normalize_text(para_text)
+
                     # 查找当前段落中的批注引用
                     comment_refs = paragraph.findall('.//w:commentReference', namespaces)
                     comment_ids = []
@@ -49,7 +75,8 @@ def get_comments_by_content(target_doc: str) -> dict:
                             comment_ids.append(ref_id)
 
                     if comment_ids:
-                        para_to_comments[para_text] = comment_ids
+                        para_to_comments[normalized_text] = comment_ids
+                        logger.debug(f"XML段落内容(规范化后): '{normalized_text}'")
 
             # 解析批注内容
             with z.open('word/comments.xml') as f:
@@ -99,14 +126,18 @@ def apply_comments_to_document(doc_path: str, output_path: str):
 
     for paragraph in doc.paragraphs:
         para_text = paragraph.text.strip() if paragraph.text else ""
-        if para_text and para_text in comments_by_content:
-            comment = comments_by_content[para_text]
-            logger.info(f"找到需要修改的段落: '{para_text}'")
-            logger.info(f"对应批注: {comment}")
+        if para_text:
+            # 对 python-docx 读取的文本也进行规范化
+            normalized_para_text = normalize_text(para_text)
 
-            # 在这里根据批注内容修改段落
-            # 例如：paragraph.text = modified_text
-            # 或者调用你的修改逻辑
+            if normalized_para_text in comments_by_content:
+                comment = comments_by_content[normalized_para_text]
+                logger.info(f"找到需要修改的段落: '{normalized_para_text}'")
+                logger.info(f"对应批注: {comment}")
+
+                # 在这里根据批注内容修改段落
+                # 例如：paragraph.text = modified_text
+                # 或者调用你的修改逻辑
 
     # 保存修改后的文档
     doc.save(output_path)
@@ -115,12 +146,6 @@ def apply_comments_to_document(doc_path: str, output_path: str):
 
 def test_get_comment():
     my_file = "/home/rd/Desktop/1.docx"
-    doc = Document(my_file)
-    for para_idx, para in enumerate(doc.paragraphs):
-        logger.debug(f"para_idx: {para_idx}, para_text: '{para.text}'")
-    content_comments = get_comments_by_content(my_file)
-    logger.info("基于内容的批注匹配:")
-    for content, comment in content_comments.items():
-        logger.info(f"内容: '{content}...' -> 批注: {comment}")
+    apply_comments_to_document(my_file, 'test.docx')
 if __name__ == "__main__":
     test_get_comment()
