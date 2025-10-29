@@ -1,28 +1,6 @@
 # config.yaml，文件格式必须严格遵循 yaml配置文件格式
 db:
-#    type: dm
-#    name: SYSDBA
-#    host: 127.0.0.1
-#    port: 5236
-#    user: SYSDBA
-#    password: SYSDBA001
-    #  数据库类型, mysql sqlite oracle, dm，最好使用MySQL
-    type: mysql
-    #  数据库（实例）名称，如果是sqlite，直接写文件名称，本地需存在相应的文件名
-    name: your_db_name
-    #  数据库连接的IP地址或者域名
-    host: your_db_host_IP_or_domain
-    #  数据库连接的端口
-    port: your_db_instance_port
-    #  连接数据库的用户名
-    user: your_db_user_name
-    #  读取数据库的用户密码
-    password: 12345
 
-    # 限制使用的表的数量，最佳实践是1表， 随着表的数量的增加，大模型输出的SQL质量会有一定程度的下降
-    restrict_table_number: 1
-    strict_search: false
-    # 用于数据库部分内容的加解密
     cypher_key: your_cypher_key
 
 sys:
@@ -44,13 +22,6 @@ api:
     #  大语言模型 模型名称
     llm_model_name: deepseek-chat
 
-    # 语音识别 API 基地址，需要部署为兼容 OpenAI-API-Compatible
-    asr_api_uri: https://api.your_audio_service_provider.com/v1/
-    # 语音识别 API key
-    asr_api_key: sk-xxxx
-    # 语音识别 API 模型名称
-    asr_model_name: asr
-
     # embedding API 基地址
     embedding_api_uri: https://api.your_audio_service_provider.com/v1/
     # embedding API Key
@@ -64,72 +35,8 @@ api:
     # mermaid script render server addr
     mermaid_api_uri: http://127.0.0.1:8000
 
-#  chart js 绘图配置
-chart_js:
-    #   是否需要在读取数据库数据的基础上，添加 chart js 绘图数据，true 需要; false，不需要，直接输出数据
-    add_chart_to_dt: false
-
 #  与大模型相关的提示词配置
 prompts:
-    #   用户问题精炼提示词,将用户的一些较短的行业问题转换为行业外的人员能理解的问题
-    refine_q_msg: |
-        你是一个专业的 xx 行业运营管理人员。已知数据源的信息如下：
-        {data_source_info}
-      
-        请检查用户提出的问题，若问题中没有明确查看数据明细的需求，
-        且又没有具体的查询条件，则按以下要求优化用户的提问:
-        (1) 明确指定为在较大时间、空间内的单一维度汇总数据查询问题;
-        (2) 直接输出优化后的简洁问题文本。
-        (3) 用户提问语句含义不明或条件不清晰时，可参考以下的简短提问语句解释清单进行理解：
-        {user_short_q_desc}
-
-    #   通过自然语言生成SQL语句的大模型提示词，内嵌变量 {schema} 不可更改，其他可自定义，多行
-    sql_gen_msg: |
-        你是一个专业的 {sql_dialect} 数据库的 SQL生成助手。数据库表结构及样例数据如下所示：
-        {schema}
-        
-        用户历史消息记录如下所示：
-        {chat_history}
-        
-        请根据用户当前提问以及历史消息记录，严格按以下要求生成数据库查询 SQL：
-        (1) 仅输出标准SQL代码块，不要任何解释;
-        (2) 使用与表结构完全一致的英文字段名;
-        (3) WHERE条件需限制最多返回 {max_record_per_page} 条数据;
-        (4) 禁止包含分析过程或思考步骤;
-        (5) 查询语句中禁止用 * 表示全部字段， 需列出详细的字段名称清单;
-
-#    进行SQL 审核，自动生成的 SQL语句存在一定的错误概率，通过缩小聚焦范围，对SQL进行审核，提升SQL的正确性
-    sql_review_msg: |
-        你是一个专业的 {sql_dialect} 数据库的 SQL专家。数据库表结构及样例数据如下所示：
-        {schema}
-
-        当前的 SQL 查询语句如下：
-        {current_sql}
-
-        请仔细核对已知的数据库schema， 纠正当前 SQL 中存在的错误，，按以下要求重新生成正确的数据查询 SQL：
-        (1) 尽量保持原始SQL的含义
-        (2) 如果使用了对应表中不存在的字段名称等， 则需要纠正
-
-    #  通过SQL语句查询到数据后，让大语言模型对数据进行文字描述总结的提示词，
-    #  内嵌变量 {markdown_dt} 不可更改必须包含,其他可自定义，多行，add_desc_to_dt = true时生效
-    chart_dt_gen_msg: |
-        你是一个专业的数据解读助手。已知 Markdown格式的数据清单：
-        {markdown_dt}
-
-        (1) 请将数据转换为chart.js 可以渲染的数据格式
-
-   # 对用户提出的问题进行优化，以便于能够更加精确地获取相应的数据
-    intercept_q_msg: |
-      根据已知的数据库表结构信息:
-      {schema}
-      检查用户提出的问题是否含有相应的查询条件
-
-   # 将查询数据 SQL 转换为 查询数据总条数的 SQL
-    count_sql_gen_msg: |
-      你是一个专业的 {sql_dialect} 数据库的 SQL生成助手。数据库表结构及样例数据如下所示：
-      {schema}
-  
-      根据查询数据的 SQL, 生成一个符合当前查询条件的所有数据数量的 SQL
 
     # 基于知识库进行问答
     vdb_chat_msg: |
@@ -137,39 +44,6 @@ prompts:
         {context}
 
         问题：{question}
-
-    # 客服中心信息分类
-    csm_cls_msg: |
-        根据问题内容，将用户问题分为以下几类:
-        {classify_label}
-
-        问题：
-        {msg}
-
-        (1) 分类结果输出为 JSONArray
-        (2) 当文本涉及多个分类时，请同时输出多个分类
-
-    # 文本分类
-    txt_cls_msg: |
-        对以下文本进行分类:
-        {txt}
-
-        分类标签清单为：
-        {classify_label}
-
-        分类结果输出为单一分类标签文本，不要输出任何额外信息
-
-    # 字典自动填充
-    fill_dict_msg: |
-        基于用户提供的信息：
-        {context}
-
-        填写 JSON 体中的相应内容：
-        {user_dict}
-
-        (1) 上下文中没有的信息请不要自行编造
-        (2) 不要破坏 JSON 本身的结构
-        (3) 直接返回填写好的纯文本的 JSON 内容，不要有任何其他额外内容，不要输出Markdown格式
 
     # 文档目录自动生成
     gen_docx_outline_msg: |
@@ -209,56 +83,6 @@ prompts:
         (7) 不包含目录标题；
         (8) 文本与图表自然衔接，技术概念解释清晰；
         (9) 确保内容准确且符合技术文档标准。
-
-    #文本转SQL
-    txt_to_sql_msg: |
-        你是一个专业的 {dialect} 数据库的 SQL生成助手。数据库表结构及样例数据如下所示：
-        {schema}
-        请根据用户当前提问以及历史消息记录，严格按以下要求生成数据库查询 SQL：
-        (1) 仅输出标准SQL代码块，不要任何解释;
-        (2) 使用与表结构完全一致的英文字段名;
-        (3) WHERE条件需限制最多返回 {max_record_count} 条数据;
-        (4) 禁止包含分析过程或思考步骤;
-        (5) 查询语句中禁止用 * 表示全部字段， 需列出详细的字段名称清单;
-        (6) 禁止生成 update、delete 等任何对数据修改的语句;
-        (7) 每次只能查询1张表，禁止生成 join 的SQL;
-        (8) 对于含有关键词 '趋势'、'形势' 的问题，需要生成在时间维度上进行汇总的SQL语句;
-        (9) 如果数据库是 oracle ， 最终输出的SQL限制数据条数使用 'ROWNUM <=' 替代 'limit';
-        (10) 如果只提供了月份，那么用户指的是当前年的月份;
-        (11) 最近指的是从当前时间算起的3个月内;
-        (12) 除非用户指定，默认的时间、数字类均按倒序排序.
-
-    # 补充字典信息
-    pad_dict_info_msg: |
-        基于已知的个人信息:
-        {context}
-        以及新提供的个人信息:
-        {append_info}
-        输出更新后个人信息
-        (1) 如果同类信息有冲突，以新提供的信息为准
-        (2) 直接返回填写好的纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
-
-    # 抽取个人信息
-    extract_person_info_msg: |
-        分析以下文本：
-        {context}
-        输出涉及到个人信息的部分文本
-        (1)直接返回准备好的纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
-        (2)若没有个人信息，则输出空字符串
-
-    # 生成订单关键信息
-    get_lpg_order_info_msg: |
-        基于以下文本：
-        {context}
-        请输出涉及到液化气、液化天然气(简称LPG)订单信息的文本，订单信息包含液化气的重量、气瓶数量
-        (1)直接返回填写好的纯文本内容，不要有任何其他额外内容，不要输出Markdown格式
-        (2)若没有液化气，则输出空字符串
-
-    # 总结聊天记录
-    get_chat_abs_msg: |
-        基于用户和机器人客服的对话文本:
-        {context}
-        抽取重要内容，以便于提供给人工客服进行后续的客户服务
 
     gen_png_msg: |
         生成一个base64编码格式的 800*600 的PNG图片二进制流， 图片背景颜色为白色，图片线条为黑色
