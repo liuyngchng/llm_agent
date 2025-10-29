@@ -145,7 +145,7 @@ def get_output_token_by_uid(uid: int)-> int | None:
             check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             if user_dt:
-                logger.info(f"get_output_token_by_uid, {user_dt[0][0]}")
+                logger.debug(f"get_output_token_by_uid, {user_dt[0][0]}")
                 return user_dt[0][0]
         except Exception as e:
             logger.error(f"get_output_token_by_uid_err, {uid}")
@@ -176,10 +176,10 @@ def add_output_token_by_uid(uid: int, output_token: int)-> bool:
     with sqlite3.connect(STS_DB_FILE) as my_conn:
         try:
             result = insert_del_sqlite(my_conn, exec_sql)
-            logger.info(f"exec_sql_success {exec_sql}")
+            logger.debug(f"exec_sql_success {exec_sql}")
             if result.get('result'):
                 save_result = True
-                logger.info("add_output_token_success")
+                logger.debug("add_output_token_success")
         except Exception as e:
             logger.exception(f"err_in_exec_sql, {exec_sql}")
     return save_result
