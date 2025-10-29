@@ -5,7 +5,7 @@ db:
 
 sys:
     #  系统名称(title) 配置
-    name: 巴拉巴拉小魔仙
+    name: 文档生成
     #  是否启用认证， true， 登录后才能使用系统;false 无需登录
     auth: true
     #  自定义数据库配置时的权限认证 token
