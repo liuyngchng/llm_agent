@@ -16,9 +16,9 @@ from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, stream_with_context, Response, render_template)
 
 from apps.docx import docx_meta_util
+from apps.docx.docx_file_cmt_util import get_comments_dict
 from apps.docx.txt_gen_util import gen_docx_outline_stream
 from apps.docx.docx_gen_parallel import DocxGenerator
-from apps.docx.docx_file_cmt_util import get_para_comment_dict
 from apps.docx.docx_file_txt_util import extract_catalogue, gen_docx_template_with_outline_txt, get_outline_txt
 from common import my_enums, statistic_util
 from common.my_enums import AppType
@@ -515,6 +515,9 @@ def register_routes(app):
 
 def start_background_tasks():
     """启动后台任务线程"""
+    if my_cfg['sys'].get('debug_mode', False):
+        logger.warning("system_in_debug_mode_background_task_exit")
+        return
 
     def _start_tasks():
         # 等待应用完全启动
@@ -602,20 +605,21 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
 
         # 使用并行化版本
         generator = DocxGenerator()
-        para_comment_dict = get_para_comment_dict(full_file_name)
+        para_comment_dict = get_comments_dict(full_file_name)
         if para_comment_dict:
-            logger.info("使用并行化批注处理")
+            logger.info(f"处理含有批注的文档, {full_file_name}")
+            logger.debug(f"处理含有批注的文档, {full_file_name}， 文档批注信息, {para_comment_dict}")
             generator.modify_para_with_comment_prompt_in_parallel(
                 task_id, full_file_name, catalogue, doc_ctx, para_comment_dict,
                 my_vdb_dir, my_cfg, output_file
             )
         elif is_include_para_txt:
-            logger.info("使用并行化带提示词处理")
+            logger.info(f"处理含有段落内容的文档, {full_file_name}")
             generator.fill_doc_with_prompt_in_parallel(
                 task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
             )
         else:
-            logger.info("使用并行化无提示词处理")
+            logger.info(f"处理仅含有目录的文档, {full_file_name}")
             generator.fill_doc_without_prompt_in_parallel(
                 task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
             )

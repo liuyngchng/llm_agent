@@ -14,6 +14,8 @@ sys:
     allowed_origin: http://192,168.1.122
     # 对配置信息进行加密的密钥，长度必须为16/32
     cypher_key: abaababa
+    # 在 debug 模式下定时任务将关闭，在生产环境下， debug_mode 必须设置为 false
+    debug_mode: true
 api:
     # 大语言模型 API 基地址
     llm_api_uri: https://api.deepseek.com/v1

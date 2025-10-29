@@ -413,17 +413,17 @@ class DocxGenerator:
         :param output_file_name: 输出文档的文件名
         """
         if not os.path.exists(target_doc):
-            error_info = f"输入文件不存在: {target_doc}"
+            error_info = f"输入文件不存在, file_not_exists, {target_doc}"
             logger.error(error_info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, error_info, 100)
             return error_info
 
         if not comments_dict:
-            warning_info = "文件里未找到批注信息"
-            logger.warning(warning_info)
+            warning_info = "文件里未找到批注信息, no_comment_found"
+            logger.warning(f"{warning_info}, {target_doc}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, warning_info, 100)
             return warning_info
-
+        logger.debug(f"comments_dict: {comments_dict}")
         start_time = time.time() * 1000
         doc = Document(target_doc)
 
@@ -432,8 +432,15 @@ class DocxGenerator:
             logger.info(info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, info)
             # 收集批注处理任务
-            tasks = DocxGenerator._collect_doc_with_comment_gen_tasks(task_id, doc, catalogue, doc_ctx, comments_dict, vdb_dir, cfg)
-
+            tasks = DocxGenerator._collect_doc_with_comment_gen_tasks(
+                task_id,
+                doc,
+                catalogue,
+                doc_ctx,
+                comments_dict,
+                vdb_dir,
+                cfg
+            )
             if not tasks:
                 final_info = "未找到有效的批注处理任务"
                 logger.info(final_info)
@@ -500,26 +507,29 @@ class DocxGenerator:
             return error_info
 
     @staticmethod
-    def _collect_doc_with_comment_gen_tasks(task_id: int , doc: Document, catalogue:str, doc_ctx: str,
-                               comments_dict: dict, vdb_dir: str,
-                               cfg: dict) -> List[Dict[str, Any]]:
+    def _collect_doc_with_comment_gen_tasks(task_id: int, doc: Document, catalogue:str, doc_ctx: str,
+            comments_dict: dict, vdb_dir: str,
+            cfg: dict) -> List[Dict[str, Any]]:
         """
         收集含有批注的文档的并行处理任务
         """
         tasks = []
         current_heading = []
         para_count = len(doc.paragraphs)
+
+        logger.info(f"{task_id}, 开始收集批注任务，共 {para_count} 个段落，批注字典: {comments_dict}")
+
         for para_idx, para in enumerate(doc.paragraphs):
+            logger.debug(f"{task_id}, para_idx: {para_idx}, para_text: '{para.text}'")
+
             # 更新当前标题
             refresh_current_heading(para, current_heading)
-            check_if_txt_para = is_txt_para(para, current_heading, cfg)
-            if not check_if_txt_para:
-                logger.debug(f"{task_id}, 跳过非文本段落: {para.text}")
-                continue
+
             # 检查当前段落是否有批注
             if para_idx not in comments_dict:
-                logger.debug(f"{task_id}, 跳过无批注段落: {para.text}")
+                logger.debug(f"{task_id}, 段落 {para_idx} 无批注，跳过")
                 continue
+
             comment_text = comments_dict[para_idx]
             if not comment_text or not comment_text.strip():
                 logger.debug(f"{task_id}, 跳过无批注内容段落: {para.text}")
@@ -539,10 +549,16 @@ class DocxGenerator:
                 'original_para': para,
                 'para_index': para_idx,
             }
-            logger.debug(f"{task_id}, user_comment: {task['user_comment']}")
+            logger.debug(f"{task_id}, 创建批注任务: {task['user_comment']}")
             tasks.append(task)
-            docx_meta_util.update_docx_file_process_info_by_task_id(task_id, f"正在处理第 {para_idx}/{para_count} 段文本，已创建 {len(tasks)} 个处理任务")
+            docx_meta_util.update_docx_file_process_info_by_task_id(
+                task_id,
+                f"正在处理第 {para_idx}/{para_count} 段文本，已创建 {len(tasks)} 个处理任务"
+            )
+
+        logger.info(f"{task_id}, 完成批注任务收集，共创建 {len(tasks)} 个任务")
         return tasks
+
 
     @staticmethod
     def _update_doc_with_comments_using_revisions(doc: Document, results: Dict[str, Dict], author_name: str = "AI assistant powered by richard"):
