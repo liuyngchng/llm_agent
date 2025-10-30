@@ -16,10 +16,10 @@ from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, stream_with_context, Response, render_template)
 
 from apps.docx import docx_meta_util
-from apps.docx.docx_file_cmt_util import get_comments_dict
+from apps.docx.docx_cmt_util import get_comments_dict
 from apps.docx.txt_gen_util import gen_docx_outline_stream
-from apps.docx.docx_gen_parallel import DocxGenerator
-from apps.docx.docx_file_txt_util import extract_catalogue, gen_docx_template_with_outline_txt, get_outline_txt
+from apps.docx.docx_editor import DocxGenerator
+from apps.docx.docx_para_util import extract_catalogue, gen_docx_template_with_outline_txt, get_outline_txt
 from common import my_enums, statistic_util
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg

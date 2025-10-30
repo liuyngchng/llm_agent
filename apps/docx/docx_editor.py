@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 """
-生成并行任务，处理 docx 文档中的文本填充、文本修改
+处理 docx 文档中的文本填充、文本修改、段落添加等任务
 """
 import json
 import logging.config
@@ -20,10 +20,10 @@ from apps.docx import docx_meta_util
 from docx import Document
 from docx.shared import RGBColor, Cm
 
-from apps.docx.docx_file_cmt_util import refresh_current_heading_xml
+from apps.docx.docx_cmt_util import refresh_current_heading_xml
 from common import cfg_util
 from apps.docx.txt_gen_util import gen_txt
-from apps.docx.docx_file_txt_util import get_elapsed_time, get_reference_from_vdb, \
+from apps.docx.docx_para_util import get_elapsed_time, get_reference_from_vdb, \
     is_3rd_heading, is_txt_para, refresh_current_heading
 from apps.docx.mermaid_render import MermaidRenderer
 
@@ -34,10 +34,17 @@ logger = logging.getLogger(__name__)
 class DocxGenerator:
     """
     DOCX文档生成器，使用多线程并行生成文本内容
-    任务一共分为3种：
+    1. 任务一共分为3种：
         (1) 只含有目录的 docx 文件；
         (2) 含有目录和段落写作要求文本的 docx 文件;
         (3) 含有word 批注内容的 docx 文件；
+    2. 处理文档分为3个步骤：
+        (1) 生成并行任务清单；
+        (2) 执行并行任务，输出生成的文本集合[{para_idx:para_content}]；
+        (3)将文本集合插入到目标Word文档；
+    3. 文档处理方法：
+        （1）含有批注的文档，需要通过zipfile工具解压原始docx文件，然后处理xml 来修改word文档；
+        （2）不含批注的文档，则使用python-docx 处理，按照段落index，插入相应的段落内容；
     """
 
     def __init__(self, max_workers=None, timeout=300, consider_memory=True):
@@ -121,26 +128,29 @@ class DocxGenerator:
         处理有目录，并且有段落写作要求的 Word 文档
         """
         start_time = time.time() * 1000
-        doc = Document(target_doc)
+
         try:
             logger.info(f"{task_id}, 开始处理文档 {target_doc}")
             tasks = DocxGenerator._collect_doc_with_prompt_gen_tasks(task_id, target_doc, doc_ctx, target_doc_catalogue,
                                                                      vdb_dir, sys_cfg)
             if not tasks:
                 final_info = f"未检测到需要生成的文本段落"
-                logger.info(f"{task_id}, {final_info}, {target_doc}")
                 docx_meta_util.update_docx_file_process_info_by_task_id(task_id, final_info, 100)
-                doc.save(output_file_name)
+                import shutil
+                shutil.copy2(target_doc, output_file_name)
+                logger.info(f"{task_id}, {final_info}, {target_doc}, 输出文件 {output_file_name}")
                 return final_info
 
-            initial_info = f"需处理 {len(tasks)} 个段落，启动 {self.executor._max_workers} 个任务"
+            initial_info = f"需处理 {len(tasks)} 个段落，计划启动 {self.executor._max_workers} 个任务"
             logger.info(f"{task_id}, {initial_info}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
             doc_gen_results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
-            self._insert_gen_para_to_doc(target_doc, doc_gen_results)
-
-            # 保存文档
-            doc.save(output_file_name)
+            success = DocxGenerator._insert_para_to_doc(target_doc, output_file_name, doc_gen_results)
+            if not success:
+                error_info = "文档更新失败"
+                logger.error(f"{task_id}, {error_info}")
+                docx_meta_util.update_docx_file_process_info_by_task_id(task_id, error_info, 100)
+                return error_info
             logger.info(f"{task_id}, 保存文档完成，{output_file_name}，耗时 {get_elapsed_time(start_time)}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
             # 计算详细统计信息
@@ -173,21 +183,15 @@ class DocxGenerator:
             total_time = get_elapsed_time(start_time)
             final_info = (f"文档处理完成，共执行 {len(tasks)} 个文本生成任务，"
                           f"成功生成 {success_count} 段文本和 {img_count} 张配图，失败任务 {failed_count} 个，{total_time}")
-
             if failed_count > 0:
                 final_info += f"，失败任务的原因可在日志中查看具体的失败原因"
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, final_info, 100)
             logger.info(f"{task_id}, {final_info}，输出文件: {output_file_name}")
             return final_info
-
         except Exception as e:
             error_info = f"文档生成过程出现异常: {str(e)}"
             logger.error(f"{task_id}, {error_info}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, error_info, 100)
-            try:
-                doc.save(output_file_name)
-            except Exception:
-                pass
             return error_info
 
     @staticmethod
@@ -195,12 +199,12 @@ class DocxGenerator:
                                            target_doc_catalogue: str, vdb_dir: str,
                                            sys_cfg: dict) -> List[Dict[str, Any]]:
         """
-        收集含有目录和段落写作要求的docx文档的文本生成任务
+        收集含有目录和段落写作要求的docx文档的文本生成任务，返回段落索引
         """
         logger.info(f"{task_id}, start_collect_task")
         tasks = []
         current_heading = []
-        doc = Document(target_doc)
+        doc = Document(target_doc) # 读取docx文档
         para_count = len(doc.paragraphs)
         for index, para in enumerate(doc.paragraphs):
             refresh_current_heading(para, current_heading)
@@ -208,9 +212,10 @@ class DocxGenerator:
             if not check_if_is_txt_para:
                 logger.info(f"{task_id}, 跳过非描述性的文本段落 {para.text}")
                 continue
+            task_key =  f"para_{index}"
             task = {
                 'task_id': task_id,
-                'unique_key': f"para_{len(tasks)}",
+                'unique_key': task_key,
                 'write_context': doc_ctx,
                 'paragraph_prompt': para.text,
                 'user_comment': "",
@@ -219,12 +224,12 @@ class DocxGenerator:
                 'current_heading': current_heading.copy(),
                 'sys_cfg': sys_cfg,
                 'vdb_dir': vdb_dir,
-                'original_para': para,
+                'para_index': index,        #  段落索引
             }
             tasks.append(task)
-            process_info = f"正在处理第 {index}/{para_count}  段文本， 已创建 {len(tasks)} 个处理任务"
+            process_info = f"正在扫描第 {index}/{para_count} 段， 已创建 {len(tasks)} 个批处理任务"
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, process_info)
-        logger.info(f"_collect_task, {len(tasks)}")
+        logger.info(f"_collect_doc_with_prompt, {len(tasks)}")
         return tasks
 
     def _exec_tasks(self, tasks: List[Dict[str, Any]],
@@ -325,7 +330,6 @@ class DocxGenerator:
                 cfg=task['sys_cfg']
             )
             word_count = len(llm_txt)
-
             # 根据任务类型返回不同的结果结构
             result = {
                 'success': True,
@@ -333,14 +337,11 @@ class DocxGenerator:
                 'current_heading': task['current_heading'],
                 'contains_mermaid': '<mermaid>' in llm_txt,
                 'word_count': word_count,
+                'para_index': task['para_index'],
             }
             if 'original_para_xml' in task:
-                result['para_index'] = task['para_index']
                 result['namespaces'] = task['namespaces']
-            else:
-                result['original_para'] = task['original_para']
             return result
-
         except Exception as e:
             heading_info = task['current_heading']
             logger.exception(f"生成段落失败: {str(e)}, single_task_args, {heading_info}")
@@ -384,31 +385,48 @@ class DocxGenerator:
             }
 
     @staticmethod
-    def _insert_gen_para_to_doc(target_doc: str, results: Dict[str, Dict]):
+    def _insert_para_to_doc(input_doc: str, output_doc: str, results: Dict[str, Dict]) -> bool:
         """
-        将生成的结果插入到文档中
-        :param target_doc: 需要处理的目标文档的路径
+        将生成的文本结果，按照段落索引插入到文档的指定位置
+        :param input_doc: 输入的 Word文档写作模板的 Word 文档路径
+        :param output_doc: 输出已生成的文章的Word文档路径
+        :param results: 批量生成的文本结果,含有原始索引位置和生成的文本内容对应关系字典的集合,[{para_index:gen_para_content}]
         """
-        doc = Document(target_doc)
-        sorted_keys = sorted(results.keys(), key=lambda x: int(x.split('_')[1]))
+        try:
+            doc = Document(input_doc)
+            paragraphs = doc.paragraphs
+            valid_results = [(result['para_index'], result) for result in results.values()
+                             if result.get('success') and 'para_index' in result]
 
-        for key in sorted_keys:
-            result = results[key]
-            if not result.get('success'):
-                continue
+            if not valid_results:
+                logger.warning(f"没有有效的生成结果需要插入, 保存原始文档:{input_doc}  至 {output_doc}")
+                doc.save(output_doc)
+                return True
+            # 直接从结果中提取段落索引并排序（从后往前处理避免索引变化）
+            sorted_results = sorted(valid_results, key=lambda x: x[0],reverse=True) # 从后往前处理
 
-            original_para = result['original_para']
-            generated_text = result['generated_text']
+            # 从后往前插入，避免索引变化
+            for para_index, result in sorted_results:
+                if para_index >= len(paragraphs):  # 添加边界检查
+                    logger.warning(f"段落索引 {para_index} 超出范围（总段落数：{len(paragraphs)}），跳过, input_doc={input_doc}")
+                    continue
+                original_para = paragraphs[para_index]
+                generated_text = result['generated_text']
+                # 创建新段落并插入
+                new_para = doc.add_paragraph()
+                new_para.paragraph_format.first_line_indent = Cm(1)
+                red_run = new_para.add_run(generated_text)
+                red_run.font.color.rgb = RGBColor(0, 0, 0)
 
-            # 创建新段落并插入
-            new_para = doc.add_paragraph()
-            new_para.paragraph_format.first_line_indent = Cm(1)
-            red_run = new_para.add_run(generated_text)
-            red_run.font.color.rgb = RGBColor(0, 0, 0)
-
-            # 插入到原始段落后面
-            original_para._p.addnext(new_para._p)
-
+                # 插入到原始段落后面
+                original_para._p.addnext(new_para._p)
+                logger.debug(f"已在段落 {para_index} 后插入生成内容")
+            doc.save(output_doc)
+            logger.info(f"使用段落索引更新文档成功: {output_doc}")
+            return True
+        except Exception as e:
+            logger.exception(f"使用段落索引更新文档失败: input_doc={input_doc}, output_doc={output_doc}")
+            return False
     def modify_para_with_comment_prompt_in_parallel(self, task_id: int, target_doc: str, catalogue: str,
                                                     doc_ctx: str, comments_dict: dict,
                                                     vdb_dir: str, cfg: dict,
@@ -721,27 +739,28 @@ class DocxGenerator:
         :param output_file_name: 输出文档的文件名
         """
         start_time = time.time() * 1000
+        tasks = []
+        current_heading = []
         doc = Document(target_doc)
         try:
             logger.info(f"开始处理无提示词文档 {target_doc}")
             # 收集三级标题任务
-            tasks = []
-            for para in doc.paragraphs:
+            for index, para in enumerate(doc.paragraphs):
+                refresh_current_heading(para, current_heading)
                 if not is_3rd_heading(para):
                     continue
-
                 task = {
                     'task_id': task_id,
-                    'unique_key': f"heading_{len(tasks)}",
+                    'unique_key': f"heading_{index}",
                     'write_context': doc_ctx,
                     'paragraph_prompt': "",
                     'user_comment': "",
                     'catalogue': target_doc_catalogue,
                     'current_sub_title': para.text,
-                    'current_heading': [para.text],
+                    'current_heading': current_heading.copy(),
                     'sys_cfg': sys_cfg,
                     'vdb_dir': vdb_dir,
-                    'original_para': para,
+                    'para_index': index,
 
                 }
                 tasks.append(task)
@@ -757,8 +776,11 @@ class DocxGenerator:
             logger.info(initial_info)
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, initial_info, 0)
             results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
-            DocxGenerator._insert_gen_para_to_doc(doc, results)
-            doc.save(output_file_name)
+            success = DocxGenerator._insert_para_to_doc(target_doc, output_file_name, results)
+            if not success:
+                error_info = "文档更新失败"
+                logger.error(f"{task_id}, {error_info}")
+                return error_info
             logger.info(f"保存无提示词文档完成: {output_file_name}")
             docx_meta_util.save_docx_output_file_path_by_task_id(task_id, output_file_name)
             success_count = len([r for r in results.values() if r.get('success')])
@@ -801,10 +823,6 @@ class DocxGenerator:
             error_info = f"文档生成过程出现异常: {str(e)}"
             logger.error(f"{task_id}, {error_info}")
             docx_meta_util.update_docx_file_process_info_by_task_id(task_id, error_info, 100)
-            try:
-                doc.save(output_file_name)
-            except Exception:
-                pass
             return error_info
 
 
