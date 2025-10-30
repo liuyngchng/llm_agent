@@ -89,7 +89,7 @@ def register_routes(app):
 
         for static_dir in static_dirs:
             if os.path.exists(os.path.join(static_dir, file_name)):
-                logger.debug(f"get_static_file, {static_dir}, {file_name}")
+                # logger.debug(f"get_static_file, {static_dir}, {file_name}")
                 return send_from_directory(static_dir, file_name)
         logger.error(f"no_file_found_error, {file_name}")
         abort(404)
@@ -149,7 +149,7 @@ def register_routes(app):
                 warning_info=warning_info
 
             ))
-        logger.info(f"{uid}, get_my_docx_task, {data}")
+        # logger.info(f"{uid}, get_my_docx_task, {data}")
         task_list = docx_meta_util.get_user_docx_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
 

@@ -60,9 +60,9 @@ def get_user_docx_task_list(uid: int) -> dict:
     if not uid:
         raise RuntimeError(f"param_uid_null_err {uid}")
     sql = f"select * from docx_file_info where uid = {uid} order by task_id desc limit 100"
-    logger.info(f"get_user_docx_task_list_by_uid_sql, {sql}")
+    # logger.info(f"get_user_docx_task_list_by_uid_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-    logger.info(f"get_user_docx_task_list_by_uid_dt {my_dt}")
+    # logger.info(f"get_user_docx_task_list_by_uid_dt {my_dt}")
     return my_dt
 
 def get_docx_file_processing_list()-> list:
@@ -70,9 +70,9 @@ def get_docx_file_processing_list()-> list:
     获取需要处理的docx任务信息清单
     """
     sql = f"select * from docx_file_info where percent != 100 limit 100"
-    logger.info(f"get_docx_processing_file_list_sql, {sql}")
+    # logger.info(f"get_docx_processing_file_list_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-    logger.info(f"get_docx_processing_file_list_dt {my_dt}")
+    # logger.info(f"get_docx_processing_file_list_dt {my_dt}")
     return my_dt
 
 def delete_docx_info_by_task_id(task_id: int):
