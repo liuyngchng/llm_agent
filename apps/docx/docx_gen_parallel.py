@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 """
-生成并行任务，处理 docx 文档中的文本填充、文本修该
+生成并行任务，处理 docx 文档中的文本填充、文本修改
 """
 import json
 import logging.config
@@ -34,10 +34,15 @@ logger = logging.getLogger(__name__)
 class DocxGenerator:
     """
     DOCX文档生成器，使用多线程并行生成文本内容
+    任务一共分为3种：
+        (1) 只含有目录的 docx 文件；
+        (2) 含有目录和段落写作要求文本的 docx 文件;
+        (3) 含有word 批注内容的 docx 文件；
     """
 
     def __init__(self, max_workers=None, timeout=300, consider_memory=True):
         """
+        进行类的初始化
         :param max_workers: 固定工作线程数，None则自动计算
         :param timeout: 任务超时时间
         :param consider_memory: 是否考虑内存使用情况
@@ -65,7 +70,7 @@ class DocxGenerator:
         try:
             cpu_count = multiprocessing.cpu_count()
             memory_info = DocxGenerator._get_memory_usage()
-            base_workers = cpu_count * 2
+            base_workers = cpu_count
             if self.consider_memory and memory_info['available_percent'] < 20:
                 memory_factor = 0.5
                 logger.warning(f"系统内存紧张({memory_info['available_percent']:.1f}%)，减少工作线程数")
@@ -113,7 +118,7 @@ class DocxGenerator:
                                          target_doc_catalogue: str, vdb_dir: str,
                                          sys_cfg: dict, output_file_name: str) -> str:
         """
-        处理有目录，并且有写作要求段落的 Word 文档
+        处理有目录，并且有段落写作要求的 Word 文档
         """
         start_time = time.time() * 1000
         doc = Document(target_doc)
@@ -190,7 +195,7 @@ class DocxGenerator:
                                            target_doc_catalogue: str, vdb_dir: str,
                                            sys_cfg: dict) -> List[Dict[str, Any]]:
         """
-        收集含有描述性的文本的docx文档的所有需要生成文本的任务信息
+        收集含有目录和段落写作要求的docx文档的文本生成任务
         """
         logger.info(f"{task_id}, start_collect_task")
         tasks = []
@@ -268,14 +273,12 @@ class DocxGenerator:
                 # 计算进度百分比时考虑Mermaid任务
                 percent = int(completed / actual_total_tasks * 100)
                 elapsed_time = get_elapsed_time(start_time)
-
                 # 计算预估剩余时间
                 if completed > 0:
                     elapsed_seconds = (time.time() * 1000 - start_time) / 1000
                     avg_time_per_task = elapsed_seconds / completed
                     remaining_tasks = actual_total_tasks - completed
                     estimated_remaining = avg_time_per_task * remaining_tasks
-
                     if estimated_remaining < 60:
                         remaining_str = f"约 {int(estimated_remaining)} 秒"
                     else:

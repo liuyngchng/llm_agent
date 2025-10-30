@@ -382,8 +382,16 @@ def search_txt(txt: str, vector_db_dir: str, score_threshold: float,
     :param txt_num: the number of txt to return
     :return: the results
     """
-    search_results = search(txt, score_threshold, vector_db_dir, llm_cfg, txt_num)
+    search_results = []
+    try:
+        search_results = search(txt, score_threshold, vector_db_dir, llm_cfg, txt_num)
+    except Exception as e:
+        logger.exception(f"search_txt_err, embedding uri: {llm_cfg['embedding_uri']}, err={e}", exc_info=True)
+
     all_txt = ""
+    if not search_results:
+        logger.info(f"no_search_results_return_for: {txt}")
+        return all_txt
     for s_r in search_results:
         s_r_txt = s_r.get("content", "").replace("\n", "")
         if "......................." in s_r_txt:
