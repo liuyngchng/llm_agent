@@ -377,7 +377,7 @@ def process_vdb_file_task():
     周期性地对已经上传的文件进行向量化处理
     """
     while True:
-        logger.debug(f"process_vdb_file_task")
+        # logger.debug(f"process_vdb_file_task")
         process_doc()
         time.sleep(5)
 
@@ -390,7 +390,7 @@ def is_task_cancelled(file_id: int) -> bool:
 def process_doc():
     file_list = VdbMeta.get_vdb_file_processing_list()
     if not file_list or len(file_list) == 0:
-        logger.debug(f"no_upload_file_need_process")
+        # logger.debug(f"no_upload_file_need_process")
         return
     for file in file_list:
         file_id = file['id']

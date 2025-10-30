@@ -142,7 +142,7 @@ def register_routes(app):
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
-            logger.warning(f"{uid}, {warning_info}")
+            # logger.warning(f"{uid}, {warning_info}")
             return redirect(url_for(
                 'auth.login_index',
                 app_source=AppType.DOCX.name.lower(),
@@ -552,7 +552,7 @@ def clean_docx_task():
             for file in docx_list:
                 task_id = file.get('task_id')
                 if task_id is None:
-                    logger.warning(f"无效task_id：{task_id}, file: {file}")
+                    # logger.warning(f"无效task_id：{task_id}, file: {file}")
                     continue
                 if now - task_id > TASK_EXPIRE_TIME_MS:  # 2小时过期
                     logger.info(f"Cleaning expired task: {task_id}")

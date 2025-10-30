@@ -29,7 +29,7 @@ SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 
 @auth_bp.route('/login', methods=['GET'])
 def login_index():
-    logger.info("login_index")
+    # logger.info("login_index")
     app_source = request.args.get('app_source')
     warning_info = request.args.get('warning_info', "")
     if not app_source:
@@ -44,7 +44,7 @@ def login_index():
     auth_flag = my_cfg['sys']['auth']
     if auth_flag:
         login_idx = "login.html"
-        logger.info(f"return_page_for_app_source {app_source}, {login_idx}")
+        # logger.info(f"return_page_for_app_source {app_source}, {login_idx}")
         return render_template(login_idx, **ctx)
     else:
         dt_idx = f"{app_source}_index.html"
