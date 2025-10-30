@@ -44,9 +44,10 @@ def get_access_count_by_uid(uid: int)-> int:
     """
     统计一个用户的累计访问次数
     """
+    today = datetime.today().strftime('%Y-%m-%d')
     with sqlite3.connect(STS_DB_FILE) as my_conn:
         try:
-            sql = f"select access_count from statistics where uid={uid} limit 1"
+            sql = f"select access_count from statistics where uid={uid} and date='{today}' limit 1"
             check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             if user_dt:
@@ -91,9 +92,10 @@ def add_access_count_by_uid(uid: int, access_count: int)-> bool:
     return save_result
 
 def get_input_token_by_uid(uid: int)-> int | None:
+    today = datetime.today().strftime('%Y-%m-%d')
     with sqlite3.connect(STS_DB_FILE) as my_conn:
         try:
-            sql = f"select input_token from statistics where uid={uid} limit 1"
+            sql = f"select input_token from statistics where uid={uid} and date='{today}' limit 1"
             check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             if user_dt:
@@ -139,9 +141,10 @@ def add_input_token_by_uid(uid: int, input_token: int)-> bool:
 
 
 def get_output_token_by_uid(uid: int)-> int | None:
+    today = datetime.today().strftime('%Y-%m-%d')
     with sqlite3.connect(STS_DB_FILE) as my_conn:
         try:
-            sql = f"select output_token from statistics where uid={uid} limit 1"
+            sql = f"select output_token from statistics where uid={uid} and date='{today}' limit 1"
             check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             if user_dt:
