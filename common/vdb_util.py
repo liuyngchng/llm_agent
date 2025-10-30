@@ -194,7 +194,9 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
                         with lock:
                             VdbMeta.update_vdb_file_process_info(file_id, info)
                             logger.error(info)
-        process_info = f"已完成文档处理， 共处理 {total_chunks} 个文本块, 异常情况:{err_info}"
+        process_info = f"已完成文档处理， 共处理 {total_chunks} 个文本块"
+        if err_info:
+            process_info += f", {err_info}"
         logger.info(f"向量数据库构建完成，保存到 {vector_db}")
         VdbMeta.update_vdb_file_process_info(file_id, process_info, 100)
     except Exception as e:
@@ -446,7 +448,7 @@ def test_update_doc():
     task_id = int(time.time())
     task_progress = {}
     # file = "./llm.txt"
-    file = "./1_pure.txt"
+    file = "./1 _pure.txt"
     vdb = "./vdb/test_db"
     my_cfg = init_yml_cfg()
     llm_cfg = my_cfg['api']

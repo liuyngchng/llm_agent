@@ -131,7 +131,7 @@ def get_vdb_file_list():
     获取知识库内的文件列表
     """
     data = request.get_json()
-    logger.debug(f"get_vdb_file_list {data}")
+    # logger.debug(f"get_vdb_file_list {data}")
     uid = data.get("uid")
     t = data.get("t")
     vdb_id = data.get("vdb_id")
@@ -141,7 +141,7 @@ def get_vdb_file_list():
         return json.dumps(msg,ensure_ascii=False), 502
     dt = VdbMeta.get_vdb_file_list(uid, vdb_id)
     return_dt = {"files": dt, "success": True}
-    logger.debug(f"get_vdb_file_list_return, {return_dt}")
+    # logger.debug(f"get_vdb_file_list_return, {return_dt}")
     return json.dumps(return_dt, ensure_ascii=False), 200
 
 @vdb_bp.route('/vdb/set/default', methods=['POST'])
