@@ -14,8 +14,8 @@ from common.my_enums import DataType
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-def save_docx_meta_info(uid: int, task_id: int, doc_type: str, doc_title: str,
-    keywords: str, template_file_name: str) -> dict:
+def save_meta_info(uid: int, task_id: int, doc_type: str, doc_title: str,
+                   keywords: str, template_file_name: str) -> dict:
     """
     保存docx文件处理任务的相关元数据信息
     :param uid: user id
@@ -37,7 +37,7 @@ def save_docx_meta_info(uid: int, task_id: int, doc_type: str, doc_title: str,
         my_dt = insert_del_sqlite(my_conn, sql)
         return my_dt
 
-def get_docx_info_by_task_id(task_id: int) -> dict:
+def get_info_by_task_id(task_id: int) -> dict:
     """
     根据任务id获取docx文件处理任务的相关元数据信息
     :param task_id: process task id
@@ -51,7 +51,7 @@ def get_docx_info_by_task_id(task_id: int) -> dict:
     logger.info(f"get_docx_info_by_task_id_dt {my_dt}")
     return my_dt
 
-def get_user_docx_task_list(uid: int) -> dict:
+def get_user_task_list(uid: int) -> dict:
     """
     根据任务id获取docx文件处理任务的相关元数据信息
     :param uid: process task id
@@ -65,7 +65,7 @@ def get_user_docx_task_list(uid: int) -> dict:
     # logger.info(f"get_user_docx_task_list_by_uid_dt {my_dt}")
     return my_dt
 
-def get_docx_file_processing_list()-> list:
+def get_processing_file_list()-> list:
     """
     获取需要处理的docx任务信息清单
     """
@@ -75,7 +75,7 @@ def get_docx_file_processing_list()-> list:
     # logger.info(f"get_docx_processing_file_list_dt {my_dt}")
     return my_dt
 
-def delete_docx_info_by_task_id(task_id: int):
+def delete_task(task_id: int):
     """
     根据任务id删除docx文件处理任务的相关元数据信息
     :param task_id: process task id
@@ -89,7 +89,7 @@ def delete_docx_info_by_task_id(task_id: int):
     return my_dt
 
 
-def update_docx_file_process_info_by_task_id(task_id: int, process_info: str, percent = 0):
+def update_process_info_by_task_id(task_id: int, process_info: str, percent = 0):
     """
     更新docx文件处理任务的处理进度信息
     :param task_id: process task id
@@ -108,7 +108,7 @@ def update_docx_file_process_info_by_task_id(task_id: int, process_info: str, pe
     logger.info(f"update_docx_file_info_dt {my_dt}")
     return my_dt
 
-def update_docx_gen_txt_count_by_task_id(task_id: int, word_count: int):
+def update_gen_txt_count_by_task_id(task_id: int, word_count: int):
     """
     更新docx文件处理任务中生成的字数统计
     :param task_id: process task id
@@ -123,7 +123,7 @@ def update_docx_gen_txt_count_by_task_id(task_id: int, word_count: int):
     logger.info(f"update_docx_gen_txt_count_dt {my_dt}")
     return my_dt
 
-def save_docx_output_file_path_by_task_id(task_id: int, file_path: str):
+def save_output_file_path_by_task_id(task_id: int, file_path: str):
     """
     保存输出文档物理文件路径信息
     """
@@ -135,7 +135,7 @@ def save_docx_output_file_path_by_task_id(task_id: int, file_path: str):
     logger.info(f"update_docx_file_path_dt {my_dt}")
     return my_dt
 
-def save_docx_outline_by_task_id(task_id: int, outline: str):
+def save_outline_by_task_id(task_id: int, outline: str):
     """
     保存输出的Word文档的三级目录
     """

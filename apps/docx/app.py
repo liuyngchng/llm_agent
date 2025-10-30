@@ -150,7 +150,7 @@ def register_routes(app):
 
             ))
         # logger.info(f"{uid}, get_my_docx_task, {data}")
-        task_list = docx_meta_util.get_user_docx_task_list(uid)
+        task_list = docx_meta_util.get_user_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
 
     @app.route('/docx/statistic/index', methods=['GET'])
@@ -320,7 +320,7 @@ def register_routes(app):
         template_file_name = gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title,
                                                                           doc_outline)
         logger.info(f"docx_template_file_generated_with_name, {template_file_name}")
-        docx_meta_util.save_docx_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
+        docx_meta_util.save_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
         threading.Thread(
             target=fill_docx_with_template,
             args=(uid, doc_type, doc_title, keywords, task_id, template_file_name, vbd_id, False)
@@ -368,7 +368,7 @@ def register_routes(app):
             err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
-        docx_meta_util.save_docx_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
+        docx_meta_util.save_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
         threading.Thread(
             target=fill_docx_with_template,
             args=(uid, doc_type, doc_title, keywords, task_id, template_file_name, vbd_id, True)
@@ -482,7 +482,7 @@ def register_routes(app):
             os.remove(disk_file)
         else:
             logger.warning(f"文件 {filename} 不存在， 无需删除物理文件, 只需删除数据库记录")
-        docx_meta_util.delete_docx_info_by_task_id(task_id)
+        docx_meta_util.delete_task(task_id)
 
         return json.dumps({"msg": "删除成功", "task_id": task_id}, ensure_ascii=False), 200
 
@@ -504,8 +504,8 @@ def register_routes(app):
                 warning_info=warning_info
 
             ))
-        file_info = docx_meta_util.get_docx_info_by_task_id(task_id)
-        logger.info(f"get_docx_info_by_task_id, {file_info}")
+        file_info = docx_meta_util.get_info_by_task_id(task_id)
+        logger.info(f"get_info_by_task_id, {file_info}")
         if not file_info or len(file_info) == 0:
             return json.dumps({"error": "未找到任务ID对应的文档信息"}, ensure_ascii=False), 400
         file_info[0]['elapsed_time'] = time.time() - task_id
@@ -547,7 +547,7 @@ def clean_docx_task():
     while True:
         try:
             now = time.time()
-            docx_list = docx_meta_util.get_docx_file_processing_list()
+            docx_list = docx_meta_util.get_processing_file_list()
             # 遍历所有任务
             for file in docx_list:
                 task_id = file.get('task_id')
@@ -556,7 +556,7 @@ def clean_docx_task():
                     continue
                 if now - task_id > TASK_EXPIRE_TIME_MS:  # 2小时过期
                     logger.info(f"Cleaning expired task: {task_id}")
-                    docx_meta_util.delete_docx_info_by_task_id(task_id)
+                    docx_meta_util.delete_task(task_id)
 
             time.sleep(1000)  # 每1000秒检查一次
         except Exception as e:
@@ -582,14 +582,14 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
 
     generator = None
     try:
-        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始解析文档结构...", 0)
+        docx_meta_util.update_process_info_by_task_id(task_id, "开始解析文档结构...", 0)
         full_file_name = os.path.join(UPLOAD_FOLDER, file_name)
         catalogue = extract_catalogue(full_file_name)
-        docx_meta_util.save_docx_outline_by_task_id(task_id, catalogue)
+        docx_meta_util.save_outline_by_task_id(task_id, catalogue)
         output_file_name = f"output_{task_id}.docx"
         output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
         logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
-        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, "开始处理文档...")
+        docx_meta_util.update_process_info_by_task_id(task_id, "开始处理文档...")
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}, 其他写作要求是 {keywords}"
 
         if vbd_id:
@@ -609,24 +609,24 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
         if para_comment_dict:
             logger.info(f"处理含有批注的文档, {full_file_name}")
             logger.debug(f"处理含有批注的文档, {full_file_name}， 文档批注信息, {para_comment_dict}")
-            generator.modify_para_with_comment_prompt_in_parallel(
+            generator.modify_doc_with_comment(
                 task_id, full_file_name, catalogue, doc_ctx, para_comment_dict,
                 my_vdb_dir, my_cfg, output_file
             )
         elif is_include_para_txt:
             logger.info(f"处理含有段落内容的文档, {full_file_name}")
-            generator.fill_doc_with_prompt_in_parallel(
+            generator.fill_doc_with_prompt(
                 task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
             )
         else:
             logger.info(f"处理仅含有目录的文档, {full_file_name}")
-            generator.fill_doc_without_prompt_in_parallel(
+            generator.fill_doc_without_prompt(
                 task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
             )
         generator.shutdown()
 
     except Exception as e:
-        docx_meta_util.update_docx_file_process_info_by_task_id(task_id, f"任务处理失败: {str(e)}")
+        docx_meta_util.update_process_info_by_task_id(task_id, f"任务处理失败: {str(e)}")
         logger.exception("文档生成异常", e)
     finally:
         # 确保资源被释放
