@@ -220,6 +220,8 @@ def get_usr_manual():
     sys_name = my_enums.AppType.get_app_type(app_source)
     markdown_content = ""
     markdown_file_name = f"./user_manual/{app_source}_user_manual.md"
+    if not os.path.exists(markdown_file_name):
+        markdown_file_name += f"./apps/{app_source}/"
     toc_content = ""
     try:
         if os.path.exists(markdown_file_name):
