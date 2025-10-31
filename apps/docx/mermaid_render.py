@@ -74,44 +74,14 @@ class MermaidRenderer:
     @staticmethod
     def _clean_mermaid_script(mermaid_script: str) -> str:
         """
-        清理Mermaid脚本，确保语法正确
+        Mermaid 脚本清理，让提示词负责生成正确的语法，这里只做最低限度的修复
         """
-        # 移除<mermaid>标签
-        cleaned = re.sub(r'<mermaid>|</mermaid>', '', mermaid_script).strip()
-
-        # 确保脚本以正确的图表类型开头
-        if not cleaned.startswith(('graph', 'sequenceDiagram', 'erDiagram', 'gantt', 'classDiagram', 'stateDiagram', 'flowchart')):
-            # 尝试自动添加缺失的图表类型声明
-            if '->>' in cleaned or '->' in cleaned:
-                cleaned = f"sequenceDiagram\n{cleaned}"
-            elif '||--o{' in cleaned or '}|--||' in cleaned:
-                cleaned = f"erDiagram\n{cleaned}"
-            elif '-->' in cleaned or '[*]' in cleaned:
-                cleaned = f"stateDiagram-v2\n{cleaned}"
-            else:
-                cleaned = f"graph TD\n{cleaned}"
-
-        if cleaned.startswith('sequenceDiagram'):
-            # 更完善的JSON内容识别和转义
-            def escape_message_content(match):
-                arrow_part = match.group(1)
-                content = match.group(2).strip()
-                # 如果内容以{开头，说明是JSON，需要转义并加引号
-                if content.startswith('{'):
-                    # 转义内部引号
-                    escaped_content = content.replace('"', '\\"')
-                    return f'{arrow_part} "{escaped_content}"'
-                return match.group(0)
-
-            # 匹配箭头操作符和后面的消息内容
-            cleaned = re.sub(r'(\w+->>?\w+:)(.*?)(?=\n\s*\w+->>|\Z)',
-                             escape_message_content,
-                             cleaned,
-                             flags=re.DOTALL)
-
+        # 移除标签
+        cleaned = mermaid_script.replace('<mermaid>', '').replace('</mermaid>', '').strip()
+        # 如果完全没有图表类型，添加默认的
+        if cleaned and not cleaned.startswith(('graph', 'sequenceDiagram', 'classDiagram', 'stateDiagram')):
+            cleaned = f"graph TD\n{cleaned}"
         return cleaned
-
-
 
     def insert_mermaid_to_docx(self, doc_path: str, mermaid_script: str,
                                img_format: str = 'png', width: float = 5.0) -> str:
