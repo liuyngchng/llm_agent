@@ -104,11 +104,11 @@ def get_my_vdb_list():
     :return: {"kb_list": [{'id':id1, 'name':name1},{'id':id2, 'name':name2},]}
     """
     data = request.get_json()
-    logger.info(f"get_my_vdb_list {data}")
+    logger.debug(f"get_my_vdb_list {data}")
     uid = data.get("uid")
     t = data.get("t")
     my_vdb_list = VdbMeta.get_vdb_info_by_uid(uid, '', False)
-    logger.info(f"get_my_vdb_list {my_vdb_list}")
+    logger.debug(f"get_my_vdb_list {my_vdb_list}")
     return json.dumps({"kb_list": my_vdb_list},ensure_ascii=False)
 
 @vdb_bp.route('/vdb/pub/list', methods=['POST'])
