@@ -18,7 +18,7 @@ from flask import (Flask, request, jsonify, send_from_directory,
 from apps.docx import docx_meta_util
 from apps.docx.docx_cmt_util import get_comments_dict
 from apps.docx.txt_gen_util import gen_docx_outline_stream
-from apps.docx.docx_editor import DocxGenerator
+from apps.docx.docx_editor import DocxEditor
 from apps.docx.docx_para_util import extract_catalogue, gen_docx_template_with_outline_txt, get_outline_txt
 from common import my_enums, statistic_util
 from common.my_enums import AppType
@@ -604,7 +604,7 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
         logger.info(f"my_vdb_dir_for_gen_doc: {my_vdb_dir}")
 
         # 使用并行化版本
-        generator = DocxGenerator()
+        generator = DocxEditor()
         para_comment_dict = get_comments_dict(full_file_name)
         if para_comment_dict:
             logger.info(f"处理含有批注的文档, {full_file_name}")

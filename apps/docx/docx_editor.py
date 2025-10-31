@@ -31,7 +31,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 
-class DocxGenerator:
+class DocxEditor:
     """
     DOCX文档生成器，使用多线程并行生成文本内容
     1. 任务一共分为3种：
@@ -76,7 +76,7 @@ class DocxGenerator:
         """
         try:
             cpu_count = multiprocessing.cpu_count()
-            memory_info = DocxGenerator._get_mem_usage()
+            memory_info = DocxEditor._get_mem_usage()
             base_workers = cpu_count
             if self.consider_memory and memory_info['available_percent'] < 20:
                 memory_factor = 0.5
@@ -116,7 +116,7 @@ class DocxGenerator:
     def _get_mem_info() -> str:
         """获取内存信息字符串"""
         try:
-            memory = DocxGenerator._get_mem_usage()
+            memory = DocxEditor._get_mem_usage()
             return f"{memory['available_percent']:.1f}%可用"
         except:
             return "未知"
@@ -137,8 +137,8 @@ class DocxGenerator:
 
         try:
             logger.info(f"{task_id}, 开始处理文档 {input_file}")
-            tasks = DocxGenerator._collect_doc_with_prompt_tasks(task_id, input_file, doc_ctx, catalogue,
-                                                                 vdb_dir, sys_cfg)
+            tasks = DocxEditor._collect_doc_with_prompt_tasks(task_id, input_file, doc_ctx, catalogue,
+                                                              vdb_dir, sys_cfg)
             if not tasks:
                 final_info = f"未检测到需要生成的文本段落"
                 docx_meta_util.update_process_info_by_task_id(task_id, final_info, 100)
@@ -151,7 +151,7 @@ class DocxGenerator:
             logger.info(f"{task_id}, {initial_info}")
             docx_meta_util.update_process_info_by_task_id(task_id, initial_info, 0)
             doc_gen_results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
-            success = DocxGenerator._insert_para_to_doc(input_file, output_file, doc_gen_results)
+            success = DocxEditor._insert_para_to_doc(input_file, output_file, doc_gen_results)
             if not success:
                 error_info = "文档更新失败"
                 logger.error(f"{task_id}, {error_info}")
@@ -172,7 +172,7 @@ class DocxGenerator:
                     f"{current_info[0]['process_info']}, 开始处理文档配图",
                     95
                 )
-                mermaid_process_info = DocxGenerator._submit_mermaid_task(
+                mermaid_process_info = DocxEditor._submit_mermaid_task(
                     task_id,
                     output_file,
                     sys_cfg['api']['mermaid_api_uri'],
@@ -261,7 +261,7 @@ class DocxGenerator:
 
         # 提交所有任务到线程池
         for task in tasks:
-            future = self.executor.submit(DocxGenerator._gen_doc_para, task)
+            future = self.executor.submit(DocxEditor._gen_doc_para, task)
             future_to_key[future] = task['unique_key']
 
         # 监控任务进度并收集结果
@@ -473,7 +473,7 @@ class DocxGenerator:
             logger.info(info)
             docx_meta_util.update_process_info_by_task_id(task_id, info)
             # 收集批注处理任务（XML方式）
-            tasks = DocxGenerator._collect_doc_with_comment_tasks(
+            tasks = DocxEditor._collect_doc_with_comment_tasks(
                 task_id,
                 input_file,
                 catalogue,
@@ -495,7 +495,7 @@ class DocxGenerator:
             docx_meta_util.update_process_info_by_task_id(task_id, initial_info, 0)
             doc_gen_results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
 
-            success = DocxGenerator._update_doc_with_comments(
+            success = DocxEditor._update_doc_with_comments(
                 input_file,
                 output_file,
                 doc_gen_results
@@ -520,7 +520,7 @@ class DocxGenerator:
                     f"{current_info[0]['process_info']}, 开始处理文档配图",
                     95
                 )
-                mermaid_process_info = DocxGenerator._submit_mermaid_task(
+                mermaid_process_info = DocxEditor._submit_mermaid_task(
                     task_id,
                     output_file,
                     cfg['api']['mermaid_api_uri'],
@@ -589,7 +589,7 @@ class DocxGenerator:
                     f" 新文本长度={len(generated_text)}"
                 )
                 # 更新段落文本
-                if DocxGenerator._update_para_txt_xml(paragraph, generated_text, namespaces):
+                if DocxEditor._update_para_txt_xml(paragraph, generated_text, namespaces):
                     modified_count += 1
                     logger.debug(f"已更新段落 {para_index}")
 
@@ -777,7 +777,7 @@ class DocxGenerator:
             logger.info(initial_info)
             docx_meta_util.update_process_info_by_task_id(task_id, initial_info, 0)
             results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
-            success = DocxGenerator._insert_para_to_doc(input_file, output_file, results)
+            success = DocxEditor._insert_para_to_doc(input_file, output_file, results)
             if not success:
                 error_info = "文档更新失败"
                 logger.error(f"{task_id}, {error_info}")
@@ -796,7 +796,7 @@ class DocxGenerator:
                     f"{current_info[0]['process_info']}, 开始处理文档配图",
                     95
                 )
-                mermaid_process_info = DocxGenerator._submit_mermaid_task(
+                mermaid_process_info = DocxEditor._submit_mermaid_task(
                     task_id,
                     output_file,
                     sys_cfg['api']['mermaid_api_uri'],
