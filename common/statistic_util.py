@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
-import json
+
 import logging.config
 import sqlite3
 from datetime import datetime
@@ -11,7 +11,7 @@ from common.cfg_util import query_sqlite, insert_del_sqlite, output_data, sqlite
 from common.my_enums import DataType
 
 STS_DB_FILE = "cfg.db"
-STS_DB_URI=f"sqlite:///{STS_DB_FILE}"
+STS_DB_URI = f"sqlite:///{STS_DB_FILE}"
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -37,8 +37,6 @@ def get_statistics_by_uid(uid: int)-> dict | None:
     my_dt = sqlite_output(STS_DB_URI, sql, DataType.JSON.value)
     logger.info(f"get_statistics_by_uid_dt {my_dt}")
     return my_dt
-
-
 
 def get_access_count_by_uid(uid: int)-> int:
     """
