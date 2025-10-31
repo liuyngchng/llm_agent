@@ -215,17 +215,21 @@ def get_usr_manual():
     curl -s --noproxy '*' http://127.0.0.1:19000 | jq
     :return:
     """
-    logger.info(f"request_args_in_get_usr_manual {request.args}")
+    logger.debug(f"request_args_in_get_usr_manual {request.args}")
     app_source = request.args.get('app_source')
     sys_name = my_enums.AppType.get_app_type(app_source)
     markdown_content = ""
     markdown_file_name = f"./user_manual/{app_source}_user_manual.md"
-    if not os.path.exists(markdown_file_name):
-        markdown_file_name += f"./apps/{app_source}/"
+    abs_path = os.path.abspath(markdown_file_name)
+    if not os.path.exists(abs_path):
+        markdown_file_name = f"./apps/{app_source}/" + markdown_file_name
+        abs_path = os.path.abspath(markdown_file_name)
+    else:
+        logger.info(f"file_exist, {abs_path}")
     toc_content = ""
     try:
-        if os.path.exists(markdown_file_name):
-            with open(markdown_file_name, 'r', encoding='utf-8') as f:
+        if os.path.exists(abs_path):
+            with open(abs_path, 'r', encoding='utf-8') as f:
                 markdown_content = f.read()
 
             md = markdown.Markdown(
@@ -239,7 +243,7 @@ def get_usr_manual():
             html_content = md.convert(markdown_content)
             toc_content = md.toc if hasattr(md, 'toc') else ""
         else:
-            html_content = f"<p>用户手册文件不存在: {markdown_file_name}</p>"
+            html_content = f"<p>用户手册文件不存在: {abs_path}</p>"
     except Exception as e:
         logger.error(f"Error reading markdown file: {e}")
         html_content = f"<p>读取用户手册时出错: {str(e)}</p>"
@@ -251,7 +255,7 @@ def get_usr_manual():
         "toc_content": toc_content,
     }
     dt_idx = "md.html"
-    logger.info(f"return_page {dt_idx}, ctx {ctx}")
+    logger.debug(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
 
 def get_client_ip():
