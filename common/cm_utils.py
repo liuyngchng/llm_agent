@@ -364,7 +364,7 @@ def llm_health_check(llm_api_uri: str, llm_api_key: str, llm_model_name: str) ->
         "max_tokens": 50  # 限制返回长度，加快响应
     }
 
-    check_result = {"status": 200, "msg": "", }
+    check_result = {"status": 404, "msg": "", }
     try:
         # 发送请求，设置合理的超时时间
         response = requests.post(
@@ -392,10 +392,12 @@ def llm_health_check(llm_api_uri: str, llm_api_key: str, llm_model_name: str) ->
 
             content = result['choices'][0]['message']['content']
             logger.info(f"模型响应正常，返回内容长度: {len(content)}")
+            check_result['status'] = 200
             return check_result
         else:
             msg = "大语言模型服务响应格式异常"
             logger.info(msg)
+            check_result['status'] = 302
             check_result['msg'] = msg
             return check_result
 
@@ -410,17 +412,17 @@ def llm_health_check(llm_api_uri: str, llm_api_key: str, llm_model_name: str) ->
         check_result['msg'] = msg
         return check_result
     except requests.exceptions.RequestException as e:
-        msg = "大语言模型服务连接错误"
+        msg = "大语言模型服务请求异常"
         logger.error(f"{msg}: {e}")
         check_result['msg'] = msg
         return check_result
     except json.JSONDecodeError:
-        msg ="JSON解析错误"
+        msg ="大语言模型服务返回 JSON 解析错误"
         logger.error(msg)
         check_result['msg'] = msg
         return check_result
     except Exception as e:
-        msg = "未知错误"
+        msg = "大语言模型服务请求未知错误"
         logger.error(f"{msg}: {e}")
         check_result['msg'] = msg
         return check_result
