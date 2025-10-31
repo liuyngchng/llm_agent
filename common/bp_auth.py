@@ -66,7 +66,7 @@ def login():
     user = request.form.get('usr').strip()
     t = request.form.get('t').strip()
     app_source = request.form.get('app_source')
-    logger.info(f"user_login: {user}, {t}, {app_source}")
+    logger.info(f"user_login: {user}, {t}, {app_source}, IP={get_client_ip()}")
     auth_result = cfg_utl.auth_user(user, t, my_cfg)
     logger.info(f"user_login_result: {user}, {t}, {auth_result}")
     sys_name = my_enums.AppType.get_app_type(app_source)
