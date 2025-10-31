@@ -50,4 +50,3 @@ sqlite_vss
 **/db_schema/*
 **/whl_py_dir
 **/vdb_idx_*
-logging.conf

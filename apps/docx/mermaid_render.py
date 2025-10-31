@@ -156,6 +156,7 @@ class MermaidRenderer:
     def batch_process_mermaid_in_docx(self, task_id: int, doc_path: str, img_format: str = 'png') -> int:
         """
         批量处理文档中的所有Mermaid脚本
+        :param task_id: 任务id
         :param doc_path: Word文档路径
         :param img_format: mermaid脚本转换为图片的格式
         :return: 处理的图片总数量

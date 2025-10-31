@@ -606,14 +606,14 @@ def sqlite_output(db_uri: str, sql: str, data_format: str) -> str | Any:
 
     db_file = db_uri.split('/')[-1]
     with sqlite3.connect(db_file) as my_conn:
-        logger.debug(f"connect_to_db_file {db_file}")
+        # logger.debug(f"connect_to_db_file {db_file}")
         my_dt = output_data(my_conn, sql, data_format)
     if DataType.JSON.value == data_format:
         try:
             my_dt = json.loads(my_dt)
         except Exception as ex:
             logger.error(f"json_parse_error_for_dt: {my_dt}, {ex}")
-    logger.debug(f"sqlite_output, data_format {data_format}, my_dt, {my_dt}")
+    # logger.debug(f"sqlite_output, data_format {data_format}, my_dt, {my_dt}")
     return my_dt
 
 
@@ -621,7 +621,7 @@ def output_data(db_con, sql:str, data_format:str) -> str:
     data = query_sqlite(db_con, sql)
     if data.get('error'):
         raise RuntimeError(f"error_occurred_in_exec_sqlite_sql, err_info={data}, sql={sql}")
-    logger.debug(f"data {data} for {db_con}")
+    # logger.debug(f"data {data} for {db_con}")
     df = pd.DataFrame(data.get('data'), columns=data['columns'])
     dt_fmt = data_format.lower()
 
@@ -637,7 +637,7 @@ def output_data(db_con, sql:str, data_format:str) -> str:
         logger.error(info)
         raise info
     dt1 = dt.replace('\n', ' ')
-    logger.debug(f"output_data_dt:{dt1}")
+    # logger.debug(f"output_data_dt:{dt1}")
     return dt
 
 def get_md_dt_from_data_frame(df):
@@ -669,7 +669,7 @@ def query_sqlite(db_con, query: str) -> dict:
     try:
         cursor = db_con.cursor()
         query = query.replace('\n', ' ')
-        logger.debug(f"execute_query, {query}")
+        # logger.debug(f"execute_query, {query}")
         cursor.execute(query)
         columns = [desc[0] for desc in cursor.description] if cursor.description else []
         data = cursor.fetchall()

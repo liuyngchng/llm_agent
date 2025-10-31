@@ -104,11 +104,11 @@ def get_my_vdb_list():
     :return: {"kb_list": [{'id':id1, 'name':name1},{'id':id2, 'name':name2},]}
     """
     data = request.get_json()
-    logger.info(f"get_my_vdb_list {data}")
+    logger.debug(f"get_my_vdb_list {data}")
     uid = data.get("uid")
     t = data.get("t")
     my_vdb_list = VdbMeta.get_vdb_info_by_uid(uid, '', False)
-    logger.info(f"get_my_vdb_list {my_vdb_list}")
+    logger.debug(f"get_my_vdb_list {my_vdb_list}")
     return json.dumps({"kb_list": my_vdb_list},ensure_ascii=False)
 
 @vdb_bp.route('/vdb/pub/list', methods=['POST'])
@@ -131,7 +131,7 @@ def get_vdb_file_list():
     获取知识库内的文件列表
     """
     data = request.get_json()
-    logger.debug(f"get_vdb_file_list {data}")
+    # logger.debug(f"get_vdb_file_list {data}")
     uid = data.get("uid")
     t = data.get("t")
     vdb_id = data.get("vdb_id")
@@ -141,7 +141,7 @@ def get_vdb_file_list():
         return json.dumps(msg,ensure_ascii=False), 502
     dt = VdbMeta.get_vdb_file_list(uid, vdb_id)
     return_dt = {"files": dt, "success": True}
-    logger.debug(f"get_vdb_file_list_return, {return_dt}")
+    # logger.debug(f"get_vdb_file_list_return, {return_dt}")
     return json.dumps(return_dt, ensure_ascii=False), 200
 
 @vdb_bp.route('/vdb/set/default', methods=['POST'])
@@ -377,7 +377,7 @@ def process_vdb_file_task():
     周期性地对已经上传的文件进行向量化处理
     """
     while True:
-        logger.debug(f"process_vdb_file_task")
+        # logger.debug(f"process_vdb_file_task")
         process_doc()
         time.sleep(5)
 
@@ -390,7 +390,7 @@ def is_task_cancelled(file_id: int) -> bool:
 def process_doc():
     file_list = VdbMeta.get_vdb_file_processing_list()
     if not file_list or len(file_list) == 0:
-        logger.debug(f"no_upload_file_need_process")
+        # logger.debug(f"no_upload_file_need_process")
         return
     for file in file_list:
         file_id = file['id']

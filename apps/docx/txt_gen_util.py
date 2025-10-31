@@ -116,7 +116,7 @@ def gen_txt(uid: int, write_context: str, references: str, paragraph_prompt: str
             input_tokens = estimate_tokens(input_text)
             logger.info(f"{uid}, input_tokens, {input_tokens}")
             statistic_util.add_input_token_by_uid(uid, input_tokens)
-            logger.info(f"gen_txt_arg, {arg_dict}, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}")
+            logger.info(f"gen_txt_arg, {arg_dict}, {cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}")
             response = chain.invoke(arg_dict)
             output_txt = rmv_think_block(response.content)
             output_tokens = estimate_tokens(response.content)
@@ -127,7 +127,7 @@ def gen_txt(uid: int, write_context: str, references: str, paragraph_prompt: str
             return output_txt
         except Exception as ex:
             last_exception = ex
-            logger.exception(f"retry_failed_in_gen_txt, retry_time={attempt}, {str(ex)}")
+            logger.exception(f"retry_failed_in_gen_txt, retry_time={attempt}, {str(ex)}, {cfg['api']['llm_api_uri']}")
             if attempt < max_retries:
                 continue
             dispose(model)

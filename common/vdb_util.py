@@ -129,6 +129,8 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
 
         def process_batch(start_idx: int, end_idx: int)-> int:
             """
+            :param start_idx: 批处理开始索引 (inclusive)
+            :param end_idx: 批处理结束索引 (exclusive)
             批量处理文本，返回处理的文本块数量
             """
             # 检查任务是否被取消
@@ -154,9 +156,10 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
                 with lock:
                     VdbMeta.update_vdb_file_process_info(file_id, info)
                     logger.error(info)
-                return 0
+                return -1
 
         # 在提交任务和等待完成之间
+        err_info =""
         with tqdm(total=total_chunks, desc=source_desc, unit="chunk") as pbar:
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 futures = []
@@ -170,7 +173,10 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
                     try:
                         processed_count = future.result()
                         with count_lock:
-                            completed_count += processed_count
+                            if processed_count > 0:
+                                completed_count += processed_count
+                            else:
+                                err_info += f"处理批次 {start_idx}-{end_idx} 时有异常, "
                             current_completed = completed_count
 
                         percent = round(100 * current_completed / total_chunks, 1)
@@ -182,12 +188,17 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
                         pbar.update(processed_count)
                     except Exception as e:
                         start_idx, end_idx = batch_ranges[i]
-                        info = f"处理批次 {start_idx}-{end_idx} 时出错: {str(e)}"
+                        info = f"处理批次 {start_idx}-{end_idx} 时有异常, "
+                        err_info += info
+                        logger.exception(f"{file_id}, {info}")
                         with lock:
                             VdbMeta.update_vdb_file_process_info(file_id, info)
                             logger.error(info)
+        process_info = f"已完成文档处理， 共处理 {total_chunks} 个文本块"
+        if err_info:
+            process_info += f", {err_info}"
         logger.info(f"向量数据库构建完成，保存到 {vector_db}")
-        VdbMeta.update_vdb_file_process_info(file_id, "已完成文档处理", 100)
+        VdbMeta.update_vdb_file_process_info(file_id, process_info, 100)
     except Exception as e:
         info = f"处理文档时发生错误: {str(e)}"
         VdbMeta.update_vdb_file_process_info(file_id, info)
@@ -382,8 +393,16 @@ def search_txt(txt: str, vector_db_dir: str, score_threshold: float,
     :param txt_num: the number of txt to return
     :return: the results
     """
-    search_results = search(txt, score_threshold, vector_db_dir, llm_cfg, txt_num)
+    search_results = []
+    try:
+        search_results = search(txt, score_threshold, vector_db_dir, llm_cfg, txt_num)
+    except Exception as e:
+        logger.exception(f"search_txt_err, embedding uri: {llm_cfg['embedding_uri']}, err={e}", exc_info=True)
+
     all_txt = ""
+    if not search_results:
+        logger.info(f"no_search_results_return_for: {txt}")
+        return all_txt
     for s_r in search_results:
         s_r_txt = s_r.get("content", "").replace("\n", "")
         if "......................." in s_r_txt:
@@ -429,7 +448,7 @@ def test_update_doc():
     task_id = int(time.time())
     task_progress = {}
     # file = "./llm.txt"
-    file = "./1_pure.txt"
+    file = "./1 _pure.txt"
     vdb = "./vdb/test_db"
     my_cfg = init_yml_cfg()
     llm_cfg = my_cfg['api']
