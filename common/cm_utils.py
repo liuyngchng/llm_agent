@@ -333,3 +333,94 @@ def build_curl_cmd(api, data, headers, proxies: dict | None):
         https_option = ''
     curl_log = f"curl -s {curl_proxy} -w'\\n' {https_option} -X POST {header_str} -d '{json.dumps(data, ensure_ascii=False)}' '{api}' | jq"
     return curl_log
+
+
+def llm_health_check(llm_api_uri: str, llm_api_key: str, llm_model_name: str) -> dict:
+    """
+    检测大语言模型是否可用的健康检查方法
+    :param llm_api_uri, base API, for example, https://api.deepseek.com/v1
+    :param llm_api_key, sk-******,
+    :param llm_model_name, model name, for example, deepseek-chat
+    Returns:
+        {
+            "status":200,
+            "msg": ""
+        }
+    """
+
+    # 请求头
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {llm_api_key}'
+    }
+
+    # 请求数据
+    payload = {
+        "model": f"{llm_model_name}",
+        "messages": [
+            {"role": "user", "content": "你的知识截至日期是哪天?"}
+        ],
+        "stream": False,
+        "max_tokens": 50  # 限制返回长度，加快响应
+    }
+
+    check_result = {"status": 200, "msg": "", }
+    try:
+        # 发送请求，设置合理的超时时间
+        response = requests.post(
+            f"{llm_api_uri}/chat/completion",
+            headers=headers,
+            data=json.dumps(payload),
+            timeout=30,  # 30秒超时
+            verify=False  # 对应curl的 -k 参数，跳过SSL验证
+        )
+
+        # 检查HTTP状态码
+        if response.status_code != 200:
+            logger.info(f"HTTP_ERR: {response.status_code} - {response.text}")
+            check_result['status'] = response.status_code
+            check_result['msg'] = "大语言模型服务状态异常"
+            return check_result
+
+        # 解析响应
+        result = response.json()
+        # 检查是否有有效的回复内容
+        if ('choices' in result and
+                len(result['choices']) > 0 and
+                'message' in result['choices'][0] and
+                'content' in result['choices'][0]['message']):
+
+            content = result['choices'][0]['message']['content']
+            logger.info(f"模型响应正常，返回内容长度: {len(content)}")
+            return check_result
+        else:
+            msg = "大语言模型服务响应格式异常"
+            logger.info(msg)
+            check_result['msg'] = msg
+            return check_result
+
+    except requests.exceptions.Timeout:
+        msg = "大语言模型服务请求超时"
+        logger.error(msg)
+        check_result['msg'] = msg
+        return check_result
+    except requests.exceptions.ConnectionError:
+        msg = "大语言模型服务连接错误"
+        logger.error(msg)
+        check_result['msg'] = msg
+        return check_result
+    except requests.exceptions.RequestException as e:
+        msg = "大语言模型服务连接错误"
+        logger.error(f"{msg}: {e}")
+        check_result['msg'] = msg
+        return check_result
+    except json.JSONDecodeError:
+        msg ="JSON解析错误"
+        logger.error(msg)
+        check_result['msg'] = msg
+        return check_result
+    except Exception as e:
+        msg = "未知错误"
+        logger.error(f"{msg}: {e}")
+        check_result['msg'] = msg
+        return check_result
