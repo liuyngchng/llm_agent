@@ -583,7 +583,7 @@ class DocxEditor:
                     logger.warning(f"段落索引 {para_index} 超出范围，跳过")
                     continue
                 paragraph = paragraphs[para_index]
-                generated_text = result['generated_text'].replace(cfg_util.AI_GEN_TAG, '').strip()
+                generated_text = result['generated_text']
                 logger.debug(
                     f"处理段落 {para_index}: 原始文本长度={len(paragraph.findall('.//w:t', namespaces))},"
                     f" 新文本长度={len(generated_text)}"
@@ -626,7 +626,7 @@ class DocxEditor:
 
             if text_elements:
                 # 更新第一个文本元素
-                text_elements[0].text = new_text
+                text_elements[0].text = f"{cfg_util.AI_GEN_TAG}{new_text}"
                 for text_elem in text_elements[1:]:
                     parent_elem = paragraph.find(f'.//w:t[@text="{text_elem.text}"]/..')
                     if parent_elem is not None:
@@ -640,7 +640,7 @@ class DocxEditor:
                 # 如果没有文本元素，创建新的 run 和 text
                 run = ET.SubElement(paragraph, f'{{{namespaces["w"]}}}r')
                 text_elem = ET.SubElement(run, f'{{{namespaces["w"]}}}t')
-                text_elem.text = new_text
+                text_elem.text = f"{cfg_util.AI_GEN_TAG}{new_text}"
                 return True
 
         except Exception as e:

@@ -50,7 +50,7 @@ def get_access_count_by_uid(uid: int)-> int:
             check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             if user_dt:
-                logger.info(f"get_access_count_by_uid, {user_dt[0][0]}")
+                logger.debug(f"get_access_count_by_uid, {user_dt[0][0]}")
                 return user_dt[0][0]
         except Exception as e:
             logger.error(f"get_access_count_by_uid_err, {uid}")
@@ -82,10 +82,10 @@ def add_access_count_by_uid(uid: int, access_count: int)-> bool:
     with sqlite3.connect(STS_DB_FILE) as my_conn:
         try:
             result = insert_del_sqlite(my_conn, exec_sql)
-            logger.info(f"exec_sql_success {exec_sql}")
+            logger.debug(f"exec_sql_success {exec_sql}")
             if result.get('result'):
                 save_result = True
-                logger.info("add_access_count_success")
+                logger.debug("add_access_count_success")
         except Exception as e:
             logger.exception(f"err_in_exec_sql, {exec_sql}")
     return save_result
@@ -97,7 +97,7 @@ def get_input_token_by_uid(uid: int)-> int | None:
             check_info = query_sqlite(my_conn, sql)
             user_dt = check_info['data']
             if user_dt:
-                logger.info(f"get_input_token_by_uid, {user_dt[0][0]}")
+                logger.debug(f"get_input_token_by_uid, {user_dt[0][0]}")
                 return user_dt[0][0]
         except Exception as e:
             logger.error(f"get_input_token_by_uid_err, {uid}")
@@ -129,7 +129,7 @@ def add_input_token_by_uid(uid: int, input_token: int)-> bool:
     with sqlite3.connect(STS_DB_FILE) as my_conn:
         try:
             result = insert_del_sqlite(my_conn, exec_sql)
-            logger.info(f"exec_sql_success {exec_sql}")
+            logger.debug(f"exec_sql_success {exec_sql}")
             if result.get('result'):
                 save_result = True
                 logger.info("add_input_token_success")
