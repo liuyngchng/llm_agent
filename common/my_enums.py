@@ -67,7 +67,7 @@ class AppType(Enum):
     ORD_GEN = "订单生成"
     CHAT2DB = "智能问数"
     OPEN = "开放平台"
-    MEETING_REPORT = "会议纪要整理"
+    MT_REPORT = "会议纪要整理"
 
     @staticmethod
     def get_app_list() -> list:

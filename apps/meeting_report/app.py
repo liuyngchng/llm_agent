@@ -71,7 +71,7 @@ def register_routes(app):
     @app.route('/')
     def app_home():
         logger.info("redirect_auth_login_index")
-        return redirect(url_for('auth.login_index', app_source=my_enums.AppType.MEETING_REPORT.name.lower()))
+        return redirect(url_for('auth.login_index', app_source=my_enums.AppType.MT_REPORT.name.lower()))
 
 
     @app.route('/docx/upload', methods=['POST'])
@@ -92,7 +92,7 @@ def register_routes(app):
             logger.warning(f"{uid}, {warning_info}")
             return redirect(url_for(
                 'auth.login_index',
-                app_source=AppType.MEETING_REPORT.name.lower(),
+                app_source=AppType.MT_REPORT.name.lower(),
                 warning_info=warning_info
 
             ))
