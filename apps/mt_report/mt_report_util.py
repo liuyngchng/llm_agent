@@ -6,7 +6,7 @@ import logging.config
 import time
 
 from docx import Document
-from docx.shared import RGBColor
+from docx.shared import RGBColor, Cm
 from langchain_core.prompts import ChatPromptTemplate
 
 from common.agt_util import get_model
@@ -90,7 +90,7 @@ FILED_DICT = {
 }
 
 
-def get_txt_abs(cfg: dict, input_txt: str, field_dict: dict) -> str:
+def get_txt_abs(cfg: dict, input_txt: str, field_dict: dict) -> dict:
     """
     从文本中抽取关键信息，输出关键信息词典
     """
@@ -111,7 +111,7 @@ def get_txt_abs(cfg: dict, input_txt: str, field_dict: dict) -> str:
             response = chain.invoke(arg_dict)
             output_txt = extract_md_content(rmv_think_block(response.content), "json")
             dispose(model)
-            return output_txt
+            return json.loads(output_txt)
         except Exception as ex:
             last_exception = ex
             logger.error(f"retry_failed, retry_time={attempt}, {str(ex)}")
@@ -120,7 +120,7 @@ def get_txt_abs(cfg: dict, input_txt: str, field_dict: dict) -> str:
             dispose(model)
             logger.error(f"all_retries_exhausted, {input_txt}, {field_dict}")
             raise last_exception
-    return ""
+    return {}
 
 def get_template_field(cfg: dict, all_paragraphs: str) -> dict:
     """
@@ -224,7 +224,8 @@ def dispose(model):
 
 if __name__ =="__main__":
     my_cfg = init_yml_cfg()
-    doc_txt = get_doc_content("/home/rd/Desktop/test_template.docx")
+    input_doc = "/home/rd/Desktop/test_template.docx"
+    doc_txt = get_doc_content(input_doc)
     logger.info(f"doc_txt={doc_txt}")
     doc_field = get_template_field(my_cfg, doc_txt)
     logger.info(f"doc_field={doc_field}")
@@ -244,3 +245,5 @@ if __name__ =="__main__":
     """
     txt_abs = get_txt_abs(my_cfg, input_txt, doc_field.get("field_dict"))
     logger.info(f"txt_abs={txt_abs}")
+    output_doc = "/home/rd/Desktop/output.docx"
+    insert_para_to_doc(input_doc, output_doc, txt_abs)
