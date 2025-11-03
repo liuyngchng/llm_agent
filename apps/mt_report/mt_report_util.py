@@ -225,24 +225,14 @@ def dispose(model):
 if __name__ =="__main__":
     my_cfg = init_yml_cfg()
     input_doc = "/home/rd/Desktop/test_template.docx"
+    report_txt_file = "/home/rd/Desktop/report.txt"
     doc_txt = get_doc_content(input_doc)
     logger.info(f"doc_txt={doc_txt}")
     doc_field = get_template_field(my_cfg, doc_txt)
     logger.info(f"doc_field={doc_field}")
-    input_txt = """
-    会议参会人员， 老王，老李
-到会的单位有 中国石化，中国电信
-
-会议围绕如何解决物联网表上传数据卡顿的问题进行，
-中国电信的老李发言了，需要增加带宽， 这个涉及到费用问题
-11月3日下午， 在中日友谊宾馆召开
-
-会议达成共识：
-（1）增加带宽需要另外支付 50万元人民币/年;
-(2)待请示上级领导后，看是否有相关项目资金；
-（3）中国电信暂时把目前的问题解决了，保证1周内数据上传不卡顿；
-下次会议大约在1个月后，领导意见就下来了。
-    """
+    with open(report_txt_file, 'r', encoding='utf-8') as file:
+        input_txt = file.read()
+    logger.info(f"input_txt={input_txt}")
     txt_abs = get_txt_abs(my_cfg, input_txt, doc_field.get("field_dict"))
     logger.info(f"txt_abs={txt_abs}")
     output_doc = "/home/rd/Desktop/output.docx"
