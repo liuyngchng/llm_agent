@@ -224,12 +224,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
-                warning_info=warning_info
-
-            ))
+            return jsonify(warning_info), 400
         doc_type = request.json.get("doc_type")
         doc_title = request.json.get("doc_title")
         keywords = request.json.get("keywords")

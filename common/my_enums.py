@@ -36,6 +36,28 @@ class MsgType(Enum):
     MSG = "msg"
     WARN = "warn"
 
+class WriteDocType(Enum):
+    """文档类型枚举（英文键，汉字值）"""
+    MEETING_REPORT = "会议纪要"
+    STANDARD = "国家标准(GB/(GB/T))"
+    PROPOSAL = "项目计划书"
+    YEAR_SUMMARY = "年度工作总结"
+    RESEARCH = "可行性研究报告"
+    MARKETING = "营销策划方案"
+    DETAILED_DESIGN_DOCUMENT = "详细设计文档"
+    PRELIMINARY_DESIGN_DOCUMENT = "概要设计文档"
+    SOFTWARE_COPYRIGHT_REG = "软件著作权申报"
+
+    @staticmethod
+    def get_doc_type_desc(input_str: str) -> str:
+        """根据输入字符串获取对应的文档类型"""
+        input_upper = input_str.upper()  # 转换为大写匹配枚举键
+        try:
+            return WriteDocType[input_upper].value
+        except KeyError:
+            return None  # 或抛出异常
+
+
 class AppType(Enum):
     """应用类型枚举（英文键，汉字值）"""
     CHAT = "智能问答"
