@@ -20,7 +20,7 @@
                 </a>
             </div>
             <h1><i class="fas fa-file-word"></i> 会议纪要整理</h1>
-            <p>四步创建专业文档，智能生成，高效便捷</p>
+            <p>上传会议记录，智能生成专业会议纪要</p>
         </header>
 
         <div class="progress-container">
@@ -31,27 +31,29 @@
                     <div class="step-label">提交整理需求</div>
                 </div>
                 <div class="step">
-                    <span>3</span>
-                    <div class="step-label">下载整理好的文档</div>
+                    <span>2</span>
+                    <div class="step-label">下载会议纪要</div>
                 </div>
             </div>
         </div>
 
-        <div class="step-panel" id="step2">
-            <h2><i class="fas fa-sitemap"></i> 提交素材</h2>
+        <div class="step-panel active" id="step1">
+            <h2><i class="fas fa-edit"></i> 提交会议信息</h2>
+
             <div class="form-group">
                 <label for="docTitle">【1】会议纪要标题</label>
-                <input type="text" id="docTitle" placeholder="请输入会议纪要标题">
+                <input type="text" id="docTitle" placeholder="请输入会议纪要标题，如：2024年第一季度项目评审会议纪要">
             </div>
 
             <div class="form-group">
-                <label for="keywords">【2】会议纪要草稿</label>
-                <textarea cols="100" rows="3" id="keywords" placeholder="输入写作要求，用逗号分隔"> </textarea>
+                <label for="keywords">【2】会议内容要点</label>
+                <textarea id="keywords" placeholder="请输入会议讨论的主要内容、决议事项、待办任务等" rows="4"></textarea>
             </div>
-            <div class="upload-container" id="uploadContainer">
+
+            <div class="upload-container active" id="uploadContainer">
                 <i class="fas fa-cloud-upload-alt"></i>
-                <h3>上传Word文档模板</h3>
-                <p>支持.docx格式文件</p>
+                <h3>上传会议记录文档（可选）</h3>
+                <p>支持上传Word格式的会议记录文档，系统将基于内容生成结构化会议纪要</p>
 
                 <div class="upload-btn">
                     <button class="btn btn-primary">
@@ -68,18 +70,20 @@
                     <div class="file-size" id="fileSize">-</div>
                 </div>
             </div>
-            <button class="btn btn-primary" id="generateBtn" onclick="gen_doc()">
-                    提交任务 <i class="fas fa-file-word"></i>
-            </button>
 
+            <button class="btn btn-primary" id="generateBtn" onclick="gen_doc()">
+                生成会议纪要 <i class="fas fa-file-word"></i>
+            </button>
         </div>
     </div>
-    <input type="hidden" id ="uid" name="uid" value="{{uid}}">
-    <input type="hidden" id ="t" name="t" value="{{t}}">
-    <input type="hidden" id ="taskId" name="taskId" value="{{taskId}}">
-    <input type="hidden" id ="file_name" name="file_name" value="{{file_name}}">
-    <input type="hidden" id ="outline_source" name="outline_source" value="{{outline_source}}">
-    <input type="hidden" id ="elapsed_time" name="elapsed_time" value="">
+
+    <input type="hidden" id="uid" name="uid" value="{{uid}}">
+    <input type="hidden" id="t" name="t" value="{{t}}">
+    <input type="hidden" id="taskId" name="taskId" value="{{taskId}}">
+    <input type="hidden" id="file_name" name="file_name" value="{{file_name}}">
+    <input type="hidden" id="outline_source" name="outline_source" value="{{outline_source}}">
+    <input type="hidden" id="elapsed_time" name="elapsed_time" value="">
+
     <!--存储Markdown原始内容 -->
     <textarea id="outlineText" style="display:none;"></textarea>
 </body>
