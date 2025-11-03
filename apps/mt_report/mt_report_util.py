@@ -166,40 +166,47 @@ def get_doc_content(input_file: str):
         content.append(para_txt)
     return "\n".join(content)
 
+
+
 def insert_para_to_doc(input_doc: str, output_doc: str, para_dict: dict[str, str]) -> bool:
     """
-    :param input_doc 输入文档的路径
-    :param output_doc 输出文档的路径
-    :param para_dict 段落ID和段落之后需要插入的文本对应关系的字典
-
+    :param input_doc: 输入文档的路径
+    :param output_doc: 输出文档的路径
+    :param para_dict: 段落ID和段落之后需要插入的文本对应关系的字典
+    :return: 操作是否成功
     """
     try:
         doc = Document(input_doc)
         paragraphs = doc.paragraphs
 
         if not para_dict:
-            logger.warning(f"没有有效的插入文本, 保存原始文档:{input_doc}  至 {output_doc}")
+            logger.warning(f"没有有效的插入文本, 保存原始文档:{input_doc} 至 {output_doc}")
             doc.save(output_doc)
             return True
-        # 直接从结果中提取段落索引并排序（从后往前处理避免索引变化）
-        sorted_results = sorted(para_dict, key=lambda x: x[0], reverse=True)  # 从后往前处理
+
+        # 将字典键转换为整数并排序（从后往前处理避免索引变化）
+        sorted_indices = sorted([int(idx) for idx in para_dict.keys()], reverse=True)
 
         # 从后往前插入，避免索引变化
-        for para_index, result in sorted_results:
-            if para_index >= len(paragraphs):  # 添加边界检查
+        for para_index in sorted_indices:
+            if para_index >= len(paragraphs):
                 logger.warning(
                     f"段落索引 {para_index} 超出范围（总段落数：{len(paragraphs)}），跳过, input_file={input_doc}")
                 continue
             original_para = paragraphs[para_index]
+            generated_text = para_dict[str(para_index)]  # 获取对应的文本内容
+
             # 创建新段落并插入
             new_para = doc.add_paragraph()
-            new_para.paragraph_format.first_line_indent = Cm(1)
-            red_run = new_para.add_run(generated_text)
-            red_run.font.color.rgb = RGBColor(0, 0, 0)
+            new_para.paragraph_format.first_line_indent = Cm(1)  # 调整为更合理的缩进值
+            new_para.paragraph_format.space_after = Cm(0.35)  # 添加段后间距
+            new_run = new_para.add_run(generated_text)
+            new_run.font.color.rgb = RGBColor(0, 0, 0)  # 黑色文本
 
             # 插入到原始段落后面
             original_para._p.addnext(new_para._p)
-            logger.debug(f"已在段落 {para_index} 后插入生成内容")
+            logger.debug(f"已在段落 {para_index} 后插入生成内容: {generated_text[:50]}...")
+
         doc.save(output_doc)
         logger.info(f"使用段落索引更新文档成功: {output_doc}")
         return True
