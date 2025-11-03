@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+import json
 import logging.config
 import time
 
 from docx import Document
+from docx.shared import RGBColor
 from langchain_core.prompts import ChatPromptTemplate
 
 from common.agt_util import get_model
@@ -39,13 +41,13 @@ EXTRACT_ABS_PROMPT = """
 
 # 输出示例
 你的输出应该看起来像这样：
-{
+{{
 "1": "关于Q3产品发布计划的评审会议",
 "2": "2023年10月26日下午2点",
 "3": "张三、李四、王五",
 "4": "评审了产品原型，决议按方案B进行开发，并增加用户反馈模块。",
 "5": "1. 完成最终版UI设计图 - 李四 - 11月3日； 2. 准备服务器部署方案 - 王五 - 11月10日"
-}
+}}
 
 现在，请开始处理上述提供的【原始会议记录草稿】和【待填充字段定义】，并输出JSON结果。
  """
@@ -68,12 +70,12 @@ GET_FIELD_PROMPT = """
 
 【输出要求】
 请严格按照以下JSON格式输出结果，且只输出JSON：
-{
-  "field_dict": {
+{{
+  "field_dict": {{
     "段落索引号": "你识别出的字段标题名（请精简概括）",
     ...
-  }
-}
+  }}
+}}
 
 请只输出你确信是“字段标题”的段落。如果一个段落看起来不重要或不是字段标题，请忽略它。
 
@@ -120,7 +122,7 @@ def get_txt_abs(cfg: dict, input_txt: str, field_dict: dict) -> str:
             raise last_exception
     return ""
 
-def get_template_field(cfg: dict, all_paragraphs: str) -> str:
+def get_template_field(cfg: dict, all_paragraphs: str) -> dict:
     """
     从 Word 模板的文本中获取需要填充的核心要素词典
     """
@@ -141,7 +143,7 @@ def get_template_field(cfg: dict, all_paragraphs: str) -> str:
             response = chain.invoke(arg_dict)
             output_txt = extract_md_content(rmv_think_block(response.content), "json")
             dispose(model)
-            return output_txt
+            return json.loads(output_txt)
         except Exception as ex:
             last_exception = ex
             logger.error(f"retry_failed, retry_time={attempt}, {str(ex)}")
@@ -150,7 +152,7 @@ def get_template_field(cfg: dict, all_paragraphs: str) -> str:
             dispose(model)
             logger.error(f"all_retries_exhausted, {all_paragraphs}")
             raise last_exception
-    return ""
+    return {}
 
 def get_doc_content(input_file: str):
     """
@@ -163,6 +165,47 @@ def get_doc_content(input_file: str):
         para_txt = f"[{index}]: {para.text}"
         content.append(para_txt)
     return "\n".join(content)
+
+def insert_para_to_doc(input_doc: str, output_doc: str, para_dict: dict[str, str]) -> bool:
+    """
+    :param input_doc 输入文档的路径
+    :param output_doc 输出文档的路径
+    :param para_dict 段落ID和段落之后需要插入的文本对应关系的字典
+
+    """
+    try:
+        doc = Document(input_doc)
+        paragraphs = doc.paragraphs
+
+        if not para_dict:
+            logger.warning(f"没有有效的插入文本, 保存原始文档:{input_doc}  至 {output_doc}")
+            doc.save(output_doc)
+            return True
+        # 直接从结果中提取段落索引并排序（从后往前处理避免索引变化）
+        sorted_results = sorted(para_dict, key=lambda x: x[0], reverse=True)  # 从后往前处理
+
+        # 从后往前插入，避免索引变化
+        for para_index, result in sorted_results:
+            if para_index >= len(paragraphs):  # 添加边界检查
+                logger.warning(
+                    f"段落索引 {para_index} 超出范围（总段落数：{len(paragraphs)}），跳过, input_file={input_doc}")
+                continue
+            original_para = paragraphs[para_index]
+            # 创建新段落并插入
+            new_para = doc.add_paragraph()
+            new_para.paragraph_format.first_line_indent = Cm(1)
+            red_run = new_para.add_run(generated_text)
+            red_run.font.color.rgb = RGBColor(0, 0, 0)
+
+            # 插入到原始段落后面
+            original_para._p.addnext(new_para._p)
+            logger.debug(f"已在段落 {para_index} 后插入生成内容")
+        doc.save(output_doc)
+        logger.info(f"使用段落索引更新文档成功: {output_doc}")
+        return True
+    except Exception as e:
+        logger.exception(f"使用段落索引更新文档失败: input_file={input_doc}, output_doc={output_doc}")
+        return False
 
 
 def dispose(model):
@@ -178,3 +221,19 @@ if __name__ =="__main__":
     logger.info(f"doc_txt={doc_txt}")
     doc_field = get_template_field(my_cfg, doc_txt)
     logger.info(f"doc_field={doc_field}")
+    input_txt = """
+    会议参会人员， 老王，老李
+到会的单位有 中国石化，中国电信
+
+会议围绕如何解决物联网表上传数据卡顿的问题进行，
+中国电信的老李发言了，需要增加带宽， 这个涉及到费用问题
+11月3日下午， 在中日友谊宾馆召开
+
+会议达成共识：
+（1）增加带宽需要另外支付 50万元人民币/年;
+(2)待请示上级领导后，看是否有相关项目资金；
+（3）中国电信暂时把目前的问题解决了，保证1周内数据上传不卡顿；
+下次会议大约在1个月后，领导意见就下来了。
+    """
+    txt_abs = get_txt_abs(my_cfg, input_txt, doc_field.get("field_dict"))
+    logger.info(f"txt_abs={txt_abs}")
