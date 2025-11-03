@@ -17,7 +17,7 @@ from flask import (Flask, request, jsonify, send_from_directory, abort, redirect
 from apps.docx import docx_meta_util
 from apps.docx.docx_editor import DocxEditor
 from apps.docx.docx_para_util import extract_catalogue, get_outline_txt
-from apps.mt_report.mt_repot_util import get_doc_content, get_template_field, get_txt_abs
+from apps.mt_report.mt_report_util import get_doc_content, get_template_field, get_txt_abs
 from common import my_enums, statistic_util
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
