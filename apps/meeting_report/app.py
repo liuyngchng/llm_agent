@@ -12,18 +12,17 @@ import os
 import threading
 import time
 
-from flask import (Flask, request, jsonify, send_from_directory,
-                   abort, redirect, url_for, stream_with_context, Response, render_template)
+from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for)
 
 from apps.docx import docx_meta_util
 from apps.docx.docx_cmt_util import get_comments_dict
 from apps.docx.docx_editor import DocxEditor
-from apps.docx.docx_para_util import extract_catalogue, gen_docx_template_with_outline_txt, get_outline_txt
+from apps.docx.docx_para_util import extract_catalogue, get_outline_txt
 from common import my_enums, statistic_util
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info, SESSION_TIMEOUT
-from common.bp_vdb import VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task
+from common.bp_vdb import VDB_PREFIX
 from common.cm_utils import get_console_arg1
 from common.vdb_meta_util import VdbMeta
 
@@ -72,13 +71,13 @@ def register_routes(app):
     @app.route('/')
     def app_home():
         logger.info("redirect_auth_login_index")
-        return redirect(url_for('auth.login_index', app_source=my_enums.AppType.DOCX.name.lower()))
+        return redirect(url_for('auth.login_index', app_source=my_enums.AppType.MEETING_REPORT.name.lower()))
 
 
     @app.route('/docx/upload', methods=['POST'])
     def upload_docx_template_file():
         """
-        上传 Word docx 写作文档模板，需要包含三级目录
+        上传 Word docx 会议纪要文档模板
         """
         logger.info(f"upload_docx_template_file, {request}")
         if 'file' not in request.files:
@@ -93,7 +92,7 @@ def register_routes(app):
             logger.warning(f"{uid}, {warning_info}")
             return redirect(url_for(
                 'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
+                app_source=AppType.MEETING_REPORT.name.lower(),
                 warning_info=warning_info
 
             ))
@@ -114,51 +113,6 @@ def register_routes(app):
             "outline": outline
         }
         logger.info(f"upload_docx_template_file, {info}")
-        return json.dumps(info, ensure_ascii=False), 200
-
-    @app.route("/docx/write/outline", methods=['POST'])
-    def write_doc_with_outline_txt():
-        """
-        按照提供的三级目录文本,生成docx 文档模板，这里的文档模板只有目录（默认三级），具体的段落中没有写作要求
-        文档目录参数 doc_outline 传递的文本格式如下： 1.标题1 \n1.1 标题1.1 \n1.2 标题1.2
-        """
-        data = request.json
-        uid = data.get("uid")
-        logger.info(f"{uid}, write_doc_with_outline_txt, data, {data}")
-        session_key = f"{uid}_{get_client_ip()}"
-        if (not auth_info.get(session_key, None)
-                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
-            logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
-                warning_info=warning_info
-
-            ))
-        doc_title = data.get("doc_title")
-        doc_outline = data.get("doc_outline")
-        doc_type = data.get("doc_type")
-        if not doc_type or not doc_title or not doc_outline:
-            err_info = {"error": "缺少文档类型、标题、目录参数中的一个或多个"}
-            logger.error(f"err_occurred, {err_info}")
-            return json.dumps(err_info, ensure_ascii=False), 400
-        task_id = int(time.time() * 1000)  # 生成任务ID， 使用毫秒数
-        if data.get("vbd_id"):
-            vbd_id = int(data.get("vbd_id"))
-        else:
-            vbd_id = None
-        keywords = data.get("keywords")
-        template_file_name = gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title,
-                                                                          doc_outline)
-        logger.info(f"docx_template_file_generated_with_name, {template_file_name}")
-        docx_meta_util.save_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
-        threading.Thread(
-            target=fill_docx_with_template,
-            args=(uid, doc_type, doc_title, keywords, task_id, template_file_name, vbd_id, False)
-        ).start()
-        info = {"status": "started", "task_id": task_id}
-        logger.info(f"write_doc_with_outline_txt, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
     @app.route("/docx/write/template", methods=['POST'])
