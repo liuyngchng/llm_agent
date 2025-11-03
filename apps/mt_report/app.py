@@ -15,16 +15,14 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for)
 
 from apps.docx import docx_meta_util
-from apps.docx.docx_cmt_util import get_comments_dict
 from apps.docx.docx_editor import DocxEditor
 from apps.docx.docx_para_util import extract_catalogue, get_outline_txt
+from apps.mt_report.mt_repot_util import get_doc_content, get_template_field, get_txt_abs
 from common import my_enums, statistic_util
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info, SESSION_TIMEOUT
-from common.bp_vdb import VDB_PREFIX
 from common.cm_utils import get_console_arg1
-from common.vdb_meta_util import VdbMeta
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -115,15 +113,15 @@ def register_routes(app):
         logger.info(f"upload_docx_template_file, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
-    @app.route("/docx/write/template", methods=['POST'])
-    def write_doc_with_docx_template():
+    @app.route("/mt_report/gen", methods=['POST'])
+    def gen_mt_report():
         """
         按照一定的 Word 文件模板, 生成文档
         在word文档模板中，有三级目录，在每个小节中，有用户提供的写作要求
         """
         data = request.json
         uid = data.get("uid")
-        logger.info(f"{uid}, write_doc_with_docx_template, {data}")
+        logger.info(f"{uid}, gen_mt_report_dt, {data}")
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
@@ -131,7 +129,7 @@ def register_routes(app):
             logger.warning(f"{uid}, {warning_info}")
             return redirect(url_for(
                 'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
+                app_source=AppType.MT_REPORT.name.lower(),
                 warning_info=warning_info
 
             ))
@@ -145,19 +143,22 @@ def register_routes(app):
             return json.dumps(err_info, ensure_ascii=False), 400
         template_file_name = data.get("file_name")
 
-        keywords = data.get("keywords")
-        if data.get("vbd_id"):
-            vbd_id = int(data.get("vbd_id"))
-        else:
-            vbd_id = None
         if not task_id or not template_file_name or not uid:
             err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
+
+        keywords = data.get("keywords")
+        if not keywords:
+            err_info = {"error": "会议纪要内容为空"}
+            logger.error(f"err_occurred, {err_info}")
+            return json.dumps(err_info, ensure_ascii=False), 400
+
+        template_file_name = data.get("file_name")
         docx_meta_util.save_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
         threading.Thread(
-            target=fill_docx_with_template,
-            args=(uid, doc_type, doc_title, keywords, task_id, template_file_name, vbd_id, True)
+            target=fill_mt_report_with_txt,
+            args=(uid, doc_type, doc_title, keywords, task_id, template_file_name)
         ).start()
 
         info = {"status": "started", "task_id": task_id}
@@ -256,29 +257,22 @@ def register_routes(app):
             abort(500)
 
 
-
-
-
-
-def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: str, task_id: int,
-                            file_name: str, vbd_id: int, is_include_para_txt=False):
+def fill_mt_report_with_txt(uid: int, doc_type: str, doc_title: str, keywords: str, task_id: int, file_name: str):
     """
-    处理无模板的文档，三级目录自动生成，每个段落无写作要求
+    按照固定的模板，将会议纪要内容填充至Word文档中
     :param uid: 用户ID
     :param doc_type: docx文档内容类型
     :param doc_title: docx文档的标题
-    :param keywords: 其他的写作要求
+    :param keywords: 会议内容要点
     :param task_id: 任务ID
     :param file_name: Word template 模板文件名, 其中包含三级目录，可能含有段落写作的提示词，也可能没有
-    :param vbd_id: vector db id.
-    :param is_include_para_txt: 各小节（章节标题下）是否包含有描述性的文本
     """
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "
-                f"task_id: {task_id}, file_name: {file_name}, vbd_id:{vbd_id}, is_include_para_txt = {is_include_para_txt}")
+                f"task_id: {task_id}, file_name: {file_name}")
 
     generator = None
     try:
-        docx_meta_util.update_process_info_by_task_id(task_id, "开始解析文档结构...", 0)
+        docx_meta_util.update_process_info_by_task_id(task_id, "开始解析模板文档结构...", 0)
         full_file_name = os.path.join(UPLOAD_FOLDER, file_name)
         catalogue = extract_catalogue(full_file_name)
         docx_meta_util.save_outline_by_task_id(task_id, catalogue)
@@ -287,38 +281,20 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
         logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
         docx_meta_util.update_process_info_by_task_id(task_id, "开始处理文档...")
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}, 其他写作要求是 {keywords}"
+        doc_all_txt = get_doc_content(output_file)
+        logger.info(f"doc_all_txt={doc_all_txt}")
+        doc_field = get_template_field(my_cfg, doc_all_txt)
+        logger.info(f"doc_field={doc_field}")
+        get_txt_abs(keywords, my_cfg, doc_field)
 
-        if vbd_id:
-            default_vdb = VdbMeta.get_vdb_by_id(vbd_id)
-            logger.info(f"my_default_vdb_dir_for_gen_doc: {default_vdb}")
-        else:
-            default_vdb = None
-        if default_vdb:
-            my_vdb_dir = f"{VDB_PREFIX}{uid}_{default_vdb[0]['id']}"
-        else:
-            my_vdb_dir = ""
-        logger.info(f"my_vdb_dir_for_gen_doc: {my_vdb_dir}")
+
 
         # 使用并行化版本
         generator = DocxEditor()
-        para_comment_dict = get_comments_dict(full_file_name)
-        if para_comment_dict:
-            logger.info(f"处理含有批注的文档, {full_file_name}")
-            logger.debug(f"处理含有批注的文档, {full_file_name}， 文档批注信息, {para_comment_dict}")
-            generator.modify_doc_with_comment(
-                task_id, full_file_name, catalogue, doc_ctx, para_comment_dict,
-                my_vdb_dir, my_cfg, output_file
-            )
-        elif is_include_para_txt:
-            logger.info(f"处理含有段落内容的文档, {full_file_name}")
-            generator.fill_doc_with_prompt(
-                task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
-            )
-        else:
-            logger.info(f"处理仅含有目录的文档, {full_file_name}")
-            generator.fill_doc_without_prompt(
-                task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
-            )
+
+        generator.fill_doc_without_prompt(
+            task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
+        )
         generator.shutdown()
 
     except Exception as e:
