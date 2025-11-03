@@ -12,12 +12,13 @@ import os
 import threading
 import time
 
-from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for)
+from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for, render_template)
+from google.auth.aio.transport.aiohttp import Response
 
 from apps.docx import docx_meta_util
 from apps.docx.docx_editor import DocxEditor
 from apps.docx.docx_para_util import extract_catalogue, get_outline_txt
-from apps.mt_report.mt_report_util import get_doc_content, get_template_field, get_txt_abs
+from apps.mt_report.mt_report_util import get_doc_content, get_template_field, get_txt_abs, insert_para_to_doc
 from common import my_enums, statistic_util
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
@@ -127,27 +128,19 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.MT_REPORT.name.lower(),
-                warning_info=warning_info
-
-            ))
+            return jsonify(warning_info), 400
         task_id = int(data.get("task_id"))
-        doc_type = data.get("doc_type")
         doc_title = data.get("doc_title")
 
-        if not doc_type or not doc_title:
-            err_info = {"error": "文档类型或文档标题不能为空"}
+        if not doc_title:
+            err_info = {"error": "文档标题不能为空"}
             logger.error(f"err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
         template_file_name = data.get("file_name")
-
         if not task_id or not template_file_name or not uid:
             err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
-
         keywords = data.get("keywords")
         if not keywords:
             err_info = {"error": "会议纪要内容为空"}
@@ -155,6 +148,7 @@ def register_routes(app):
             return json.dumps(err_info, ensure_ascii=False), 400
 
         template_file_name = data.get("file_name")
+        doc_type = my_enums.WriteDocType.MEETING_REPORT.value
         docx_meta_util.save_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
         threading.Thread(
             target=fill_mt_report_with_txt,
@@ -164,6 +158,60 @@ def register_routes(app):
         info = {"status": "started", "task_id": task_id}
         logger.info(f"write_doc_with_docx_template, {info}")
         return json.dumps(info, ensure_ascii=False), 200
+
+    @app.route('/mt_report/task', methods=['GET'])
+    def docx_task_index():
+        """
+        获取当前在进行的写作任务，渲染页面
+        """
+        logger.info(f"mt_report_index, {request.args}")
+        uid = request.args.get('uid')
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.MT_REPORT.name.lower(),
+                warning_info=warning_info
+
+            ))
+        statistic_util.add_access_count_by_uid(int(uid), 1)
+        app_source = request.args.get('app_source')
+        warning_info = request.args.get('warning_info', "")
+        sys_name = my_enums.AppType.get_app_type(app_source)
+        ctx = {
+            "uid": uid,
+            "sys_name": sys_name,
+            "app_source": app_source,
+            "warning_info": warning_info,
+        }
+        dt_idx = "mt_report_my_task.html"
+        logger.info(f"{uid}, return_page_with_no_auth {dt_idx}")
+        return render_template(dt_idx, **ctx)
+
+    @app.route('/mt_report/my/task', methods=['POST'])
+    def my_docx_task():
+        """
+        获取用户的写作任务
+        """
+        data = request.json
+        uid = int(data.get('uid'))
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            # logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.MT_REPORT.name.lower(),
+                warning_info=warning_info
+
+            ))
+        logger.info(f"{uid}, get_my_mt_report_task, {data}")
+        task_list = docx_meta_util.get_user_task_list(uid)
+        return json.dumps(task_list, ensure_ascii=False), 200
 
     @app.route('/docx/download/<filename>', methods=['GET'])
     def download_file_by_filename(filename):
@@ -265,46 +313,31 @@ def fill_mt_report_with_txt(uid: int, doc_type: str, doc_title: str, keywords: s
     :param doc_title: docx文档的标题
     :param keywords: 会议内容要点
     :param task_id: 任务ID
-    :param file_name: Word template 模板文件名, 其中包含三级目录，可能含有段落写作的提示词，也可能没有
+    :param file_name: Word template 模板文件名
     """
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "
                 f"task_id: {task_id}, file_name: {file_name}")
-
-    generator = None
     try:
         docx_meta_util.update_process_info_by_task_id(task_id, "开始解析模板文档结构...", 0)
         full_file_name = os.path.join(UPLOAD_FOLDER, file_name)
         catalogue = extract_catalogue(full_file_name)
         docx_meta_util.save_outline_by_task_id(task_id, catalogue)
-        output_file_name = f"output_{task_id}.docx"
-        output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
-        logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
+
         docx_meta_util.update_process_info_by_task_id(task_id, "开始处理文档...")
-        doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}, 其他写作要求是 {keywords}"
-        doc_all_txt = get_doc_content(output_file)
+        doc_all_txt = get_doc_content(full_file_name)
         logger.info(f"doc_all_txt={doc_all_txt}")
         doc_field = get_template_field(my_cfg, doc_all_txt)
         logger.info(f"doc_field={doc_field}")
-        get_txt_abs(keywords, my_cfg, doc_field)
+        fill_para_txt_dict = get_txt_abs(my_cfg, keywords, doc_field)
+        output_file_name = f"output_{task_id}.docx"
+        output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
+        logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
 
-
-
-        # 使用并行化版本
-        generator = DocxEditor()
-
-        generator.fill_doc_without_prompt(
-            task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
-        )
-        generator.shutdown()
-
+        insert_para_to_doc(full_file_name, output_file, fill_para_txt_dict)
+        docx_meta_util.update_process_info_by_task_id(task_id, "文档处理完毕", 100)
     except Exception as e:
         docx_meta_util.update_process_info_by_task_id(task_id, f"任务处理失败: {str(e)}")
         logger.exception("文档生成异常", e)
-    finally:
-        # 确保资源被释放
-        if generator:
-            generator.shutdown()
-
 
 # 创建应用实例
 app = create_app()
