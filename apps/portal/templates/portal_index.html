@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大模型应用清单</title>
+    <link rel="stylesheet" href="/static/portal.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-list-alt"></i> 大模型应用</h1>
+            <p>大模型应用门户，一站式访问所有应用</p>
+        </header>
+
+        <div class="app-grid">
+            <!-- 应用1 -->
+            <div class="app-card">
+                <div class="app-icon">
+                    <i class="fas fa-plug"></i>
+                </div>
+                <div class="app-content">
+                    <h3 class="app-title">
+                        <i class="fas fa-plug"></i> 开放平台
+                    </h3>
+                    <p class="app-description">
+                        提供与其他平台进行集成的接口，支持HTTP/HTTPS协议，实现系统间的无缝对接。
+                    </p>
+                    <div class="app-meta">
+                        <span class="app-port">端口: 18000</span>
+                        <span>db_svc</span>
+                    </div>
+                    <a href="https://11.10.36.2:18000" class="app-link">进入应用</a>
+                </div>
+            </div>
+
+            <!-- 应用2 -->
+            <div class="app-card">
+                <div class="app-icon">
+                    <i class="fas fa-database"></i>
+                </div>
+                <div class="app-content">
+                    <h3 class="app-title">
+                        <i class="fas fa-database"></i> AI 数据库查询
+                    </h3>
+                    <p class="app-description">
+                        支持MySQL, Oracle, DM8等多种数据库，通过自然语言查询数据库，简化数据检索流程。
+                    </p>
+                    <div class="app-meta">
+                        <span class="app-port">端口: 19001</span>
+                        <span>chat2sql</span>
+                    </div>
+                    <a href="https://11.10.36.2:19001" class="app-link">进入应用</a>
+                </div>
+            </div>
+
+            <!-- 应用3 -->
+            <div class="app-card">
+                <div class="app-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="app-content">
+                    <h3 class="app-title">
+                        <i class="fas fa-graduation-cap"></i> AI 知识库问答
+                    </h3>
+                    <p class="app-description">
+                        提供基于知识库的问答能力，快速获取专业知识解答，提升信息检索效率。
+                    </p>
+                    <div class="app-meta">
+                        <span class="app-port">端口: 19002</span>
+                        <span>chat</span>
+                    </div>
+                    <a href="https://11.10.36.2:19002" class="app-link">进入应用</a>
+                </div>
+            </div>
+
+            <!-- 应用4 -->
+            <div class="app-card">
+                <div class="app-icon">
+                    <i class="fas fa-file-word"></i>
+                </div>
+                <div class="app-content">
+                    <h3 class="app-title">
+                        <i class="fas fa-file-word"></i> AI 文档生成
+                    </h3>
+                    <p class="app-description">
+                        支持在线生成 Word docx文档，智能排版和内容组织，提高文档创作效率。
+                    </p>
+                    <div class="app-meta">
+                        <span class="app-port">端口: 19003</span>
+                        <span>docx</span>
+                    </div>
+                    <a href="https://11.10.36.2:19003" class="app-link">进入应用</a>
+                </div>
+            </div>
+
+            <!-- 应用5 -->
+            <div class="app-card">
+                <div class="app-icon">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <div class="app-content">
+                    <h3 class="app-title">
+                        <i class="fas fa-headset"></i> AI 客服
+                    </h3>
+                    <p class="app-description">
+                        提供 AI 辅助人工客服的能力，智能解答客户问题，提升客户服务体验和效率。
+                    </p>
+                    <div class="app-meta">
+                        <span class="app-port">端口: 19004</span>
+                        <span>csm</span>
+                    </div>
+                    <a href="https://11.10.36.2:19004" class="app-link">进入应用</a>
+                </div>
+            </div>
+
+            <!-- 应用6 -->
+            <div class="app-card">
+                <div class="app-icon">
+                    <i class="fas fa-window-restore"></i>
+                </div>
+                <div class="app-content">
+                    <h3 class="app-title">
+                        <i class="fas fa-window-restore"></i> MCP Client
+                    </h3>
+                    <p class="app-description">
+                        MCP客户端，通过Web界面访问和管理MCP服务，提供友好的用户交互体验。
+                    </p>
+                    <div class="app-meta">
+                        <span class="app-port">端口: 19005</span>
+                        <span>mcp_client</span>
+                    </div>
+                    <a href="https://11.10.36.2:19005" class="app-link">进入应用</a>
+                </div>
+            </div>
+
+            <!-- 应用7 -->
+            <div class="app-card">
+                <div class="app-icon">
+                    <i class="fas fa-server"></i>
+                </div>
+                <div class="app-content">
+                    <h3 class="app-title">
+                        <i class="fas fa-server"></i> MCP Server
+                    </h3>
+                    <p class="app-description">
+                        MCP服务端，提供 MCP tools 查询服务，支持多种工具调用和功能扩展。
+                    </p>
+                    <div class="app-meta">
+                        <span class="app-port">端口: 19006</span>
+                        <span>mcp_server</span>
+                    </div>
+                    <a href="https://11.10.36.2:19006/mcp" class="app-link">进入应用</a>
+                </div>
+            </div>
+
+            <!-- 应用8 -->
+            <div class="app-card">
+                <div class="app-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <div class="app-content">
+                    <h3 class="app-title">
+                        <i class="fas fa-shopping-cart"></i> AI 订单生成
+                    </h3>
+                    <p class="app-description">
+                        智能订单生成系统，自动化处理订单创建流程，提高订单处理效率和准确性。
+                    </p>
+                    <div class="app-meta">
+                        <span class="app-port">端口: 19007</span>
+                        <span>ord_gen</span>
+                    </div>
+                    <a href="https://11.10.36.2:19007" class="app-link">进入应用</a>
+                </div>
+            </div>
+
+            <!-- 应用9 -->
+            <div class="app-card">
+                <div class="app-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="app-content">
+                    <h3 class="app-title">
+                        <i class="fas fa-file-alt"></i> AI 会议纪要整理
+                    </h3>
+                    <p class="app-description">
+                        智能整理会议记录，自动生成专业会议纪要，提取关键信息和行动项。
+                    </p>
+                    <div class="app-meta">
+                        <span class="app-port">端口: 19008</span>
+                        <span>mt_report</span>
+                    </div>
+                    <a href="https://11.10.36.2:19008" class="app-link">进入应用</a>
+                </div>
+            </div>
+
+            <!-- 应用10 -->
+            <div class="app-card">
+                <div class="app-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <div class="app-content">
+                    <h3 class="app-title">
+                        <i class="fas fa-brain"></i> 大语言模型服务
+                    </h3>
+                    <p class="app-description">
+                        兼容 OpenAI 接口格式的大语言模型服务，提供强大的自然语言处理能力。
+                    </p>
+                    <div class="app-meta">
+                        <span class="app-port">端口: 16000</span>
+                        <span>llm</span>
+                    </div>
+                    <a href="https://11.10.36.2:16000" class="app-link">进入应用</a>
+                </div>
+            </div>
+
+            <!-- 应用11 -->
+            <div class="app-card">
+                <div class="app-icon">
+                    <i class="fas fa-code"></i>
+                </div>
+                <div class="app-content">
+                    <h3 class="app-title">
+                        <i class="fas fa-code"></i> 文本嵌入模型服务
+                    </h3>
+                    <p class="app-description">
+                        兼容 OpenAI 接口格式的文本嵌入模型服务，支持文本向量化和语义分析。
+                    </p>
+                    <div class="app-meta">
+                        <span class="app-port">端口: 17000</span>
+                        <span>embedding</span>
+                    </div>
+                    <a href="https://11.10.36.2:17000" class="app-link">进入应用</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
