@@ -12,11 +12,10 @@ import os
 import threading
 import time
 
-from flask import (Flask, request, jsonify, send_from_directory, abort, redirect, url_for, render_template)
-from google.auth.aio.transport.aiohttp import Response
+from flask import (Flask, request, jsonify, send_from_directory,
+                   abort, redirect, url_for, render_template)
 
 from apps.docx import docx_meta_util
-from apps.docx.docx_editor import DocxEditor
 from apps.docx.docx_para_util import extract_catalogue, get_outline_txt
 from apps.mt_report.mt_report_util import get_doc_content, get_template_field, get_txt_abs, insert_para_to_doc
 from common import my_enums, statistic_util
@@ -123,6 +122,7 @@ def register_routes(app):
         data = request.json
         uid = data.get("uid")
         logger.info(f"{uid}, gen_mt_report_dt, {data}")
+        statistic_util.add_access_count_by_uid(int(uid), 1)
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
@@ -255,7 +255,7 @@ def register_routes(app):
             logger.error(f"文件发送失败: {str(e)}")
             abort(500)
 
-    @app.route('/docx/download/task/<task_id>', methods=['GET'])
+    @app.route('/mt_report/download/task/<task_id>', methods=['GET'])
     def download_file_by_task_id(task_id):
         """
         根据任务ID下载文件
@@ -304,6 +304,23 @@ def register_routes(app):
             logger.error(f"文件发送失败: {str(e)}")
             abort(500)
 
+    @app.route('/mt_report/del/task/<task_id>', methods=['GET'])
+    def delete_file_info_by_task_id(task_id):
+        """
+        根据任务ID下载文件
+        ：param task_id: 任务ID，其对应的文件名格式如下 f"output_{task_id}.docx"
+        """
+        logger.info(f"delete_file_task_id, {task_id}")
+        filename = f"output_{task_id}.docx"
+        disk_file = os.path.join(UPLOAD_FOLDER, filename)
+        if os.path.exists(disk_file):
+            os.remove(disk_file)
+        else:
+            logger.warning(f"文件 {filename} 不存在， 无需删除物理文件, 只需删除数据库记录")
+        docx_meta_util.delete_task(task_id)
+
+        return json.dumps({"msg": "删除成功", "task_id": task_id}, ensure_ascii=False), 200
+
 
 def fill_mt_report_with_txt(uid: int, doc_type: str, doc_title: str, keywords: str, task_id: int, file_name: str):
     """
@@ -322,17 +339,15 @@ def fill_mt_report_with_txt(uid: int, doc_type: str, doc_title: str, keywords: s
         full_file_name = os.path.join(UPLOAD_FOLDER, file_name)
         catalogue = extract_catalogue(full_file_name)
         docx_meta_util.save_outline_by_task_id(task_id, catalogue)
-
         docx_meta_util.update_process_info_by_task_id(task_id, "开始处理文档...")
         doc_all_txt = get_doc_content(full_file_name)
         logger.info(f"doc_all_txt={doc_all_txt}")
-        doc_field = get_template_field(my_cfg, doc_all_txt)
+        doc_field = get_template_field(uid, my_cfg, doc_all_txt)
         logger.info(f"doc_field={doc_field}")
-        fill_para_txt_dict = get_txt_abs(my_cfg, keywords, doc_field)
+        fill_para_txt_dict = get_txt_abs(uid, my_cfg, keywords, doc_field)
         output_file_name = f"output_{task_id}.docx"
         output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
         logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
-
         insert_para_to_doc(full_file_name, output_file, fill_para_txt_dict)
         docx_meta_util.update_process_info_by_task_id(task_id, "文档处理完毕", 100)
     except Exception as e:

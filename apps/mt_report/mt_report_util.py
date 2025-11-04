@@ -9,8 +9,9 @@ from docx import Document
 from docx.shared import RGBColor, Cm
 from langchain_core.prompts import ChatPromptTemplate
 
+from common import statistic_util
 from common.agt_util import get_model
-from common.cm_utils import extract_md_content, rmv_think_block
+from common.cm_utils import extract_md_content, rmv_think_block, estimate_tokens
 from common.sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -90,7 +91,7 @@ FILED_DICT = {
 }
 
 
-def get_txt_abs(cfg: dict, input_txt: str, field_dict: dict) -> dict:
+def get_txt_abs(uid: int, cfg: dict, input_txt: str, field_dict: dict) -> dict:
     """
     从文本中抽取关键信息，输出关键信息词典
     """
@@ -107,9 +108,17 @@ def get_txt_abs(cfg: dict, input_txt: str, field_dict: dict) -> dict:
             model = get_model(cfg)
             chain = prompt | model
             arg_dict = {"input_txt": input_txt, "field_dict": field_dict}
+            input_text = prompt.format(input_txt=input_txt, field_dict=field_dict)
+            # logger.info(f"{uid}, start_calc_txt_token, {input_text}")
+            input_tokens = estimate_tokens(input_text)
+            logger.info(f"{uid}, input_tokens, {input_tokens}")
+            statistic_util.add_input_token_by_uid(uid, input_tokens)
             logger.info(f"submit_arg_dict_to_llm, [{arg_dict}], llm[{cfg['api']}]")
             response = chain.invoke(arg_dict)
             output_txt = extract_md_content(rmv_think_block(response.content), "json")
+            output_tokens = estimate_tokens(response.content)
+            logger.info(f"{uid}, output_tokens, {output_tokens}")
+            statistic_util.add_output_token_by_uid(uid, output_tokens)
             dispose(model)
             return json.loads(output_txt)
         except Exception as ex:
@@ -122,7 +131,7 @@ def get_txt_abs(cfg: dict, input_txt: str, field_dict: dict) -> dict:
             raise last_exception
     return {}
 
-def get_template_field(cfg: dict, all_paragraphs: str) -> dict:
+def get_template_field(uid: int, cfg: dict, all_paragraphs: str) -> dict:
     """
     从 Word 模板的文本中获取需要填充的核心要素词典
     """
@@ -139,9 +148,16 @@ def get_template_field(cfg: dict, all_paragraphs: str) -> dict:
             model = get_model(cfg)
             chain = prompt | model
             arg_dict = {"all_paragraphs": all_paragraphs}
+            input_text = prompt.format(all_paragraphs=all_paragraphs)
+            input_tokens = estimate_tokens(input_text)
+            logger.info(f"{uid}, input_tokens, {input_tokens}")
+            statistic_util.add_input_token_by_uid(uid, input_tokens)
             logger.info(f"submit_arg_dict_to_llm, [{arg_dict}], llm[{cfg['api']}]")
             response = chain.invoke(arg_dict)
             output_txt = extract_md_content(rmv_think_block(response.content), "json")
+            out_tokens = estimate_tokens(response.content)
+            logger.info(f"{uid}, out_tokens, {out_tokens}")
+            statistic_util.add_output_token_by_uid(uid, out_tokens)
             dispose(model)
             return json.loads(output_txt)
         except Exception as ex:
