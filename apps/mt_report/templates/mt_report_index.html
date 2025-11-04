@@ -41,13 +41,24 @@
             <h2><i class="fas fa-edit"></i> 提交会议信息</h2>
 
             <div class="form-group">
-                <label for="docTitle">【1】会议纪要标题</label>
-                <input type="text" id="docTitle" placeholder="请输入会议纪要标题，如：2024年第一季度项目评审会议纪要">
+                <label for="docTitle">【1】会议主题</label>
+                <input type="text" id="docTitle" placeholder="请输入会议主题，如：2024年第一季度项目评审会议纪要">
             </div>
 
             <div class="form-group">
-                <label for="keywords">【2】会议内容要点</label>
-                <textarea id="keywords" placeholder="请输入会议讨论的主要内容、决议事项、待办任务等" rows="4"></textarea>
+                <label for="contentFile">【2】会议内容要点</label>
+                <div class="upload-btn">
+                    <button class="btn btn-primary">
+                        <i class="fas fa-file-alt"></i> 选择会议内容文件 (.txt 或.md)
+                    </button>
+                    <input type="file" class="file-input" id="contentFile" accept=".txt,.md" onchange="handleContentFileUpload(this)">
+                </div>
+                <div class="file-info" id="contentFileInfo">
+                    <div class="file-name">
+                        <i class="fas fa-file-alt"></i>
+                        <span id="contentFileName">未选择文件</span>
+                    </div>
+                </div>
             </div>
 
             <div class="upload-container active" id="uploadContainer">
@@ -57,7 +68,7 @@
 
                 <div class="upload-btn">
                     <button class="btn btn-primary">
-                        <i class="fas fa-file-word"></i> 选择Word文件
+                        <i class="fas fa-file-word"></i> 选择会议纪要模板 (.docx)
                     </button>
                     <input type="file" class="file-input" id="templateFile" accept=".docx" onchange="handleFileUpload(this)">
                 </div>

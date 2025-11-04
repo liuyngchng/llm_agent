@@ -59,20 +59,15 @@ async function uploadTemplateFile(file) {
             method: 'POST',
             body: formData
         });
-
         if (!response.ok) {
             throw new Error('文件上传失败');
         }
-
         const data = await response.json();
 
         // 记录上传的文件模板的名称
         document.getElementById('file_name').value = data.file_name;
         // 保存任务ID
         document.getElementById('taskId').value = data.task_id;
-
-        alert('文件上传成功！');
-
     } catch (error) {
         console.error('上传错误:', error);
         alert('文件上传失败: ' + error.message);
@@ -82,15 +77,35 @@ async function uploadTemplateFile(file) {
     }
 }
 
+// 处理会议内容文件上传
+function handleContentFileUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // 验证文件类型
+    if (!file.name.endsWith('.txt') && !file.name.endsWith('.md')) {
+        alert('请上传 .txt 或 .md 格式的文件');
+        return;
+    }
+
+    // 显示文件信息
+    document.getElementById('contentFileInfo').style.display = 'block';
+    document.getElementById('contentFileName').textContent = file.name;
+
+    // 读取文件内容
+    const reader = new FileReader();
+    reader.readAsText(file);
+}
+
 // 生成会议纪要
 async function gen_mt_report() {
     const uid = document.getElementById('uid').value;
     const token = document.getElementById('t').value;
     const task_id = document.getElementById('taskId').value;
     const doc_title = document.getElementById('docTitle').value;
-    const keywords = document.getElementById('keywords').value;
     const file_name = document.getElementById('file_name').value;
     const generateBtn = document.getElementById('generateBtn');
+    const contentFile = document.getElementById('contentFile');
 
     // 验证输入
     if (!doc_title.trim()) {
@@ -98,10 +113,16 @@ async function gen_mt_report() {
         return;
     }
 
-    if (!keywords.trim()) {
-        alert('请输入会议内容要点');
+    if (!contentFile.files || contentFile.files.length === 0) {
+        alert('请上传会议内容文件');
         return;
     }
+
+    const keywords = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsText(contentFile.files[0]);
+    });
 
     // 禁用按钮
     generateBtn.disabled = true;
@@ -147,7 +168,7 @@ async function gen_mt_report() {
 function resetForm() {
     // 清空表单数据
     document.getElementById('docTitle').value = '';
-    document.getElementById('keywords').value = '';
+    document.getElementById('contentFile').value = '';
     document.getElementById('fileInfo').style.display = 'none';
     document.getElementById('templateFile').value = '';
     document.getElementById('taskId').value = '';

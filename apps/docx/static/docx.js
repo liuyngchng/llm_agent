@@ -207,8 +207,6 @@ async function uploadTemplateFile(file) {
     }
 }
 
-
-
 // 目录生成
 function generateOutline() {
     const docType = document.getElementById('docTypeInput').value;
