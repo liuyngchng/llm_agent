@@ -15,7 +15,7 @@ import re
 from flask import (Flask, request, Response,
                    send_from_directory, abort, make_response, redirect, url_for)
 from common.cfg_util import get_user_role_by_uid
-from csm_service import CsmService
+from apps.csm.csm_service import CsmService
 from common.bp_auth import auth_bp
 from common.my_enums import ActorRole, AiServiceStatus, AppType
 from common.agt_util import classify_msg

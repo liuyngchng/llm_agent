@@ -128,7 +128,11 @@ def get_const_dict_by_app(app_name):
 # 健康检查API
 @app.route('/dt/health', methods=['GET'])
 def health_check():
-    return jsonify({'status': 'ok'})
+    return jsonify({'status': 200})
+
+@app.route('/', methods=['GET'])
+def health_check():
+    return jsonify({'status': 200, 'msg':'welcome to open api platform'})
 
 
 if __name__ == '__main__':

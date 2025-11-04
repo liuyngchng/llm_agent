@@ -13,7 +13,7 @@ import time
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, redirect, abort, url_for, send_from_directory
-from chat_agent import ChatAgent
+from apps.chat.chat_agent import ChatAgent
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, auth_info, get_client_ip
