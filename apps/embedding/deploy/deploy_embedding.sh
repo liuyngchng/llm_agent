@@ -26,7 +26,7 @@ docker run -dit --name ${CONTAINER}  \
   -v /data/bge-large-zh-v1.5:/opt/bge-large-zh-v1.5 \
   -p 17000:19000 \
   -e APP_NAME=${APP} \
-  llm_docx:1.1
+  llm_embedding:1.1
 echo "容器 ${CONTAINER} 已启动"
 docker ps -a  | grep ${CONTAINER} --color=always
 echo "部署完成"

@@ -9,9 +9,7 @@ import logging.config
 import re
 import sys
 import time
-
 import requests
-import tiktoken
 
 from common import cfg_util
 from common.my_enums import AppType
@@ -25,6 +23,7 @@ english_pattern = re.compile(r'[a-zA-Z]')
 
 def calc_txt_token(txt: str) -> int:
     """默认需要联网"""
+    import tiktoken
     encoding = tiktoken.get_encoding("cl100k_base")
     return len(encoding.encode(txt))
 
@@ -338,9 +337,9 @@ def build_curl_cmd(api, data, headers, proxies: dict | None):
 def llm_health_check(llm_api_uri: str, llm_api_key: str, llm_model_name: str) -> dict:
     """
     检测大语言模型是否可用的健康检查方法
-    :param llm_api_uri, base API, for example, https://api.deepseek.com/v1
-    :param llm_api_key, sk-******,
-    :param llm_model_name, model name, for example, deepseek-chat
+    :param llm_api_uri: base API, for example, https://api.deepseek.com/v1
+    :param llm_api_key: sk-******,
+    :param llm_model_name: model name, for example, deepseek-chat
     Returns:
         {
             "status":200,

@@ -9,7 +9,7 @@ ARG APP="embedding"
 #ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn"
 COPY ./whl_py_dir_${APP} /tmp/whl
 RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl \
-        gunicorn fastapi \
+        gunicorn fastapi uvicorn \
         concurrent-log-handler sentence_transformers   \
         pydantic wheel && \
     rm -rf /tmp/whl && \

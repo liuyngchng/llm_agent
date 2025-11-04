@@ -40,7 +40,7 @@ if [[ $confirm == [Yy] ]]; then
     cd ${WHL_PY_DIR} || exit 1
     echo "current_dir:$(pwd)"
 
-    pip download gunicorn fastapi \
+    pip download gunicorn fastapi uvicorn \
         concurrent-log-handler sentence_transformers   \
         pydantic wheel
     cd ..

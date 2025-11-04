@@ -14,7 +14,6 @@ from pydantic import BaseModel
 from typing import Optional, List, Union
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from common.cm_utils import get_console_arg1
 from common.sys_init import init_yml_cfg
 
 app = FastAPI()
@@ -33,6 +32,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.normpath(os.path.join(current_dir, "..", "..", "..", my_cfg["api"]["embedding_model_name"]))
 print(f"尝试加载模型路径: {model_path}")  # 调试信息
 model = SentenceTransformer(model_path, device='cpu')
+print(f"模型加载完毕, {model_path}")  # 调试信息
 # # 明确指定使用 CPU
 # model = SentenceTransformer('your_model_name', device='cpu')
 # # 或明确指定使用 GPU
