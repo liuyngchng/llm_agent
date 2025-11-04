@@ -163,6 +163,7 @@ async def create_embedding_legacy(
 @app.get("/health")
 async def health():
     """健康检查端点（不需要认证）"""
+    logger.info("health_check")
     return {"status": "healthy", "model": "bge-large-zh-v1.5"}
 
 
@@ -197,8 +198,10 @@ async def root():
 
 
 if __name__ == "__main__":
-    logger.info(f"模型设备: {model.device}, {model._target_device}")
+    info = f"模型设备: {model.device}, {model._target_device}"
+    logger.info(info)
     # port = get_console_arg1()
     port = 17000
     logger.info(f"api_cfg, {my_cfg['api']}, listening on port {port}")
+
     uvicorn.run(app, host="0.0.0.0", port=port)
