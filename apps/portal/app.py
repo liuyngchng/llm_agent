@@ -13,6 +13,7 @@ import os
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, render_template
 from common.cm_utils import get_console_arg1
+from common.sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -27,10 +28,15 @@ os.system(
 )
 
 SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
+my_cfg = init_yml_cfg()
 
 @app.route('/')
 def app_home():
-    return render_template("portal_index.html")
+    ctx = {
+        "host": my_cfg['sys']['host']
+    }
+    logger.info(f"ctx, {ctx}")
+    return render_template("portal_index.html", **ctx)
 
 
 

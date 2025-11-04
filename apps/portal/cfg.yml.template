@@ -1,0 +1,17 @@
+# config.yaml，文件格式必须严格遵循 yaml配置文件格式
+sys:
+    #  系统名称(title) 配置
+    name: 大模型应用
+    #  是否启用认证， true， 登录后才能使用系统;false 无需登录
+    # your host
+    host: https://192.168.1.1
+
+
+
+
+
+
+
+
+
+

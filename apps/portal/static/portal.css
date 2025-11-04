@@ -142,7 +142,7 @@ h1 {
 }
 
 .app-link {
-    display: block;
+    display: inline-block; /* 改为 inline-block 以便控制宽度 */
     text-align: center;
     padding: 12px 20px;
     background: linear-gradient(to right, #4b6cb7, #3a5a9e);
@@ -152,6 +152,9 @@ h1 {
     font-weight: 600;
     transition: all 0.3s;
     margin-top: auto;
+    width: 50%; /* 添加宽度为50% */
+    margin-left: auto; /* 水平居中 */
+    margin-right: auto; /* 水平居中 */
 }
 
 .app-link:hover {
