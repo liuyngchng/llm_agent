@@ -14,17 +14,22 @@ from flask import Flask, request, Response, stream_with_context
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
 
-from common.cm_utils import get_console_arg1
+from common.sys_init import init_yml_cfg
 
 app = Flask(__name__)
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+my_cfg = init_yml_cfg()
+
+# 加载模型
+model_path = my_cfg['model']['path']
+model_name = my_cfg['model']['name']
+print(f"model_path={model_path}, model_name={model_name}")
 
 def timeout(seconds=60):
     """简单的超时装饰器（不使用signal）"""
-
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -35,22 +40,12 @@ def timeout(seconds=60):
             execution_time = end_time - start_time
             if execution_time > seconds:
                 logger.warning(f"Function {func.__name__} took {execution_time:.2f}s (exceeded {seconds}s timeout)")
-
             return result
-
         return wrapper
-
     return decorator
-
-
-# 加载模型
-model_path = "../DeepSeek-R1-Distill-Qwen-7B"
-model_name = "DeepSeek-R1"
 
 try:
     tokenizer = AutoTokenizer.from_pretrained(model_path)
-
-
     # 4-bit 量化配置, for GPU with limited resource
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -99,7 +94,6 @@ def generate_response(prompt, max_length=512, temperature=0.7):
 
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     final_response = response[len(prompt):].strip()
-
     generation_time = time.time() - start_time
     logger.info(f"Generation completed in {generation_time:.2f}s, tokens: {len(tokenizer.encode(final_response))}")
     return final_response

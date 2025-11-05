@@ -1,0 +1,7 @@
+gunicorn
+fastapi
+uvicorn
+concurrent-log-handler
+sentence_transformers
+pydantic
+wheel

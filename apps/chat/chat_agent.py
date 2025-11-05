@@ -32,9 +32,9 @@ class ChatAgent:
         prompt = ChatPromptTemplate.from_template(template)
         model = self.get_llm()
         chain = (
-                {"context": RunnablePassthrough(), "question": RunnablePassthrough()}
-                | prompt
-                | model
-                | StrOutputParser()
+            {"context": RunnablePassthrough(), "question": RunnablePassthrough()}
+            | prompt
+            | model
+            | StrOutputParser()
         )
         return chain

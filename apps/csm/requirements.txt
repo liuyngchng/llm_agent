@@ -1,0 +1,9 @@
+gunicorn
+flask
+concurrent-log-handler
+langchain_openai
+langchain_core
+langchain_community
+pycryptodome
+wheel
+markdown

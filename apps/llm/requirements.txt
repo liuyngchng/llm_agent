@@ -1,0 +1,6 @@
+gunicorn
+flask
+concurrent-log-handler
+wheel
+transformers
+torch
