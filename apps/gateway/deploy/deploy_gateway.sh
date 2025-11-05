@@ -1,5 +1,5 @@
 #!/bin/bash
-APP='db_svc'
+APP='gateway'
 CONTAINER="${APP}_app"
 APP_DIR="apps/${APP}"
 CURRENT_DIR=$(pwd)

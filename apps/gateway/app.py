@@ -131,8 +131,8 @@ def health_check():
     return jsonify({'status': 200})
 
 @app.route('/', methods=['GET'])
-def health_check():
-    return jsonify({'status': 200, 'msg':'welcome to open api platform'})
+def welcome():
+    return jsonify({'status': 200, 'msg':'welcome to open API platform'})
 
 
 if __name__ == '__main__':
