@@ -41,7 +41,7 @@ if [[ $confirm == [Yy] ]]; then
     echo "current_dir:$(pwd)"
 
     pip download gunicorn flask concurrent-log-handler \
-        wheel transformers torch
+        wheel transformers torch bitsandbytes accelerate
     cd ..
 else
     echo "跳过依赖包下载步骤，直接使用 ${WHL_PY_DIR} 目录下的包进行镜像构建"

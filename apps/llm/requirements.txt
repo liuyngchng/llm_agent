@@ -1,6 +1,8 @@
-gunicorn
-flask
-concurrent-log-handler
-wheel
-transformers
-torch
+gunicorn==23.0.0
+flask==3.1.2
+concurrent-log-handler==0.9.25
+wheel==0.45.1
+transformers==4.56.2
+torch==2.8.0
+bitsandbytes==0.48.0
+accelerate==1.11.0

@@ -6,6 +6,7 @@
 """
 import logging.config
 import json
+import os.path
 import time
 import uuid
 import functools
@@ -26,7 +27,7 @@ my_cfg = init_yml_cfg()
 # 加载模型
 model_path = my_cfg['model']['path']
 model_name = my_cfg['model']['name']
-print(f"model_path={model_path}, model_name={model_name}")
+print(f"on host, or in container, model_path={model_path}, model_name={model_name}")
 
 def timeout(seconds=60):
     """简单的超时装饰器（不使用signal）"""
@@ -45,6 +46,9 @@ def timeout(seconds=60):
     return decorator
 
 try:
+    abs_path = os.path.abspath(model_path)
+    if not os.path.exists(abs_path):
+        raise FileNotFoundError(f"model_path_not_exist_err, {abs_path}")
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     # 4-bit 量化配置, for GPU with limited resource
     bnb_config = BitsAndBytesConfig(
@@ -280,6 +284,15 @@ def health_check():
     return json.dumps({
         "status": "healthy",
         "model_loaded": True,
+        "model": model_name,
+        "timestamp": int(time.time())
+    }, ensure_ascii=False)
+
+@app.route('/', methods=['GET'])
+def welcome():
+    return json.dumps({
+        "status": 200,
+        "msg": "hello LLM world, your can use API to interact with me",
         "model": model_name,
         "timestamp": int(time.time())
     }, ensure_ascii=False)

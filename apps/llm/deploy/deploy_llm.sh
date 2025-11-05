@@ -3,6 +3,8 @@ APP='llm'
 CONTAINER="${APP}_app"
 APP_DIR="apps/${APP}"
 CURRENT_DIR=$(pwd)
+# docker容器所在的宿主机的模型所在目录
+MODEL_HOST_DIR="/data"
 # 检查当前目录下是否存在 apps/${APP} 文件夹
 if [ ! -d ${APP_DIR} ]; then
     echo "错误：当前目录下未找到 ${APP_DIR} 文件夹"
@@ -21,6 +23,7 @@ echo "正在创建 ${CONTAINER} 容器"
 docker run -dit --name ${CONTAINER}  \
   --security-opt seccomp=unconfined \
   -v ${CURRENT_DIR}:/opt/app \
+  -v ${MODEL_HOST_DIR}:/opt/model\
   -p 16000:19000 \
   -e APP_NAME=${APP} \
   llm_llm:1.1
