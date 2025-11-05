@@ -14,14 +14,8 @@ import logging.config
 import time
 from decimal import Decimal
 from typing import Any
-
-import pandas as pd
-
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
 import base64
 import functools
-
 from common.my_enums import DataType
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -82,9 +76,9 @@ def get_uid_by_user(usr_name:str) ->str:
         check_info = query_sqlite(my_conn, check_sql)
         logger.debug(f"check_info {check_info}")
         if check_info:
-            check_data = check_info.get('data', None)
+            check_data = check_info.get('data', [])
         else:
-            check_data = None
+            check_data = []
         try:
             if check_data and check_data[0]:
                 uid = check_data[0][0]
@@ -379,6 +373,8 @@ def encrypt(dt: str, key:str) -> str:
     """
     密钥 key 需为16/24/32字节,密钥需为16/24/32字节，ECB模式不安全建议改用CBC+IV
     """
+    from Crypto.Cipher import AES
+    from Crypto.Util.Padding import pad
     cipher = AES.new(key.encode(), AES.MODE_ECB)
     data = pad(dt.encode(), AES.block_size)
     encrypted = cipher.encrypt(data)
@@ -387,9 +383,11 @@ def encrypt(dt: str, key:str) -> str:
     return dt_rt
 
 def decrypt(dt: str, key: str) -> str:
+    from Crypto.Cipher import AES
     cipher = AES.new(key.encode(), AES.MODE_ECB)
     encrypted_data = base64.b64decode(dt)
     decrypted = cipher.decrypt(encrypted_data)
+    from Crypto.Util.Padding import unpad
     pln_txt = unpad(decrypted, AES.block_size).decode()
     # logger.info(f"get_pln_txt_for_cypher_txt, {pln_txt}, {dt}")
     return pln_txt
@@ -622,6 +620,7 @@ def output_data(db_con, sql:str, data_format:str) -> str:
     if data.get('error'):
         raise RuntimeError(f"error_occurred_in_exec_sqlite_sql, err_info={data}, sql={sql}")
     # logger.debug(f"data {data} for {db_con}")
+    import pandas as pd
     df = pd.DataFrame(data.get('data'), columns=data['columns'])
     dt_fmt = data_format.lower()
 

@@ -21,4 +21,4 @@ RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime' && \
     ulimit -n 65535
 WORKDIR /opt/app
 EXPOSE 19000 19001
-ENTRYPOINT ["sh", "./boot.sh"]
+ENTRYPOINT ["sh", "./common/boot.sh"]

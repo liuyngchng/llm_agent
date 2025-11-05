@@ -11,7 +11,7 @@ import sys
 import time
 import requests
 
-from common import cfg_util
+from common.cfg_util import get_const
 from common.my_enums import AppType
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -115,11 +115,11 @@ def adjust_html_table_columns(html_content: str) -> str:
 
     headers = [th.text.strip() for th in header_row.find_all('th')]
     # 地理区域(省、市、区县)名称
-    area_name_str = cfg_util.get_const('area_name_list', AppType.CHAT2DB.name.lower())
+    area_name_str = get_const('area_name_list', AppType.CHAT2DB.name.lower())
     if not area_name_str:
         area_name_str = '["省", "市", "区", "县"]'
     # 组织机构(公司、团体)名称
-    org_str = cfg_util.get_const('organization_name_list', AppType.CHAT2DB.name.lower())
+    org_str = get_const('organization_name_list', AppType.CHAT2DB.name.lower())
     if not org_str:
         org_str='["公司", "机构", "单位"]'
     if not area_name_str or not org_str:
