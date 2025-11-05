@@ -187,7 +187,8 @@ async def list_models(api_key: str = Depends(verify_api_key)):
 @app.get("/")
 async def root():
     return {
-        "message": "BGE Embedding Service",
+        "message": "welcome to use BGE embedding service",
+        "model" : "bge-large-zh-v1.5",
         "version": "1.0",
         "endpoints": {
             "embeddings": "/v1/embeddings",
