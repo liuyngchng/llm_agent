@@ -12,7 +12,10 @@ echo "ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
 #/opt/llm_py_env/bin/gunicorn --timeout 240 -w 1 --threads 8 -b 0.0.0.0:19000 apps.${APP}.app:app
 # for HTTPS
 # 根据 APP 名称选择不同的启动方式
-if [ "${APP}" = "embedding" ] || [ "${APP}" = "mcp_server" ]; then
+if [ "${APP}" = "mcp_server" ]; then
+    echo "直接运行 mcp_server.py 文件..."
+    CMD="/opt/llm_py_env/bin/python -m apps.mcp_server.app"
+elif [ "${APP}" = "embedding" ]; then
     echo "检测到 embedding 应用，使用 uvicorn 启动..."
     # 使用 Uvicorn 启动 FastAPI 应用
     CMD="/opt/llm_py_env/bin/uvicorn \
