@@ -27,10 +27,13 @@ my_cfg = init_yml_cfg()
 # 加载模型
 model_path = my_cfg['model']['path']
 model_name = my_cfg['model']['name']
+api_key = my_cfg['model'].get('key', '')  # 从配置读取API密钥
 print(f"on host, or in container, model_path={model_path}, model_name={model_name}")
 
+
 def timeout(seconds=60):
-    """简单的超时装饰器（不使用signal）"""
+    """简单的超时装饰器"""
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -44,6 +47,56 @@ def timeout(seconds=60):
             return result
         return wrapper
     return decorator
+
+
+def authenticate_request():
+    """验证API密钥"""
+    # 检查是否设置了API密钥
+    if not api_key:
+        return True  # 如果没有设置密钥，则允许所有请求
+
+    # 从请求头获取Authorization
+    auth_header = request.headers.get('Authorization', '')
+
+    if not auth_header:
+        logger.warning("Missing Authorization header")
+        return False
+
+    # 支持 Bearer token 和直接API key
+    if auth_header.startswith('Bearer '):
+        token = auth_header[7:]  # 去掉 'Bearer ' 前缀
+    else:
+        token = auth_header
+
+    # 验证token
+    if token == api_key:
+        return True
+    else:
+        logger.warning(f"Invalid API key: {token[:8]}...")
+        return False
+
+
+def require_auth(f):
+    """认证装饰器"""
+
+    @functools.wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not authenticate_request():
+            return Response(
+                json.dumps({
+                    "error": {
+                        "message": "Invalid authentication",
+                        "type": "invalid_request_error",
+                        "code": 401
+                    }
+                }, ensure_ascii=False),
+                mimetype='application/json',
+                status=401
+            )
+        return f(*args, **kwargs)
+
+    return decorated_function
+
 
 try:
     abs_path = os.path.abspath(model_path)
@@ -149,15 +202,12 @@ def gen_stream(prompt, max_tokens, temperature):
 
         generated_ids = outputs.sequences[0]
         total_length = len(generated_ids)
-
         logger.info(f"Generated {total_length - prompt_length} new tokens")
-
         accumulated_text = ""
         for i in range(prompt_length, total_length):
             token_id = generated_ids[i].unsqueeze(0)
             token_text = tokenizer.decode(token_id, skip_special_tokens=True,
                                           clean_up_tokenization_spaces=False)
-
             if token_text.strip():
                 accumulated_text += token_text
                 yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
@@ -221,6 +271,7 @@ def gen_normal_response(prompt, max_tokens, temperature):
 
 
 @app.route('/v1/chat/completions', methods=['POST'])
+@require_auth  # 添加认证
 def chat_completions():
     start_time = time.time()
     data = request.json
@@ -266,6 +317,7 @@ def chat_completions():
 
 
 @app.route('/v1/models', methods=['GET'])
+@require_auth  # 添加认证
 def list_models():
     timestamp = int(time.time())
     return json.dumps({
@@ -281,6 +333,7 @@ def list_models():
 
 @app.route('/health', methods=['GET'])
 def health_check():
+    """健康检查"""
     return json.dumps({
         "status": "healthy",
         "model_loaded": True,
@@ -288,8 +341,10 @@ def health_check():
         "timestamp": int(time.time())
     }, ensure_ascii=False)
 
+
 @app.route('/', methods=['GET'])
 def welcome():
+    """欢迎页面"""
     return json.dumps({
         "status": 200,
         "msg": "hello LLM world, your can use API to interact with me",
