@@ -27,7 +27,7 @@ docker run -dit --name ${CONTAINER}  \
   -p 19005:19000 \
   -p 19006:19001 \
   -e APP_NAME=${APP} \
-  llm_mcp_server:1.0
+  llm_mcp_server:1.1
 
 echo "容器 ${CONTAINER} 已启动"
 docker ps -a  | grep ${CONTAINER} --color=always

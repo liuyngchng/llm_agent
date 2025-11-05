@@ -16,8 +16,6 @@ cp ${APP_DIR}/logging.conf ./
 echo "正在部署 ${APP} 服务"
 docker stop ${CONTAINER}
 echo "正在删除 ${CONTAINER} 容器"
-docker rm ${CONTAINER}
-echo "正在创建 ${CONTAINER} 容器"
 docker stop ${CONTAINER}
 docker rm ${CONTAINER}
 #docker run -dit --name ${app} --network host --rm \
@@ -27,7 +25,7 @@ docker run -dit --name ${CONTAINER}  \
   -p 19005:19000 \
   -p 19006:19001 \
   -e APP_NAME=${APP} \
-  llm_mcp_client:1.0
+  llm_mcp_client:1.1
 
 echo "容器 ${CONTAINER} 已启动"
 docker ps -a  | grep ${CONTAINER} --color=always

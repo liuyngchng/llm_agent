@@ -4,10 +4,12 @@ FROM ubuntu_py:24.04 as builder
 
 WORKDIR /opt
 ARG PROXY=""
+ARG APP="mcp_client"
 #ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn"
-# 确保当前目录下的目录 ./whl_py_dir 存在，且 whl 离线包与当前 python 的版本完全一致, 离线安装时使用
-COPY ./whl_py_dir /tmp/whl
-RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn uvicorn uv \
+# 确保当前目录下的目录 ./whl_py_dir_{APP} 存在，且 whl 离线包与当前 python 的版本完全一致, 离线安装时使用
+COPY ./whl_py_dir_${APP} /tmp/whl
+RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl \
+    gunicorn uvicorn uv \
     mcp mcp[cli] concurrent_log_handler pyyaml flask requests $PROXY && \
     rm -rf /tmp/whl && \
     rm -rf ~/.cache/pip

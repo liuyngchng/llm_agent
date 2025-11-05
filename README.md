@@ -10,7 +10,7 @@ gitee 平台地址为：[https://gitee.com/liuyngchng/gitee_llm_agent](https://g
 
 | No.   | 名称      | 服务类型 | 端口 | 描述         |
 |---------| --- |------------|------------|------------|
-| 1 | apps/db_svc | HTTP/HTTPS | 18000 | 开放平台，提供与其他平台进行集成的接口 |
+| 1 | apps/gateway | HTTP/HTTPS | 18000 | 开放平台，提供与其他平台进行集成的接口 |
 | 2 | apps/chat2sql | HTTP/HTTPS | 19001 | AI 数据库查询，支持MySQL, Oracle, DM8 |
 | 3 | apps/chat | HTTP/HTTPS | 19002 | AI 知识库问答, 提供基于知识库的问答能力 |
 | 4 | apps/docx | HTTP/HTTPS | 19003 | AI 文档生成，支持在线生成 Word docx文档 |

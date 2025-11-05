@@ -1,6 +1,28 @@
 #!/bin/bash
-# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
-WHL_PY_DIR="./whl_py_dir"
+# 检查当前目录结构，确保上级目录为 build，上上级目录为 apps
+GRANDPARENT_DIR_LEGAL="apps"
+PARENT_DIR_LEGAL="mcp_server"
+APP="mcp_server"
+CURRENT_DIR=$(pwd)
+echo "current_dir: ${CURRENT_DIR}"
+PARENT_DIR=$(dirname "${CURRENT_DIR}")
+echo "parent_dir: $(basename "${PARENT_DIR}")"
+GRANDPARENT_DIR=$(dirname "${PARENT_DIR}")
+echo "grandparent_dir: $(basename "${GRANDPARENT_DIR}")"
+
+if [[ "$(basename "${PARENT_DIR}")" != "${PARENT_DIR_LEGAL}" ]]; then
+    echo "错误：请在目录 ${GRANDPARENT_DIR_LEGAL}/${APP}/${PARENT_DIR_LEGAL} 下执行脚本"
+    exit 1
+fi
+
+if [[ "$(basename "${GRANDPARENT_DIR}")" != "${GRANDPARENT_DIR_LEGAL}" ]]; then
+    echo "错误：请在目录 ${GRANDPARENT_DIR_LEGAL}/${APP}/${PARENT_DIR_LEGAL} 下执行脚本"
+    exit 1
+fi
+
+echo "当前目录为: ${GRANDPARENT_DIR_LEGAL}/${PARENT_DIR_LEGAL}/$(basename "${CURRENT_DIR}")"
+
+WHL_PY_DIR="./whl_py_dir_${APP}"
 # 检查文件夹是否存在
 if [ ! -d "${WHL_PY_DIR}" ]; then
     echo "未找到目录: ${WHL_PY_DIR} ，正在创建..."
@@ -12,14 +34,34 @@ if [ ! -d "${WHL_PY_DIR}" ]; then
         exit 1
     fi
 fi
-echo "进入目录:${WHL_PY_DIR}"
-cd ${WHL_PY_DIR} || exit 1
-echo "current_dir:$(pwd)"
-pip download gunicorn uvicorn uv \
-    mcp mcp[cli] concurrent_log_handler pyyaml flask requests
-cd ..
-echo "current_dir:$(pwd)"
+read -p "是否需要下载依赖包？(Y/N): " confirm
+if [[ $confirm == [Yy] ]]; then
+    echo "进入目录:${WHL_PY_DIR}"
+    cd ${WHL_PY_DIR} || exit 1
+    echo "current_dir:$(pwd)"
 
-docker build --rm -f ./Dockerfile_mcp_server ./ -t llm_mcp_server:1.0
+    pip download gunicorn uvicorn uv \
+      mcp mcp[cli] concurrent_log_handler pyyaml flask requests
+
+    cd ..
+else
+    echo "跳过依赖包下载步骤，直接使用 ${WHL_PY_DIR} 目录下的包进行镜像构建"
+
+    # 检查 whl_py_dir 目录是否存在以及是否有 .whl 文件
+    if [ ! -d "${WHL_PY_DIR}" ]; then
+        echo "错误：目录 ${WHL_PY_DIR} 不存在，无法进行镜像构建"
+        exit 1
+    fi
+
+    # 检查目录下是否有 .whl 文件
+    if ! ls ${WHL_PY_DIR}/*.whl 1> /dev/null 2>&1; then
+        echo "错误：目录 ${WHL_PY_DIR} 下没有找到 .whl 文件，无法进行镜像构建"
+        exit 1
+    fi
+fi
+echo "current_dir:$(pwd)"
+docker build --rm -f ./Dockerfile_${APP} ./ -t llm_${APP}:1.1
 docker images | grep '<none>' | awk -F ' ' '{print $3}' | xargs docker rmi -f
 docker images
+
+
