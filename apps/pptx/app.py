@@ -332,14 +332,56 @@ def fill_pptx_with_txt(uid: int, doc_type: str, doc_title: str, keywords: str, t
                 f"task_id: {task_id}, file_name: {file_name}")
 
 
+def check_my_ppt(my_ppt_file_path: str, ppt_template_file_path: str) -> str:
+    """
+    检查并格式化PPT文件以符合指定模板的要求。
+
+    Args:
+        my_ppt_file_path: 需要检查和格式化的PPT文件路径
+        ppt_template_file_path: 用作参考的PPT模板文件路径
+
+    Returns:
+        格式化后的PPT文件路径
+    """
+    logger.info(f"检查 PPT 文件: {my_ppt_file_path}, 模板文件 {ppt_template_file_path}")
+    from apps.pptx.template_extractor import TemplateExtractor
+    from apps.pptx.ppt_formatter import PPTFormatter
+    import os
+
+    template_extractor = TemplateExtractor()
+    template_styles = template_extractor.extract_complete_template(ppt_template_file_path)
+    logger.info(f"抽取到的 PPT 样式: {template_styles}")
+    formatter = PPTFormatter()
+
+    input_dir = os.path.dirname(my_ppt_file_path)
+    input_filename = os.path.basename(my_ppt_file_path)
+    name, ext = os.path.splitext(input_filename)
+    output_filename = f"{name}_formatted{ext}"
+    out_put_file_path = os.path.join(input_dir, output_filename)
+    logger.info(f"输出文件的保存路径: {out_put_file_path}")
+
+
+    if os.path.exists(out_put_file_path):
+        logger.info(f"输出文件已存在，删除: {out_put_file_path}")
+        os.remove(out_put_file_path)
+
+    # 4. 格式化PPT
+    logger.info(f"开始格式化 PPT: {my_ppt_file_path}")
+    formatted_presentation = formatter.format_ppt(my_ppt_file_path, template_styles)
+
+    logger.info(f"格式化已完成，保存至: {out_put_file_path}")
+    formatted_presentation.save(out_put_file_path)
+
+    return out_put_file_path
+
+
 # 创建应用实例
 app = create_app()
 
 # 当直接运行脚本时，启动开发服务器
 if __name__ == '__main__':
-    # result = VdbMeta.get_vdb_file_processing_list()
-    # logger.info(f"vdb_file_processing_list: {result}")
-    # 确保后台任务在直接运行时也启动
-    # start_background_tasks_once()
-    port = get_console_arg1()
-    app.run(host='0.0.0.0', port=port)
+    # port = get_console_arg1()
+    # app.run(host='0.0.0.0', port=port)
+    my_ppt = "/home/rd/doc/文档生成/PPT修改/我写的PPT.pptx"
+    ppt_template = "/home/rd/doc/文档生成/PPT修改/PPT模板.pptx"
+    check_my_ppt(my_ppt, ppt_template)

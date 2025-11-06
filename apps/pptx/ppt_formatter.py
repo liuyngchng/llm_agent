@@ -319,7 +319,7 @@ class PPTFormatter:
             'compliance_score': 100 - (len(violations) * 10) if violations else 100
         }
 
-    def format_ppt(self, source_path, template_styles):
+    def format_ppt(self, source_path: str, template_styles):
         """根据模板样式格式化源PPT"""
         source_ppt = Presentation(source_path)
         formatted_ppt = Presentation()  # 新建基于模板的PPT

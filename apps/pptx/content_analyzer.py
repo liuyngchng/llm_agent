@@ -127,7 +127,10 @@ class ContentAnalyzer:
             }
             return type_mapping.get(ph_type, 'text')
 
-        if hasattr(shape, 'image') and shape.image:
+        # 优先检查是否为线条类型
+        if hasattr(shape, 'shape_type') and shape.shape_type == MSO_SHAPE_TYPE.LINE:
+            return 'line'
+        elif hasattr(shape, 'image') and shape.image:
             return 'image'
         elif hasattr(shape, 'chart') and shape.chart:
             return 'chart'
@@ -135,8 +138,6 @@ class ContentAnalyzer:
             return 'table'
         elif hasattr(shape, 'text_frame') and shape.text_frame.text.strip():
             return 'text'
-        elif hasattr(shape, 'auto_shape_type'):
-            return 'shape'
         elif hasattr(shape, 'shape_type'):
             if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
                 return 'image'
@@ -146,8 +147,12 @@ class ContentAnalyzer:
                 return 'table'
             else:
                 return 'shape'
+        elif hasattr(shape, 'auto_shape_type'):
+            return 'shape'
         else:
             return 'unknown'
+
+
 
     def _extract_text_properties(self, shape):
         """提取文本属性"""
@@ -286,7 +291,7 @@ class ContentAnalyzer:
     def _calculate_content_density(self, slide):
         """计算内容密度"""
         elements = self._catalog_slide_elements(slide)
-        total_area = slide.slide_width * slide.slide_height
+        total_area = slide.slide_layout.slide_master.slide_width * slide.slide_layout.slide_master.slide_height
 
         if total_area == 0:
             return 0
@@ -356,7 +361,7 @@ class ContentAnalyzer:
 
     def _extract_color_info(self, color):
         """提取颜色信息"""
-        if not color or not color.rgb:
+        if not color or not hasattr(color, 'rgb') or not color.rgb:
             return None
 
         return {
@@ -560,7 +565,7 @@ class ContentAnalyzer:
 
     def _calculate_area_coverage(self, slide, elements):
         """计算面积覆盖率"""
-        total_area = slide.slide_width * slide.slide_height
+        total_area = slide.slide_layout.slide_master.slide_width * slide.slide_layout.slide_master.slide_height
         if total_area == 0:
             return 0
 

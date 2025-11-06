@@ -153,14 +153,27 @@ class TemplateExtractor:
     def _extract_paragraph_font(paragraph):
         """提取段落字体信息"""
         font = paragraph.font
+        color_info = None
+        try:
+            # 安全地获取颜色信息
+            if hasattr(font.color, 'rgb') and font.color.rgb:
+                color_info = str(font.color.rgb)
+            elif hasattr(font.color, 'theme_color') and font.color.theme_color:
+                # 可以选择保留主题颜色信息或者设置为默认值
+                color_info = f"theme:{font.color.theme_color}"
+        except (AttributeError, TypeError):
+            # 处理无法获取颜色的情况
+            pass
+
         return {
             'name': font.name,
             'size': font.size,
             'bold': font.bold,
             'italic': font.italic,
-            'color': str(font.color.rgb) if font.color.rgb else None,
+            'color': color_info,
             'underline': font.underline
         }
+
 
     @staticmethod
     def _extract_shape_fill(shape):
@@ -210,17 +223,27 @@ class TemplateExtractor:
                 # 获取第一个段落的字体作为代表
                 for paragraph in shape.text_frame.paragraphs:
                     font = paragraph.font
+                    color_info = None
+                    try:
+                        if hasattr(font.color, 'rgb') and font.color.rgb:
+                            color_info = str(font.color.rgb)
+                        elif hasattr(font.color, 'theme_color') and font.color.theme_color:
+                            color_info = f"theme:{font.color.theme_color}"
+                    except (AttributeError, TypeError):
+                        pass
+
                     font_info = {
                         'name': font.name,
                         'size': font.size,
                         'bold': font.bold,
                         'italic': font.italic,
-                        'color': str(font.color.rgb) if font.color.rgb else None
+                        'color': color_info
                     }
                     break  # 只取第一个段落
         except:
             pass
         return font_info
+
 
     @staticmethod
     def _get_text_alignment(shape):
@@ -409,7 +432,12 @@ class TemplateExtractor:
         elif hasattr(obj, '__dict__'):
             return self._make_serializable(obj.__dict__)
         else:
-            return str(obj)
+            # 对于其他不可序列化的对象，尝试转换为字符串
+            try:
+                return str(obj)
+            except:
+                return "<unserializable object>"
+
 
 
 # 使用示例
