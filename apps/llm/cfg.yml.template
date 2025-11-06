@@ -6,3 +6,5 @@ model:
     name: deepseek-r1
     # 访问模型 API 的 key
     key: your-secret-key
+    # 当本地没有 GPU 资源时， 设置为 True， 启用 Mock 模式，将返回假数据
+    is_mock: true
