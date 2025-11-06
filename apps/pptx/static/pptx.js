@@ -83,8 +83,8 @@ function handleContentFileUpload(input) {
     if (!file) return;
 
     // 验证文件类型
-    if (!file.name.endsWith('.txt') && !file.name.endsWith('.md')) {
-        alert('请上传 .txt 或 .md 格式的文件');
+    if (!file.name.endsWith('.pptx')) {
+        alert('请上传 .pptx 格式的文件');
         return;
     }
 
