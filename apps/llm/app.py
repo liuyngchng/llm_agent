@@ -320,7 +320,7 @@ def chat_completions():
 @require_auth  # 添加认证
 def list_models():
     timestamp = int(time.time())
-    return json.dumps({
+    data = {
         "object": "list",
         "data": [{
             "id": model_name,
@@ -328,29 +328,41 @@ def list_models():
             "created": timestamp,
             "owned_by": "deepseek"
         }]
-    }, ensure_ascii=False)
+    }
+    return Response(
+        json.dumps(data, ensure_ascii=False),
+        mimetype='application/json; charset=utf-8'
+    )
 
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """健康检查"""
-    return json.dumps({
+    data = {
         "status": "healthy",
         "model_loaded": True,
         "model": model_name,
         "timestamp": int(time.time())
-    }, ensure_ascii=False)
+    }
+    return Response(
+        json.dumps(data, ensure_ascii=False),
+        mimetype='application/json; charset=utf-8'
+    )
 
 
 @app.route('/', methods=['GET'])
 def welcome():
     """欢迎页面"""
-    return json.dumps({
+    data={
         "status": 200,
         "msg": "hello LLM world, your can use API to interact with me",
         "model": model_name,
         "timestamp": int(time.time())
-    }, ensure_ascii=False)
+    }
+    return Response(
+        json.dumps(data, ensure_ascii=False),
+        mimetype='application/json; charset=utf-8'
+    )
 
 
 if __name__ == '__main__':
