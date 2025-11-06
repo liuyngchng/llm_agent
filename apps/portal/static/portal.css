@@ -5,6 +5,29 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+.category-container {
+    padding: 20px 40px 40px;
+}
+
+.category-section {
+    margin-bottom: 40px;
+}
+
+.category-title {
+    font-size: 1.8rem;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e4edf5;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.category-title i {
+    color: #4b6cb7;
+}
+
 body {
     background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
     min-height: 100vh;
@@ -74,7 +97,7 @@ h1 {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 25px;
-    padding: 40px;
+    margin-bottom: 10px;
 }
 
 .app-card {
@@ -174,6 +197,12 @@ h1 {
 }
 
 @media (max-width: 768px) {
+    .category-container {
+        padding: 15px 25px 25px;
+    }
+    .category-title {
+        font-size: 1.5rem;
+    }
     .container {
         min-width: auto;
         width: 100%;
@@ -196,6 +225,5 @@ h1 {
 
     .app-grid {
         grid-template-columns: 1fr;
-        padding: 25px;
     }
 }
