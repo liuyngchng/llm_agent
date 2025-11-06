@@ -63,6 +63,7 @@ class AppType(Enum):
     CHAT = "智能问答"
     NL2SQL = "智能问数 "
     DOCX = "文档生成"
+    PPTX = "PPT 校对"
     CSM = "智能客服"
     ORD_GEN = "订单生成"
     CHAT2DB = "智能问数"

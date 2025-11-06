@@ -3,73 +3,343 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 """
-通过 PPT 模板分析用户 PPT 中的内容是否符合规范，直接对报告进行调整不符合模板规范的直接修改  PPT 格式。
+PPT 文件校对工具
+pip install flask
 """
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory
+import json
+import logging.config
 import os
-from werkzeug.utils import secure_filename
-from apps.pptx.ppt_formatter import PPTFormatter
+import threading
+import time
 
-# 初始化 Flask 应用
-app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['ALLOWED_EXTENSIONS'] = {'pptx'}
+from flask import (Flask, request, jsonify, send_from_directory,
+                   abort, redirect, url_for, render_template)
 
-# 确保上传目录存在
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+from apps.pptx import pptx_meta_util
+from common import my_enums, statistic_util
+from common.my_enums import AppType
+from common.sys_init import init_yml_cfg
+from common.bp_auth import auth_bp, get_client_ip, auth_info, SESSION_TIMEOUT
+from common.cm_utils import get_console_arg1
 
-# 检查文件扩展名是否合法
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+logging.config.fileConfig('logging.conf', encoding="utf-8")
+logger = logging.getLogger(__name__)
 
-# 首页路由
-@app.route('/')
-def index():
-    return render_template('index.html')
+UPLOAD_FOLDER = 'upload_doc'
+TASK_EXPIRE_TIME_MS = 7200 * 1000  # 任务超时时间，默认2小时
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+my_cfg = init_yml_cfg()
+os.system(
+    "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
+)
 
-# 文件上传路由
-@app.route('/upload', methods=['GET', 'POST'])
-def upload_files():
-    if request.method == 'POST':
-        # 检查文件是否上传
-        if 'template_file' not in request.files or 'source_file' not in request.files:
-            return redirect(request.url)
-        
-        template_file = request.files['template_file']
-        source_file = request.files['source_file']
-        
-        if template_file.filename == '' or source_file.filename == '':
-            return redirect(request.url)
-        
-        if template_file and allowed_file(template_file.filename) and source_file and allowed_file(source_file.filename):
-            # 保存上传的文件
-            template_filename = secure_filename(template_file.filename)
-            source_filename = secure_filename(source_file.filename)
-            
-            template_path = os.path.join(app.config['UPLOAD_FOLDER'], template_filename)
-            source_path = os.path.join(app.config['UPLOAD_FOLDER'], source_filename)
-            
-            template_file.save(template_path)
-            source_file.save(source_path)
-            
-            # 调用 PPTFormatter 处理文件
-            formatter = PPTFormatter()
-            template_styles = formatter.extract_template_styles(template_path)
-            formatted_ppt = formatter.auto_format_ppt(source_path, template_styles)
-            
-            # 保存处理后的文件
-            output_filename = 'formatted_' + source_filename
-            output_path = os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
-            formatted_ppt.save(output_path)
-            
-            return redirect(url_for('download_file', filename=output_filename))
-    
-    return render_template('index.html')
+PPTX_MIME_TYPE ="application/vnd.openxmlformats-officedocument.presentationml.presentation"
 
-# 文件下载路由
-@app.route('/download/<filename>')
-def download_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+def create_app():
+    """应用工厂函数"""
+    app = Flask(__name__, static_folder=None)
+    app.config['JSON_AS_ASCII'] = False
+    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    app.config['TASK_EXPIRE_TIME_MS'] = TASK_EXPIRE_TIME_MS
+    app.config['MY_CFG'] = my_cfg
+    # 注册蓝图
+    app.register_blueprint(auth_bp)
+    # 注册路由
+    register_routes(app)
+    return app
 
+
+def register_routes(app):
+    """注册所有路由"""
+    @app.route('/static/<path:file_name>')
+    def get_static_file(file_name):
+        static_dirs = [
+            os.path.join(os.path.dirname(__file__), '../../common/static'),
+            os.path.join(os.path.dirname(__file__), 'static'),
+        ]
+
+        for static_dir in static_dirs:
+            if os.path.exists(os.path.join(static_dir, file_name)):
+                # logger.debug(f"get_static_file, {static_dir}, {file_name}")
+                return send_from_directory(static_dir, file_name)
+        logger.error(f"no_file_found_error, {file_name}")
+        abort(404)
+
+    @app.route('/')
+    def app_home():
+        logger.info("redirect_auth_login_index")
+        return redirect(url_for('auth.login_index', app_source=my_enums.AppType.PPTX.name.lower()))
+
+
+    @app.route('/pptx/upload', methods=['POST'])
+    def upload_pptx_template_file():
+        """
+        上传 Word pptx 会议纪要文档模板
+        """
+        logger.info(f"upload_pptx_template_file, {request}")
+        if 'file' not in request.files:
+            return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
+        file = request.files['file']
+        uid = int(request.form.get('uid'))
+        logger.info(f"{uid}, upload_pptx_template_file")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.PPTX.name.lower(),
+                warning_info=warning_info
+
+            ))
+        if file.filename == '':
+            return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
+
+        # 生成任务ID， 使用毫秒数
+        task_id = int(time.time() * 1000)
+        filename = f"{task_id}_{file.filename}"
+        save_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(save_path)
+        logger.info(f"upload_file_saved_as {filename}, {task_id}")
+        info = {
+            "task_id": task_id,
+            "file_name": filename,
+        }
+        logger.info(f"upload_pptx_template_file, {info}")
+        return json.dumps(info, ensure_ascii=False), 200
+
+    @app.route("/pptx/gen", methods=['POST'])
+    def gen_pptx():
+        """
+        按照一定的 Word 文件模板, 生成文档
+        在word文档模板中，有三级目录，在每个小节中，有用户提供的写作要求
+        """
+        data = request.json
+        uid = data.get("uid")
+        logger.info(f"{uid}, gen_pptx_dt, {data}")
+        statistic_util.add_access_count_by_uid(int(uid), 1)
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return jsonify(warning_info), 400
+        task_id = int(data.get("task_id"))
+        doc_title = data.get("doc_title")
+
+        if not doc_title:
+            err_info = {"error": "文档标题不能为空"}
+            logger.error(f"err_occurred, {err_info}")
+            return json.dumps(err_info, ensure_ascii=False), 400
+        template_file_name = data.get("file_name")
+        if not task_id or not template_file_name or not uid:
+            err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
+            logger.error(f"err_occurred, {err_info}")
+            return jsonify(err_info), 400
+        keywords = data.get("keywords")
+        if not keywords:
+            err_info = {"error": "会议纪要内容为空"}
+            logger.error(f"err_occurred, {err_info}")
+            return json.dumps(err_info, ensure_ascii=False), 400
+
+        template_file_name = data.get("file_name")
+        doc_type = my_enums.WriteDocType.MEETING_REPORT.value
+        pptx_meta_util.save_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
+        threading.Thread(
+            target=fill_pptx_with_txt,
+            args=(uid, doc_type, doc_title, keywords, task_id, template_file_name)
+        ).start()
+
+        info = {"status": "started", "task_id": task_id}
+        logger.info(f"write_doc_with_pptx_template, {info}")
+        return json.dumps(info, ensure_ascii=False), 200
+
+    @app.route('/pptx/task', methods=['GET'])
+    def pptx_task_index():
+        """
+        获取当前在进行的写作任务，渲染页面
+        """
+        logger.info(f"pptx_index, {request.args}")
+        uid = request.args.get('uid')
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.PPTX.name.lower(),
+                warning_info=warning_info
+
+            ))
+        statistic_util.add_access_count_by_uid(int(uid), 1)
+        app_source = request.args.get('app_source')
+        warning_info = request.args.get('warning_info', "")
+        sys_name = my_enums.AppType.get_app_type(app_source)
+        ctx = {
+            "uid": uid,
+            "sys_name": sys_name,
+            "app_source": app_source,
+            "warning_info": warning_info,
+        }
+        dt_idx = "pptx_my_task.html"
+        logger.info(f"{uid}, return_page_with_no_auth {dt_idx}")
+        return render_template(dt_idx, **ctx)
+
+    @app.route('/pptx/my/task', methods=['POST'])
+    def my_pptx_task():
+        """
+        获取用户的写作任务
+        """
+        data = request.json
+        uid = int(data.get('uid'))
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            # logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.PPTX.name.lower(),
+                warning_info=warning_info
+
+            ))
+        logger.info(f"{uid}, get_my_pptx_task, {data}")
+        task_list = pptx_meta_util.get_user_task_list(uid)
+        return json.dumps(task_list, ensure_ascii=False), 200
+
+    @app.route('/pptx/download/<filename>', methods=['GET'])
+    def download_file_by_filename(filename):
+        """
+        下载文件
+        ：param filename: 文件名， 格式如下 f"output_{task_id}.pptx"
+        """
+
+        uid = request.args["uid"]
+        logger.info(f"{uid}, download_file, {filename}")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.PPTX.name.lower(),
+                warning_info=warning_info
+
+            ))
+        statistic_util.add_access_count_by_uid(int(uid), 1)
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        absolute_path = os.path.abspath(file_path)
+        logger.info(f"文件检查 - 绝对路径: {absolute_path}")
+
+        if not os.path.exists(absolute_path):
+            logger.error(f"文件不存在: {absolute_path}")
+            abort(404)
+
+        logger.info(f"文件找到，准备发送: {absolute_path}")
+        try:
+            from flask import send_file
+            return send_file(
+                absolute_path,
+                as_attachment=True,
+                download_name=filename,
+                mimetype=PPTX_MIME_TYPE,
+            )
+        except Exception as e:
+            logger.error(f"文件发送失败: {str(e)}")
+            abort(500)
+
+    @app.route('/pptx/download/task/<task_id>', methods=['GET'])
+    def download_file_by_task_id(task_id):
+        """
+        根据任务ID下载文件
+        ：param task_id: 任务ID，其对应的文件名格式如下 f"output_{task_id}.pptx"
+        """
+
+        uid = request.args["uid"]
+        logger.info(f"{uid}, download_file_task_id, {task_id}")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.PPTX.name.lower(),
+                warning_info=warning_info
+
+            ))
+        statistic_util.add_access_count_by_uid(int(uid), 1)
+        filename = f"output_{task_id}.pptx"
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        absolute_path = os.path.abspath(file_path)
+        logger.info(f"文件检查 - 相对路径: {file_path}")
+        logger.info(f"文件检查 - 绝对路径: {absolute_path}")
+        logger.info(f"文件检查 - UPLOAD_FOLDER: {UPLOAD_FOLDER}")
+        logger.info(f"文件检查 - 当前工作目录: {os.getcwd()}")
+        if not os.path.exists(absolute_path):
+            logger.error(f"文件不存在: {absolute_path}")
+            abort(404)
+
+        if not os.access(absolute_path, os.R_OK):
+            logger.error(f"文件不可读: {absolute_path}")
+            abort(403)
+        logger.info(f"文件找到，准备发送: {absolute_path}")
+        try:
+            from flask import send_file
+            logger.info(f"使用 send_file 发送: {absolute_path}")
+            return send_file(
+                absolute_path,
+                as_attachment=True,
+                download_name=filename,
+                mimetype=PPTX_MIME_TYPE,
+            )
+        except Exception as e:
+            logger.error(f"文件发送失败: {str(e)}")
+            abort(500)
+
+    @app.route('/pptx/del/task/<task_id>', methods=['GET'])
+    def delete_file_info_by_task_id(task_id):
+        """
+        根据任务ID下载文件
+        ：param task_id: 任务ID，其对应的文件名格式如下 f"output_{task_id}.pptx"
+        """
+        logger.info(f"delete_file_task_id, {task_id}")
+        filename = f"output_{task_id}.pptx"
+        disk_file = os.path.join(UPLOAD_FOLDER, filename)
+        if os.path.exists(disk_file):
+            os.remove(disk_file)
+        else:
+            logger.warning(f"文件 {filename} 不存在， 无需删除物理文件, 只需删除数据库记录")
+        pptx_meta_util.delete_task(task_id)
+
+        return json.dumps({"msg": "删除成功", "task_id": task_id}, ensure_ascii=False), 200
+
+
+def fill_pptx_with_txt(uid: int, doc_type: str, doc_title: str, keywords: str, task_id: int, file_name: str):
+    """
+    按照固定的模板，将会议纪要内容填充至Word文档中
+    :param uid: 用户ID
+    :param doc_type: pptx文档内容类型
+    :param doc_title: pptx文档的标题
+    :param keywords: 会议内容要点
+    :param task_id: 任务ID
+    :param file_name: Word template 模板文件名
+    """
+    logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "
+                f"task_id: {task_id}, file_name: {file_name}")
+
+
+# 创建应用实例
+app = create_app()
+
+# 当直接运行脚本时，启动开发服务器
 if __name__ == '__main__':
-    app.run(debug=True)
+    # result = VdbMeta.get_vdb_file_processing_list()
+    # logger.info(f"vdb_file_processing_list: {result}")
+    # 确保后台任务在直接运行时也启动
+    # start_background_tasks_once()
+    port = get_console_arg1()
+    app.run(host='0.0.0.0', port=port)
