@@ -271,7 +271,7 @@ def gen_normal_response(prompt, max_tokens, temperature):
 
 
 @app.route('/v1/chat/completions', methods=['POST'])
-@require_auth  # 添加认证
+@require_auth
 def chat_completions():
     start_time = time.time()
     data = request.json
