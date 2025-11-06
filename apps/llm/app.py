@@ -509,7 +509,7 @@ def welcome():
         "msg": "hello LLM world, your can use API to interact with me",
         "model": model_name,
         "mock_mode": is_mock,
-        "api_key" : api_key,
+        "api_key" : return_api_key,
         ""
         "timestamp": int(time.time())
     }
