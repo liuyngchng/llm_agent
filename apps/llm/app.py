@@ -510,7 +510,7 @@ def welcome():
         "model": model_name,
         "mock_mode": is_mock,
         "api_key" : return_api_key,
-        ""
+        "endpoint": my_cfg['model']['end_point'],
         "timestamp": int(time.time())
     }
     return Response(

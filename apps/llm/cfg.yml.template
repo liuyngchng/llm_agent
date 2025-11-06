@@ -8,3 +8,5 @@ model:
     key: your-secret-key
     # 当本地没有 GPU 资源时， 设置为 True， 启用 Mock 模式，将返回假数据
     is_mock: true
+    # LLM 服务器地址, 例如  “http://127.0.0.1/v1”，部署到服务器时开启
+    end_point: https://11.10.36.2/v1
