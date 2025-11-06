@@ -326,9 +326,10 @@ def list_models():
             "id": model_name,
             "object": "model",
             "created": timestamp,
-            "owned_by": "deepseek"
+            "owned_by": "richard"
         }]
     }
+    logger.info(f"return data, {data}")
     return Response(
         json.dumps(data, ensure_ascii=False),
         mimetype='application/json; charset=utf-8'
