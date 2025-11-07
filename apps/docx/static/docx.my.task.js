@@ -81,11 +81,16 @@ function renderTasksTable(tasks) {
 
         // 文档下载
         const downloadCell = document.createElement('td');
-        downloadCell.innerHTML = `
-            <a href="/docx/download/task/${task.task_id}?uid=${uid}" class="action-btn action-download">
-                <i class="fas fa-download"></i> 全文下载
-            </a>
-        `;
+        if (task.percent === 100) {
+            downloadCell.innerHTML = `
+                <a href="/docx/download/task/${task.task_id}?uid=${uid}" class="action-btn action-download">
+                    <i class="fas fa-download"></i> 全文下载
+                </a>
+            `;
+        } else {
+            downloadCell.innerHTML = ''; // 未完成时留空
+            downloadCell.style.color = '#999'; // 可选：添加灰色提示
+        }
 
         // 操作 （刷新/重试/完成）
         const actionCell = document.createElement('td');
