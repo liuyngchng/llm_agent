@@ -3,7 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 """
-知识库问答系统
+AI 应用市场
 pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama \
  langchain_core langchain_community pandas tabulate pymysql cx_Oracle pycryptodome
 """
