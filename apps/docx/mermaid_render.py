@@ -43,7 +43,7 @@ class MermaidRenderer:
         try:
             # 清理Mermaid脚本
             cleaned_script = MermaidRenderer._clean_mermaid_script(mermaid_script)
-
+            logger.info(f"cleaned_script:{cleaned_script}, original_script:{mermaid_script}")
             # 发送到Kroki服务
             response = requests.post(
                 f"{self.kroki_url}/{output_format}",
@@ -78,9 +78,6 @@ class MermaidRenderer:
         """
         # 移除标签
         cleaned = mermaid_script.replace('<mermaid>', '').replace('</mermaid>', '').strip()
-        # 如果完全没有图表类型，添加默认的
-        if cleaned and not cleaned.startswith(('graph', 'sequenceDiagram', 'classDiagram', 'stateDiagram')):
-            cleaned = f"graph TD\n{cleaned}"
         return cleaned
 
     def insert_mermaid_to_docx(self, doc_path: str, mermaid_script: str,
@@ -216,20 +213,14 @@ def test_mermaid_render():
 
     # 测试ER图
     er_diagram = """
-        erDiagram
-            DEVICE_INFO ||--o{ REAL_TIME_DATA : "1:N"
-            DEVICE_INFO {
-                varchar device_id PK
-                varchar device_name
-                varchar device_type
-                datetime install_date
-            }
-            REAL_TIME_DATA {
-                bigint record_id PK
-                varchar device_id FK
-                numeric sensor_value
-                datetime collect_time
-            }
+        flowchart TD
+        %% this is a test comment
+            A["Investment Owner<br>华北天然气集团有限公司"] --> B["Asset Owner<br>输配分公司"]
+            A --> C["Primary Users<br>总部与区域分公司"]
+            B --> D["Field Users<br>一线场站操作人员"]
+            E["Feasibility Study Unit<br>中联工程技术咨询有限公司"] --> A
+            C --> F["System Operation"]
+            D --> F
         """
 
     try:
@@ -242,7 +233,7 @@ def test_mermaid_render():
         logger.info("测试图片已保存为 test_mermaid.png")
 
     except Exception as e:
-        logger.error(f"Mermaid渲染测试失败: {str(e)}")
+        logger.error(f"Mermaid渲染测试失败: {str(e)}, {renderer.kroki_url}")
 
 
 if __name__ == "__main__":
