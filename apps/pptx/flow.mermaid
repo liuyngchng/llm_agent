@@ -1,12 +1,6 @@
-graph TD
-    A[读取模板PPT] --> B[TemplateExtractor提取模板样式]
-    B --> C[保存模板样式到JSON]
-    D[读取源PPT] --> E[ContentAnalyzer分析每页内容]
-    E --> F[LayoutMatcher匹配最优版式]
-    F --> G[PPTFormatter创建新PPT并添加幻灯片]
-    G --> H[StyleApplicator应用模板样式]
-    H --> I[FormattingRules检查合规性]
-    I --> J{是否合规?}
-    J -->|否| K[自动修正]
-    K --> L[生成合规报告]
-    J -->|是| L
+
+%%系统技术架
+flowchart TD
+    A["Presentation Layer<br>Web/Mobile UI"] --> B["Application Layer<br>Business Modules"]
+    B --> C["Platform Layer<br>Unified Tech Platform"]
+    C --> D["Infrastructure Layer<br>Cloud Resources"]
