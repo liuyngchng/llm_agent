@@ -4,6 +4,7 @@
 """
 处理 docx 文档相关的元数据， 存储在 DB 中
 """
+import json
 import logging.config
 import sqlite3
 import time
@@ -106,6 +107,63 @@ def update_process_info_by_task_id(task_id: int, process_info: str, percent = 0)
     logger.info(f"update_docx_file_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"update_docx_file_info_dt {my_dt}")
+    return my_dt
+
+def save_para_info(task_id: int, tasks: list):
+    """
+    保存用户文档生成任务的系统子任务清单,,一个文档写作任务的任务ID task_id 对应多个 docx_para_info 记录
+    :param task_id: process task id
+    :param tasks: 单个文档生成的任务清单信息
+    :return:
+    """
+    if not task_id or not tasks:
+        raise RuntimeError(f"param_null_err, {task_id}, {tasks}")
+    my_values = ""
+    for task in tasks:
+        if isinstance(task['current_heading'], list):
+            heading_str = json.dumps(task['current_heading'], ensure_ascii=False)
+        else:
+            heading_str = str(task['current_heading'])
+        heading_escaped = heading_str.replace("'", "''")
+        if my_values:
+            my_values = f"{my_values}, ({task['task_id']}, {task['para_id']}, '{heading_escaped}')"
+        else:
+            my_values = f"({task['task_id']}, {task['para_id']}, '{heading_escaped}')"
+    sql = f"insert into docx_para_info (task_id, para_id, heading) values {my_values}"
+    logger.info(f"save_docx_para_info_sql, {sql}")
+    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"save_docx_para_info_dt, {my_dt}")
+    return my_dt
+
+def update_para_info(task_id: int, para_id: int, gen_txt: str):
+    """
+    保存用户文档生成任务的系统子任务清单,,一个文档写作任务的任务ID task_id 对应多个 docx_para_info 记录
+    :param task_id: process task id
+    :param para_id: 文档段落 ID
+    :param gen_txt: 当前段落生成的文本，后续将会将文本插入  para_id 之后
+    :return:
+    """
+    if not task_id or not para_id or not gen_txt:
+        raise RuntimeError(f"param_null_err, {task_id}, {para_id}, {gen_txt}")
+    sql = f"update docx_para_info set gen_txt = '{gen_txt}', status=1 where task_id = {task_id} and para_id = {para_id} limit 1"
+    logger.info(f"update_docx_para_info_sql, {sql}")
+    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"update_docx_para_info_dt, {my_dt}")
+    return my_dt
+
+def get_para_info(task_id: int, para_id: int)-> list:
+    """
+    查询用户文档生成需求的并行子任务清单,一个文档写作任务的任务ID task_id 对应多个para_info
+    :param task_id: 文档处理的任务 ID
+    :param para_id: 文档段落 ID
+    :return:
+    """
+    if not task_id or not para_id:
+        raise RuntimeError(f"param_null_err, {task_id}, {para_id}")
+    sql = f"select * from docx_para_info where task_id = {task_id} and para_id = {para_id} limit 1"
+    logger.info(f"get_para_info_sql, {sql}")
+    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"get_para_info_dt, {my_dt}")
     return my_dt
 
 def update_gen_txt_count_by_task_id(task_id: int, word_count: int):

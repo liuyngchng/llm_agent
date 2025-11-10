@@ -150,7 +150,8 @@ class DocxEditor:
             initial_info = f"需处理 {len(tasks)} 个段落，计划启动 {self.executor._max_workers} 个任务"
             logger.info(f"{task_id}, {initial_info}")
             docx_meta_util.update_process_info_by_task_id(task_id, initial_info, 0)
-            doc_gen_results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
+            docx_meta_util.save_para_info(task_id, tasks)
+            doc_gen_results = self._submit_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
             success = DocxEditor._insert_para_to_doc(input_file, output_file, doc_gen_results)
             if not success:
                 error_info = "文档更新失败"
@@ -230,7 +231,8 @@ class DocxEditor:
                 'current_heading': current_heading.copy(),
                 'sys_cfg': sys_cfg,
                 'vdb_dir': vdb_dir,
-                'para_index': index,        #  段落索引
+                'para_id': index,                #  段落索引
+                'gen_txt': "",                      # 生成的文本，后续任务添加内容
             }
             tasks.append(task)
             process_info = f"正在扫描第 {index}/{para_count} 段， 已创建 {len(tasks)} 个批处理任务"
@@ -238,9 +240,9 @@ class DocxEditor:
         logger.info(f"_collect_doc_with_prompt, {len(tasks)}")
         return tasks
 
-    def _exec_tasks(self, tasks: List[Dict[str, Any]],
-                    task_id: int, start_time: float,
-                    total_tasks: int, include_mermaid: bool = False) -> Dict[str, Dict]:
+    def _submit_tasks(self, tasks: List[Dict[str, Any]],
+            task_id: int, start_time: float,
+            total_tasks: int, include_mermaid: bool = False) -> Dict[str, Dict]:
         """
         并行执行文本生成任务
         :param tasks: 任务列表
@@ -255,15 +257,15 @@ class DocxEditor:
         future_to_key = {}
         last_update_time = time.time()
         update_interval = 2  # 每2秒更新一次进度，避免过于频繁
-
         # 如果包含Mermaid任务，总任务数需要加1
         actual_total_tasks = total_tasks + 1 if include_mermaid else total_tasks
-
         # 提交所有任务到线程池
         for task in tasks:
+            if task['gen_txt']:
+                logger.info(f"{task['task_id']}, ignore_finished_sub_task, para_id={task['para_id']}")
+                continue
             future = self.executor.submit(DocxEditor._gen_doc_para, task)
             future_to_key[future] = task['unique_key']
-
         # 监控任务进度并收集结果
         for future in as_completed(future_to_key, timeout=self.timeout):
             key = future_to_key[future]
@@ -294,15 +296,11 @@ class DocxEditor:
                         remaining_str = f"约 {int(estimated_remaining)} 秒"
                     else:
                         remaining_str = f"约 {int(estimated_remaining / 60)} 分 {int(estimated_remaining % 60)} 秒"
-
                     progress_info = f"正在处理第 {completed}/{actual_total_tasks} 个任务，{elapsed_time}，剩余{remaining_str}"
                 else:
                     progress_info = f"正在处理第 {completed}/{actual_total_tasks} 个任务，{elapsed_time}"
-
-                docx_meta_util.update_process_info_by_task_id(
-                    task_id, progress_info, percent)
+                docx_meta_util.update_process_info_by_task_id(task_id, progress_info, percent)
                 last_update_time = current_time
-
         return results
 
     @staticmethod
@@ -318,12 +316,13 @@ class DocxEditor:
                 task['sys_cfg']['api']
             )
             logger.debug(f"gen_txt_user_comment, {task['user_comment']}")
-
+            task_id = task['task_id']
+            para_id = task['para_id']
             # 生成文本
-            if not task['task_id']:
+            if not task_id:
                 raise RuntimeError('task_id_null_exception')
 
-            docx_file_info = docx_meta_util.get_info_by_task_id(task['task_id'])
+            docx_file_info = docx_meta_util.get_info_by_task_id(task_id)
             uid = docx_file_info[0]['uid']
             llm_txt = gen_txt(
                 uid=uid,
@@ -335,6 +334,11 @@ class DocxEditor:
                 user_comment=task['user_comment'],
                 cfg=task['sys_cfg']
             )
+            para_info_list = docx_meta_util.get_para_info(task_id, para_id)
+            if not para_info_list:
+                raise RuntimeError(f"para_info_list_null_err, {task_id}, {para_id}")
+            logger.info(f"{task_id}, save_para_info_after_gen_doc_para, {para_id}, {llm_txt}")
+            docx_meta_util.update_para_info(task_id, para_id, llm_txt)
             word_count = len(llm_txt)
             # 根据任务类型返回不同的结果结构
             result = {
@@ -343,7 +347,7 @@ class DocxEditor:
                 'current_heading': task['current_heading'],
                 'contains_mermaid': '<mermaid>' in llm_txt,
                 'word_count': word_count,
-                'para_index': task['para_index'],
+                'para_id': task['para_id'],
             }
             if 'original_para_xml' in task:
                 result['namespaces'] = task['namespaces']
@@ -402,13 +406,13 @@ class DocxEditor:
         将生成的文本结果集合，按照段落索引插入到文档的指定位置
         :param input_doc: 输入的 Word文档写作模板的 Word 文档路径
         :param output_doc: 输出已生成的文章的Word文档路径
-        :param results: 批量生成的文本结果,含有原始索引位置和生成的文本内容对应关系字典的集合,[{para_index:gen_para_content}]
+        :param results: 批量生成的文本结果,含有原始索引位置和生成的文本内容对应关系字典的集合,[{para_id:gen_para_content}]
         """
         try:
             doc = Document(input_doc)
             paragraphs = doc.paragraphs
-            valid_results = [(result['para_index'], result) for result in results.values()
-                             if result.get('success') and 'para_index' in result]
+            valid_results = [(result['para_id'], result) for result in results.values()
+                             if result.get('success') and 'para_id' in result]
 
             if not valid_results:
                 logger.warning(f"没有有效的生成结果需要插入, 保存原始文档:{input_doc}  至 {output_doc}")
@@ -418,11 +422,11 @@ class DocxEditor:
             sorted_results = sorted(valid_results, key=lambda x: x[0],reverse=True) # 从后往前处理
 
             # 从后往前插入，避免索引变化
-            for para_index, result in sorted_results:
-                if para_index >= len(paragraphs):  # 添加边界检查
-                    logger.warning(f"段落索引 {para_index} 超出范围（总段落数：{len(paragraphs)}），跳过, input_file={input_doc}")
+            for para_id, result in sorted_results:
+                if para_id >= len(paragraphs):  # 添加边界检查
+                    logger.warning(f"段落索引 {para_id} 超出范围（总段落数：{len(paragraphs)}），跳过, input_file={input_doc}")
                     continue
-                original_para = paragraphs[para_index]
+                original_para = paragraphs[para_id]
                 generated_text = result['generated_text']
                 # 创建新段落并插入
                 new_para = doc.add_paragraph()
@@ -432,7 +436,7 @@ class DocxEditor:
 
                 # 插入到原始段落后面
                 original_para._p.addnext(new_para._p)
-                logger.debug(f"已在段落 {para_index} 后插入生成内容")
+                logger.debug(f"已在段落 {para_id} 后插入生成内容")
             doc.save(output_doc)
             logger.info(f"使用段落索引更新文档成功: {output_doc}")
             return True
@@ -493,8 +497,8 @@ class DocxEditor:
             initial_info = f"需处理 {len(tasks)} 个批注段落，启动 {self.executor._max_workers} 个任务"
             logger.info(initial_info)
             docx_meta_util.update_process_info_by_task_id(task_id, initial_info, 0)
-            doc_gen_results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
-
+            docx_meta_util.save_para_info(task_id, tasks)
+            doc_gen_results = self._submit_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
             success = DocxEditor._update_doc_with_comments(
                 input_file,
                 output_file,
@@ -578,20 +582,20 @@ class DocxEditor:
             for result in results.values():
                 if not result.get('success'):
                     continue
-                para_index = result.get('para_index')
-                if para_index is None or para_index >= len(paragraphs):
-                    logger.warning(f"段落索引 {para_index} 超出范围，跳过")
+                para_id = result.get('para_id')
+                if para_id is None or para_id >= len(paragraphs):
+                    logger.warning(f"段落索引 {para_id} 超出范围，跳过")
                     continue
-                paragraph = paragraphs[para_index]
+                paragraph = paragraphs[para_id]
                 generated_text = result['generated_text']
                 logger.debug(
-                    f"处理段落 {para_index}: 原始文本长度={len(paragraph.findall('.//w:t', namespaces))},"
+                    f"处理段落 {para_id}: 原始文本长度={len(paragraph.findall('.//w:t', namespaces))},"
                     f" 新文本长度={len(generated_text)}"
                 )
                 # 更新段落文本
                 if DocxEditor._update_para_txt_xml(paragraph, generated_text, namespaces):
                     modified_count += 1
-                    logger.debug(f"已更新段落 {para_index}")
+                    logger.debug(f"已更新段落 {para_id}")
 
             # 保存修改后的 XML
             tree.write(document_xml_path, encoding='UTF-8', xml_declaration=True)
@@ -672,7 +676,7 @@ class DocxEditor:
                     para_count = len(paragraphs)
                     logger.info(f"{task_id}, 共 {para_count} 个 XML 段落")
 
-                    for para_idx, paragraph in enumerate(paragraphs):
+                    for para_id, paragraph in enumerate(paragraphs):
                         # 提取段落文本内容
                         para_text = ' '.join(
                             t.text.strip()
@@ -680,24 +684,24 @@ class DocxEditor:
                             if t.text and t.text.strip()
                         )
 
-                        logger.debug(f"{task_id}, para_idx: {para_idx}, para_text: '{para_text}'")
+                        logger.debug(f"{task_id}, para_id: {para_id}, para_text: '{para_text}'")
 
                         # 更新当前标题（需要从 XML 中判断标题样式）
                         refresh_current_heading_xml(paragraph, current_heading, namespaces)
 
                         # 检查当前段落是否有批注
-                        if para_idx not in comments_dict:
-                            logger.debug(f"{task_id}, 段落 {para_idx} 无批注，跳过")
+                        if para_id not in comments_dict:
+                            logger.debug(f"{task_id}, 段落 {para_id} 无批注，跳过")
                             continue
 
-                        comment_text = comments_dict[para_idx]
+                        comment_text = comments_dict[para_id]
                         if not comment_text or not comment_text.strip():
                             logger.debug(f"{task_id}, 跳过无批注内容段落: {para_text}")
                             continue
 
                         task = {
                             'task_id': task_id,
-                            'unique_key': f"comment_{para_idx}",
+                            'unique_key': f"comment_{para_id}",
                             'write_context': doc_ctx,
                             'paragraph_prompt': para_text,
                             'user_comment': comment_text,
@@ -706,16 +710,17 @@ class DocxEditor:
                             'current_heading': current_heading.copy(),
                             'sys_cfg': cfg,
                             'vdb_dir': vdb_dir,
-                            'original_para_xml': paragraph,  # 改为保存 XML 元素
-                            'para_index': para_idx,
-                            'namespaces': namespaces  # 添加命名空间信息
+                            'original_para_xml': paragraph,     # 改为保存 XML 元素
+                            'para_id': para_id,
+                            'namespaces': namespaces,           # 添加命名空间信息
+                            'gen_txt': "",                      # 生成的文本，后续任务添加内容
                         }
                         logger.debug(f"{task_id}, 创建批注任务: {task['user_comment']}")
                         tasks.append(task)
 
                         docx_meta_util.update_process_info_by_task_id(
                             task_id,
-                            f"正在处理第 {para_idx}/{para_count} 段文本，已创建 {len(tasks)} 个处理任务"
+                            f"正在处理第 {para_id}/{para_count} 段文本，已创建 {len(tasks)} 个处理任务"
                         )
 
         except Exception as e:
@@ -746,13 +751,13 @@ class DocxEditor:
         try:
             logger.info(f"开始处理无提示词文档 {input_file}")
             # 收集三级标题任务
-            for index, para in enumerate(doc.paragraphs):
+            for para_id, para in enumerate(doc.paragraphs):
                 refresh_current_heading(para, current_heading)
                 if not is_3rd_heading(para):
                     continue
                 task = {
                     'task_id': task_id,
-                    'unique_key': f"heading_{index}",
+                    'unique_key': f"heading_{para_id}",
                     'write_context': doc_ctx,
                     'paragraph_prompt': "",
                     'user_comment': "",
@@ -761,8 +766,8 @@ class DocxEditor:
                     'current_heading': current_heading.copy(),
                     'sys_cfg': sys_cfg,
                     'vdb_dir': vdb_dir,
-                    'para_index': index,
-
+                    'para_id': para_id,                # 段落索引
+                    'gen_txt': "",                      # 生成的文本，后续任务添加内容
                 }
                 tasks.append(task)
 
@@ -776,7 +781,8 @@ class DocxEditor:
             initial_info = f"需处理 {len(tasks)} 个三级标题，启动 {self.executor._max_workers} 个任务"
             logger.info(initial_info)
             docx_meta_util.update_process_info_by_task_id(task_id, initial_info, 0)
-            results = self._exec_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
+            docx_meta_util.save_para_info(task_id, tasks)
+            results = self._submit_tasks(tasks, task_id, start_time, len(tasks), include_mermaid=True)
             success = DocxEditor._insert_para_to_doc(input_file, output_file, results)
             if not success:
                 error_info = "文档更新失败"
