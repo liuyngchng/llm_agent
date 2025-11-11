@@ -12,6 +12,8 @@ import os
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, render_template
+
+from common.bp_auth import get_client_ip
 from common.cm_utils import get_console_arg1
 from common.sys_init import init_yml_cfg
 
@@ -35,7 +37,9 @@ def app_home():
     ctx = {
         "host": my_cfg['sys']['host']
     }
-    logger.info(f"ctx, {ctx}")
+    ip = get_client_ip()
+    logger.info(f"ctx, {ctx}, from_ip, {ip}")
+
     return render_template("portal_index.html", **ctx)
 
 
