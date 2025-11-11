@@ -14,6 +14,8 @@ CREATE TABLE "docx_file_info" (
 	"outline"	TEXT,
 	"img_count"	INTEGER DEFAULT 0,
 	"word_count"	INTEGER DEFAULT 0,
+	"vdb_id"	INTEGER,
+	"is_include_para_txt"	INTEGER,
 	"create_time"	TEXT,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );

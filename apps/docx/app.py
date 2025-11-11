@@ -315,7 +315,7 @@ def register_routes(app):
         template_file_name = gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title,
                                                                           doc_outline)
         logger.info(f"docx_template_file_generated_with_name, {template_file_name}")
-        docx_meta_util.save_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
+        docx_meta_util.save_docx_file_info(uid, task_id, doc_type, doc_title, keywords, template_file_name, vbd_id, False)
         threading.Thread(
             target=fill_docx_with_template,
             args=(uid, doc_type, doc_title, keywords, task_id, template_file_name, vbd_id, False)
@@ -363,7 +363,8 @@ def register_routes(app):
             err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
-        docx_meta_util.save_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
+        docx_meta_util.save_docx_file_info(uid, task_id, doc_type, doc_title, keywords,
+                                           template_file_name, vbd_id, True)
         threading.Thread(
             target=fill_docx_with_template,
             args=(uid, doc_type, doc_title, keywords, task_id, template_file_name, vbd_id, True)
@@ -499,8 +500,8 @@ def register_routes(app):
                 warning_info=warning_info
 
             ))
-        file_info = docx_meta_util.get_info_by_task_id(task_id)
-        logger.info(f"get_info_by_task_id, {file_info}")
+        file_info = docx_meta_util.get_docx_file_info(task_id)
+        logger.info(f"get_docx_file_info, {file_info}")
         if not file_info or len(file_info) == 0:
             return json.dumps({"error": "未找到任务ID对应的文档信息"}, ensure_ascii=False), 400
         file_info[0]['elapsed_time'] = time.time() - task_id

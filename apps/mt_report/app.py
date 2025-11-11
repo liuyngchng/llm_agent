@@ -149,7 +149,8 @@ def register_routes(app):
 
         template_file_name = data.get("file_name")
         doc_type = my_enums.WriteDocType.MEETING_REPORT.value
-        docx_meta_util.save_meta_info(uid, task_id, doc_type, doc_title, keywords, template_file_name)
+        docx_meta_util.save_docx_file_info(uid, task_id, doc_type, doc_title,
+                                           keywords, template_file_name, 0, False)
         threading.Thread(
             target=fill_mt_report_with_txt,
             args=(uid, doc_type, doc_title, keywords, task_id, template_file_name)

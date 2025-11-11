@@ -15,8 +15,8 @@ from common.my_enums import DataType
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-def save_meta_info(uid: int, task_id: int, doc_type: str, doc_title: str,
-                   keywords: str, template_file_name: str) -> dict:
+def save_docx_file_info(uid: int, task_id: int, doc_type: str, doc_title: str,
+                        keywords: str, template_file_name: str, vdb_id: int, is_include_para_txt: int) -> dict:
     """
     保存docx文件处理任务的相关元数据信息
     :param uid: user id
@@ -27,18 +27,20 @@ def save_meta_info(uid: int, task_id: int, doc_type: str, doc_title: str,
     :param template_file_name: docx template file name
     :return:
     """
-    logger.info(f"save_docx_info {uid}, {task_id}, {doc_type}, {doc_title}, {keywords}, {template_file_name}")
+    logger.info(f"save_docx_file_info, {uid}, {task_id}, {doc_type}, {doc_title}, {keywords}, {template_file_name}")
     timestamp = time.time()
     # 生成类似格式（UTC时间）
     iso_str = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
-    sql = (f"insert into docx_file_info(uid, task_id, doc_type, doc_title, keywords, template_path, create_time) values "
-           f"({uid}, {task_id}, '{doc_type}', '{doc_title}', '{keywords}', '{template_file_name}','{iso_str}')")
+    sql = (f"insert into docx_file_info(uid, task_id, doc_type, doc_title, "
+           f"keywords, template_path, vdb_id, is_include_para_txt, create_time) values "
+           f"({uid}, {task_id}, '{doc_type}', '{doc_title}', "
+           f"'{keywords}', '{template_file_name}', {vdb_id}, {is_include_para_txt}, '{iso_str}')")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         logger.info(f"save_file_info_sql, {sql}")
         my_dt = insert_del_sqlite(my_conn, sql)
         return my_dt
 
-def get_info_by_task_id(task_id: int) -> dict:
+def get_docx_file_info(task_id: int) -> dict:
     """
     根据任务id获取docx文件处理任务的相关元数据信息
     :param task_id: process task id

@@ -167,7 +167,7 @@ class DocxEditor:
             img_count = 0
             try:
                 logger.info(f"{task_id}, 开始处理文档中的Mermaid图表")
-                current_info = docx_meta_util.get_info_by_task_id(task_id)
+                current_info = docx_meta_util.get_docx_file_info(task_id)
                 docx_meta_util.update_process_info_by_task_id(
                     task_id,
                     f"{current_info[0]['process_info']}, 开始处理文档配图",
@@ -322,7 +322,7 @@ class DocxEditor:
             if not task_id:
                 raise RuntimeError('task_id_null_exception')
 
-            docx_file_info = docx_meta_util.get_info_by_task_id(task_id)
+            docx_file_info = docx_meta_util.get_docx_file_info(task_id)
             uid = docx_file_info[0]['uid']
             llm_txt = gen_txt(
                 uid=uid,
@@ -518,7 +518,7 @@ class DocxEditor:
             img_count = 0
             try:
                 logger.info(f"{task_id}, 开始处理文档中的Mermaid图表")
-                current_info = docx_meta_util.get_info_by_task_id(task_id)
+                current_info = docx_meta_util.get_docx_file_info(task_id)
                 docx_meta_util.update_process_info_by_task_id(
                     task_id,
                     f"{current_info[0]['process_info']}, 开始处理文档配图",
@@ -796,7 +796,7 @@ class DocxEditor:
             img_count = 0
             try:
                 logger.info(f"{task_id}, 开始处理文档中的Mermaid图表")
-                current_info = docx_meta_util.get_info_by_task_id(task_id)
+                current_info = docx_meta_util.get_docx_file_info(task_id)
                 docx_meta_util.update_process_info_by_task_id(
                     task_id,
                     f"{current_info[0]['process_info']}, 开始处理文档配图",
