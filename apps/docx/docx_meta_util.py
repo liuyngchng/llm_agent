@@ -25,6 +25,8 @@ def save_docx_file_info(uid: int, task_id: int, doc_type: str, doc_title: str,
     :param doc_title: docx content title
     :param keywords: 其他通用的写作要求
     :param template_file_name: docx template file name
+    :param vdb_id: vector db id
+    :param is_include_para_txt: 写作的 Word 文档模板中是否包含有文本段落
     :return:
     """
     logger.info(f"save_docx_file_info, {uid}, {task_id}, {doc_type}, {doc_title}, {keywords}, {template_file_name}")

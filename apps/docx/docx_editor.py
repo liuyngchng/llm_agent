@@ -441,61 +441,58 @@ class DocxEditor:
             logger.exception(f"使用段落索引更新文档失败: input_file={input_doc}, output_doc={output_doc}")
             return False
 
-    def modify_doc_with_comment(self, uid: int, task_id: int, input_file: str, catalogue: str,
-        doc_ctx: str, comments_dict: dict, vdb_dir: str, cfg: dict, output_file: str) -> str:
+    def modify_doc_with_comment(self, uid: int, task_id: int, doc_ctx: str, input_file: str, catalogue: str,
+         vdb_dir: str, cfg: dict, output_file: str, comments_dict: dict) -> str:
         """
         处理添加了Word批注的文档,采用直接修改xml的方式修改 word文档，保证与提取批注的方式一致
-        :param uid: 用户 ID
-        :param task_id: 执行任务的ID
-        :param input_file: 需要修改的文档路径
-        :param catalogue: 文档的三级目录
-        :param doc_ctx: 文档写作的背景信息
-        :param comments_dict: 段落ID和段落批注的对应关系字典
-        :param vdb_dir: 向量数据库的目录
-        :param cfg: 系统配置，用于使用大模型的能力
-        :param output_file: 输出文档的文件名
+        :param uid:             用户 ID
+        :param task_id:         执行任务的ID
+        :param doc_ctx:         文档写作的背景信息
+        :param input_file:      需要修改的文档路径
+        :param catalogue:       文档的三级目录
+        :param vdb_dir:         向量数据库的目录
+        :param cfg:             系统配置，用于使用大模型的能力
+        :param output_file:     输出文档的文件名
+        :param comments_dict:   段落ID和段落批注的对应关系字典
         """
         if not os.path.exists(input_file):
             error_info = f"输入文件不存在, file_not_exists, {input_file}"
-            logger.error(f"{uid}, {error_info}")
+            logger.error(f"{uid}, {task_id}, {error_info}")
             docx_meta_util.update_process_info_by_task_id(uid, task_id, error_info, 100)
             return error_info
-
         if not comments_dict:
             warning_info = "文件里未找到批注信息, no_comment_found"
             logger.warning(f"{uid}, {warning_info}, {input_file}")
             docx_meta_util.update_process_info_by_task_id(uid, task_id, warning_info, 100)
             return warning_info
-        logger.debug(f"{uid}, comments_dict: {comments_dict}")
+        logger.debug(f"{uid}, {task_id}, comments_dict: {comments_dict}")
         start_time = time.time() * 1000
-
         try:
             info = f"处理带批注的文档 {input_file}，共找到 {len(comments_dict)} 个批注"
-            logger.info(f"{uid}, {info}")
+            logger.info(f"{uid}, {task_id}, {info}")
             docx_meta_util.update_process_info_by_task_id(uid, task_id, info)
             tasks = DocxEditor._collect_doc_with_comment_tasks(
                 uid, task_id, input_file, catalogue, doc_ctx, comments_dict, vdb_dir, cfg
             )
             if not tasks:
                 final_info = "未找到有效的批注处理任务"
-                logger.info(f"{uid}, {final_info}")
+                logger.info(f"{uid}, {task_id}, {final_info}")
                 docx_meta_util.update_process_info_by_task_id(uid, task_id, final_info, 100)
                 import shutil
                 shutil.copy2(input_file, output_file)
                 return final_info
-
             initial_info = f"需处理 {len(tasks)} 个批注段落，启动 {self.executor._max_workers} 个任务"
-            logger.info(f"{uid}, {initial_info}")
+            logger.info(f"{uid}, {task_id}, {initial_info}")
             docx_meta_util.update_process_info_by_task_id(uid, task_id, initial_info, 0)
             docx_meta_util.save_para_info(task_id, tasks)
             doc_gen_results = self._submit_tasks(uid, task_id, tasks, start_time, len(tasks), include_mermaid=True)
-            success = DocxEditor._update_doc_with_comments(input_file, output_file, doc_gen_results)
+            success = DocxEditor._update_doc_with_comments(uid, task_id, input_file, output_file, doc_gen_results)
             if not success:
                 error_info = "XML方式更新文档失败"
-                logger.error(f"{uid}, {error_info}")
+                logger.error(f"{uid}, {task_id}, {error_info}")
                 docx_meta_util.update_process_info_by_task_id(uid, task_id, error_info, 100)
                 return error_info
-            logger.info(f"{uid}, 保存批注处理文档完成: {output_file}")
+            logger.info(f"{uid}, {task_id}, 保存批注处理文档完成: {output_file}")
             docx_meta_util.save_output_file_path_by_task_id(task_id, output_file)
             # 统计结果
             success_count = len([r for r in doc_gen_results.values() if r.get('success')])
@@ -520,13 +517,12 @@ class DocxEditor:
                 logger.error(f"{uid}, {task_id}, Mermaid图表处理失败: {str(e)}")
             total_time = get_elapsed_time(start_time)
             final_info = (f"批注文档处理完成，共处理 {len(tasks)} 个批注段落，"
-                          f"成功生成 {success_count} 段文本和 {img_count} 张配图，失败 {failed_count} 段，{total_time}")
+                f"成功生成 {success_count} 段文本和 {img_count} 张配图，失败 {failed_count} 段，{total_time}")
             if failed_count > 0:
                 final_info += "，失败段落可在日志中查看详情"
             docx_meta_util.update_process_info_by_task_id(uid, task_id, final_info, 100)
             logger.info(f"{uid}, {task_id}, {final_info}，输出文件: {output_file}")
             return final_info
-
         except Exception as e:
             error_info = f"批注文档处理过程出现异常: {str(e)}"
             logger.error(f"{uid}, {task_id}, {error_info}")
@@ -534,7 +530,7 @@ class DocxEditor:
             return error_info
 
     @staticmethod
-    def _update_doc_with_comments(input_doc: str, output_doc: str, results: Dict[str, Dict]) -> bool:
+    def _update_doc_with_comments(uid: int, task_id: int, input_doc: str, output_doc: str, results: Dict[str, Dict]) -> bool:
         """
         使用 XML 方式更新文档中的批注段落的内容
         """
@@ -564,18 +560,18 @@ class DocxEditor:
                     continue
                 para_id = result.get('para_id')
                 if para_id is None or para_id >= len(paragraphs):
-                    logger.warning(f"段落索引 {para_id} 超出范围，跳过")
+                    logger.warning(f"{uid}, {task_id}, 段落索引 {para_id} 超出范围，跳过")
                     continue
                 paragraph = paragraphs[para_id]
                 generated_text = result['generated_text']
                 logger.debug(
-                    f"处理段落 {para_id}: 原始文本长度={len(paragraph.findall('.//w:t', namespaces))},"
+                    f"{uid}, {task_id}, 处理段落 {para_id}: 原始文本长度={len(paragraph.findall('.//w:t', namespaces))},"
                     f" 新文本长度={len(generated_text)}"
                 )
                 # 更新段落文本
-                if DocxEditor._update_para_txt_xml(paragraph, generated_text, namespaces):
+                if DocxEditor._update_para_txt_xml(uid, task_id, paragraph, generated_text, namespaces):
                     modified_count += 1
-                    logger.debug(f"已更新段落 {para_id}")
+                    logger.debug(f"{uid}, {task_id}, 已更新段落 {para_id}")
 
             # 保存修改后的 XML
             tree.write(document_xml_path, encoding='UTF-8', xml_declaration=True)
@@ -588,7 +584,7 @@ class DocxEditor:
                         arcname = os.path.relpath(file_path, temp_dir)
                         z_out.write(file_path, arcname)
 
-            logger.info(f"XML方式更新文档完成，共修改 {modified_count} 个段落")
+            logger.info(f"{uid}, {task_id}, XML方式更新文档完成，共修改 {modified_count} 个段落")
             return True
 
         except Exception as e:
@@ -600,7 +596,7 @@ class DocxEditor:
                 shutil.rmtree(temp_dir)
 
     @staticmethod
-    def _update_para_txt_xml(paragraph, new_text: str, namespaces: dict) -> bool:
+    def _update_para_txt_xml(uid: int, task_id: int, paragraph, new_text: str, namespaces: dict) -> bool:
         """
         更新 XML 段落中的文本内容
         """
@@ -628,7 +624,7 @@ class DocxEditor:
                 return True
 
         except Exception as e:
-            logger.error(f"更新段落文本时出错: {str(e)}")
+            logger.error(f"{uid}, {task_id}, 更新段落文本时出错: {str(e)}")
             return False
 
     @staticmethod
