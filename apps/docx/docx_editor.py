@@ -43,8 +43,8 @@ class DocxEditor:
         (2) 执行并行任务，输出生成的文本集合[{para_idx:para_content}]；
         (3)将文本集合插入到目标Word文档；
     3. 文档处理方法：
-        （1）含有批注的文档，需要通过zipfile工具解压原始docx文件，然后处理xml 来修改word文档；
-        （2）不含批注的文档，则使用python-docx 处理，按照段落index，插入相应的段落内容；
+        （1）含有批注的文档，需要通过 zipfile 工具解压原始 docx 文件，然后处理xml 来修改 word文档；
+        （2）不含批注的文档，则使用 python-docx 处理，按照段落 index，插入相应的段落内容；
     """
 
     def __init__(self, max_workers=None, timeout=300, consider_memory=True):
@@ -201,8 +201,7 @@ class DocxEditor:
 
     @staticmethod
     def _collect_doc_with_prompt_tasks(uid: int, task_id: int, target_doc: str, doc_ctx: str,
-                                       target_doc_catalogue: str, vdb_dir: str,
-                                       sys_cfg: dict) -> List[Dict[str, Any]]:
+        target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict) -> List[Dict[str, Any]]:
         """
         收集含有目录和段落写作要求的docx文档的文本生成任务，返回段落索引
         """
@@ -356,8 +355,8 @@ class DocxEditor:
             raise
 
     @staticmethod
-    def _submit_mermaid_task(uid: int, task_id: int, doc_path: str, mermaid_api_uri: str, results: Dict[str, Dict]) -> \
-    Dict[str, Any]:
+    def _submit_mermaid_task(uid: int, task_id: int, doc_path: str, mermaid_api_uri: str,
+        results: Dict[str, Dict]) -> Dict[str, Any]:
         """
         提交处理文档中的Mermaid script 脚本的任务
         :return: 处理结果信息
@@ -441,10 +440,9 @@ class DocxEditor:
         except Exception as e:
             logger.exception(f"使用段落索引更新文档失败: input_file={input_doc}, output_doc={output_doc}")
             return False
+
     def modify_doc_with_comment(self, uid: int, task_id: int, input_file: str, catalogue: str,
-                                doc_ctx: str, comments_dict: dict,
-                                vdb_dir: str, cfg: dict,
-                                output_file: str) -> str:
+        doc_ctx: str, comments_dict: dict, vdb_dir: str, cfg: dict, output_file: str) -> str:
         """
         处理添加了Word批注的文档,采用直接修改xml的方式修改 word文档，保证与提取批注的方式一致
         :param uid: 用户 ID
