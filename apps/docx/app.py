@@ -350,7 +350,7 @@ def register_routes(app):
 
         if not doc_type or not doc_title:
             err_info = {"error": "文档类型或文档标题不能为空"}
-            logger.error(f"err_occurred, {err_info}")
+            logger.error(f"{uid}, err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
         template_file_name = data.get("file_name")
 
@@ -361,17 +361,18 @@ def register_routes(app):
             vbd_id = None
         if not task_id or not template_file_name or not uid:
             err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
-            logger.error(f"err_occurred, {err_info}")
+            logger.error(f"{uid}, err_occurred, {err_info}")
             return jsonify(err_info), 400
-        docx_meta_util.save_docx_file_info(uid, task_id, doc_type, doc_title, keywords,
-                                           template_file_name, vbd_id, True)
+        docx_meta_util.save_docx_file_info(
+            uid, task_id, doc_type, doc_title, keywords,template_file_name, vbd_id, True
+        )
         threading.Thread(
             target=fill_docx_with_template,
             args=(uid, doc_type, doc_title, keywords, task_id, template_file_name, vbd_id, True)
         ).start()
 
         info = {"status": "started", "task_id": task_id}
-        logger.info(f"write_doc_with_docx_template, {info}")
+        logger.info(f"{uid}, write_doc_with_docx_template, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
     @app.route('/docx/download/<filename>', methods=['GET'])
@@ -392,18 +393,17 @@ def register_routes(app):
                 'auth.login_index',
                 app_source=AppType.DOCX.name.lower(),
                 warning_info=warning_info
-
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         absolute_path = os.path.abspath(file_path)
-        logger.info(f"文件检查 - 绝对路径: {absolute_path}")
+        logger.info(f"{uid}, 文件检查 - 绝对路径: {absolute_path}")
 
         if not os.path.exists(absolute_path):
-            logger.error(f"文件不存在: {absolute_path}")
+            logger.error(f"{uid}, 文件不存在: {absolute_path}")
             abort(404)
 
-        logger.info(f"文件找到，准备发送: {absolute_path}")
+        logger.info(f"{uid}, 文件找到，准备发送: {absolute_path}")
         try:
             from flask import send_file
             return send_file(
@@ -413,7 +413,7 @@ def register_routes(app):
                 mimetype=DOCX_MIME_TYPE,
             )
         except Exception as e:
-            logger.error(f"文件发送失败: {str(e)}")
+            logger.error(f"{uid}, 文件发送失败: {str(e)}")
             abort(500)
 
     @app.route('/docx/download/task/<task_id>', methods=['GET'])
@@ -440,21 +440,21 @@ def register_routes(app):
         filename = f"output_{task_id}.docx"
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         absolute_path = os.path.abspath(file_path)
-        logger.info(f"文件检查 - 相对路径: {file_path}")
-        logger.info(f"文件检查 - 绝对路径: {absolute_path}")
-        logger.info(f"文件检查 - UPLOAD_FOLDER: {UPLOAD_FOLDER}")
-        logger.info(f"文件检查 - 当前工作目录: {os.getcwd()}")
+        logger.info(f"{uid}, 文件检查 - 相对路径: {file_path}")
+        logger.info(f"{uid}, 文件检查 - 绝对路径: {absolute_path}")
+        logger.info(f"{uid}, 文件检查 - UPLOAD_FOLDER: {UPLOAD_FOLDER}")
+        logger.info(f"{uid}, 文件检查 - 当前工作目录: {os.getcwd()}")
         if not os.path.exists(absolute_path):
-            logger.error(f"文件不存在: {absolute_path}")
+            logger.error(f"{uid}, 文件不存在: {absolute_path}")
             abort(404)
 
         if not os.access(absolute_path, os.R_OK):
-            logger.error(f"文件不可读: {absolute_path}")
+            logger.error(f"{uid}, 文件不可读: {absolute_path}")
             abort(403)
-        logger.info(f"文件找到，准备发送: {absolute_path}")
+        logger.info(f"{uid}, 文件找到，准备发送: {absolute_path}")
         try:
             from flask import send_file
-            logger.info(f"使用 send_file 发送: {absolute_path}")
+            logger.info(f"{uid}, 使用 send_file 发送: {absolute_path}")
             return send_file(
                 absolute_path,
                 as_attachment=True,
@@ -462,7 +462,7 @@ def register_routes(app):
                 mimetype=DOCX_MIME_TYPE,
             )
         except Exception as e:
-            logger.error(f"文件发送失败: {str(e)}")
+            logger.error(f"{uid}, 文件发送失败: {str(e)}")
             abort(500)
 
     @app.route('/docx/del/task/<task_id>', methods=['GET'])
@@ -578,52 +578,50 @@ def fill_docx_with_template(uid: int, doc_type: str, doc_title: str, keywords: s
 
     generator = None
     try:
-        docx_meta_util.update_process_info_by_task_id(task_id, "开始解析文档结构...", 0)
+        docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始解析文档结构...", 0)
         full_file_name = os.path.join(UPLOAD_FOLDER, file_name)
         catalogue = extract_catalogue(full_file_name)
         docx_meta_util.save_outline_by_task_id(task_id, catalogue)
         output_file_name = f"output_{task_id}.docx"
         output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
-        logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
-        docx_meta_util.update_process_info_by_task_id(task_id, "开始处理文档...")
-        doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}, 其他写作要求是 {keywords}"
-
+        logger.info(f"{uid}, doc_output_file_name_for_task_id:{task_id} {output_file_name}")
+        docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始处理文档...")
+        doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
+        if keywords:
+            doc_ctx = doc_ctx +f", 其他写作要求是 {keywords}"
         if vbd_id:
-            default_vdb = VdbMeta.get_vdb_by_id(vbd_id)
-            logger.info(f"my_default_vdb_dir_for_gen_doc: {default_vdb}")
+            vdb_info = VdbMeta.get_vdb_by_id(vbd_id)
+            logger.info(f"{uid}, vdb_info: {vdb_info}")
         else:
-            default_vdb = None
-        if default_vdb:
-            my_vdb_dir = f"{VDB_PREFIX}{uid}_{default_vdb[0]['id']}"
+            vdb_info = None
+        if vdb_info:
+            my_vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_info[0]['id']}"
         else:
             my_vdb_dir = ""
-        logger.info(f"my_vdb_dir_for_gen_doc: {my_vdb_dir}")
-
-        # 使用并行化版本
+        logger.info(f"{uid}, my_vdb_dir_for_gen_doc: {my_vdb_dir}")
         generator = DocxEditor()
         para_comment_dict = get_comments_dict(full_file_name)
         if para_comment_dict:
-            logger.info(f"处理含有批注的文档, {full_file_name}")
-            logger.debug(f"处理含有批注的文档, {full_file_name}， 文档批注信息, {para_comment_dict}")
+            logger.info(f"{uid}, fill_doc_with_comment, {full_file_name}")
+            logger.debug(f"{uid}, fill_doc_with_comment, {full_file_name}， comment_dict, {para_comment_dict}")
             generator.modify_doc_with_comment(
-                task_id, full_file_name, catalogue, doc_ctx, para_comment_dict,
+                uid, task_id, full_file_name, catalogue, doc_ctx, para_comment_dict,
                 my_vdb_dir, my_cfg, output_file
             )
         elif is_include_para_txt:
-            logger.info(f"处理含有段落内容的文档, {full_file_name}")
+            logger.info(f"{uid}, fill_doc_with_para_content, {full_file_name}")
             generator.fill_doc_with_prompt(
-                task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
+                uid, task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
             )
         else:
-            logger.info(f"处理仅含有目录的文档, {full_file_name}")
+            logger.info(f"{uid}, fill_doc_without_para_content, {full_file_name}")
             generator.fill_doc_without_prompt(
-                task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
+                uid, task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
             )
         generator.shutdown()
-
     except Exception as e:
-        docx_meta_util.update_process_info_by_task_id(task_id, f"任务处理失败: {str(e)}")
-        logger.exception("文档生成异常", e)
+        docx_meta_util.update_process_info_by_task_id(uid, task_id, f"任务处理失败: {str(e)}")
+        logger.exception(f"{uid}, fill_doc_err", e)
     finally:
         # 确保资源被释放
         if generator:

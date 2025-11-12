@@ -92,23 +92,24 @@ def delete_task(task_id: int):
     return my_dt
 
 
-def update_process_info_by_task_id(task_id: int, process_info: str, percent = 0):
+def update_process_info_by_task_id(uid: int, task_id: int, process_info: str, percent = 0):
     """
     更新docx文件处理任务的处理进度信息
+    :param uid: user id
     :param task_id: process task id
     :param process_info: process info
     :param percent: process percent
     :return:
     """
     if not task_id or not process_info:
-        raise RuntimeError(f"param_null_err, {task_id}, {process_info}")
+        raise RuntimeError(f"{uid}, param_null_err, {task_id}, {process_info}")
     if percent == 0:
         sql = f"update docx_file_info set process_info = '{process_info}' where task_id = {task_id} limit 1"
     else:
         sql = f"update docx_file_info set process_info = '{process_info}', percent= {percent} where task_id = {task_id} limit 1"
-    logger.info(f"update_docx_file_info_sql, {sql}")
+    logger.info(f"{uid}, update_docx_file_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-    logger.info(f"update_docx_file_info_dt {my_dt}")
+    logger.info(f"{uid}, update_docx_file_info_dt, {my_dt}")
     return my_dt
 
 def save_para_info(task_id: int, tasks: list):
