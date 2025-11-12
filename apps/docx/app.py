@@ -607,8 +607,7 @@ def process_doc(uid: int, task_id: int, doc_type: str, doc_title: str, keywords:
             logger.info(f"{uid}, {task_id}, fill_doc_with_comment, {full_file_name}")
             logger.debug(f"{uid}, {task_id}, fill_doc_with_comment, {full_file_name}， comment_dict, {para_comment_dict}")
             generator.modify_doc_with_comment(
-                uid, task_id, doc_ctx, full_file_name, catalogue,
-                my_vdb_dir, my_cfg, output_file, para_comment_dict
+                uid, task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file, para_comment_dict
             )
         elif is_include_para_txt:
             logger.info(f"{uid}, {task_id}, fill_doc_with_para_content, {full_file_name}")

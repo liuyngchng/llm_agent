@@ -114,27 +114,39 @@ def update_process_info_by_task_id(uid: int, task_id: int, process_info: str, pe
     logger.info(f"{uid}, update_docx_file_info_dt, {my_dt}")
     return my_dt
 
-def save_para_info(task_id: int, tasks: list):
+def save_para_task(task_id: int, tasks: list):
     """
-    保存用户文档生成任务的系统子任务清单,,一个文档写作任务的任务ID task_id 对应多个 docx_para_info 记录
+    保存用户文档生成任务的各个段落生成的子任务清单,
+    一个文档写作任务的任务ID task_id 对应多个 docx_para_info 记录
     :param task_id: process task id
-    :param tasks: 单个文档生成的任务清单信息
+    :param tasks: 单个文档生成任务的段落生成任务清单
     :return:
     """
     if not task_id or not tasks:
-        raise RuntimeError(f"param_null_err, {task_id}, {tasks}")
+        raise RuntimeError(f"save_para_task_param_null_err, {task_id}, {tasks}")
     my_values = ""
     for task in tasks:
         if isinstance(task['current_heading'], list):
             heading_str = json.dumps(task['current_heading'], ensure_ascii=False)
         else:
             heading_str = str(task['current_heading'])
-        heading_escaped = heading_str.replace("'", "''")
+        heading = heading_str.replace("'", "''")
+        unique_key = task['unique_key'].replace("'", "''")
+        write_context = task['write_context'].replace("'", "''")
+        paragraph_prompt = task['paragraph_prompt'].replace("'", "''")
+        user_comment = task['user_comment'].replace("'", "''")
+        current_sub_title = task['current_sub_title'].replace("'", "''")
+        vdb_dir = task['vdb_dir'].replace("'", "''")
+        namespaces = task['namespaces'].replace("'", "''")
+        value_item = (f"({task['task_id']},{task['para_id']},'{heading}','{unique_key}',"
+            f"'{write_context}','{paragraph_prompt}','{user_comment}','{current_sub_title}',"
+            f"'{vdb_dir}','{namespaces}')")
         if my_values:
-            my_values = f"{my_values}, ({task['task_id']}, {task['para_id']}, '{heading_escaped}')"
+            my_values = f"{my_values}, {value_item}"
         else:
-            my_values = f"({task['task_id']}, {task['para_id']}, '{heading_escaped}')"
-    sql = f"insert into docx_para_info (task_id, para_id, heading) values {my_values}"
+            my_values = value_item
+    sql = (f"insert into docx_para_info (task_id, para_id, heading, unique_key, write_context, "
+           f"paragraph_prompt, user_comment, catalogue, current_sub_title, vdb_dir, namespaces) values {my_values}")
     logger.info(f"save_docx_para_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"save_docx_para_info_dt, {my_dt}")
