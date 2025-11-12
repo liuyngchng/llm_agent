@@ -573,10 +573,10 @@ def process_doc(uid: int, task_id: int, doc_type: str, doc_title: str, keywords:
     :param keywords:            其他的写作要求
     :param file_name:           Word template 模板文件名, 其中包含三级目录，可能含有段落写作的提示词，也可能没有
     :param vbd_id:              vector db id.
-    :param is_include_para_txt: 各小节（章节标题下）是否包含有描述性的文本
+    :param is_include_para_txt: Word 文档中各小节（章节标题下）是否包含有描述性的文本
     """
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "
-        f"task_id: {task_id}, file_name: {file_name}, vbd_id:{vbd_id}, is_include_para_txt = {is_include_para_txt}")
+        f"task_id: {task_id}, file_name: {file_name}, vbd_id:{vbd_id}, is_include_para_txt: {is_include_para_txt}")
 
     generator = None
     try:
