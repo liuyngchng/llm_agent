@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <title>知识库管理</title>
+    <meta charset="utf-8">
+    <meta id="vdb_index.html">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/vdb.css?t=2">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-database"></i> 知识库管理</h1>
+            <p>构建专业文档知识库，提升大模型输出质量</p>
+        </header>
+        <!-- 第一步：知识库管理 -->
+        <div class="content-section">
+            <h2><i class="fas fa-database"></i> 知识库管理</h2>
+            <div class="knowledge-base-manager">
+                <div class="kb-controls">
+                    <div class="kb-select-container">
+                        <select id="kb_selector">
+                            <option value="">--选择知识库--</option>
+                            <!-- 知识库选项将通过JS动态加载 -->
+                        </select>
+                        <span class="or-divider">或</span>
+                        <input type="text" id="kb_name" class="search-input" placeholder="输入新知识库名称">
+                        <!-- 新增公开选项 -->
+                        <div class="visibility-option">
+                            <input type="checkbox" id="public_checkbox">
+                            <label for="public_checkbox">公开</label>
+                        </div>
+                        <button class="btn btn-primary" id="createKB">
+                            <i class="fas fa-plus-circle"></i> 创建知识库
+                        </button>
+                    </div>
+                    <div id="kb_status" class="status-container" style="display:none">
+                        <i class="fas fa-check-circle"></i>
+                        <span>知识库创建成功</span>
+                    </div>
+                </div>
+
+                <div class="kb-status-area">
+                    <div class="kb-status-info">
+                        <strong>当前知识库状态:</strong>
+                        <span id="vdb_status_desc">{{vdb_status}}</span>
+                    </div>
+                    <button class="btn btn-activate" id="setDefaultBtn" style="display: none;">
+                        <i class="fas fa-star"></i> 设置为默认
+                    </button>
+                    <button class="btn btn-danger" id="deleteBtn" style="display: none;">
+                        <i class="fas fa-trash-alt"></i> 删除知识库
+                    </button>
+                </div>
+                <div id="fileListContainer" style="margin-top: 20px; display: none;">
+                    <h3><i class="fas fa-file-alt"></i> 知识库文件列表</h3>
+                    <table id="fileListTable" class="result-table">
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>文件名</th>
+                                <th>创建时间</th>
+                                <th>处理进度(%)</th>
+                                <th>处理信息</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 文件列表将通过JS动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- 第二步：文档上传（默认隐藏） -->
+        <div id="step2" class="hidden">
+            <div class="content-section">
+                <h2><i class="fas fa-file-upload"></i> 文档上传</h2>
+                <div class="input-group">
+                    <input type="file" id="fileInput" accept=".pdf,.docx,.txt" multiple style="display:none">
+                    <button class="btn btn-primary" id="selectBtn">
+                        <i class="fas fa-folder-open"></i> 选择文档
+                    </button>
+                    <div id="fileList" class="file-list-container">
+                        <div class="file-list-header">
+                            <span>已选择 <span id="fileCount">0</span> 个文件</span>
+                            <button type="button" class="btn-clear" id="clearFilesBtn">清空</button>
+                        </div>
+                        <div id="fileItems" class="file-items">
+                            <!-- 文件列表将在这里动态显示 -->
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="startBtn">
+                        <i class="fas fa-cloud-upload-alt"></i> 上传
+                    </button>
+                </div>
+
+                <div class="progress-display">
+                    <div class="progress-text">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="fileUploadResult">请选择文档并点击上传按钮开始构建知识库</span>
+                    </div>
+                    <div id="uploadProgress" class="upload-progress" style="display: none;">
+                        <div class="progress-bar">
+                            <div id="overallProgressFill" class="progress-fill"></div>
+                        </div>
+                        <div class="progress-info">
+                            <span id="progressText">上传中: 0/0</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer>
+            <p>© 2025 知识库构建平台 | KLSZ</p>
+        </footer>
+    </div>
+
+    <input type="hidden" id="uid" name="uid" value="{{uid}}">
+    <input type="hidden" id="t" name="t" value="{{t}}">
+    <script type="text/javascript" src="/static/vdb.js?a=111"></script>
+</body>
+</html>
