@@ -153,12 +153,15 @@ def register_routes(app):
         logger.info(f"chat_request {request.form}")
         msg = request.form.get('msg', "").strip()
         uid = request.form.get('uid')
-        kb_id = request.form.get('kb_id')
-        model_id = request.form.get('model_id')
+        file_infos = request.form.get('file_infos')
+        if file_infos:
+            logger.info(f"request_file_infos, {file_infos}")
+            file_infos = json.loads(file_infos)
 
-        if not msg or not uid or not kb_id:
-            warning_info = f"缺少用户消息、用户身份信息、知识库信息中的一个或多个参数，请您检查后再试"
-            logger.error(f"{warning_info}, {msg}, {uid}, {kb_id}, {model_id}")
+
+        if not msg or not uid:
+            warning_info = f"缺少用户消息、用户身份信息中的一个或多个参数，请您检查后再试"
+            logger.error(f"{warning_info}, {msg}, {uid}")
             return warning_info
 
         session_key = f"{uid}_{get_client_ip()}"
@@ -186,7 +189,7 @@ def register_routes(app):
     @app.route('/upload', methods=['POST'])
     def upload_file():
         """
-        上传 Word docx 写作文档模板，需要包含三级目录
+        单个文件上传
         """
         logger.info(f"upload_file, {request}")
         if 'file' not in request.files:

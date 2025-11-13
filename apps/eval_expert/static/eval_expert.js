@@ -25,19 +25,36 @@ queryForm.addEventListener('submit', async function(e) {
     if (isFetching) return;
 
     const query = queryInput.value.trim();
-    if (!query) {
-        addMessage("请填写您想问的问题", 'bot');
+    const hasFiles = selectedFiles.length > 0;
+    if (!query && !hasFiles) {
+        addMessage("请填写问题或上传文件", 'bot');
         return;
     }
 
-    // 添加用户消息
-    addMessage(query, 'user');
+    // 添加用户消息（显示文本和文件信息）
+    let userMessage = query;
+    if (hasFiles) {
+        const fileNames = selectedFiles.map(f => f.name).join(', ');
+        userMessage += `\n\n上传文件: ${fileNames}`;
+    }
+    addMessage(userMessage, 'user');
+    // 如果有文件，先上传文件
+    let uploadedFileInfos = [];  // 改为文件信息数组
+    if (hasFiles) {
+        try {
+            uploadedFileInfos = await uploadFiles();
+        } catch (error) {
+            console.error("文件上传失败:", error);
+            addMessage("文件上传失败，请重试", 'bot');
+            return;
+        }
+    }
     queryInput.value = '';
     queryInput.focus();
 
     try {
         // 开始获取数据
-        await fetchQueryData(query);
+        await fetchQueryData(query, uploadedFileInfos);
     } catch (error) {
         console.error("请求出错:", error);
         if (currentBotMessage) {
@@ -73,7 +90,7 @@ stopButton.addEventListener('click', function() {
 });
 
 // 获取流式数据
-async function fetchQueryData(query, fileUrls = []) {
+async function fetchQueryData(query, fileInfos = []) {
     isFetching = true;
     sendButton.disabled = true;
     stopButton.style.display = 'inline-block';
@@ -95,12 +112,10 @@ async function fetchQueryData(query, fileUrls = []) {
         requestData.append('uid', uid);
         requestData.append('t', t);
         requestData.append('app_source', appSource);
-
-        // 添加文件URL
-        fileUrls.forEach(url => {
-            requestData.append('file_urls', url);
-        });
-
+        // 添加文件信息（JSON格式）
+        if (fileInfos.length > 0) {
+            requestData.append('file_infos', JSON.stringify(fileInfos));
+        }
         const response = await fetch('/chat', {
             method: 'POST',
             headers: {
@@ -457,7 +472,7 @@ queryForm.addEventListener('submit', async function(e) {
 
 // 发起上传多个文件的请求
 async function uploadFiles() {
-    const uploadedFileUrls = [];
+    const uploadedFileInfos = [];
     const uid = document.getElementById('uid').value;
     const t = document.getElementById('t').value;
 
@@ -467,7 +482,10 @@ async function uploadFiles() {
             const fileInfo = await uploadSingleFile(file, uid, t);
             // 根据您的后端返回结构构建文件URL
             const fileUrl = `/uploads/${fileInfo.file_name}`; // 假设这样访问文件
-            uploadedFileUrls.push(fileUrl);
+            uploadedFileInfos.push({
+                file_id: fileInfo.file_id,
+                file_name: fileInfo.file_name
+            });
         } catch (error) {
             console.error(`文件 ${file.name} 上传失败:`, error);
             throw new Error(`文件 ${file.name} 上传失败`);
