@@ -400,9 +400,9 @@ def get_const(key:str, app: str)->str | None:
             check_info = query_sqlite(my_conn, sql)
             value_dt = check_info['data']
             value = value_dt[0][0]
-            logger.info(f"get_const {value} with key {key}")
+            # logger.debug(f"get_const {value} with key {key}")
         except Exception as e:
-            logger.info(f"no_value_info_found_for_key, {key}")
+            logger.error(f"no_value_info_found_for_key, {key}")
     return value
 
 def get_consts(app: str)-> dict:
