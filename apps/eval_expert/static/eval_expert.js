@@ -73,7 +73,7 @@ stopButton.addEventListener('click', function() {
 });
 
 // 获取流式数据
-async function fetchQueryData(query) {
+async function fetchQueryData(query, fileUrls = []) {
     isFetching = true;
     sendButton.disabled = true;
     stopButton.style.display = 'inline-block';
@@ -88,15 +88,26 @@ async function fetchQueryData(query) {
         const t = document.getElementById('t').value;
         const appSource = document.getElementById('app_source').value;
         const uid = document.getElementById('uid').value;
-        const kbId = document.getElementById('kb_selector').value || '';
-        const modelId = document.getElementById('model_selector').value || '';
+
+        // 构建请求数据
+        const requestData = new URLSearchParams();
+        requestData.append('msg', query);
+        requestData.append('uid', uid);
+        requestData.append('t', t);
+        requestData.append('app_source', appSource);
+
+        // 添加文件URL
+        fileUrls.forEach(url => {
+            requestData.append('file_urls', url);
+        });
+
         const response = await fetch('/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Accept': 'text/event-stream'
             },
-            body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&t=${t}&app_source=${appSource}&kb_id=${kbId}&model_id=${modelId}`,
+            body: requestData,
             signal: abortController.signal,
             credentials: 'include'
         });
@@ -220,7 +231,7 @@ function addMessage(text, type) {
         messageContainer.innerHTML = `
             <div class="bot-message-header">
                 <img src="/static/bot.png" alt="AI Assistant">
-                <span>智能助手</span>
+                <span>数字专家</span>
             </div>
             <div class="message-bubble bot-message-bubble">${sanitizedContent}</div>
         `;
@@ -269,3 +280,219 @@ queryInput.addEventListener('keydown', function(e) {
         queryForm.dispatchEvent(new Event('submit'));
     }
 });
+
+//文件上传相关功能
+// 文件上传相关元素
+const uploadArea = document.getElementById('upload-area');
+const fileInput = document.getElementById('file-input');
+const fileList = document.getElementById('file-list');
+const uploadContainer = document.getElementById('upload-container');
+
+// 已选择的文件列表
+let selectedFiles = [];
+
+// 文件上传事件处理
+uploadArea.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', handleFileSelect);
+
+// 拖拽事件处理
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadContainer.classList.add('drag-over');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+    uploadContainer.classList.remove('drag-over');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadContainer.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+});
+
+// 处理文件选择
+function handleFileSelect(e) {
+    handleFiles(e.target.files);
+    fileInput.value = ''; // 重置input，允许选择相同文件
+}
+
+function handleFiles(files) {
+    for (let file of files) {
+        if (validateFile(file)) {
+            selectedFiles.push(file);
+        }
+    }
+    updateFileList();
+}
+
+// 文件验证
+function validateFile(file) {
+    const validTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    ];
+
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    if (!validTypes.includes(file.type)) {
+        alert(`不支持的文件类型: ${file.name}`);
+        return false;
+    }
+
+    if (file.size > maxSize) {
+        alert(`文件大小超过限制: ${file.name}`);
+        return false;
+    }
+
+    return true;
+}
+
+// 更新文件列表显示
+function updateFileList() {
+    fileList.innerHTML = '';
+
+    if (selectedFiles.length > 0) {
+        fileList.classList.add('has-files');
+
+        selectedFiles.forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+
+            const fileSize = formatFileSize(file.size);
+
+            fileItem.innerHTML = `
+                <div class="file-info">
+                    <div class="file-icon">
+                        <i class="fas fa-file"></i>
+                    </div>
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-size">${fileSize}</div>
+                </div>
+                <button class="remove-file" data-index="${index}">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            fileList.appendChild(fileItem);
+        });
+
+        // 添加删除文件事件
+        document.querySelectorAll('.remove-file').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const index = parseInt(e.currentTarget.getAttribute('data-index'));
+                selectedFiles.splice(index, 1);
+                updateFileList();
+            });
+        });
+    } else {
+        fileList.classList.remove('has-files');
+    }
+}
+
+// 格式化文件大小
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// 修改表单提交事件，添加上传文件功能
+queryForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (isFetching) return;
+
+    const query = queryInput.value.trim();
+    const hasFiles = selectedFiles.length > 0;
+
+    if (!query && !hasFiles) {
+        addMessage("请填写问题或上传文件", 'bot');
+        return;
+    }
+
+    // 添加用户消息（显示文本和文件信息）
+    let userMessage = query;
+    if (hasFiles) {
+        const fileNames = selectedFiles.map(f => f.name).join(', ');
+        userMessage += `\n\n上传文件: ${fileNames}`;
+    }
+    addMessage(userMessage, 'user');
+
+    // 如果有文件，先上传文件
+    let uploadedFileUrls = [];
+    if (hasFiles) {
+        try {
+            uploadedFileUrls = await uploadFiles();
+        } catch (error) {
+            console.error("文件上传失败:", error);
+            addMessage("文件上传失败，请重试", 'bot');
+            return;
+        }
+    }
+
+    queryInput.value = '';
+    selectedFiles = [];
+    updateFileList();
+
+    try {
+        // 发送查询（包含文件URL）
+        await fetchQueryData(query, uploadedFileUrls);
+    } catch (error) {
+        console.error("请求出错:", error);
+        if (currentBotMessage) {
+            updateBotMessage("回答生成中断或出错，请重试");
+        }
+        resetUI();
+    }
+});
+
+// 发起上传多个文件的请求
+async function uploadFiles() {
+    const uploadedFileUrls = [];
+    const uid = document.getElementById('uid').value;
+    const t = document.getElementById('t').value;
+
+    // 逐个上传文件
+    for (let file of selectedFiles) {
+        try {
+            const fileInfo = await uploadSingleFile(file, uid, t);
+            // 根据您的后端返回结构构建文件URL
+            const fileUrl = `/uploads/${fileInfo.file_name}`; // 假设这样访问文件
+            uploadedFileUrls.push(fileUrl);
+        } catch (error) {
+            console.error(`文件 ${file.name} 上传失败:`, error);
+            throw new Error(`文件 ${file.name} 上传失败`);
+        }
+    }
+
+    return uploadedFileUrls;
+}
+
+// 上传多个文件
+async function uploadSingleFile(file, uid, t) {
+    const formData = new FormData();
+    formData.append('file', file);  // 注意：字段名改为 'file' 而不是 'files'
+    formData.append('uid', uid);
+    formData.append('t', t);
+
+    const response = await fetch('/upload', {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`上传失败: ${errorText}`);
+    }
+
+    return await response.json();
+}

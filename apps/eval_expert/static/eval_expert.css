@@ -5,6 +5,137 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* 上传容器样式 */
+.upload-container {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 2px dashed #ddd;
+    transition: all 0.3s;
+}
+
+.upload-container.drag-over {
+    border-color: #4b6cb7;
+    background: #e6f7ff;
+}
+
+.upload-area {
+    text-align: center;
+    padding: 20px;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.3s;
+}
+
+.upload-area:hover {
+    color: #4b6cb7;
+}
+
+.upload-area i {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.upload-area p {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.upload-hint {
+    font-size: 0.9rem;
+    color: #999;
+}
+
+#file-input {
+    display: none;
+}
+
+/* 文件列表样式 */
+.file-list {
+    margin-top: 15px;
+    display: none;
+}
+
+.file-list.has-files {
+    display: block;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.file-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4b6cb7;
+}
+
+.file-name {
+    font-size: 0.95rem;
+    color: #333;
+    word-break: break-all;
+}
+
+.file-size {
+    font-size: 0.85rem;
+    color: #999;
+    margin-left: auto;
+    margin-right: 15px;
+}
+
+.remove-file {
+    background: none;
+    border: none;
+    color: #ff4d4d;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+.remove-file:hover {
+    background: #ff4d4d;
+    color: white;
+}
+
+/* 上传进度条 */
+.upload-progress {
+    width: 100%;
+    height: 4px;
+    background: #e0e0e0;
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+    display: none;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+    width: 0%;
+    transition: width 0.3s;
+}
+
 body {
     background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
     min-height: 100vh;

@@ -35,6 +35,8 @@ os.system(
 background_tasks_started = False
 background_tasks_lock = threading.Lock()
 
+UPLOAD_FOLDER = 'upload_doc'
+
 def create_app():
     """应用工厂函数"""
     app = Flask(__name__, static_folder=None)
@@ -181,6 +183,38 @@ def register_routes(app):
 
         return app.response_class(generate_stream(), mimetype='text/event-stream')
 
+    @app.route('/upload', methods=['POST'])
+    def upload_file():
+        """
+        上传 Word docx 写作文档模板，需要包含三级目录
+        """
+        logger.info(f"upload_file, {request}")
+        if 'file' not in request.files:
+            return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
+        file = request.files['file']
+        uid = int(request.form.get('uid'))
+        logger.info(f"{uid}, upload_file")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return json.dumps({"error": f"{warning_info}"}, ensure_ascii=False), 400
+        if file.filename == '':
+            return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
+
+        # 生成任务ID， 使用毫秒数
+        file_id = int(time.time() * 1000)
+        file_name = f"{file_id}_{file.filename}"
+        save_path = os.path.join(UPLOAD_FOLDER, file_name)
+        file.save(save_path)
+        logger.info(f"{uid}, upload_file_saved_as {file_name}, {file_id}")
+        info = {
+            "file_id": file_id,
+            "file_name": file_name,
+        }
+        logger.info(f"{uid}, file_uploaded, {info}")
+        return json.dumps(info, ensure_ascii=False), 200
 
 def start_background_tasks():
     """启动后台任务线程"""

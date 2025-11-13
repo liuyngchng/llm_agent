@@ -30,9 +30,19 @@
         </div>
 
         <form id="query-form">
+             <!-- 上传文档区域 -->
+            <div class="upload-container" id="upload-container">
+                <div class="upload-area" id="upload-area">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>点击或拖拽文件到此处上传</p>
+                    <span class="upload-hint">支持 PDF、Word、Excel、TXT 等格式</span>
+                    <input type="file" id="file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.ppt,.pptx">
+                </div>
+                <div class="file-list" id="file-list"></div>
+            </div>
             <div class="input-container">
                 <input type="text" class="input-field" id="query-input" name="msg"
-                       placeholder="输入你的问题，帮你深度解答..." required autocomplete="off">
+                       placeholder="请提交您的评审材料及评审标准，我来给出评审结果..." required autocomplete="off">
                 <div class="button-container">
                     <button type="submit" class="send-button" id="send-button">
                         <i class="fas fa-paper-plane"></i> 发送
