@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="text/javascript" src="/static/purify.min.js"></script>
     <script type="text/javascript" src="/static/marked.min.js"></script>
-    <link rel="stylesheet" href="/static/eval_expert.css">
+    <link rel="stylesheet" href="/static/eval_expert.css?t=1">
+    <link rel="stylesheet" href="/static/font-awesome.all.min.css?t=2">
     <title>项目评审数字专家</title>
 </head>
 <body>
@@ -14,9 +15,6 @@
         <header>
             <h1><i class="fas fa-comments"></i> 项目评审数字专家</h1>
             <div class="system-settings-link-container">
-<!--                <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="system-settings-link" target="_blank">-->
-<!--                    <i class="fas fa-book"></i> 知识库配置-->
-<!--                </a>-->
                 <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="system-settings-link" target="_blank">
                     <i class="fas fa-sign-out-alt"></i> 退出
                 </a>
@@ -30,27 +28,33 @@
         </div>
 
         <form id="query-form">
-             <!-- 上传文档区域 -->
-            <div class="upload-container" id="upload-container">
-                <div class="upload-area" id="upload-area">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>点击或拖拽文件到此处上传</p>
-                    <span class="upload-hint">支持 PDF、Word、Excel、TXT 等格式</span>
-                    <input type="file" id="file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.ppt,.pptx">
-                </div>
-                <div class="file-list" id="file-list"></div>
-            </div>
             <div class="input-container">
+                <!-- 上传文件按钮区域 -->
+                <div class="upload-section">
+                    <div class="file-upload-button" id="file-upload-button" title="上传文件">
+                        <i class="fas fa-paperclip"></i>
+                    </div>
+                    <input type="file" id="file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.ppt,.pptx,.jpg,.jpeg,.png,.zip,.rar">
+                </div>
+
+                <!-- 输入框 -->
                 <input type="text" class="input-field" id="query-input" name="msg"
                        placeholder="请提交您的评审材料及评审标准，我来给出评审结果..." required autocomplete="off">
+
+                <!-- 操作按钮 -->
                 <div class="button-container">
                     <button type="submit" class="send-button" id="send-button">
-                        <i class="fas fa-paper-plane"></i> 发送
+                        <i class="fas fa-paper-plane"></i>
                     </button>
                     <button type="button" class="stop-button" id="stop-button" style="display:none;">
-                        <i class="fas fa-stop"></i> 停止
+                        <i class="fas fa-stop"></i>
                     </button>
                 </div>
+            </div>
+
+            <!-- 文件列表 -->
+            <div class="file-list-container" id="file-list-container">
+                <div class="file-list" id="file-list"></div>
             </div>
 
             <input type="hidden" id ="uid" name="uid" value="{{uid}}">
