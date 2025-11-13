@@ -117,7 +117,7 @@ def logout():
     logger.info(f"user_logout, {uid}, {app_source}")
     session_key = f"{uid}_{get_client_ip()}"
     auth_info.pop(session_key, None)
-    usr_info = cfg_utl.get_user_info_by_uid(uid)
+    usr_info = cfg_utl.get_user_info_by_uid(int(uid))
     usr_name = usr_info.get('name', '')
     return redirect(url_for('auth.login_index',
                            app_source=app_source,
