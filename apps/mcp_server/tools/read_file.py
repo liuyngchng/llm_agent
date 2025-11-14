@@ -4,19 +4,16 @@
 
 import logging.config
 from common.docx_util import get_md_catalog, get_md_para_by_heading
-from common.sys_init import init_yml_cfg
 from typing import Dict, Any, Optional
 
 logging.config.fileConfig("logging.conf", encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-
+# 在模块级别定义 MCP_TOOLS
 MCP_TOOLS = {}
-
 
 def mcp_tool(name: str, description: str, require_approval: bool = False):
     """装饰器标记函数为MCP工具"""
-
     def decorator(func):
         MCP_TOOLS[name] = {
             'func': func,
@@ -25,10 +22,9 @@ def mcp_tool(name: str, description: str, require_approval: bool = False):
             'require_approval': require_approval,
             'schema': _generate_input_schema(func)
         }
+        logger.info(f"Registered MCP tool: {name}")
         return func
-
     return decorator
-
 
 def _generate_input_schema(func):
     """根据函数签名生成输入schema"""
@@ -68,7 +64,6 @@ def _generate_input_schema(func):
 
         # 添加描述（从docstring中提取）
         if func.__doc__:
-            # 这里可以添加更复杂的docstring解析
             param_info["description"] = f"参数 {param_name}"
 
         # 处理可选参数
@@ -81,7 +76,7 @@ def _generate_input_schema(func):
 
     return schema
 
-
+# 工具函数定义 - 这些装饰器会在模块导入时立即执行
 @mcp_tool(
     name="get_markdown_catalog",
     description="获取Markdown文件的目录结构，返回JSON格式的层级目录",
@@ -99,7 +94,7 @@ def get_markdown_catalog(file_path: str) -> Dict[str, Any]:
     """
     try:
         result = get_md_catalog(file_path)
-        logger.info(f"成功获取目录结构，文件: {file_path}")
+        logger.info(f"获取目录结构: {file_path}")
         return {
             "status": "success",
             "data": result,
@@ -112,7 +107,6 @@ def get_markdown_catalog(file_path: str) -> Dict[str, Any]:
             "message": f"获取目录失败: {str(e)}",
             "file_path": file_path
         }
-
 
 @mcp_tool(
     name="get_markdown_section",
@@ -163,7 +157,7 @@ def get_markdown_section(md_file_path: str, heading1: str, heading2: Optional[st
             "file_path": md_file_path
         }
 
-
+# 其他辅助函数...
 def get_mcp_tools_config() -> Dict[str, Any]:
     """获取MCP工具的完整配置"""
     tools_config = {}
@@ -174,9 +168,7 @@ def get_mcp_tools_config() -> Dict[str, Any]:
             "inputSchema": tool_info["schema"],
             "requireApproval": tool_info["require_approval"]
         }
-
     return tools_config
-
 
 def execute_mcp_tool(tool_name: str, **kwargs) -> Dict[str, Any]:
     """执行MCP工具"""
@@ -197,14 +189,18 @@ def execute_mcp_tool(tool_name: str, **kwargs) -> Dict[str, Any]:
             "message": f"执行失败: {str(e)}"
         }
 
+# 添加这个函数来确保工具被正确注册
+def get_mcp_tools():
+    """返回注册的MCP工具"""
+    return MCP_TOOLS
 
 if __name__ == "__main__":
     # 测试代码
     tools_config = get_mcp_tools_config()
-    print("可用的MCP工具:")
+    logger.info("可用的MCP工具:")
     for tool_name, config in tools_config.items():
         print(f"- {tool_name}: {config['description']}")
 
     # 测试获取目录
-    result = get_markdown_catalog("output/1.md")
-    print(f"目录获取结果: {result['status']}")
+    result = get_markdown_catalog("common/output_doc/1.md")
+    print(f"目录获取结果: {result}")
