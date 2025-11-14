@@ -33,7 +33,7 @@ def get_docx_md_txt(docx_path: str) -> str:
         pypandoc.convert_file(docx_path, 'md', outputfile=md_path, format='docx')
 
         logger.info(f"成功转换文档: {docx_path} -> {md_path}")
-        return md_path
+        return os.path.abspath(md_path)
 
     except Exception as e:
         logger.error(f"docx_to_md_error, file {docx_path}, {str(e)}")
