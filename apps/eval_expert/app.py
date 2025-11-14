@@ -184,14 +184,14 @@ def register_routes(app):
         categorize_files = eval_expert.categorize_files(file_infos)
         logger.info(f"categorize_files, {categorize_files}")
         # 处理文件内容
-        review_criteria_msg = eval_expert.get_file_content_msg(categorize_files, "review_criteria")
-        project_materials_msg = eval_expert.get_file_content_msg(categorize_files, "project_materials")
+        review_criteria_msg = eval_expert.get_file_path_msg(categorize_files, "review_criteria")
+        project_materials_msg = eval_expert.get_file_path_msg(categorize_files, "project_materials")
         def generate_stream():
             full_response = ""
             stream_input = {
                 "domain": "燃气行业",
-                "review_criteria": review_criteria_msg,
-                "project_materials": project_materials_msg,
+                "review_criteria_file": review_criteria_msg,
+                "project_material_file": project_materials_msg,
                 "msg": msg
             }
             logger.info(f"stream_input {stream_input}")

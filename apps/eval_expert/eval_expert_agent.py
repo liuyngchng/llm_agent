@@ -10,9 +10,9 @@ from langchain_core.runnables import RunnablePassthrough
 from pydantic import SecretStr
 
 from common import agt_util, cfg_util
-from common.docx_util import get_docx_md_txt
+from common.docx_util import get_docx_md_file_path
 from common.sys_init import init_yml_cfg
-from common.xlsx_util import get_xlsx_md_txt
+from common.xlsx_util import get_xlsx_md_file_path
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -60,7 +60,12 @@ class EvalExpertAgent:
         prompt = ChatPromptTemplate.from_template(template)
         model = self.get_llm()
         chain = (
-            {"domain": RunnablePassthrough(), "review_criteria": RunnablePassthrough(), "project_materials": RunnablePassthrough(),"msg": RunnablePassthrough()}
+            {
+                "domain": RunnablePassthrough(),
+                "review_criteria_file": RunnablePassthrough(),
+                "project_material_file": RunnablePassthrough(),
+                "msg": RunnablePassthrough()
+            }
             | prompt
             | model
             | StrOutputParser()
@@ -68,21 +73,20 @@ class EvalExpertAgent:
         return chain
 
     @staticmethod
-    def get_file_content_msg(categorize_files: dict[str, list[str]], content_type: str):
+    def get_file_path_msg(categorize_files: dict[str, list[str]], content_type: str):
         msg = []
         for file_name in categorize_files.get(content_type):
             logger.info(f"processing_file: {file_name}")
-            content = EvalExpertAgent.get_file_content(file_name)
+            file_path = EvalExpertAgent.get_file_convert_md_file_path(file_name)
             msg.append({
-                'file_name': file_name,
-                'content': content
+                'file_path': file_path
             })
         return msg
 
     @staticmethod
-    def get_file_content(file_name: str):
+    def get_file_convert_md_file_path(file_name: str):
         """
-        根据文件信息获取文件内容
+        根据文件信息获取文件转换为markdown 文件的磁盘路径
         """
         file_path = os.path.join(UPLOAD_FOLDER, file_name)
         abs_path = os.path.abspath(file_path)
@@ -93,12 +97,12 @@ class EvalExpertAgent:
 
         try:
             if file_ext in ['.docx', '.doc']:
-                return get_docx_md_txt(file_path)
+                return get_docx_md_file_path(file_path)
             elif file_ext in ['.xlsx', '.xls']:
-                return get_xlsx_md_txt(file_path)
+                return get_xlsx_md_file_path(file_path)
             elif file_ext == '.txt':
                 with open(file_path, 'r', encoding='utf-8') as f:
-                    return f.read()
+                    return file_path
             elif file_ext == '.pdf':
                 # 如果需要处理PDF，可以在这里添加PDF处理逻辑
                 return f"PDF文件内容提取功能待实现: {file_name}"
@@ -155,9 +159,9 @@ if __name__ == "__main__":
     ]
     agent = EvalExpertAgent(my_cfg)
     logger.info(file_info)
-    categorize_files = agent.categorize_files(file_info)
-    logger.info(categorize_files)
+    my_categorize_files = agent.categorize_files(file_info)
+    logger.info(my_categorize_files)
 
-    review_criteria_msg = agent.get_file_content_msg(categorize_files, "review_criteria")
-    project_materials_msg = agent.get_file_content_msg(categorize_files, "project_materials")
+    review_criteria_msg = agent.get_file_path_msg(my_categorize_files, "review_criteria")
+    project_materials_msg = agent.get_file_path_msg(my_categorize_files, "project_materials")
     logger.info(f"review_criteria_msg={review_criteria_msg}, project_materials_msg={project_materials_msg}")

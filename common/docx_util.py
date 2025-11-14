@@ -11,12 +11,13 @@ logger = logging.getLogger(__name__)
 OUTPUT_DIR = "output_doc"
 
 
-def get_docx_md_txt(docx_path: str) -> str:
+def get_docx_md_file_path(docx_path: str, output_abs_path: bool = False) -> str:
     """
     # 使用前需要安装 pandoc: https://pandoc.org/installing.html
     # pip install pypandoc
     # sudo apt-get install pandoc
     :param docx_path: Word 文档的路径
+    :param output_abs_path: 是否输出绝对路径
     :return: markdown 文档保存在磁盘的路径
     """
     import pypandoc
@@ -31,9 +32,12 @@ def get_docx_md_txt(docx_path: str) -> str:
 
         # 转换并保存到文件
         pypandoc.convert_file(docx_path, 'md', outputfile=md_path, format='docx')
-
+        abs_path = os.path.abspath(md_path)
         logger.info(f"成功转换文档: {docx_path} -> {md_path}")
-        return os.path.abspath(md_path)
+        if output_abs_path:
+            return abs_path
+        else:
+            return md_path
 
     except Exception as e:
         logger.error(f"docx_to_md_error, file {docx_path}, {str(e)}")
@@ -217,10 +221,10 @@ def get_md_para_by_heading(md_file_path: str, heading1: str, heading2: str = Non
 # 使用示例
 if __name__ == "__main__":
     my_docx_file = "/home/rd/Downloads/java.tutorial.docx"  # 替换为你的docx文件路径
-    my_md_file_path = get_docx_md_txt(my_docx_file)
+    my_md_file_path = get_docx_md_file_path(my_docx_file)
     if not my_md_file_path:
         logger.info("转换失败")
     logger.info(f"Markdown文件已保存到: {my_md_file_path}")
     heading1 = "包依赖管理"
     txt = get_md_para_by_heading(my_md_file_path, heading1)
-    logger.info(f"txt for {heading1}, {txt}")
+    logger.info(f"txt for {heading1}, {txt[:100]}...")
