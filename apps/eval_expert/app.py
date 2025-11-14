@@ -159,13 +159,13 @@ def register_routes(app):
         msg = request.form.get('msg', "").strip()
         uid = request.form.get('uid')
         file_infos = request.form.get('file_infos')
-        if file_infos:
-            logger.info(f"request_file_infos, {file_infos}")
-            file_infos = json.loads(file_infos)
+        if not file_infos:
+            warning_info = f"缺少评审文件信息，请上传后再试"
+            logger.error(f"{warning_info}, {msg}, {uid}")
+            return warning_info
 
-
-        if not msg or not uid:
-            warning_info = f"缺少用户消息、用户身份信息中的一个或多个参数，请您检查后再试"
+        if not uid:
+            warning_info = f"缺少用户身份信息，请您检查后再试"
             logger.error(f"{warning_info}, {msg}, {uid}")
             return warning_info
 
@@ -178,18 +178,32 @@ def register_routes(app):
 
         logger.info(f"rcv_msg, {msg}, uid {uid}")
         auth_info[session_key] = time.time()
-        eval_expert_agent = EvalExpertAgent(my_cfg)
-
+        logger.info(f"request_file_infos, {file_infos}")
+        file_infos = json.loads(file_infos)
+        eval_expert = EvalExpertAgent(my_cfg)
+        categorize_files = eval_expert.categorize_files(file_infos)
+        logger.info(f"categorize_files, {categorize_files}")
+        # 处理文件内容
+        review_criteria_msg = eval_expert.get_file_content_msg(categorize_files, "review_criteria")
+        project_materials_msg = eval_expert.get_file_content_msg(categorize_files, "project_materials")
         def generate_stream():
             full_response = ""
-            stream_input = {"context": "", "question": msg}
+            stream_input = {
+                "domain": "燃气行业",
+                "review_criteria": review_criteria_msg,
+                "project_materials": project_materials_msg,
+                "msg": msg
+            }
             logger.info(f"stream_input {stream_input}")
-            for chunk in eval_expert_agent.get_chain().stream(stream_input):
+            for chunk in eval_expert.get_chain().stream(stream_input):
                 full_response += chunk
                 yield chunk
             logger.info(f"full_response: {full_response}")
 
         return app.response_class(generate_stream(), mimetype='text/event-stream')
+
+
+
 
     @app.route('/upload', methods=['POST'])
     def upload_file():
