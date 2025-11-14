@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+
+import logging.config
+from common.docx_util import get_md_catalog, get_md_para_by_heading
+from common.sys_init import init_yml_cfg
+from typing import Dict, Any, Optional
+
+logging.config.fileConfig("logging.conf", encoding="utf-8")
+logger = logging.getLogger(__name__)
+
+
+MCP_TOOLS = {}
+
+
+def mcp_tool(name: str, description: str, require_approval: bool = False):
+    """装饰器标记函数为MCP工具"""
+
+    def decorator(func):
+        MCP_TOOLS[name] = {
+            'func': func,
+            'name': name,
+            'description': description,
+            'require_approval': require_approval,
+            'schema': _generate_input_schema(func)
+        }
+        return func
+
+    return decorator
+
+
+def _generate_input_schema(func):
+    """根据函数签名生成输入schema"""
+    import inspect
+    from typing import get_type_hints
+
+    schema = {
+        "type": "object",
+        "properties": {},
+        "required": []
+    }
+
+    # 获取函数签名和类型提示
+    sig = inspect.signature(func)
+    type_hints = get_type_hints(func)
+
+    for param_name, param in sig.parameters.items():
+        if param_name == 'self':  # 跳过self参数
+            continue
+
+        param_type = type_hints.get(param_name, str)
+        param_default = param.default
+
+        # 类型映射
+        type_mapping = {
+            str: "string",
+            int: "integer",
+            float: "number",
+            bool: "boolean",
+            dict: "object",
+            list: "array"
+        }
+
+        param_info = {
+            "type": type_mapping.get(param_type, "string")
+        }
+
+        # 添加描述（从docstring中提取）
+        if func.__doc__:
+            # 这里可以添加更复杂的docstring解析
+            param_info["description"] = f"参数 {param_name}"
+
+        # 处理可选参数
+        if param_default == inspect.Parameter.empty:
+            schema["required"].append(param_name)
+        else:
+            param_info["default"] = param_default
+
+        schema["properties"][param_name] = param_info
+
+    return schema
+
+
+@mcp_tool(
+    name="get_markdown_catalog",
+    description="获取Markdown文件的目录结构，返回JSON格式的层级目录",
+    require_approval=False
+)
+def get_markdown_catalog(file_path: str) -> Dict[str, Any]:
+    """
+    获取Markdown文件的目录结构
+
+    Args:
+        file_path: Markdown文件的完整路径
+
+    Returns:
+        包含目录结构的字典，包含标题、层级和子章节信息
+    """
+    try:
+        result = get_md_catalog(file_path)
+        logger.info(f"成功获取目录结构，文件: {file_path}")
+        return {
+            "status": "success",
+            "data": result,
+            "file_path": file_path
+        }
+    except Exception as e:
+        logger.error(f"获取目录失败: {file_path}, 错误: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"获取目录失败: {str(e)}",
+            "file_path": file_path
+        }
+
+
+@mcp_tool(
+    name="get_markdown_section",
+    description="根据一级标题和可选的二级标题获取Markdown文件特定章节的内容",
+    require_approval=False
+)
+def get_markdown_section(md_file_path: str, heading1: str, heading2: Optional[str] = None) -> Dict[str, Any]:
+    """
+    获取Markdown文件特定章节的内容
+
+    Args:
+        md_file_path: Markdown文件的完整路径
+        heading1: 一级标题名称
+        heading2: 二级标题名称（可选）
+
+    Returns:
+        包含章节内容的字典
+    """
+    try:
+        content = get_md_para_by_heading(md_file_path, heading1, heading2)
+
+        if content:
+            logger.info(f"成功获取章节内容: {heading1}" + (f" -> {heading2}" if heading2 else ""))
+            return {
+                "status": "success",
+                "data": {
+                    "heading1": heading1,
+                    "heading2": heading2,
+                    "content": content
+                },
+                "file_path": md_file_path
+            }
+        else:
+            logger.warning(f"未找到指定章节: {heading1}" + (f" -> {heading2}" if heading2 else ""))
+            return {
+                "status": "not_found",
+                "message": "未找到指定章节内容",
+                "heading1": heading1,
+                "heading2": heading2,
+                "file_path": md_file_path
+            }
+
+    except Exception as e:
+        logger.error(f"获取章节内容失败: {md_file_path}, 错误: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"获取章节内容失败: {str(e)}",
+            "file_path": md_file_path
+        }
+
+
+def get_mcp_tools_config() -> Dict[str, Any]:
+    """获取MCP工具的完整配置"""
+    tools_config = {}
+
+    for tool_name, tool_info in MCP_TOOLS.items():
+        tools_config[tool_name] = {
+            "description": tool_info["description"],
+            "inputSchema": tool_info["schema"],
+            "requireApproval": tool_info["require_approval"]
+        }
+
+    return tools_config
+
+
+def execute_mcp_tool(tool_name: str, **kwargs) -> Dict[str, Any]:
+    """执行MCP工具"""
+    if tool_name not in MCP_TOOLS:
+        return {
+            "status": "error",
+            "message": f"工具不存在: {tool_name}"
+        }
+
+    try:
+        tool_func = MCP_TOOLS[tool_name]["func"]
+        result = tool_func(**kwargs)
+        return result
+    except Exception as e:
+        logger.error(f"执行工具失败 {tool_name}: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"执行失败: {str(e)}"
+        }
+
+
+if __name__ == "__main__":
+    # 测试代码
+    tools_config = get_mcp_tools_config()
+    print("可用的MCP工具:")
+    for tool_name, config in tools_config.items():
+        print(f"- {tool_name}: {config['description']}")
+
+    # 测试获取目录
+    result = get_markdown_catalog("output/1.md")
+    print(f"目录获取结果: {result['status']}")
