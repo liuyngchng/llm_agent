@@ -4,6 +4,7 @@ langchain
 pydantic
 langchain_core
 concurrent-log-handler
+# 需要依赖操作系统的组件pandoc，需另外安装 sudo apt-get install pandoc
 pypandoc
 pandas
 openpyxl
