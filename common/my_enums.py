@@ -69,7 +69,7 @@ class AppType(Enum):
     CHAT2DB = "智能问数"
     OPEN = "开放平台"
     MT_REPORT = "会议纪要整理"
-    EVAL_EXPERT = "项目评审数字专家"
+    EVAL_EXPERT = "AI 评审数字专家"
 
     @staticmethod
     def get_app_list() -> list:

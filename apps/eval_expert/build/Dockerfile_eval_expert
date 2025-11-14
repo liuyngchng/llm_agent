@@ -1,0 +1,28 @@
+# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+
+FROM ubuntu_py:24.04 as builder
+
+WORKDIR /opt
+ARG PROXY=""
+ARG APP="eval_expert"
+#ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn"
+# 确保当前目录下的 ./whl_py_dir 存在，且 whl 离线包与当前 python 的版本完全一致, 离线安装时使用
+COPY ./whl_py_dir_${APP} /tmp/whl
+RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn flask \
+    langchain_openai langchain_community \
+    langchain langchain_text_splitters langchain_unstructured unstructured \
+    unstructured[pdf] langchain_core pydantic python-docx python-pptx pillow \
+    concurrent_log_handler pydub pycryptodome wheel tabulate chromadb \
+    lxml websockets markdown openpyxl $PROXY && \
+    rm -rf /tmp/whl && \
+    rm -rf ~/.cache/pip
+
+
+FROM ubuntu_py:24.04
+COPY --from=builder /opt/llm_py_env /opt/llm_py_env
+RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime' && \
+    ulimit -n 65535
+
+WORKDIR /opt/app
+EXPOSE 19000
+ENTRYPOINT ["sh", "./common/boot.sh"]
