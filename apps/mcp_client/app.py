@@ -11,7 +11,7 @@ import os
 
 from flask import (Flask, render_template, request, jsonify, Response,
                    stream_with_context, send_from_directory, abort)
-from apps.mcp_client.client_service import auto_call_mcp, auto_call_mcp_yield
+from common.mcp_service import auto_call_mcp, auto_call_mcp_yield
 from common.sys_init import init_yml_cfg
 
 # 配置日志

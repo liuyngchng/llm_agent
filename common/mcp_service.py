@@ -15,8 +15,6 @@ from typing import Any, Generator
 from urllib.parse import urlparse
 
 import httpx
-from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
 from common.sys_init import init_yml_cfg
 from common.cm_utils import post_with_retry, build_curl_cmd
 
@@ -37,7 +35,7 @@ CACHE_EXPIRY_MINUTES = 30
 
 
 # 配置选项
-class MCPClientConfig:
+class Config:
     """MCP 客户端配置"""
 
     def __init__(self,
@@ -51,7 +49,7 @@ class MCPClientConfig:
         self.max_retries = max_retries  # 最大重试次数
 
 # 使用配置创建客户端工厂
-def create_http_client_factory(config: MCPClientConfig):
+def create_http_client_factory(config: Config):
     """创建可配置的 HTTP 客户端工厂"""
 
     def factory(**kwargs):
@@ -72,7 +70,7 @@ def create_http_client_factory(config: MCPClientConfig):
 
     return factory
 
-client_config = MCPClientConfig(
+cfg = Config(
     verify_https=False,  # 开发环境禁用 SSL 验证
     http_timeout=30,
     sse_timeout=300,
@@ -104,10 +102,11 @@ async def async_get_available_tools(server_list:list[str], force_refresh: bool =
 
     all_tools = []
     tool_server_map = {}
-
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
     for index, server_addr in enumerate(server_list):
         try:
-            async with streamablehttp_client(url=server_addr, timeout=30, httpx_client_factory=create_http_client_factory(client_config)) as (read, write, _):
+            async with streamablehttp_client(url=server_addr, timeout=30, httpx_client_factory=create_http_client_factory(cfg)) as (read, write, _):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     tools_resp = await session.list_tools()
@@ -148,9 +147,11 @@ async def async_call_mcp_tool(server_addr: str, call_tool_name: str, params: dic
     :param params: 工具参数（字典格式）
     :return: 工具执行返回结果
     """
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
     logger.info(f"call_mcp_tool: {call_tool_name}@{server_addr}, params: {params}")
     try:
-        async with streamablehttp_client(url=server_addr, timeout=30, httpx_client_factory=create_http_client_factory(client_config)) as (read, write, _):
+        async with streamablehttp_client(url=server_addr, timeout=30, httpx_client_factory=create_http_client_factory(cfg)) as (read, write, _):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 result = await session.call_tool(call_tool_name, params or {})
