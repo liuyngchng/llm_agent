@@ -7,7 +7,7 @@ import logging.config
 from mcp.server.fastmcp import FastMCP
 from mcp.types import Request
 from starlette.responses import JSONResponse
-from apps.mcp_server.tools import read_file
+from apps.mcp_server.tools.read_file import get_mcp_tools
 
 # 移除硬编码的端口，让 uvicorn 控制端口
 app = FastMCP(stateless_http=True, json_response=True, host='0.0.0.0')
@@ -53,7 +53,6 @@ async def get_tools(request: Request):
 def add_your_tools():
     """从MCP服务中添加可调用的工具"""
     # 确保工具已经被注册
-    from apps.mcp_server.tools.read_file import get_mcp_tools
 
     mcp_tools = get_mcp_tools()
 

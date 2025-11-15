@@ -205,7 +205,7 @@ def register_routes(app):
         # logger.info(f"stream_input, {stream_input}")
         # 使用工具处理
         response = asyncio.run(eval_expert.process_with_tools(stream_input))
-        logger.info(f"full_response: {response}")
+        logger.info(f"full_response: {json.dumps(response, ensure_ascii=False)}")
         return response
 
     @app.route('/upload', methods=['POST'])

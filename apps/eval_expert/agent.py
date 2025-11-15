@@ -114,7 +114,8 @@ class EvalExpertAgent:
                 url=uri,
                 headers=headers,
                 json=payload,
-                timeout=60
+                timeout=60,
+                verify=False,
             )
             logger.info(f"response_status: {response.status_code}, 响应头: {response.headers}")
 
@@ -348,30 +349,57 @@ class EvalExpertAgent:
             logger.error(f"处理工具调用时出错: {str(e)}")
             return f"工具调用处理失败: {str(e)}"
 
-    def execute_tool(self, tool: Dict, tool_args: Dict) -> str:
+    @staticmethod
+    def execute_tool(tool: Dict, tool_args: Dict) -> str:
         """执行工具调用"""
         try:
             server_addr = tool.get('server')
             if not server_addr:
                 return f"工具 {tool['name']} 未配置服务器地址"
 
-            logger.info(f"调用工具 {tool['name']}, 参数: {tool_args}, 服务器: {server_addr}")
+            headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json, text/event-stream'
+            }
 
+            # 构建符合 JSON-RPC 2.0 标准的请求体
+            import uuid
+            json_rpc_request = {
+                "jsonrpc": "2.0",
+                "id": str(uuid.uuid4()),
+                "method": "tools/call",
+                "params": {
+                    "name": tool['name'],
+                    "arguments": tool_args
+                }
+            }
+
+            logger.info(f"调用工具 {server_addr}, {tool['name']}, 参数: {tool_args}")
             response = requests.post(
-                f"{server_addr}/call_tool",
-                json={
-                    "tool_name": tool['name'],
-                    "parameters": tool_args
-                },
-                timeout=30
+                f"{server_addr}",
+                headers=headers,
+                json=json_rpc_request,  # 使用标准的 JSON-RPC 2.0 格式
+                timeout=30,
+                verify=False
             )
 
             if response.status_code == 200:
-                result = response.json().get('result', '')
-                logger.info(f"工具 {tool['name']} 调用成功，结果长度: {len(str(result))}")
-                return result
+                result_data = response.json()
+                # 检查 JSON-RPC 响应格式
+                if 'result' in result_data:
+                    result = result_data['result']
+                    logger.info(f"工具 {tool['name']} 调用成功，结果长度: {len(str(result))}")
+                    return result
+                elif 'error' in result_data:
+                    error_msg = f"工具调用返回错误: {result_data['error']}"
+                    logger.error(f"工具 {tool['name']} 调用错误: {error_msg}")
+                    return error_msg
+                else:
+                    error_msg = f"无效的 JSON-RPC 响应格式: {result_data}"
+                    logger.error(f"工具 {tool['name']} 响应格式错误: {error_msg}")
+                    return error_msg
             else:
-                error_msg = f"工具调用失败: {response.text}"
+                error_msg = f"工具调用失败: {response.status_code} - {response.text}"
                 logger.error(f"工具 {tool['name']} 调用失败: {error_msg}")
                 return error_msg
 
@@ -401,7 +429,10 @@ class EvalExpertAgent:
             工具调用结果:
             {tool_results_str}
 
-            请基于评审依据与标准给出的模板给出完整的评审报告。
+            请严格按照评审依据与标准模板：
+            {input_data.get('review_criteria', '')}
+            
+            填写模板中的相应内容，给出最终的报告。
             """
 
             return self.call_llm_api(final_prompt)

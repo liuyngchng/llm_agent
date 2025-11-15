@@ -92,21 +92,25 @@ def get_markdown_catalog(file_path: str) -> Dict[str, Any]:
     Returns:
         包含目录结构的字典，包含标题、层级和子章节信息
     """
+    logger.info(f"call_get_markdown_catalog, {file_path}")
     try:
-        result = get_md_catalog(file_path)
+        catalog = get_md_catalog(file_path)
         logger.info(f"获取目录结构: {file_path}")
-        return {
+        result = {
             "status": "success",
-            "data": result,
+            "data": catalog,
             "file_path": file_path
         }
     except Exception as e:
         logger.error(f"获取目录失败: {file_path}, 错误: {str(e)}")
-        return {
+        result = {
             "status": "error",
             "message": f"获取目录失败: {str(e)}",
+            "data": "",
             "file_path": file_path
         }
+    logger.info(f"返回结果: {result}")
+    return result
 
 @mcp_tool(
     name="get_markdown_section",
@@ -125,12 +129,12 @@ def get_markdown_section(md_file_path: str, heading1: str, heading2: Optional[st
     Returns:
         包含章节内容的字典
     """
+    logger.info(f"call_get_markdown_section, {md_file_path}, {heading1}, {heading2}")
     try:
         content = get_md_para_by_heading(md_file_path, heading1, heading2)
-
         if content:
             logger.info(f"成功获取章节内容: {heading1}" + (f" -> {heading2}" if heading2 else ""))
-            return {
+            result = {
                 "status": "success",
                 "data": {
                     "heading1": heading1,
@@ -141,11 +145,14 @@ def get_markdown_section(md_file_path: str, heading1: str, heading2: Optional[st
             }
         else:
             logger.warning(f"未找到指定章节: {heading1}" + (f" -> {heading2}" if heading2 else ""))
-            return {
+            result = {
                 "status": "not_found",
                 "message": "未找到指定章节内容",
-                "heading1": heading1,
-                "heading2": heading2,
+                "data": {
+                    "heading1": heading1,
+                    "heading2": heading2,
+                    "content": ""
+                },
                 "file_path": md_file_path
             }
 
@@ -154,8 +161,15 @@ def get_markdown_section(md_file_path: str, heading1: str, heading2: Optional[st
         return {
             "status": "error",
             "message": f"获取章节内容失败: {str(e)}",
+            "data": {
+                "heading1": heading1,
+                "heading2": heading2,
+                "content": ""
+            },
             "file_path": md_file_path
         }
+    logger.info(f"返回结果: {result}")
+    return result
 
 # 其他辅助函数...
 def get_mcp_tools_config() -> Dict[str, Any]:
@@ -198,9 +212,9 @@ if __name__ == "__main__":
     # 测试代码
     tools_config = get_mcp_tools_config()
     logger.info("可用的MCP工具:")
-    for tool_name, config in tools_config.items():
-        print(f"- {tool_name}: {config['description']}")
+    for name, config in tools_config.items():
+        print(f"- {name}: {config['description']}")
 
     # 测试获取目录
-    result = get_markdown_catalog("common/output_doc/1.md")
-    print(f"目录获取结果: {result}")
+    my_result = get_markdown_catalog("common/output_doc/1.md")
+    print(f"目录获取结果: {my_result}")
