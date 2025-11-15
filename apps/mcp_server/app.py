@@ -92,7 +92,7 @@ if __name__ == "__main__":
     uvicorn.run(
         starlette_app,
         host="0.0.0.0",
-        port=19000,  # 直接运行时使用 19000
+        port=19001,  # 直接运行时使用 19001
         ssl_keyfile=key_file,
         ssl_certfile=cert_file,
         log_level="info"

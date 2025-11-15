@@ -222,10 +222,13 @@ queryForm.addEventListener('submit', async function(e) {
 
     // 添加用户消息（显示文本和文件信息）
     let userMessage = query;
+    let finalQuery = query; // 用于发送到后端的消息
+
     if (hasFiles) {
         const fileNames = selectedFiles.map(f => f.name).join(', ');
         // 如果只有文件没有文本，显示不同的消息
         userMessage = userMessage || "文件上传评审";
+        finalQuery = finalQuery || "请对上传的文件进行评审"; // 优化：为后端提供明确的指令
         userMessage += `\n\n上传文件: ${fileNames}`;
     }
     addMessage(userMessage, 'user');
@@ -249,7 +252,7 @@ queryForm.addEventListener('submit', async function(e) {
 
     try {
         // 开始获取数据
-        await fetchQueryData(query, uploadedFileInfos);
+        await fetchQueryData(finalQuery, uploadedFileInfos);
     } catch (error) {
         console.error("请求出错:", error);
         if (currentBotMessage) {

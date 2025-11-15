@@ -62,6 +62,7 @@ class EvalExpertAgent:
         try:
             # 动态获取可用工具
             available_tools = await async_get_available_tools(self.mcp_servers)
+            logger.info(f"可用工具: {available_tools}")
             self.tools = self.convert_to_langchain_tools(available_tools)
             self.tools_description = self.generate_tools_description(available_tools)
             logger.info(f"工具初始化完成: {len(self.tools)} 个工具可用")
