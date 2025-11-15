@@ -30,9 +30,7 @@ class EvalExpertAgent:
         self.llm_api_key = SecretStr(syc_cfg['api']['llm_api_key'])
         self.llm_model_name = syc_cfg['api']['llm_model_name']
         self.mcp_servers = syc_cfg.get('mcp', {}).get('servers', [])
-        self.llm = self.get_llm()
         self.tools = []
-        self.tools_description = "当前无可用工具"
         # 评审标准关键词
         self.standard_keywords = [
             '标准', '要求', '准则', '规范', '指引', '指标',
@@ -59,12 +57,10 @@ class EvalExpertAgent:
             available_tools = await async_get_available_tools(self.mcp_servers)
             logger.info(f"可用工具: {available_tools}")
             self.tools = self.convert_to_basic_tools(available_tools)
-            self.tools_description = self.generate_tools_description(available_tools)
-            logger.info(f"工具初始化完成: {len(self.tools)} 个工具可用, tools_description: {self.tools_description}")
+            logger.info(f"工具初始化完成: {len(self.tools)} 个工具可用")
         except Exception as e:
             logger.error(f"工具初始化失败: {str(e)}")
             self.tools = []
-            self.tools_description = "工具初始化失败，将不使用工具功能"
 
     @staticmethod
     def convert_to_basic_tools(available_tools: List[Dict]) -> List[Dict]:
@@ -82,85 +78,92 @@ class EvalExpertAgent:
 
         except Exception as e:
             logger.error(f"转换工具失败: {str(e)}")
-
         return tools
-
-    @staticmethod
-    def generate_tools_description(available_tools: List[Dict]) -> str:
-        """生成工具描述文本用于提示词"""
-        if not available_tools:
-            return "当前无可用工具"
-
-        descriptions = []
-        for tool in available_tools:
-            desc = f"- **{tool['name']}**: {tool.get('description', '暂无描述')}"
-
-            if tool.get('inputSchema'):
-                input_schema = tool['inputSchema']
-                # 提取并格式化参数信息
-                params_desc = []
-                properties = input_schema.get('properties', {})
-                required_params = input_schema.get('required', [])
-
-                for param_name, param_info in properties.items():
-                    param_type = param_info.get('type', 'string')
-                    is_required = param_name in required_params
-                    required_mark = "[必需]" if is_required else "[可选]"
-                    param_title = param_info.get('title', param_name)
-                    params_desc.append(f"{param_name}{required_mark}({param_type}): {param_title}")
-
-                if params_desc:
-                    desc += f" 参数: {', '.join(params_desc)}"
-
-            descriptions.append(desc)
-
-        return "\n".join(descriptions)
-
-    def get_llm(self):
-        """获取LLM配置"""
-        return agt_util.get_model(self.syc_cfg, temperature=1.3)
 
     def call_llm_api(self, prompt: str) -> str:
         """直接调用LLM API"""
+        key = self.llm_api_key.get_secret_value()
+        model = self.llm_model_name
+        uri = f"{self.llm_api_uri}/chat/completions"
         try:
-            llm_config = self.get_llm()
-
             headers = {
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {llm_config["api_key"].get_secret_value()}'
+                'Authorization': f'Bearer {key}'
             }
 
+            # 构建消息
+            messages = [
+                {"role": "user", "content": prompt}
+            ]
+
+            # 构建请求体
             payload = {
-                'model': llm_config['model_name'],
-                'messages': [{'role': 'user', 'content': prompt}],
+                'model': model,
+                'messages': messages,
                 'temperature': 1.3
             }
 
+            # 如果有可用工具，添加到请求中
+            if self.tools:
+                payload['tools'] = self.convert_tools_to_openai_format()
+                # 可选：设置工具调用策略
+                payload['tool_choice'] = 'auto'
+
+            logger.info(f"start_request, {uri}, {model}, 工具数量: {len(self.tools)}, 提示词长度: {len(prompt)}")
             response = requests.post(
-                llm_config['api_uri'],
+                url=uri,
                 headers=headers,
                 json=payload,
                 timeout=60
             )
+            logger.info(f"response_status: {response.status_code}, 响应头: {response.headers}")
 
             if response.status_code == 200:
                 result = response.json()
-                # 根据不同的API响应格式提取内容
-                if 'choices' in result and len(result['choices']) > 0:
-                    return result['choices'][0]['message']['content']
-                elif 'content' in result:
-                    return result['content']
-                else:
-                    return str(result)
+                logger.info(f"LLM 响应解析成功")
+                return self.parse_llm_response(result)
             else:
                 error_msg = f"LLM API调用失败: {response.status_code} - {response.text}"
                 logger.error(error_msg)
                 return error_msg
-
         except Exception as e:
             error_msg = f"LLM API调用异常: {str(e)}"
             logger.error(error_msg)
             return error_msg
+
+    def convert_tools_to_openai_format(self) -> List[Dict]:
+        """将工具转换为OpenAI格式"""
+        openai_tools = []
+        for tool in self.tools:
+            openai_tool = {
+                "type": "function",
+                "function": {
+                    "name": tool['name'],
+                    "description": tool.get('description', ''),
+                    "parameters": tool.get('inputSchema', {})
+                }
+            }
+            openai_tools.append(openai_tool)
+        return openai_tools
+
+    def parse_llm_response(self, result: Dict) -> str:
+        """解析LLM响应"""
+        if 'choices' in result and len(result['choices']) > 0:
+            choice = result['choices'][0]
+            message = choice.get('message', {})
+
+            # 检查是否有工具调用
+            if 'tool_calls' in message and message['tool_calls']:
+                # 返回工具调用信息，让上层处理
+                return json.dumps({
+                    'tool_calls': message['tool_calls'],
+                    'content': message.get('content', '')
+                })
+            else:
+                # 直接返回文本内容
+                return message.get('content', '')
+        else:
+            return str(result)
 
     def build_prompt(self, input_data: Dict[str, Any]) -> str:
         """构建提示词"""
@@ -168,18 +171,21 @@ class EvalExpertAgent:
         template = cfg_util.get_usr_prompt_template(template_name, self.syc_cfg)
         if not template:
             raise ReferenceError(f"no_prompt_template_config_for {template_name}")
-
-        # 动态替换工具描述
-        template = template.replace("{available_tools_description}", self.tools_description)
-
         # 替换其他变量
-        prompt = template.replace("{today}", input_data.get("today", ""))
-        prompt = prompt.replace("{domain}", input_data.get("domain", ""))
-        prompt = prompt.replace("{review_criteria}", input_data.get("review_criteria", ""))
-        prompt = prompt.replace("{project_material_file}", input_data.get("project_material_file", ""))
-        prompt = prompt.replace("{msg}", input_data.get("msg", ""))
+        prompt = template.replace("{today}", str(input_data.get("today", "")))
+        prompt = prompt.replace("{domain}", str(input_data.get("domain", "")))
+        prompt = prompt.replace("{review_criteria}", str(input_data.get("review_criteria", "")))
+        project_material_file = input_data.get("project_material_file", [])
+        if isinstance(project_material_file, list):
+            project_files_str = ", ".join([
+                str(item.get('file_path', '')) if isinstance(item, dict) else str(item)
+                for item in project_material_file
+            ])
+        else:
+            project_files_str = str(project_material_file)
+        prompt = prompt.replace("{project_material_file}", project_files_str)
+        prompt = prompt.replace("{msg}", str(input_data.get("msg", "")))
 
-        logger.debug(f"构建的提示词: {prompt}")
         return prompt
 
     async def process_with_tools(self, input_data: Dict[str, Any]) -> str:
@@ -218,20 +224,14 @@ class EvalExpertAgent:
         tool_calls = []
 
         try:
-            # 简单的工具调用检测逻辑
-            # 这里可以根据实际响应格式进行调整
-            if "tool_call" in response.lower() or "function" in response.lower():
-                # 尝试解析JSON格式的工具调用
-                lines = response.split('\n')
-                for line in lines:
-                    line = line.strip()
-                    if line.startswith('{') and line.endswith('}'):
-                        try:
-                            data = json.loads(line)
-                            if 'tool_name' in data or 'function' in data:
-                                tool_calls.append(data)
-                        except json.JSONDecodeError:
-                            continue
+            # 检查是否是结构化的工具调用响应
+            if response.startswith('{') and response.endswith('}'):
+                try:
+                    data = json.loads(response)
+                    if 'tool_calls' in data and data['tool_calls']:
+                        return data['tool_calls']
+                except json.JSONDecodeError:
+                    pass
 
             # 如果没有检测到结构化工具调用，但响应中提到了可用工具名称
             if not tool_calls and self.tools:
@@ -249,7 +249,8 @@ class EvalExpertAgent:
 
         return tool_calls
 
-    def extract_tool_arguments(self, response: str, tool_name: str) -> Dict:
+    @staticmethod
+    def extract_tool_arguments(response: str, tool_name: str) -> Dict:
         """从响应中提取工具参数"""
         # 简单的参数提取逻辑，可以根据实际需求增强
         args = {}
@@ -283,20 +284,25 @@ class EvalExpertAgent:
             for tool_call in tool_calls:
                 # 处理不同的工具调用格式
                 if isinstance(tool_call, dict):
-                    if 'name' in tool_call:
+                    # 处理 OpenAI 格式的工具调用
+                    if 'function' in tool_call:
+                        tool_name = tool_call['function']['name']
+                        try:
+                            if isinstance(tool_call['function']['arguments'], str):
+                                tool_args = json.loads(tool_call['function']['arguments'])
+                            else:
+                                tool_args = tool_call['function']['arguments']
+                        except (json.JSONDecodeError, KeyError) as e:
+                            logger.error(f"工具参数解析失败: {e}")
+                            tool_args = {}
+                    elif 'name' in tool_call:
                         tool_name = tool_call['name']
                         tool_args = tool_call.get('args', {})
                     elif 'tool_name' in tool_call:
                         tool_name = tool_call['tool_name']
                         tool_args = tool_call.get('parameters', {})
                     else:
-                        tool_name = tool_call.get('function', {}).get('name', '')
-                        tool_args = tool_call.get('function', {}).get('arguments', {})
-                        if isinstance(tool_args, str):
-                            try:
-                                tool_args = json.loads(tool_args)
-                            except json.JSONDecodeError:
-                                tool_args = {}
+                        continue
                 else:
                     continue
 
@@ -485,16 +491,3 @@ class EvalExpertAgent:
 
 if __name__ == "__main__":
     my_cfg = init_yml_cfg()
-    file_info = [
-        {"file_id": 1763088904912, "file_name": "1763086478215_评审标准.xlsx", "original_name": "评审标准.xlsx"},
-        {"file_id": 1763088904924, "file_name": "1763088904924_天然气零售信息系统概要设计.docx",
-         "original_name": "天然气零售信息系统概要设计.docx"}
-    ]
-    agent = EvalExpertAgent(my_cfg)
-    logger.info(file_info)
-    my_categorize_files = agent.categorize_files(file_info)
-    logger.info(my_categorize_files)
-
-    review_criteria_msg = agent.get_file_path_msg(my_categorize_files, "review_criteria")
-    project_materials_msg = agent.get_file_path_msg(my_categorize_files, "project_materials")
-    logger.info(f"review_criteria_msg={review_criteria_msg}, project_materials_msg={project_materials_msg}")

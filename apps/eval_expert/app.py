@@ -202,8 +202,7 @@ def register_routes(app):
             "project_material_file": project_material_file,
             "msg": msg
         }
-        logger.info(f"stream_input, {stream_input}")
-
+        # logger.info(f"stream_input, {stream_input}")
         # 使用工具处理
         response = asyncio.run(eval_expert.process_with_tools(stream_input))
         logger.info(f"full_response: {response}")

@@ -41,10 +41,6 @@ prompts:
         # 角色与任务
         今天的日期是 {today}， 你作为{domain}专家，将执行一次严谨的评审。请基于提供的《评审材料》和《评审标准》，完成一份详细的评审报告。
         
-        # 可用工具
-        你可以使用以下工具来辅助评审工作：
-        {available_tools_description}
-        
         # 输入信息
         - **评审依据与标准**：{review_criteria}
         - **待评审材料文件名**：{project_material_file} 
