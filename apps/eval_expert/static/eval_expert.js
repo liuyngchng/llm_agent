@@ -214,6 +214,7 @@ queryForm.addEventListener('submit', async function(e) {
     const query = queryInput.value.trim();
     const hasFiles = selectedFiles.length > 0;
 
+    // 修改1: 允许只有文件没有文本的情况
     if (!query && !hasFiles) {
         addMessage("请填写问题或上传文件", 'bot');
         return;
@@ -223,6 +224,8 @@ queryForm.addEventListener('submit', async function(e) {
     let userMessage = query;
     if (hasFiles) {
         const fileNames = selectedFiles.map(f => f.name).join(', ');
+        // 如果只有文件没有文本，显示不同的消息
+        userMessage = userMessage || "文件上传评审";
         userMessage += `\n\n上传文件: ${fileNames}`;
     }
     addMessage(userMessage, 'user');
@@ -232,6 +235,8 @@ queryForm.addEventListener('submit', async function(e) {
     if (hasFiles) {
         try {
             uploadedFileInfos = await uploadFiles();
+            // 修改2: 文件上传成功后立即清空文件列表
+            clearFileList();
         } catch (error) {
             console.error("文件上传失败:", error);
             addMessage("文件上传失败，请重试", 'bot');
@@ -240,7 +245,6 @@ queryForm.addEventListener('submit', async function(e) {
     }
 
     queryInput.value = '';
-    selectedFiles = [];
     updateFileListVisibility();
 
     try {
@@ -254,6 +258,12 @@ queryForm.addEventListener('submit', async function(e) {
         resetUI();
     }
 });
+
+function clearFileList() {
+    selectedFiles = [];
+    fileList.innerHTML = '';
+    updateFileListVisibility();
+}
 
 // 停止按钮事件
 stopButton.addEventListener('click', function() {
