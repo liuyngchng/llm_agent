@@ -149,7 +149,7 @@ def register_routes(app):
         return json.dumps(statistics_list, ensure_ascii=False), 200
 
     @app.route('/chat', methods=['POST'])
-    async def chat(catch=None):
+    def chat(catch=None):
         """
         curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/chat' \
             -H "Content-Type: application/x-www-form-urlencoded" \
@@ -182,8 +182,8 @@ def register_routes(app):
         logger.info(f"request_file_infos, {file_infos}")
         file_infos = json.loads(file_infos)
         eval_expert = EvalExpertAgent(my_cfg)
-        # 异步初始化工具
-        await eval_expert.initialize_tools()
+        # 同步初始化
+        asyncio.run(eval_expert.initialize_tools())
         categorize_files = eval_expert.categorize_files(file_infos)
         logger.info(f"categorize_files, {categorize_files}")
         # 处理文件内容
@@ -197,7 +197,7 @@ def register_routes(app):
         }
         # 使用工具处理
         if eval_expert.tools:
-            response = await eval_expert.process_with_tools(stream_input)
+            response = asyncio.run(eval_expert.process_with_tools(stream_input))
             logger.info(f"full_response: {response}")
             return response
         else:
