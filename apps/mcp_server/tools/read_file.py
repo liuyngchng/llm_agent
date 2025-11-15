@@ -117,7 +117,7 @@ def get_markdown_catalog(file_path: str) -> Dict[str, Any]:
 @mcp_tool(
     name="get_markdown_content",
     title="获取Markdown文件的内容",
-    description="获取Markdown文件的全文文本，如果内容长度大于32KB，则只返回前32KB的内容",
+    description="获取Markdown文件的全文文本，如果内容长度大于320KB，则只返回前320KB的内容",
     require_approval=False
 )
 def get_markdown_content(file_path: str) -> Dict[str, Any]:

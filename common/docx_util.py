@@ -43,7 +43,7 @@ def get_docx_md_file_path(docx_path: str, output_abs_path: bool = False) -> str:
         logger.error(f"docx_to_md_error, file {docx_path}, {str(e)}")
         return ""
 
-def get_md_file_content(md_file_path:str) -> str:
+def get_md_file_content(md_file_path:str, max_length: int = 327670) -> str:
     """
     从 Markdown 文件中获取文件内容
     :param md_file_path: Markdown 文件路径
@@ -52,10 +52,10 @@ def get_md_file_content(md_file_path:str) -> str:
     try:
         with open(md_file_path, 'r', encoding='utf-8') as file:
             content = file.read()
-        if len(content) <32767:
+        if len(content) <max_length:
             return content
         else:
-            return f"{content[:32767]}\n\n ***请注意，文件全文太长，已截断。请通过目录按章节浏览。***"
+            return f"{content[:max_length]}\n\n ***请注意，文件全文太长，已截断。请通过目录按章节浏览。***"
     except FileNotFoundError:
         logger.error(f"Markdown文件不存在: {md_file_path}")
         raise FileNotFoundError(f"file_not_exist, {md_file_path}")

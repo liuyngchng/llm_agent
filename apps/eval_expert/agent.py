@@ -109,7 +109,7 @@ class EvalExpertAgent:
                 # 可选：设置工具调用策略
                 payload['tool_choice'] = 'auto'
 
-            logger.info(f"start_request, {uri}, {model}, 工具数量: {len(self.tools)}, 提示词长度: {len(prompt)}")
+            logger.info(f"start_request, {uri}, {model}, 工具数量: {len(self.tools)}, 提示词: {prompt[:400]}")
             response = requests.post(
                 url=uri,
                 headers=headers,
