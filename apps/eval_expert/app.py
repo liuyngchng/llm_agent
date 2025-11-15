@@ -7,6 +7,7 @@
 pip install gunicorn flask concurrent-log-handler langchain_openai \
  langchain_core langchain_community tabulate pycryptodome
 """
+import asyncio
 import json
 import logging.config
 import os
@@ -148,7 +149,7 @@ def register_routes(app):
         return json.dumps(statistics_list, ensure_ascii=False), 200
 
     @app.route('/chat', methods=['POST'])
-    def chat(catch=None):
+    async def chat(catch=None):
         """
         curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/chat' \
             -H "Content-Type: application/x-www-form-urlencoded" \
@@ -181,26 +182,35 @@ def register_routes(app):
         logger.info(f"request_file_infos, {file_infos}")
         file_infos = json.loads(file_infos)
         eval_expert = EvalExpertAgent(my_cfg)
+        # 异步初始化工具
+        await eval_expert.initialize_tools()
         categorize_files = eval_expert.categorize_files(file_infos)
         logger.info(f"categorize_files, {categorize_files}")
         # 处理文件内容
         review_criteria_msg = eval_expert.get_file_path_msg(categorize_files, "review_criteria")
         project_materials_msg = eval_expert.get_file_path_msg(categorize_files, "project_materials")
-        def generate_stream():
-            full_response = ""
-            stream_input = {
-                "domain": "燃气行业",
-                "review_criteria_file": review_criteria_msg,
-                "project_material_file": project_materials_msg,
-                "msg": msg
-            }
-            logger.info(f"stream_input {stream_input}")
-            for chunk in eval_expert.get_chain().stream(stream_input):
-                full_response += chunk
-                yield chunk
-            logger.info(f"full_response: {full_response}")
+        stream_input = {
+            "domain": "燃气行业",
+            "review_criteria_file": review_criteria_msg,
+            "project_material_file": project_materials_msg,
+            "msg": msg
+        }
+        # 使用工具处理
+        if eval_expert.tools:
+            response = await eval_expert.process_with_tools(stream_input)
+            logger.info(f"full_response: {response}")
+            return response
+        else:
+            def generate_stream():
+                full_response = ""
+                logger.info(f"stream_input {stream_input}")
+                # 回退到原来的流式处理
+                for chunk in eval_expert.get_chain().stream(stream_input):
+                    full_response += chunk
+                    yield chunk
 
-        return app.response_class(generate_stream(), mimetype='text/event-stream')
+                logger.info(f"full_response: {full_response}")
+            return app.response_class(generate_stream(), mimetype='text/event-stream')
 
 
 
