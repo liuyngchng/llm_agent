@@ -8,10 +8,6 @@ import os
 import requests
 from typing import List, Dict, Any
 
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.tools import BaseTool
 from pydantic import SecretStr
 
 from common import agt_util, cfg_util
@@ -23,13 +19,12 @@ from common.xlsx_util import get_xlsx_md_file_path
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-
 UPLOAD_FOLDER = 'upload_doc'
 
 
 class EvalExpertAgent:
 
-    def __init__(self, syc_cfg:dict , prompt_padding=""):
+    def __init__(self, syc_cfg: dict, prompt_padding=""):
         self.syc_cfg = syc_cfg
         self.llm_api_uri = syc_cfg['api']['llm_api_uri']
         self.llm_api_key = SecretStr(syc_cfg['api']['llm_api_key'])
@@ -63,7 +58,7 @@ class EvalExpertAgent:
             # 动态获取可用工具
             available_tools = await async_get_available_tools(self.mcp_servers)
             logger.info(f"可用工具: {available_tools}")
-            self.tools = self.convert_to_langchain_tools(available_tools)
+            self.tools = self.convert_to_basic_tools(available_tools)
             self.tools_description = self.generate_tools_description(available_tools)
             logger.info(f"工具初始化完成: {len(self.tools)} 个工具可用, tools_description: {self.tools_description}")
         except Exception as e:
@@ -72,52 +67,18 @@ class EvalExpertAgent:
             self.tools_description = "工具初始化失败，将不使用工具功能"
 
     @staticmethod
-    def convert_to_langchain_tools(available_tools: List[Dict]) -> List[BaseTool]:
-        """将MCP工具转换为LangChain工具"""
+    def convert_to_basic_tools(available_tools: List[Dict]) -> List[Dict]:
+        """将MCP工具转换为基本工具字典"""
         tools = []
         try:
-            from langchain.tools import Tool
-
             for tool_info in available_tools:
-                # 修复：使用闭包正确捕获 tool_info
-                def create_tool_func(tool_info=tool_info):  # 将tool_info作为默认参数固定
-                    def tool_function(**kwargs):
-                        try:
-                            # 调用MCP服务器执行工具
-                            server_addr = tool_info.get('server')
-                            logger.info(f"调用工具 {tool_info['name']}, 参数: {kwargs}, 服务器: {server_addr}")
-
-                            response = requests.post(
-                                f"{server_addr}/call_tool",
-                                json={
-                                    "tool_name": tool_info['name'],
-                                    "parameters": kwargs
-                                },
-                                timeout=30
-                            )
-                            if response.status_code == 200:
-                                result = response.json().get('result', '')
-                                logger.info(f"工具 {tool_info['name']} 调用成功，结果长度: {len(str(result))}")
-                                return result
-                            else:
-                                error_msg = f"工具调用失败: {response.text}"
-                                logger.error(f"工具 {tool_info['name']} 调用失败: {error_msg}")
-                                return error_msg
-                        except Exception as e:
-                            error_msg = f"工具调用异常: {str(e)}"
-                            logger.error(f"工具 {tool_info['name']} 调用异常: {error_msg}")
-                            return error_msg
-
-                    return tool_function
-
-                # 创建工具实例
-                tool_func = create_tool_func()  # 调用函数返回实际的工具函数
-                tool = Tool(
-                    name=tool_info['name'],
-                    description=tool_info.get('description', ''),
-                    func=tool_func  # 直接传递函数引用
-                )
-                tools.append(tool)
+                tool_dict = {
+                    'name': tool_info['name'],
+                    'description': tool_info.get('description', ''),
+                    'server': tool_info.get('server'),
+                    'inputSchema': tool_info.get('inputSchema', {})
+                }
+                tools.append(tool_dict)
 
         except Exception as e:
             logger.error(f"转换工具失败: {str(e)}")
@@ -156,36 +117,70 @@ class EvalExpertAgent:
         return "\n".join(descriptions)
 
     def get_llm(self):
+        """获取LLM配置"""
         return agt_util.get_model(self.syc_cfg, temperature=1.3)
 
-    def get_chain(self):
+    def call_llm_api(self, prompt: str) -> str:
+        """直接调用LLM API"""
+        try:
+            llm_config = self.get_llm()
+
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {llm_config["api_key"].get_secret_value()}'
+            }
+
+            payload = {
+                'model': llm_config['model_name'],
+                'messages': [{'role': 'user', 'content': prompt}],
+                'temperature': 1.3
+            }
+
+            response = requests.post(
+                llm_config['api_uri'],
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                # 根据不同的API响应格式提取内容
+                if 'choices' in result and len(result['choices']) > 0:
+                    return result['choices'][0]['message']['content']
+                elif 'content' in result:
+                    return result['content']
+                else:
+                    return str(result)
+            else:
+                error_msg = f"LLM API调用失败: {response.status_code} - {response.text}"
+                logger.error(error_msg)
+                return error_msg
+
+        except Exception as e:
+            error_msg = f"LLM API调用异常: {str(e)}"
+            logger.error(error_msg)
+            return error_msg
+
+    def build_prompt(self, input_data: Dict[str, Any]) -> str:
+        """构建提示词"""
         template_name = 'eval_expert'
         template = cfg_util.get_usr_prompt_template(template_name, self.syc_cfg)
         if not template:
             raise ReferenceError(f"no_prompt_template_config_for {template_name}")
+
         # 动态替换工具描述
         template = template.replace("{available_tools_description}", self.tools_description)
-        logger.debug(f"template {template}")
-        prompt = ChatPromptTemplate.from_template(template)
-        model = self.get_llm()
-        # 如果有工具，使用绑定工具的模型
-        if self.tools:
-            model_with_tools = model.bind_tools(self.tools)
-        else:
-            model_with_tools = model
-        chain = (
-            {
-                "today": RunnablePassthrough(),
-                "domain": RunnablePassthrough(),
-                "review_criteria": RunnablePassthrough(),
-                "project_material_file": RunnablePassthrough(),
-                "msg": RunnablePassthrough()
-            }
-            | prompt
-            | model_with_tools
-            | StrOutputParser()
-        )
-        return chain
+
+        # 替换其他变量
+        prompt = template.replace("{today}", input_data.get("today", ""))
+        prompt = prompt.replace("{domain}", input_data.get("domain", ""))
+        prompt = prompt.replace("{review_criteria}", input_data.get("review_criteria", ""))
+        prompt = prompt.replace("{project_material_file}", input_data.get("project_material_file", ""))
+        prompt = prompt.replace("{msg}", input_data.get("msg", ""))
+
+        logger.debug(f"构建的提示词: {prompt}")
+        return prompt
 
     async def process_with_tools(self, input_data: Dict[str, Any]) -> str:
         """使用工具处理请求"""
@@ -196,103 +191,114 @@ class EvalExpertAgent:
             # 记录工具信息
             logger.info(f"可用工具数量: {len(self.tools)}")
             for tool in self.tools:
-                logger.info(f"工具: {tool.name} - {tool.description}")
+                logger.info(f"工具: {tool['name']} - {tool['description']}")
 
-            # 使用与 get_chain 相同的构建方式，但不使用 StrOutputParser
-            template_name = 'eval_expert'
-            template = cfg_util.get_usr_prompt_template(template_name, self.syc_cfg)
-            template = template.replace("{available_tools_description}", self.tools_description)
+            # 构建提示词
+            prompt = self.build_prompt(input_data)
 
-            prompt = ChatPromptTemplate.from_template(template)
-            model = self.get_llm()
+            # 调用LLM API
+            response = self.call_llm_api(prompt)
 
-            if self.tools:
-                model_with_tools = model.bind_tools(self.tools)
-            else:
-                model_with_tools = model
+            # 检查响应中是否包含工具调用
+            tool_calls = self.extract_tool_calls_from_response(response)
 
-            # 构建chain但不使用StrOutputParser，以保留原始响应
-            chain = (
-                    {
-                        "today": RunnablePassthrough(),
-                        "domain": RunnablePassthrough(),
-                        "review_criteria": RunnablePassthrough(),
-                        "project_material_file": RunnablePassthrough(),
-                        "msg": RunnablePassthrough()
-                    }
-                    | prompt
-                    | model_with_tools
-            )
-
-            # 获取原始响应
-            response = chain.invoke(input_data)
-
-            # 调试日志：记录完整响应
-            logger.info(f"模型完整响应: {response}")
-            logger.info(f"响应类型: {type(response)}")
-            logger.info(f"响应属性: {dir(response)}")
-
-            # 检查是否有工具调用
-            if hasattr(response, 'tool_calls') and response.tool_calls:
-                logger.info(f"检测到工具调用: {len(response.tool_calls)} 个")
-                return await self.handle_tool_calls(response.tool_calls, input_data)
-            elif hasattr(response, 'additional_kwargs') and response.additional_kwargs.get('tool_calls'):
-                tool_calls = response.additional_kwargs['tool_calls']
-                logger.info(f"检测到工具调用(additional_kwargs): {len(tool_calls)} 个")
+            if tool_calls:
+                logger.info(f"检测到工具调用: {len(tool_calls)} 个")
                 return await self.handle_tool_calls(tool_calls, input_data)
             else:
                 logger.info("未检测到工具调用，直接返回响应内容")
-                # 返回响应内容
-                return response.content if hasattr(response, 'content') else str(response)
+                return response
 
         except Exception as e:
             logger.error(f"工具处理过程中出错: {str(e)}")
             return f"处理过程中出现错误: {str(e)}"
+
+    def extract_tool_calls_from_response(self, response: str) -> List[Dict]:
+        """从LLM响应中提取工具调用信息"""
+        tool_calls = []
+
+        try:
+            # 简单的工具调用检测逻辑
+            # 这里可以根据实际响应格式进行调整
+            if "tool_call" in response.lower() or "function" in response.lower():
+                # 尝试解析JSON格式的工具调用
+                lines = response.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line.startswith('{') and line.endswith('}'):
+                        try:
+                            data = json.loads(line)
+                            if 'tool_name' in data or 'function' in data:
+                                tool_calls.append(data)
+                        except json.JSONDecodeError:
+                            continue
+
+            # 如果没有检测到结构化工具调用，但响应中提到了可用工具名称
+            if not tool_calls and self.tools:
+                for tool in self.tools:
+                    if tool['name'].lower() in response.lower():
+                        # 创建一个基本的工具调用
+                        tool_call = {
+                            'name': tool['name'],
+                            'args': self.extract_tool_arguments(response, tool['name'])
+                        }
+                        tool_calls.append(tool_call)
+
+        except Exception as e:
+            logger.error(f"提取工具调用失败: {str(e)}")
+
+        return tool_calls
+
+    def extract_tool_arguments(self, response: str, tool_name: str) -> Dict:
+        """从响应中提取工具参数"""
+        # 简单的参数提取逻辑，可以根据实际需求增强
+        args = {}
+
+        # 查找文件路径参数
+        if 'file_path' in response.lower() or '文件' in response:
+            # 尝试提取文件路径
+            import re
+            file_patterns = [
+                r'file_path[\"\' ]*:[\"\' ]*([^\"\',}\s]+)',
+                r'文件[\"\' ]*:[\"\' ]*([^\"\',}\s]+)',
+                r'path[\"\' ]*:[\"\' ]*([^\"\',}\s]+)'
+            ]
+
+            for pattern in file_patterns:
+                matches = re.findall(pattern, response, re.IGNORECASE)
+                if matches:
+                    args['file_path'] = matches[0]
+                    break
+
+        return args
 
     async def handle_tool_calls(self, tool_calls: List, input_data: Dict[str, Any]) -> str:
         """处理工具调用"""
         try:
             logger.info(f"tool_calls:{tool_calls}, input_data:{input_data}")
             tool_results = []
-            available_tool_names = [tool.name for tool in self.tools]
+            available_tool_names = [tool['name'] for tool in self.tools]
             logger.info(f"当前可用工具: {available_tool_names}")
+
             for tool_call in tool_calls:
                 # 处理不同的工具调用格式
-                if hasattr(tool_call, 'name'):
-                    # 如果是工具调用对象
-                    tool_name = tool_call.name
-                    # 修复参数提取逻辑
-                    if hasattr(tool_call, 'args') and tool_call.args:
-                        tool_args = tool_call.args
-                    elif hasattr(tool_call, 'kwargs') and tool_call.kwargs:
-                        tool_args = tool_call.kwargs
-                    else:
-                        tool_args = {}
-                else:
-                    # 如果是字典格式
+                if isinstance(tool_call, dict):
                     if 'name' in tool_call:
                         tool_name = tool_call['name']
-                        # 提取参数
-                        if 'args' in tool_call:
-                            tool_args = tool_call['args']
-                        elif 'kwargs' in tool_call:
-                            tool_args = tool_call['kwargs']
-                        else:
-                            tool_args = {}
-                    elif 'function' in tool_call:
-                        tool_name = tool_call['function']['name']
-                        try:
-                            arguments = tool_call['function'].get('arguments', '{}')
-                            if isinstance(arguments, str):
-                                tool_args = json.loads(arguments)
-                            else:
-                                tool_args = arguments
-                        except (json.JSONDecodeError, KeyError) as e:
-                            logger.error(f"工具参数解析失败: {e}")
-                            tool_args = {}
+                        tool_args = tool_call.get('args', {})
+                    elif 'tool_name' in tool_call:
+                        tool_name = tool_call['tool_name']
+                        tool_args = tool_call.get('parameters', {})
                     else:
-                        tool_name = tool_call.get('name', '')
-                        tool_args = tool_call.get('arguments', {})
+                        tool_name = tool_call.get('function', {}).get('name', '')
+                        tool_args = tool_call.get('function', {}).get('arguments', {})
+                        if isinstance(tool_args, str):
+                            try:
+                                tool_args = json.loads(tool_args)
+                            except json.JSONDecodeError:
+                                tool_args = {}
+                else:
+                    continue
 
                 # 关键修复：处理 __arg1 参数格式
                 if isinstance(tool_args, dict) and '__arg1' in tool_args:
@@ -302,12 +308,12 @@ class EvalExpertAgent:
                     logger.info(f"转换参数格式: {tool_args}")
 
                 logger.info(f"执行工具: {tool_name}, 参数: {tool_args}")
-                tool = next((t for t in self.tools if t.name == tool_name), None)
+                tool = next((t for t in self.tools if t['name'] == tool_name), None)
 
                 if tool:
                     try:
                         # 执行工具调用
-                        result = tool.invoke(tool_args)
+                        result = self.execute_tool(tool, tool_args)
                         logger.info(f"工具 {tool_name} 调用成功，结果长度: {len(str(result))}")
                         tool_results.append({
                             'tool': tool_name,
@@ -336,6 +342,38 @@ class EvalExpertAgent:
             logger.error(f"处理工具调用时出错: {str(e)}")
             return f"工具调用处理失败: {str(e)}"
 
+    def execute_tool(self, tool: Dict, tool_args: Dict) -> str:
+        """执行工具调用"""
+        try:
+            server_addr = tool.get('server')
+            if not server_addr:
+                return f"工具 {tool['name']} 未配置服务器地址"
+
+            logger.info(f"调用工具 {tool['name']}, 参数: {tool_args}, 服务器: {server_addr}")
+
+            response = requests.post(
+                f"{server_addr}/call_tool",
+                json={
+                    "tool_name": tool['name'],
+                    "parameters": tool_args
+                },
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                result = response.json().get('result', '')
+                logger.info(f"工具 {tool['name']} 调用成功，结果长度: {len(str(result))}")
+                return result
+            else:
+                error_msg = f"工具调用失败: {response.text}"
+                logger.error(f"工具 {tool['name']} 调用失败: {error_msg}")
+                return error_msg
+
+        except Exception as e:
+            error_msg = f"工具调用异常: {str(e)}"
+            logger.error(f"工具 {tool['name']} 调用异常: {error_msg}")
+            return error_msg
+
     async def finalize_with_tool_results(self, input_data: Dict[str, Any], tool_results: List[Dict]) -> str:
         """使用工具结果生成最终响应"""
         try:
@@ -360,9 +398,7 @@ class EvalExpertAgent:
             请基于评审依据与标准给出的模板给出完整的评审报告。
             """
 
-            model = self.get_llm()
-            response = model.invoke(final_prompt)
-            return response.content if hasattr(response, 'content') else str(response)
+            return self.call_llm_api(final_prompt)
 
         except Exception as e:
             logger.error(f"生成最终响应时出错: {str(e)}")
@@ -371,7 +407,7 @@ class EvalExpertAgent:
     @staticmethod
     def get_file_path_msg(categorize_files: dict[str, list[str]], content_type: str) -> list[dict]:
         msg = []
-        for file_name in categorize_files.get(content_type):
+        for file_name in categorize_files.get(content_type, []):
             logger.info(f"processing_file: {file_name}")
             file_path = EvalExpertAgent.get_file_convert_md_file_path(file_name)
             msg.append({
@@ -438,7 +474,7 @@ class EvalExpertAgent:
                 uncategorized.append(file_item.get('file_name', ''))
         # 记录分类结果
         logger.info(f"分类完成: 评审标准 {len(standards)} 个, "
-            f"项目材料 {len(materials)} 个, 未分类 {len(uncategorized)} 个")
+                    f"项目材料 {len(materials)} 个, 未分类 {len(uncategorized)} 个")
 
         return {
             'review_criteria': standards,
@@ -450,8 +486,9 @@ class EvalExpertAgent:
 if __name__ == "__main__":
     my_cfg = init_yml_cfg()
     file_info = [
-        {"file_id":1763088904912,"file_name":"1763086478215_评审标准.xlsx","original_name":"评审标准.xlsx"},
-        {"file_id":1763088904924,"file_name":"1763088904924_天然气零售信息系统概要设计.docx","original_name":"天然气零售信息系统概要设计.docx"}
+        {"file_id": 1763088904912, "file_name": "1763086478215_评审标准.xlsx", "original_name": "评审标准.xlsx"},
+        {"file_id": 1763088904924, "file_name": "1763088904924_天然气零售信息系统概要设计.docx",
+         "original_name": "天然气零售信息系统概要设计.docx"}
     ]
     agent = EvalExpertAgent(my_cfg)
     logger.info(file_info)

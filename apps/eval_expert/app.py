@@ -4,8 +4,8 @@
 
 """
 项目评审数字专家
-pip install gunicorn flask concurrent-log-handler langchain_openai \
- langchain_core langchain_community tabulate pycryptodome
+pip install gunicorn flask concurrent-log-handler requests \
+ pycryptodome
 """
 import asyncio
 import json
@@ -129,6 +129,7 @@ def register_routes(app):
         logger.info(f"{uid}, return_statistics_page {dt_idx}")
         return render_template(dt_idx, **ctx)
 
+
     @app.route('/chat/statistic/report', methods=['POST'])
     def get_statistic_report():
         """
@@ -202,25 +203,11 @@ def register_routes(app):
             "msg": msg
         }
         logger.info(f"stream_input, {stream_input}")
+
         # 使用工具处理
-        if eval_expert.tools:
-            response = asyncio.run(eval_expert.process_with_tools(stream_input))
-            logger.info(f"full_response: {response}")
-            return response
-        else:
-            def generate_stream():
-                full_response = ""
-                logger.info(f"stream_input {stream_input}")
-                # 回退到原来的流式处理
-                for chunk in eval_expert.get_chain().stream(stream_input):
-                    full_response += chunk
-                    yield chunk
-
-                logger.info(f"full_response: {full_response}")
-            return app.response_class(generate_stream(), mimetype='text/event-stream')
-
-
-
+        response = asyncio.run(eval_expert.process_with_tools(stream_input))
+        logger.info(f"full_response: {response}")
+        return response
 
     @app.route('/upload', methods=['POST'])
     def upload_file():
@@ -254,6 +241,7 @@ def register_routes(app):
         }
         logger.info(f"{uid}, file_uploaded, {info}")
         return json.dumps(info, ensure_ascii=False), 200
+
 
 def start_background_tasks():
     """启动后台任务线程"""
