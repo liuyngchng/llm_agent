@@ -316,60 +316,92 @@ async function fetchQueryData(query, fileInfos = []) {
         requestData.append('uid', uid);
         requestData.append('t', t);
         requestData.append('app_source', appSource);
+
         // 添加文件信息（JSON格式）
         if (fileInfos.length > 0) {
             requestData.append('file_infos', JSON.stringify(fileInfos));
         }
 
-        const response = await fetch('/chat', {
+        const response = await fetch('/chat/stream', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'text/event-stream'
             },
             body: requestData,
             signal: abortController.signal,
-            credentials: 'include'
         });
 
-        // 检查响应是否正常
-        if (!response.ok || !response.body) {
-            throw new Error('网络响应失败');
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`服务器错误: ${response.status} - ${errorText}`);
         }
 
-        // 设置当前响应对象
-        currentResponse = response;
-
-        // 读取流数据
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let accumulatedText = '';
 
         while (true) {
-            const { value, done } = await reader.read();
+            const { done, value } = await reader.read();
             if (done) break;
 
             const chunk = decoder.decode(value, { stream: true });
-            accumulatedText += chunk;
+            const lines = chunk.split('\n');
 
-            // 更新消息内容
-            updateBotMessage(accumulatedText);
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.slice(6).trim();
+
+                    if (data === '[DONE]') {
+                        break;
+                    }
+
+                    if (data) {
+                        try {
+                            const parsed = JSON.parse(data);
+                            if (parsed.content) {
+                                accumulatedText += parsed.content;
+                                updateBotMessage(accumulatedText);
+                            }
+                        } catch (e) {
+                            console.warn('解析数据失败:', e, '原始数据:', data);
+                        }
+                    }
+                }
+            }
         }
 
-        // 添加复制按钮
         addCopyButton(currentBotMessage, accumulatedText);
 
     } catch (error) {
         if (error.name === 'AbortError') {
             console.log('请求已中止');
+            if (currentBotMessage && accumulatedText) {
+                updateBotMessage(accumulatedText + "\n\n（生成已停止）");
+            }
         } else {
             console.error('请求出错:', error);
             if (currentBotMessage) {
-                updateBotMessage("回答生成出错，请重试");
+                updateBotMessage("回答生成出错: " + error.message);
             }
+            // 显示错误容器
+            showError(error.message);
         }
     } finally {
         resetUI();
+    }
+}
+
+// 添加错误显示函数
+function showError(message) {
+    const errorContainer = document.getElementById('error-container');
+    const errorMessage = document.getElementById('error-message');
+    if (errorContainer && errorMessage) {
+        errorMessage.textContent = message;
+        errorContainer.style.display = 'block';
+        // 3秒后自动隐藏
+        setTimeout(() => {
+            errorContainer.style.display = 'none';
+        }, 5000);
     }
 }
 

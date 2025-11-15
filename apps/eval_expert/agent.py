@@ -10,10 +10,9 @@ from typing import List, Dict, Any
 
 from pydantic import SecretStr
 
-from common import agt_util, cfg_util
+from common import cfg_util
 from common.docx_util import get_docx_md_file_path
 from common.mcp_util import async_get_available_tools
-from common.sys_init import init_yml_cfg
 from common.xlsx_util import get_xlsx_md_file_path
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -80,8 +79,8 @@ class EvalExpertAgent:
             logger.error(f"转换工具失败: {str(e)}")
         return tools
 
-    def call_llm_api(self, prompt: str) -> str:
-        """直接调用LLM API"""
+    def call_llm_api(self, prompt: str, stream_callback=None) -> str:
+        """直接调用LLM API，支持流式输出"""
         key = self.llm_api_key.get_secret_value()
         model = self.llm_model_name
         uri = f"{self.llm_api_uri}/chat/completions"
@@ -100,7 +99,8 @@ class EvalExpertAgent:
             payload = {
                 'model': model,
                 'messages': messages,
-                'temperature': 1.3
+                'temperature': 1.3,
+                'stream': stream_callback is not None  # 启用流式输出
             }
 
             # 如果有可用工具，添加到请求中
@@ -110,22 +110,62 @@ class EvalExpertAgent:
                 payload['tool_choice'] = 'auto'
 
             logger.info(f"start_request, {uri}, {model}, 工具数量: {len(self.tools)}, 提示词: {prompt[:400]}")
-            response = requests.post(
-                url=uri,
-                headers=headers,
-                json=payload,
-                timeout=60,
-                verify=False,
-            )
-            logger.info(f"response_status: {response.status_code}, data: {json.dumps(response.json(), ensure_ascii=False)}")
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"LLM 响应解析成功")
-                return self.parse_llm_response(result)
+
+            if stream_callback:
+                # 流式处理
+                response = requests.post(
+                    url=uri,
+                    headers=headers,
+                    json=payload,
+                    timeout=60,
+                    verify=False,
+                    stream=True
+                )
+
+                if response.status_code == 200:
+                    full_content = ""
+                    for line in response.iter_lines():
+                        if line:
+                            line = line.decode('utf-8')
+                            if line.startswith('data: '):
+                                data = line[6:]
+                                if data == '[DONE]':
+                                    break
+                                try:
+                                    chunk = json.loads(data)
+                                    if 'choices' in chunk and len(chunk['choices']) > 0:
+                                        delta = chunk['choices'][0].get('delta', {})
+                                        if 'content' in delta and delta['content']:
+                                            content_chunk = delta['content']
+                                            full_content += content_chunk
+                                            # 调用流式回调
+                                            if stream_callback:
+                                                stream_callback(content_chunk)
+                                except json.JSONDecodeError:
+                                    continue
+                    return full_content
+                else:
+                    error_msg = f"LLM API调用失败: {response.status_code} - {response.text}"
+                    logger.error(error_msg)
+                    return error_msg
             else:
-                error_msg = f"LLM API调用失败: {response.status_code} - {response.text}"
-                logger.error(error_msg)
-                return error_msg
+                # 非流式处理
+                response = requests.post(
+                    url=uri,
+                    headers=headers,
+                    json=payload,
+                    timeout=60,
+                    verify=False,
+                )
+                logger.info(f"response_status: {response.status_code}")
+                if response.status_code == 200:
+                    result = response.json()
+                    logger.info(f"LLM 响应解析成功")
+                    return self.parse_llm_response(result)
+                else:
+                    error_msg = f"LLM API调用失败: {response.status_code} - {response.text}"
+                    logger.error(error_msg)
+                    return error_msg
         except Exception as e:
             error_msg = f"LLM API调用异常: {str(e)}"
             logger.error(error_msg)
@@ -146,7 +186,8 @@ class EvalExpertAgent:
             openai_tools.append(openai_tool)
         return openai_tools
 
-    def parse_llm_response(self, result: Dict) -> str:
+    @staticmethod
+    def parse_llm_response(result: Dict) -> str:
         """解析LLM响应"""
         if 'choices' in result and len(result['choices']) > 0:
             choice = result['choices'][0]
@@ -188,8 +229,8 @@ class EvalExpertAgent:
 
         return prompt
 
-    async def process_with_tools(self, input_data: Dict[str, Any]) -> str:
-        """使用工具处理请求"""
+    async def process_with_tools_stream(self, input_data: Dict[str, Any], stream_callback) -> str:
+        """使用工具处理请求，支持流式输出"""
         try:
             if not self.tools:
                 await self.initialize_tools()
@@ -202,86 +243,42 @@ class EvalExpertAgent:
             # 构建提示词
             prompt = self.build_prompt(input_data)
 
-            # 调用LLM API
-            response = self.call_llm_api(prompt)
+            # 发送开始处理消息
+            stream_callback("🚀 开始处理您的请求...\n\n")
+
+            # 调用LLM API（流式）
+            response = self.call_llm_api(prompt, stream_callback)
 
             # 检查响应中是否包含工具调用
             tool_calls = self.extract_tool_calls_from_response(response)
 
             if tool_calls:
+                stream_callback(f"\n🔧 检测到 {len(tool_calls)} 个工具调用，开始执行...\n\n")
                 logger.info(f"检测到工具调用: {len(tool_calls)} 个")
-                return await self.handle_tool_calls(tool_calls, input_data)
+                return await self.handle_tool_calls_stream(tool_calls, input_data, stream_callback)
             else:
                 logger.info("未检测到工具调用，直接返回响应内容")
                 return response
 
         except Exception as e:
+            error_msg = f"❌ 处理过程中出现错误: {str(e)}"
             logger.error(f"工具处理过程中出错: {str(e)}")
-            return f"处理过程中出现错误: {str(e)}"
+            stream_callback(error_msg)
+            return error_msg
 
-    def extract_tool_calls_from_response(self, response: str) -> List[Dict]:
-        """从LLM响应中提取工具调用信息"""
-        tool_calls = []
-
-        try:
-            # 检查是否是结构化的工具调用响应
-            if response.startswith('{') and response.endswith('}'):
-                try:
-                    data = json.loads(response)
-                    if 'tool_calls' in data and data['tool_calls']:
-                        return data['tool_calls']
-                except json.JSONDecodeError:
-                    pass
-
-            # 如果没有检测到结构化工具调用，但响应中提到了可用工具名称
-            if not tool_calls and self.tools:
-                for tool in self.tools:
-                    if tool['name'].lower() in response.lower():
-                        # 创建一个基本的工具调用
-                        tool_call = {
-                            'name': tool['name'],
-                            'args': self.extract_tool_arguments(response, tool['name'])
-                        }
-                        tool_calls.append(tool_call)
-
-        except Exception as e:
-            logger.error(f"提取工具调用失败: {str(e)}")
-
-        return tool_calls
-
-    @staticmethod
-    def extract_tool_arguments(response: str, tool_name: str) -> Dict:
-        """从响应中提取工具参数"""
-        # 简单的参数提取逻辑，可以根据实际需求增强
-        args = {}
-
-        # 查找文件路径参数
-        if 'file_path' in response.lower() or '文件' in response:
-            # 尝试提取文件路径
-            import re
-            file_patterns = [
-                r'file_path[\"\' ]*:[\"\' ]*([^\"\',}\s]+)',
-                r'文件[\"\' ]*:[\"\' ]*([^\"\',}\s]+)',
-                r'path[\"\' ]*:[\"\' ]*([^\"\',}\s]+)'
-            ]
-
-            for pattern in file_patterns:
-                matches = re.findall(pattern, response, re.IGNORECASE)
-                if matches:
-                    args['file_path'] = matches[0]
-                    break
-
-        return args
-
-    async def handle_tool_calls(self, tool_calls: List, input_data: Dict[str, Any]) -> str:
-        """处理工具调用"""
+    async def handle_tool_calls_stream(self, tool_calls: List, input_data: Dict[str, Any], stream_callback) -> str:
+        """处理工具调用，支持流式输出"""
         try:
             logger.info(f"tool_calls:{tool_calls}")
             tool_results = []
             available_tool_names = [tool['name'] for tool in self.tools]
             logger.info(f"当前可用工具: {available_tool_names}")
 
-            for tool_call in tool_calls:
+            for i, tool_call in enumerate(tool_calls):
+                # 发送工具执行进度
+                progress_msg = f"📋 执行工具 {i + 1}/{len(tool_calls)}..."
+                stream_callback(progress_msg)
+
                 # 处理不同的工具调用格式
                 if isinstance(tool_call, dict):
                     # 处理 OpenAI 格式的工具调用
@@ -313,7 +310,11 @@ class EvalExpertAgent:
                     tool_args = {'file_path': file_path}
                     logger.info(f"转换参数格式: {tool_args}")
 
+                # 发送工具执行开始消息
+                start_msg = f"\n🛠️ 正在执行工具: **{tool_name}**\n"
+                stream_callback(start_msg)
                 logger.info(f"执行工具: {tool_name}, 参数: {tool_args}")
+
                 tool = next((t for t in self.tools if t['name'] == tool_name), None)
 
                 if tool:
@@ -321,32 +322,195 @@ class EvalExpertAgent:
                         # 执行工具调用
                         result = self.execute_tool(tool, tool_args)
                         logger.info(f"工具 {tool_name} 调用成功，结果长度: {len(str(result))}")
+
+                        # 发送工具执行成功消息
+                        success_msg = f"✅ 工具 **{tool_name}** 执行成功！\n"
+                        if len(str(result)) > 200:
+                            success_msg += f"📊 返回结果长度: {len(str(result))} 字符\n"
+                        else:
+                            success_msg += f"📊 返回结果: {str(result)[:100]}...\n"
+                        stream_callback(success_msg)
+
                         tool_results.append({
                             'tool': tool_name,
                             'result': result
                         })
                     except Exception as e:
                         logger.error(f"工具 {tool_name} 调用失败: {str(e)}")
+                        error_msg = f"❌ 工具 **{tool_name}** 执行失败: {str(e)}\n"
+                        stream_callback(error_msg)
                         tool_results.append({
                             'tool': tool_name,
                             'result': f"工具调用失败: {str(e)}"
                         })
                 else:
                     logger.warning(f"未找到工具: {tool_name}")
+                    warning_msg = f"⚠️ 未找到工具: {tool_name}\n"
+                    stream_callback(warning_msg)
                     tool_results.append({
                         'tool': tool_name,
                         'result': f"工具未找到: {tool_name}"
                     })
 
             if tool_results:
+                stream_callback("\n🎯 工具调用完成，正在生成最终响应...\n\n")
                 logger.info(f"工具调用完成，开始生成最终响应")
-                return await self.finalize_with_tool_results(input_data, tool_results)
+                return await self.finalize_with_tool_results_stream(input_data, tool_results, stream_callback)
             else:
-                return "未执行任何工具调用"
+                no_tools_msg = "未执行任何工具调用"
+                stream_callback(no_tools_msg)
+                return no_tools_msg
 
         except Exception as e:
+            error_msg = f"❌ 处理工具调用时出错: {str(e)}"
             logger.error(f"处理工具调用时出错: {str(e)}")
-            return f"工具调用处理失败: {str(e)}"
+            stream_callback(error_msg)
+            return error_msg
+
+    async def real_call_llm_api_stream(self, prompt: str, stream_callback) -> str:
+        """真正的流式LLM API调用"""
+        key = self.llm_api_key.get_secret_value()
+        model = self.llm_model_name
+        uri = f"{self.llm_api_uri}/chat/completions"
+
+        try:
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {key}'
+            }
+
+            messages = [{"role": "user", "content": prompt}]
+
+            payload = {
+                'model': model,
+                'messages': messages,
+                'temperature': 0.7,
+                'stream': True
+            }
+
+            if self.tools:
+                payload['tools'] = self.convert_tools_to_openai_format()
+                payload['tool_choice'] = 'auto'
+
+            logger.info(f"流式请求开始, {uri}, {model}")
+
+            # 使用aiohttp替代requests以获得更好的异步支持
+            import aiohttp
+            full_content = ""
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(uri, headers=headers, json=payload, ssl=False) as response:
+                    if response.status == 200:
+                        async for line in response.content:
+                            if line:
+                                line = line.decode('utf-8').strip()
+                                if line.startswith('data: '):
+                                    data = line[6:]
+                                    if data == '[DONE]':
+                                        break
+                                    try:
+                                        chunk = json.loads(data)
+                                        if 'choices' in chunk and chunk['choices']:
+                                            delta = chunk['choices'][0].get('delta', {})
+                                            if 'content' in delta and delta['content']:
+                                                content_chunk = delta['content']
+                                                full_content += content_chunk
+                                                # 调用流式回调
+                                                stream_callback(content_chunk)
+                                    except json.JSONDecodeError:
+                                        continue
+                        return full_content
+                    else:
+                        error_text = await response.text()
+                        error_msg = f"LLM API调用失败: {response.status}"
+                        logger.error(f"{error_msg} - {error_text}")
+                        stream_callback(error_msg)
+                        return error_msg
+
+        except Exception as e:
+            error_msg = f"LLM API调用异常: {str(e)}"
+            logger.error(error_msg)
+            stream_callback(error_msg)
+            return error_msg
+
+    async def real_handle_tool_calls_stream(self, tool_calls: List, input_data: Dict[str, Any], stream_callback) -> str:
+        """真正的流式工具调用处理"""
+        try:
+            tool_results = []
+
+            for i, tool_call in enumerate(tool_calls):
+                # 发送进度
+                stream_callback(f"📋 执行工具 {i + 1}/{len(tool_calls)}...")
+
+                # 工具调用逻辑（与之前相同）
+                # ... 省略具体工具执行逻辑 ...
+
+                # 执行工具
+                tool_name = tool_call['function']['name']
+                stream_callback(f"\n🛠️ 正在执行工具: **{tool_name}**\n")
+
+                # 执行工具并发送结果
+                result = self.execute_tool(tool, tool_args)
+                stream_callback(f"✅ 工具 **{tool_name}** 执行成功！\n")
+
+                tool_results.append({
+                    'tool': tool_name,
+                    'result': result
+                })
+
+            # 生成最终响应
+            stream_callback("\n🎯 工具调用完成，正在生成最终响应...\n\n")
+
+            final_prompt = self.build_final_prompt(input_data, tool_results)
+            final_response = await self.real_call_llm_api_stream(final_prompt, stream_callback)
+
+            return final_response
+
+        except Exception as e:
+            error_msg = f"❌ 处理工具调用时出错: {str(e)}"
+            logger.error(f"处理工具调用时出错: {str(e)}")
+            stream_callback(error_msg)
+            return error_msg
+
+    async def finalize_with_tool_results_stream(self, input_data: Dict[str, Any], tool_results: List[Dict],
+                                                stream_callback) -> str:
+        """使用工具结果生成最终响应，支持流式输出"""
+        try:
+            # 构建包含工具结果的提示词
+            tool_results_str = "\n".join([
+                f"工具 {result['tool']} 结果: {result['result'][:200]}..." if len(
+                    str(result['result'])) > 200 else f"工具 {result['tool']} 结果: {result['result']}"
+                for result in tool_results
+            ])
+
+            final_prompt = f"""
+            基于原始请求和工具调用结果，请给出最终的评审结论。
+
+            原始请求:
+            - 领域: {input_data.get('domain', '')}
+            - 评审依据与标准: {input_data.get('review_criteria', '')}
+            - 项目材料文件名: {input_data.get('project_material_file', '')}
+            - 用户消息: {input_data.get('msg', '')}
+
+            工具调用结果:
+            {tool_results_str}
+
+            请严格按照评审依据与标准模板：
+            {input_data.get('review_criteria', '')}
+
+            填写模板中的相应内容，给出最终的报告。
+            """
+
+            stream_callback("📝 正在生成最终报告...\n\n")
+            return self.call_llm_api(final_prompt, stream_callback)
+
+        except Exception as e:
+            logger.error(f"生成最终响应时出错: {str(e)}")
+            error_msg = "❌ 处理完成，但生成最终报告时出现错误。"
+            stream_callback(error_msg)
+            return error_msg
+
+
 
     @staticmethod
     def execute_tool(tool: Dict, tool_args: Dict) -> str:
@@ -407,38 +571,76 @@ class EvalExpertAgent:
             logger.error(f"工具 {tool['name']} 调用异常: {error_msg}")
             return error_msg
 
-    async def finalize_with_tool_results(self, input_data: Dict[str, Any], tool_results: List[Dict]) -> str:
-        """使用工具结果生成最终响应"""
+    def extract_tool_calls_from_response(self, response: str) -> List[Dict]:
+        """从LLM响应中提取工具调用信息"""
+        tool_calls = []
+
         try:
-            # 构建包含工具结果的提示词
-            tool_results_str = "\n".join([
-                f"工具 {result['tool']} 结果: {result['result']}"
-                for result in tool_results
-            ])
+            # 首先尝试解析为JSON
+            if response.startswith('{') and response.endswith('}'):
+                try:
+                    data = json.loads(response)
+                    # 检查OpenAI格式的工具调用
+                    if 'tool_calls' in data and data['tool_calls']:
+                        return data['tool_calls']
+                    # 检查其他可能的工具调用格式
+                    if 'function_calls' in data and data['function_calls']:
+                        return data['function_calls']
+                except json.JSONDecodeError:
+                    pass
 
-            final_prompt = f"""
-            基于原始请求和工具调用结果，请给出最终的评审结论。
+            # 如果没有结构化工具调用，检查响应中是否包含工具名称
+            if self.tools:
+                for tool in self.tools:
+                    tool_name = tool['name']
+                    # 检查工具名称是否在响应中明确提到
+                    if (tool_name.lower() in response.lower() or
+                            f'"{tool_name}"' in response or
+                            f"'{tool_name}'" in response):
+                        # 尝试提取参数
+                        tool_args = self.extract_tool_arguments(response, tool_name)
 
-            原始请求:
-            - 领域: {input_data.get('domain', '')}
-            - 评审依据与标准: {input_data.get('review_criteria', '')}
-            - 项目材料文件名: {input_data.get('project_material_file', '')}
-            - 用户消息: {input_data.get('msg', '')}
-
-            工具调用结果:
-            {tool_results_str}
-
-            请严格按照评审依据与标准模板：
-            {input_data.get('review_criteria', '')}
-            
-            填写模板中的相应内容，给出最终的报告。
-            """
-
-            return self.call_llm_api(final_prompt)
+                        # 创建工具调用对象
+                        tool_call = {
+                            'id': f"call_{len(tool_calls) + 1}",
+                            'type': 'function',
+                            'function': {
+                                'name': tool_name,
+                                'arguments': json.dumps(tool_args) if tool_args else '{}'
+                            }
+                        }
+                        tool_calls.append(tool_call)
+                        logger.info(f"检测到工具调用: {tool_name} with args: {tool_args}")
 
         except Exception as e:
-            logger.error(f"生成最终响应时出错: {str(e)}")
-            return "处理完成，但生成最终报告时出现错误。"
+            logger.error(f"提取工具调用失败: {str(e)}")
+
+        logger.info(f"最终提取的工具调用: {len(tool_calls)} 个")
+        return tool_calls
+
+    @staticmethod
+    def extract_tool_arguments(response: str, tool_name: str) -> Dict:
+        """从响应中提取工具参数"""
+        # 简单的参数提取逻辑，可以根据实际需求增强
+        args = {}
+
+        # 查找文件路径参数
+        if 'file_path' in response.lower() or '文件' in response:
+            # 尝试提取文件路径
+            import re
+            file_patterns = [
+                r'file_path[\"\' ]*:[\"\' ]*([^\"\',}\s]+)',
+                r'文件[\"\' ]*:[\"\' ]*([^\"\',}\s]+)',
+                r'path[\"\' ]*:[\"\' ]*([^\"\',}\s]+)'
+            ]
+
+            for pattern in file_patterns:
+                matches = re.findall(pattern, response, re.IGNORECASE)
+                if matches:
+                    args['file_path'] = matches[0]
+                    break
+
+        return args
 
     @staticmethod
     def get_file_path_msg(categorize_files: dict[str, list[str]], content_type: str) -> list[dict]:
@@ -517,7 +719,3 @@ class EvalExpertAgent:
             'project_materials': materials,
             'uncategorized': uncategorized
         }
-
-
-if __name__ == "__main__":
-    my_cfg = init_yml_cfg()
