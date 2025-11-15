@@ -65,7 +65,7 @@ class EvalExpertAgent:
             logger.info(f"可用工具: {available_tools}")
             self.tools = self.convert_to_langchain_tools(available_tools)
             self.tools_description = self.generate_tools_description(available_tools)
-            logger.info(f"工具初始化完成: {len(self.tools)} 个工具可用")
+            logger.info(f"工具初始化完成: {len(self.tools)} 个工具可用, tools_description: {self.tools_description}")
         except Exception as e:
             logger.error(f"工具初始化失败: {str(e)}")
             self.tools = []
@@ -120,8 +120,24 @@ class EvalExpertAgent:
         descriptions = []
         for tool in available_tools:
             desc = f"- **{tool['name']}**: {tool.get('description', '暂无描述')}"
+
             if tool.get('inputSchema'):
-                desc += f" 输入参数: {tool['inputSchema']}"
+                input_schema = tool['inputSchema']
+                # 提取并格式化参数信息
+                params_desc = []
+                properties = input_schema.get('properties', {})
+                required_params = input_schema.get('required', [])
+
+                for param_name, param_info in properties.items():
+                    param_type = param_info.get('type', 'string')
+                    is_required = param_name in required_params
+                    required_mark = "[必需]" if is_required else "[可选]"
+                    param_title = param_info.get('title', param_name)
+                    params_desc.append(f"{param_name}{required_mark}({param_type}): {param_title}")
+
+                if params_desc:
+                    desc += f" 参数: {', '.join(params_desc)}"
+
             descriptions.append(desc)
 
         return "\n".join(descriptions)
@@ -162,33 +178,57 @@ class EvalExpertAgent:
         try:
             if not self.tools:
                 await self.initialize_tools()
+
             # 记录工具信息
             logger.info(f"可用工具数量: {len(self.tools)}")
             for tool in self.tools:
                 logger.info(f"工具: {tool.name} - {tool.description}")
+
+            # 使用与 get_chain 相同的构建方式，但不使用 StrOutputParser
             template_name = 'eval_expert'
             template = cfg_util.get_usr_prompt_template(template_name, self.syc_cfg)
             template = template.replace("{available_tools_description}", self.tools_description)
+
             prompt = ChatPromptTemplate.from_template(template)
             model = self.get_llm()
+
             if self.tools:
                 model_with_tools = model.bind_tools(self.tools)
             else:
                 model_with_tools = model
-            chain = prompt | model_with_tools | StrOutputParser()
+
+            # 构建chain但不使用StrOutputParser，以保留原始响应
+            chain = (
+                    {
+                        "domain": RunnablePassthrough(),
+                        "review_criteria_file": RunnablePassthrough(),
+                        "project_material_file": RunnablePassthrough(),
+                        "msg": RunnablePassthrough()
+                    }
+                    | prompt
+                    | model_with_tools
+            )
+
+            # 获取原始响应
             response = chain.invoke(input_data)
-            # 调试日志：记录响应类型和内容
-            logger.info(f"模型响应类型: {type(response)}")
-            logger.info(f"模型响应内容: {response}")
-            # 对于支持工具调用的模型，需要检查是否有工具调用
-            # 注意：这取决于您使用的具体模型和响应格式
-            if hasattr(response, 'additional_kwargs') and response.additional_kwargs.get('tool_calls'):
+
+            # 调试日志：记录完整响应
+            logger.info(f"模型完整响应: {response}")
+            logger.info(f"响应类型: {type(response)}")
+            logger.info(f"响应属性: {dir(response)}")
+
+            # 检查是否有工具调用
+            if hasattr(response, 'tool_calls') and response.tool_calls:
+                logger.info(f"检测到工具调用: {len(response.tool_calls)} 个")
+                return await self.handle_tool_calls(response.tool_calls, input_data)
+            elif hasattr(response, 'additional_kwargs') and response.additional_kwargs.get('tool_calls'):
                 tool_calls = response.additional_kwargs['tool_calls']
-                logger.info(f"检测到工具调用: {len(tool_calls)} 个")
+                logger.info(f"检测到工具调用(additional_kwargs): {len(tool_calls)} 个")
                 return await self.handle_tool_calls(tool_calls, input_data)
             else:
-                logger.info("未检测到工具调用，直接返回响应")
-                return response
+                logger.info("未检测到工具调用，直接返回响应内容")
+                # 返回响应内容
+                return response.content if hasattr(response, 'content') else str(response)
 
         except Exception as e:
             logger.error(f"工具处理过程中出错: {str(e)}")
@@ -199,14 +239,38 @@ class EvalExpertAgent:
         try:
             tool_results = []
             for tool_call in tool_calls:
-                tool_name = tool_call['function']['name']
-                try:
-                    tool_args = json.loads(tool_call['function']['arguments'])
-                except json.JSONDecodeError as e:
-                    logger.error(f"工具参数解析失败: {e}")
-                    tool_args = {}
+                # 处理不同的工具调用格式
+                if hasattr(tool_call, 'name'):
+                    # 如果是工具调用对象
+                    tool_name = tool_call.name
+                    # 修复这里：直接访问属性而不是使用get方法
+                    if hasattr(tool_call, 'args'):
+                        tool_args = tool_call.args
+                    elif hasattr(tool_call, 'arguments'):
+                        tool_args = tool_call.arguments
+                    else:
+                        tool_args = {}
+                else:
+                    # 如果是字典格式
+                    if 'function' in tool_call:
+                        tool_name = tool_call['function']['name']
+                        try:
+                            # 这里需要检查arguments是字符串还是字典
+                            arguments = tool_call['function'].get('arguments', '{}')
+                            if isinstance(arguments, str):
+                                tool_args = json.loads(arguments)
+                            else:
+                                tool_args = arguments
+                        except (json.JSONDecodeError, KeyError) as e:
+                            logger.error(f"工具参数解析失败: {e}")
+                            tool_args = {}
+                    else:
+                        tool_name = tool_call.get('name', '')
+                        tool_args = tool_call.get('arguments', {})
+
                 logger.info(f"执行工具: {tool_name}, 参数: {tool_args}")
                 tool = next((t for t in self.tools if t.name == tool_name), None)
+
                 if tool:
                     try:
                         # 执行工具调用
@@ -228,6 +292,7 @@ class EvalExpertAgent:
                         'tool': tool_name,
                         'result': f"工具未找到: {tool_name}"
                     })
+
             if tool_results:
                 logger.info(f"工具调用完成，开始生成最终响应")
                 return await self.finalize_with_tool_results(input_data, tool_results)
