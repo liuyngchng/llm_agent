@@ -458,7 +458,7 @@ def get_usr_prompt_template(template_name: str,  sys_cfg: dict, uid=0)-> str:
         sql = f"select value from prompt_template where name = '{template_name}' and  uid = {uid} limit 1"
         try:
             prompt_info = query_sqlite(my_conn, sql)
-            prompt = prompt_info.get('data', None)
+            prompt = prompt_info.get('data', [])
             if prompt and prompt[0]:
                 return prompt[0][0]
             if uid != 0:

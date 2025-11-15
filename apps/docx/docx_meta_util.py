@@ -135,11 +135,12 @@ def save_para_task(task_id: int, tasks: list):
         write_context = task['write_context'].replace("'", "''")
         paragraph_prompt = task['paragraph_prompt'].replace("'", "''")
         user_comment = task['user_comment'].replace("'", "''")
+        catalogue = task['catalogue'].replace("'", "''")
         current_sub_title = task['current_sub_title'].replace("'", "''")
         vdb_dir = task['vdb_dir'].replace("'", "''")
-        namespaces = task['namespaces'].replace("'", "''")
+        namespaces = task.get('namespaces', '').replace("'", "''")
         value_item = (f"({task['task_id']},{task['para_id']},'{heading}','{unique_key}',"
-            f"'{write_context}','{paragraph_prompt}','{user_comment}','{current_sub_title}',"
+            f"'{write_context}','{paragraph_prompt}','{user_comment}','{catalogue}','{current_sub_title}',"
             f"'{vdb_dir}','{namespaces}')")
         if my_values:
             my_values = f"{my_values}, {value_item}"
