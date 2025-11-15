@@ -117,8 +117,7 @@ class EvalExpertAgent:
                 timeout=60,
                 verify=False,
             )
-            logger.info(f"response_status: {response.status_code}, 响应头: {response.headers}")
-
+            logger.info(f"response_status: {response.status_code}, data: {json.dumps(response.json(), ensure_ascii=False)}")
             if response.status_code == 200:
                 result = response.json()
                 logger.info(f"LLM 响应解析成功")
@@ -277,7 +276,7 @@ class EvalExpertAgent:
     async def handle_tool_calls(self, tool_calls: List, input_data: Dict[str, Any]) -> str:
         """处理工具调用"""
         try:
-            logger.info(f"tool_calls:{tool_calls}, input_data:{input_data}")
+            logger.info(f"tool_calls:{tool_calls}")
             tool_results = []
             available_tool_names = [tool['name'] for tool in self.tools]
             logger.info(f"当前可用工具: {available_tool_names}")
