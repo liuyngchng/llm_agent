@@ -17,20 +17,6 @@ api:
     #  大语言模型 模型名称
     llm_model_name: deepseek-chat
 
-    # 语音识别 API 基地址，需要部署为兼容 OpenAI-API-Compatible
-    asr_api_uri: https://api.your_audio_service_provider.com/v1/
-    # 语音识别 API key
-    asr_api_key: sk-xxxx
-    # 语音识别 API 模型名称
-    asr_model_name: asr
-
-    # embedding API 基地址
-    embedding_api_uri: https://api.your_audio_service_provider.com/v1/
-    # embedding API Key
-    embedding_api_key: sk-xxxx
-    # embedding model name
-    embedding_model_name: bce-base
-
     # 是否为远程模式，true 表示使用远程模式，false 表示使用本地模式 ollama 接口
     is_remote: true
 
