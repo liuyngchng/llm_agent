@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 TOOLS_CACHE = {
     "tools": [],
     "tool_server_map": {},
-    "last_updated": None
+    "last_updated": ""
 }
 
 # 缓存有效期（分钟）
@@ -94,9 +94,9 @@ async def async_get_available_tools(server_list:list[str], force_refresh: bool =
     global TOOLS_CACHE
 
     # 检查缓存是否有效
-    current_time = datetime.now()  # 使用正确的datetime.now()
+    current_time = datetime.now()
     if (not force_refresh and TOOLS_CACHE["last_updated"] and
-            (current_time - TOOLS_CACHE["last_updated"]) < timedelta(minutes=CACHE_EXPIRY_MINUTES)):
+            (current_time - TOOLS_CACHE.get("last_updated")) < timedelta(minutes=CACHE_EXPIRY_MINUTES)):
         logger.info(f"使用缓存的工具列表，总共{len(TOOLS_CACHE["tools"])}个tool, 最后更新于 {TOOLS_CACHE['last_updated']}")
         return TOOLS_CACHE["tools"]
 
@@ -252,7 +252,7 @@ def auto_call_mcp(question: str, cfg: dict) -> str:
 
                     # 执行所有工具调用并收集结果
                     for tool_call in tool_calls:
-                        server_addr = asyncio.run(async_get_tool_server_addr(tool_call['name']))
+                        server_addr = asyncio.run(async_get_tool_server_addr(server_list, tool_call['name']))
                         tool_call_name = get_tool_call_name(tool_call['name'])
                         tool_result = call_mcp_tool(server_addr, tool_call_name, tool_call["arguments"])
                         tool_result_content = str(tool_result.content)
@@ -395,7 +395,7 @@ def auto_call_mcp_yield(question: str, cfg: dict) -> Generator[str, None, None]:
                     # 执行所有工具调用并收集结果
                     for tool_call in tool_calls:
                         # 查找工具对应的服务器
-                        server_addr = asyncio.run(async_get_tool_server_addr(tool_call['name']))
+                        server_addr = asyncio.run(async_get_tool_server_addr(server_list, tool_call['name']))
                         # 获取工具调用名称
                         tool_call_name = get_tool_call_name(tool_call['name'])
                         # 发送工具执行开始信息

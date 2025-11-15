@@ -30,7 +30,7 @@ async def health_check(request: Request):
     return JSONResponse({"status": "ok"})
 
 
-@app.custom_route("/tools", methods=["GET"])
+@app.custom_route("/tools/list", methods=["GET"])
 async def get_tools(request: Request):
     """获取所有tools清单"""
     logger.info(f"trigger_get_tools, {request}")

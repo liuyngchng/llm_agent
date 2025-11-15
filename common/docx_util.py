@@ -52,7 +52,10 @@ def get_md_file_content(md_file_path:str) -> str:
     try:
         with open(md_file_path, 'r', encoding='utf-8') as file:
             content = file.read()
-        return content
+        if len(content) <32767:
+            return content
+        else:
+            return f"{content[:32767]}\n\n ***请注意，文件全文太长，已截断。请通过目录按章节浏览。***"
     except FileNotFoundError:
         logger.error(f"Markdown文件不存在: {md_file_path}")
         raise FileNotFoundError(f"file_not_exist, {md_file_path}")

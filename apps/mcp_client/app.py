@@ -11,7 +11,7 @@ import os
 
 from flask import (Flask, render_template, request, jsonify, Response,
                    stream_with_context, send_from_directory, abort)
-from common.mcp_service import auto_call_mcp, auto_call_mcp_yield
+from common.mcp_util import auto_call_mcp, auto_call_mcp_yield
 from common.sys_init import init_yml_cfg
 
 # 配置日志
@@ -42,10 +42,15 @@ def get_static_file(file_name):
     logger.error(f"no_file_found_error, {file_name}")
     abort(404)
 
+@app.route('/webfonts/<path:file_name>')
+def get_webfonts_file(file_name):
+    font_file_name = f"webfonts/{file_name}"
+    return get_static_file(font_file_name)
+
 @app.route('/')
 def index():
     """主页面"""
-    return render_template('index.html')
+    return render_template('mcp_client_index.html')
 
 
 @app.route('/api/query', methods=['POST'])
@@ -110,4 +115,6 @@ def health_check():
 
 if __name__ == '__main__':
     # 启动 Flask 应用
-    app.run(debug=True, host='0.0.0.0', port=19002)
+    port = 19002
+    logger.info(f"启动 Flask 应用，端口：{port}")
+    app.run(debug=True, host='0.0.0.0', port=port)

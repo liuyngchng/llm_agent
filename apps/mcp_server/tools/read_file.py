@@ -3,7 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 import logging.config
-from common.docx_util import get_md_catalog, get_md_para_by_heading
+from common.docx_util import get_md_catalog, get_md_para_by_heading, get_md_file_content
 from typing import Dict, Any, Optional
 
 logging.config.fileConfig("logging.conf", encoding="utf-8")
@@ -12,12 +12,13 @@ logger = logging.getLogger(__name__)
 # 在模块级别定义 MCP_TOOLS
 MCP_TOOLS = {}
 
-def mcp_tool(name: str, description: str, require_approval: bool = False):
+def mcp_tool(name: str, title:str, description: str, require_approval: bool = False):
     """装饰器标记函数为MCP工具"""
     def decorator(func):
         MCP_TOOLS[name] = {
             'func': func,
             'name': name,
+            'title': title,
             'description': description,
             'require_approval': require_approval,
             'schema': _generate_input_schema(func)
@@ -76,9 +77,10 @@ def _generate_input_schema(func):
 
     return schema
 
-# 工具函数定义 - 这些装饰器会在模块导入时立即执行
+
 @mcp_tool(
     name="get_markdown_catalog",
+    title="获取Markdown文件的目录",
     description="获取Markdown文件的目录结构，返回JSON格式的层级目录",
     require_approval=False
 )
@@ -92,7 +94,7 @@ def get_markdown_catalog(file_path: str) -> Dict[str, Any]:
     Returns:
         包含目录结构的字典，包含标题、层级和子章节信息
     """
-    logger.info(f"call_get_markdown_catalog, {file_path}")
+    logger.info(f"triggered_call, {file_path}")
     try:
         catalog = get_md_catalog(file_path)
         logger.info(f"获取目录结构: {file_path}")
@@ -113,7 +115,44 @@ def get_markdown_catalog(file_path: str) -> Dict[str, Any]:
     return result
 
 @mcp_tool(
+    name="get_markdown_content",
+    title="获取Markdown文件的内容",
+    description="获取Markdown文件的全文文本，如果内容长度大于32KB，则只返回前32KB的内容",
+    require_approval=False
+)
+def get_markdown_content(file_path: str) -> Dict[str, Any]:
+    """
+    获取Markdown文件的目录结构
+
+    Args:
+        file_path: Markdown文件的完整路径
+
+    Returns:
+        文件的全文信息
+    """
+    logger.info(f"triggered_call, {file_path}")
+    try:
+        content = get_md_file_content(file_path)
+        logger.info(f"获取内容: {file_path}")
+        result = {
+            "status": "success",
+            "data": content,
+            "file_path": file_path
+        }
+    except Exception as e:
+        logger.error(f"获取内容失败: {file_path}, 错误: {str(e)}")
+        result = {
+            "status": "error",
+            "message": f"获取内容失败: {str(e)}",
+            "data": "",
+            "file_path": file_path
+        }
+    logger.info(f"返回结果: {result}")
+    return result
+
+@mcp_tool(
     name="get_markdown_section",
+    title="获取Markdown文件的特定章节内容",
     description="根据一级标题和可选的二级标题获取Markdown文件特定章节的内容",
     require_approval=False
 )

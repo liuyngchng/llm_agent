@@ -286,7 +286,7 @@ def post_with_retry(uri: str, headers: dict, data: dict, proxies: str | None, ma
                 time.sleep(2 ** attempt)  # 指数退避
 
     # 所有重试都失败
-    raise RuntimeError(f"LLM API 调用失败，已重试 {max_retries} 次")
+    raise RuntimeError(f"LLM API 调用失败，已重试 {max_retries} 次, uri={uri}, proxy={proxies}, data={data}")
 
 def get_with_retry(uri: str, headers: dict, params: dict, proxies: str | None, max_retries: int = 3) -> dict:
     """

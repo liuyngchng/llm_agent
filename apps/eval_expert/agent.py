@@ -12,7 +12,7 @@ from pydantic import SecretStr
 
 from common import agt_util, cfg_util
 from common.docx_util import get_docx_md_file_path
-from common.mcp_service import async_get_available_tools
+from common.mcp_util import async_get_available_tools
 from common.sys_init import init_yml_cfg
 from common.xlsx_util import get_xlsx_md_file_path
 
