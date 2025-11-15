@@ -77,12 +77,16 @@ class EvalExpertAgent:
         tools = []
         try:
             from langchain.tools import Tool
+
             for tool_info in available_tools:
-                def create_tool_func(tool_info):
+                # 修复：使用闭包正确捕获 tool_info
+                def create_tool_func(tool_info=tool_info):  # 将tool_info作为默认参数固定
                     def tool_function(**kwargs):
                         try:
                             # 调用MCP服务器执行工具
                             server_addr = tool_info.get('server')
+                            logger.info(f"调用工具 {tool_info['name']}, 参数: {kwargs}, 服务器: {server_addr}")
+
                             response = requests.post(
                                 f"{server_addr}/call_tool",
                                 json={
@@ -92,17 +96,26 @@ class EvalExpertAgent:
                                 timeout=30
                             )
                             if response.status_code == 200:
-                                return response.json().get('result', '')
+                                result = response.json().get('result', '')
+                                logger.info(f"工具 {tool_info['name']} 调用成功，结果长度: {len(str(result))}")
+                                return result
                             else:
-                                return f"工具调用失败: {response.text}"
+                                error_msg = f"工具调用失败: {response.text}"
+                                logger.error(f"工具 {tool_info['name']} 调用失败: {error_msg}")
+                                return error_msg
                         except Exception as e:
-                            return f"工具调用异常: {str(e)}"
+                            error_msg = f"工具调用异常: {str(e)}"
+                            logger.error(f"工具 {tool_info['name']} 调用异常: {error_msg}")
+                            return error_msg
 
                     return tool_function
+
+                # 创建工具实例
+                tool_func = create_tool_func()  # 调用函数返回实际的工具函数
                 tool = Tool(
                     name=tool_info['name'],
                     description=tool_info.get('description', ''),
-                    func=create_tool_func(tool_info)
+                    func=tool_func  # 直接传递函数引用
                 )
                 tools.append(tool)
 
@@ -162,8 +175,9 @@ class EvalExpertAgent:
             model_with_tools = model
         chain = (
             {
+                "today": RunnablePassthrough(),
                 "domain": RunnablePassthrough(),
-                "review_criteria_file": RunnablePassthrough(),
+                "review_criteria": RunnablePassthrough(),
                 "project_material_file": RunnablePassthrough(),
                 "msg": RunnablePassthrough()
             }
@@ -200,8 +214,9 @@ class EvalExpertAgent:
             # 构建chain但不使用StrOutputParser，以保留原始响应
             chain = (
                     {
+                        "today": RunnablePassthrough(),
                         "domain": RunnablePassthrough(),
-                        "review_criteria_file": RunnablePassthrough(),
+                        "review_criteria": RunnablePassthrough(),
                         "project_material_file": RunnablePassthrough(),
                         "msg": RunnablePassthrough()
                     }
@@ -237,25 +252,36 @@ class EvalExpertAgent:
     async def handle_tool_calls(self, tool_calls: List, input_data: Dict[str, Any]) -> str:
         """处理工具调用"""
         try:
+            logger.info(f"tool_calls:{tool_calls}, input_data:{input_data}")
             tool_results = []
+            available_tool_names = [tool.name for tool in self.tools]
+            logger.info(f"当前可用工具: {available_tool_names}")
             for tool_call in tool_calls:
                 # 处理不同的工具调用格式
                 if hasattr(tool_call, 'name'):
                     # 如果是工具调用对象
                     tool_name = tool_call.name
-                    # 修复这里：直接访问属性而不是使用get方法
-                    if hasattr(tool_call, 'args'):
+                    # 修复参数提取逻辑
+                    if hasattr(tool_call, 'args') and tool_call.args:
                         tool_args = tool_call.args
-                    elif hasattr(tool_call, 'arguments'):
-                        tool_args = tool_call.arguments
+                    elif hasattr(tool_call, 'kwargs') and tool_call.kwargs:
+                        tool_args = tool_call.kwargs
                     else:
                         tool_args = {}
                 else:
                     # 如果是字典格式
-                    if 'function' in tool_call:
+                    if 'name' in tool_call:
+                        tool_name = tool_call['name']
+                        # 提取参数
+                        if 'args' in tool_call:
+                            tool_args = tool_call['args']
+                        elif 'kwargs' in tool_call:
+                            tool_args = tool_call['kwargs']
+                        else:
+                            tool_args = {}
+                    elif 'function' in tool_call:
                         tool_name = tool_call['function']['name']
                         try:
-                            # 这里需要检查arguments是字符串还是字典
                             arguments = tool_call['function'].get('arguments', '{}')
                             if isinstance(arguments, str):
                                 tool_args = json.loads(arguments)
@@ -267,6 +293,13 @@ class EvalExpertAgent:
                     else:
                         tool_name = tool_call.get('name', '')
                         tool_args = tool_call.get('arguments', {})
+
+                # 关键修复：处理 __arg1 参数格式
+                if isinstance(tool_args, dict) and '__arg1' in tool_args:
+                    # 将 {'__arg1': 'file_path'} 转换为 {'file_path': 'file_path'}
+                    file_path = tool_args['__arg1']
+                    tool_args = {'file_path': file_path}
+                    logger.info(f"转换参数格式: {tool_args}")
 
                 logger.info(f"执行工具: {tool_name}, 参数: {tool_args}")
                 tool = next((t for t in self.tools if t.name == tool_name), None)
@@ -317,14 +350,14 @@ class EvalExpertAgent:
 
             原始请求:
             - 领域: {input_data.get('domain', '')}
-            - 评审标准文件: {input_data.get('review_criteria_file', '')}
-            - 项目材料文件: {input_data.get('project_material_file', '')}
+            - 评审依据与标准: {input_data.get('review_criteria', '')}
+            - 项目材料文件名: {input_data.get('project_material_file', '')}
             - 用户消息: {input_data.get('msg', '')}
 
             工具调用结果:
             {tool_results_str}
 
-            请基于以上信息给出完整的评审报告，重点结合工具调用获得的新信息。
+            请基于评审依据与标准给出的模板给出完整的评审报告。
             """
 
             model = self.get_llm()
@@ -336,7 +369,7 @@ class EvalExpertAgent:
             return "处理完成，但生成最终报告时出现错误。"
 
     @staticmethod
-    def get_file_path_msg(categorize_files: dict[str, list[str]], content_type: str):
+    def get_file_path_msg(categorize_files: dict[str, list[str]], content_type: str) -> list[dict]:
         msg = []
         for file_name in categorize_files.get(content_type):
             logger.info(f"processing_file: {file_name}")
@@ -347,7 +380,7 @@ class EvalExpertAgent:
         return msg
 
     @staticmethod
-    def get_file_convert_md_file_path(file_name: str):
+    def get_file_convert_md_file_path(file_name: str) -> str:
         """
         根据文件信息获取文件转换为markdown 文件的磁盘路径
         """

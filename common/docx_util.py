@@ -43,6 +43,22 @@ def get_docx_md_file_path(docx_path: str, output_abs_path: bool = False) -> str:
         logger.error(f"docx_to_md_error, file {docx_path}, {str(e)}")
         return ""
 
+def get_md_file_content(md_file_path:str) -> str:
+    """
+    从 Markdown 文件中获取文件内容
+    :param md_file_path: Markdown 文件路径
+    :return: 文件内容
+    """
+    try:
+        with open(md_file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        return content
+    except FileNotFoundError:
+        logger.error(f"Markdown文件不存在: {md_file_path}")
+        raise FileNotFoundError(f"file_not_exist, {md_file_path}")
+    except Exception as e:
+        logger.error(f"error_occurred")
+        return ""
 
 def get_md_catalog(md_file_path: str) -> dict:
     """

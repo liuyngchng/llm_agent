@@ -13,10 +13,12 @@ import logging.config
 import os
 import time
 import threading
+from datetime import datetime
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, redirect, abort, url_for, send_from_directory, render_template
 from apps.eval_expert.agent import EvalExpertAgent
+from common.docx_util import get_md_file_content
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, auth_info, get_client_ip, SESSION_TIMEOUT
@@ -187,14 +189,19 @@ def register_routes(app):
         categorize_files = eval_expert.categorize_files(file_infos)
         logger.info(f"categorize_files, {categorize_files}")
         # 处理文件内容
-        review_criteria_msg = eval_expert.get_file_path_msg(categorize_files, "review_criteria")
-        project_materials_msg = eval_expert.get_file_path_msg(categorize_files, "project_materials")
+        review_criteria_file = eval_expert.get_file_path_msg(categorize_files, "review_criteria")
+        review_criteria = ''
+        for file in review_criteria_file:
+            review_criteria += get_md_file_content(file['file_path'])
+        project_material_file = eval_expert.get_file_path_msg(categorize_files, "project_materials")
         stream_input = {
+            "today": datetime.now().strftime("%Y年%m月%d日"),
             "domain": "燃气行业",
-            "review_criteria_file": review_criteria_msg,
-            "project_material_file": project_materials_msg,
+            "review_criteria": review_criteria,
+            "project_material_file": project_material_file,
             "msg": msg
         }
+        logger.info(f"stream_input, {stream_input}")
         # 使用工具处理
         if eval_expert.tools:
             response = asyncio.run(eval_expert.process_with_tools(stream_input))
