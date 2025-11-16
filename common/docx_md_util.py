@@ -8,7 +8,45 @@ from pathlib import Path
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+
+
 OUTPUT_DIR = "output_doc"
+
+
+def save_content_to_md_file(md_txt: str, file_name: str, output_abs_path: bool = False) -> str:
+    """
+    :param md_txt markdown 格式的文本
+    :param file_name 输出的markdown 文件的文件名
+    :param output_abs_path: 是否需要输出 markdown 文件的绝对路径
+    """
+    # 确保输出目录存在
+    output_path = Path(OUTPUT_DIR)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # 确保文件名以 .md 结尾
+    if not file_name.lower().endswith('.md'):
+        file_name += '.md'
+
+    # 构建完整的文件路径
+    file_path = output_path / file_name
+
+    try:
+        # 写入文件
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(md_txt)
+        # 根据参数决定返回相对路径还是绝对路径
+        if output_abs_path:
+            logger.info(f"成功保存文件: {file_path.absolute()}")
+            return str(file_path.absolute())
+        else:
+            logger.info(f"成功保存文件: {file_path}")
+            return str(file_path)
+
+    except Exception as e:
+        # 处理可能的写入错误
+        error_msg = f"写入文件时出错: {str(e)}"
+        logging.error(error_msg)
+        return error_msg
 
 
 def convert_docx_to_md(docx_path: str, output_abs_path: bool = False) -> str:

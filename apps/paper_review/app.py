@@ -16,10 +16,10 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
+from apps.paper_review.agent import generate_review_report
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md, get_md_file_content, get_md_file_catalogue
-from common.docx_para_util import extract_catalogue, get_outline_txt
 from common import my_enums, statistic_util
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
@@ -340,52 +340,7 @@ def register_routes(app):
         return json.dumps({"msg": "删除成功", "task_id": task_id}, ensure_ascii=False), 200
 
 
-def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: int,
-                           criteria_file: str, paper_file: str):
-    """
-    生成评审报告
-    :param uid: 用户ID
-    :param doc_type: 生成文档的内容类型
-    :param review_topic: 文档标题
-    :param task_id: 任务ID
-    :param criteria_file: 评审标准文件的绝对路径
-    :param paper_file: 评审材料文件的绝对路径
-    """
-    logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {review_topic}, "
-                f"task_id: {task_id}, criteria_file: {criteria_file}, "
-                f"review_file: {paper_file}")
-    try:
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始解析评审标准...", 0)
 
-        # 获取评审标准的文件内容，格式为 Markdown
-        criteria_data = get_md_file_content(criteria_file)
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始分析评审材料...", 30)
-
-        # 解析评审材料文件的目录
-        catalogue = get_md_file_catalogue(paper_file)
-
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, "生成评审报告...", 60)
-
-        # TODO: 根据评审标准和评审材料生成评审报告
-        # 这里调用你的AI评审逻辑
-        # review_result = generate_ai_review(criteria_data, review_file_path)
-
-        # 生成输出文件
-        output_file_name = f"output_{task_id}.docx"
-        output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
-
-        # TODO: 将评审结果写入Word文档
-        # write_review_to_doc(review_result, output_file)
-
-        # 暂时复制原文件作为示例
-        import shutil
-        shutil.copy2(review_file_path, output_file)
-
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, "评审报告生成完毕", 100)
-
-    except Exception as e:
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, f"任务处理失败: {str(e)}")
-        logger.exception("评审报告生成异常", e)
 
 
 # 创建应用实例
