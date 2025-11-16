@@ -324,45 +324,73 @@ class SectionReviewer:
                     'risk_level': result.get('risk_level', '未知')
                 }
                 section_summaries.append(summary)
+
             prompt = f"""
-作为资深评审专家，请基于各章节评审结果，对整篇可行性分析报告进行整体评估：
+    作为资深评审专家，请基于各章节评审结果，对整篇可行性分析报告进行整体评估：
 
-【各章节评审概要】
-{json.dumps(section_summaries, ensure_ascii=False, indent=2)}
+    【各章节评审概要】
+    {json.dumps(section_summaries, ensure_ascii=False, indent=2)}
 
-【评审标准】
-{self.criteria_data}
+    【评审标准】
+    {self.criteria_data}
 
-请从以下维度进行整体评估：
-1. 整体逻辑连贯性 - 各章节之间逻辑是否连贯，论证是否形成完整链条
-2. 前后论证一致性 - 前后数据、结论是否一致，有无矛盾之处
-3. 风险评估全面性 - 整体风险识别是否全面，应对措施是否有效
-4. 经济效益合理性 - 经济效益分析是否合理可信
-5. 报告整体质量 - 综合各章节评分给出整体评价
+    请从以下维度进行整体评估：
+    1. 整体逻辑连贯性 - 各章节之间逻辑是否连贯，论证是否形成完整链条
+    2. 前后论证一致性 - 前后数据、结论是否一致，有无矛盾之处
+    3. 风险评估全面性 - 整体风险识别是否全面，应对措施是否有效
+    4. 经济效益合理性 - 经济效益分析是否合理可信
+    5. 报告整体质量 - 综合各章节评分给出整体评价
 
-请按照 【评审标准】的模板， 填写相应内容，返回
-"""
-            # overall_result = {
-            #     "overall_score": sum(r['score'] for r in section_results) // len(section_results),
-            #     "overall_strengths": ["报告结构完整", "数据分析详实"],
-            #     "overall_issues": ["部分章节深度不足", "风险分析需要加强"],
-            #     "key_recommendations": ["建议补充行业最新数据", "建议增加敏感性分析"],
-            #     "review_summary": "报告基本达到要求，但需要在数据更新和风险分析方面进一步加强。"
-            # }
+    请按照以下JSON格式返回评审结果：
+    {{
+        "overall_score": 85,
+        "overall_strengths": ["优势1", "优势2"],
+        "overall_issues": ["问题1", "问题2"],
+        "key_recommendations": ["建议1", "建议2"],
+        "review_summary": "整体评价摘要"
+    }}
+
+    请确保返回有效的JSON格式数据。
+    """
             overall_result = self.call_llm_api(prompt)
+
+            # 添加结果验证和降级处理
+            if not overall_result or 'overall_score' not in overall_result:
+                logger.warning("整体评审返回结果格式异常，使用降级结果")
+                return self._get_fallback_overall_result(section_results)
+
             return overall_result
 
         except Exception as e:
             logger.error(f"整体评审失败: {str(e)}")
+            return self._get_fallback_overall_result(section_results)
+
+    @staticmethod
+    def _get_fallback_overall_result(section_results: List[Dict]) -> Dict:
+        """获取整体评审的降级结果"""
+        try:
+            # 计算平均分
+            avg_score = sum(r['score'] for r in section_results) // len(section_results) if section_results else 60
+
+            return {
+                "overall_score": avg_score,
+                "overall_strengths": ["报告结构完整"],
+                "overall_issues": ["整体评审过程出现技术问题，建议人工复核"],
+                "key_recommendations": ["建议专家对整篇报告进行人工评审"],
+                "review_summary": f"报告各章节平均评分为{avg_score}分。由于技术原因，整体评审未能完成，建议专家人工复核整篇报告。"
+            }
+        except Exception as e:
+            logger.error(f"生成降级整体结果失败: {str(e)}")
             return {
                 "overall_score": 60,
                 "overall_strengths": [],
-                "overall_issues": ["整体评审过程出现技术问题"],
-                "key_recommendations": ["建议人工复核整篇报告"],
-                "review_summary": "由于技术原因，整体评审未能完成，建议专家人工评审。"
+                "overall_issues": ["评审系统出现技术故障"],
+                "key_recommendations": ["请专家进行完整人工评审"],
+                "review_summary": "评审系统出现技术问题，建议专家进行完整人工评审。"
             }
 
-    def generate_final_report(self, section_results: List[Dict], overall_result: Dict) -> str:
+    @staticmethod
+    def generate_final_report(section_results: List[Dict], overall_result: Dict) -> str:
         """
         生成最终评审报告
         """
@@ -522,6 +550,7 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
 
         docx_file_full_path = convert_md_to_docx(output_md_file, output_abs_path=True)
         logger.info(f"{uid}, {task_id}, 评审报告生成成功, {docx_file_full_path}")
+
 
         update_process_info_by_task_id(uid, task_id, "评审报告生成完毕", 100)
 

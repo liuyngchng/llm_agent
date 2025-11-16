@@ -16,7 +16,7 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
-from apps.paper_review.agent import generate_review_report
+from apps.paper_review.agent import generate_review_report, OUTPUT_DIR
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
@@ -272,7 +272,7 @@ def register_routes(app):
                 app_source=AppType.PAPER_REVIEW.name.lower(),
                 warning_info=warning_info
             ))
-        logger.info(f"{uid}, get_my_paper_review_task, {data}")
+        # logger.info(f"{uid}, get_my_paper_review_task, {data}")
         task_list = docx_meta_util.get_user_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
 
@@ -296,18 +296,13 @@ def register_routes(app):
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
         filename = f"output_{task_id}.docx"
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file_path = os.path.join(OUTPUT_DIR, filename)
         absolute_path = os.path.abspath(file_path)
         logger.info(f"文件检查 - 绝对路径: {absolute_path}")
 
         if not os.path.exists(absolute_path):
             logger.error(f"文件不存在: {absolute_path}")
             abort(404)
-
-        if not os.access(absolute_path, os.R_OK):
-            logger.error(f"文件不可读: {absolute_path}")
-            abort(403)
-
         logger.info(f"文件找到，准备发送: {absolute_path}")
         try:
             from flask import send_file
