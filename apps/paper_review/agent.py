@@ -174,7 +174,6 @@ class SectionReviewer:
 - 问题描述要具体明确
 - 建议要具有可操作性
 """
-                # TODO: 这里调用你的LLM接口
                 result = self.call_llm_api(prompt)
                 # # 暂时用模拟数据
                 # result = {
@@ -216,9 +215,10 @@ class SectionReviewer:
             payload = {
                 'model': model,
                 'messages': messages,
-                'temperature': 1.3,
+                'temperature': 0.7,  # 降低温度以获得更稳定的JSON输出
+                'response_format': {"type": "json_object"}  # 强制JSON格式输出
             }
-            logger.info(f"start_request, {uri}, {model},, 提示词: {prompt[:400]}")
+            logger.info(f"start_request, {uri}, {model}, 提示词: {prompt[:400]}")
             response = requests.post(
                 url=uri,
                 headers=headers,
@@ -229,16 +229,56 @@ class SectionReviewer:
             logger.info(f"response_status: {response.status_code}")
             if response.status_code == 200:
                 result = response.json()
-                logger.info(f"LLM 响应解析成功, {result}")
-                return result
+                logger.info(f"LLM 响应解析成功")
+
+                # 提取LLM返回的内容
+                content = result['choices'][0]['message']['content']
+                logger.debug(f"LLM返回的原始内容: {content}")
+
+                try:
+                    # 尝试直接解析JSON
+                    if content.strip().startswith('```json'):
+                        # 如果包含代码块，提取JSON部分
+                        json_str = content.strip().replace('```json', '').replace('```', '').strip()
+                        parsed_result = json.loads(json_str)
+                    else:
+                        # 直接解析
+                        parsed_result = json.loads(content)
+
+                    logger.info(f"成功解析LLM返回的JSON: {parsed_result}")
+                    return parsed_result
+
+                except json.JSONDecodeError as e:
+                    logger.error(f"解析LLM返回的JSON失败: {str(e)}")
+                    logger.error(f"原始内容: {content}")
+                    # 返回降级结果
+                    return {
+                        "score": 60,
+                        "strengths": ["内容结构完整"],
+                        "issues": [f"AI评审解析失败: {str(e)}", "建议人工复核"],
+                        "suggestions": ["请专家人工评审该章节"],
+                        "risk_level": "未知"
+                    }
             else:
-                error_msg = f"LLM API调用失败:{uri},  {response.status_code} - {response.text}"
+                error_msg = f"LLM API调用失败:{uri}, {response.status_code} - {response.text}"
                 logger.error(error_msg)
-                return error_msg
+                return {
+                    "score": 60,
+                    "strengths": ["章节结构完整"],
+                    "issues": [f"API调用失败: {response.status_code}"],
+                    "suggestions": ["请专家人工评审该章节"],
+                    "risk_level": "未知"
+                }
         except Exception as e:
             error_msg = f"LLM API调用异常: {uri}, {str(e)}"
             logger.error(error_msg)
-            return error_msg
+            return {
+                "score": 60,
+                "strengths": ["章节结构完整"],
+                "issues": [f"API调用异常: {str(e)}"],
+                "suggestions": ["请专家人工评审该章节"],
+                "risk_level": "未知"
+            }
 
     @staticmethod
     def _validate_review_result(result: Dict):
@@ -296,7 +336,6 @@ class SectionReviewer:
 
 请按照 【评审标准】的模板， 填写相应内容，返回
 """
-            # TODO: 调用LLM
             # overall_result = {
             #     "overall_score": sum(r['score'] for r in section_results) // len(section_results),
             #     "overall_strengths": ["报告结构完整", "数据分析详实"],
