@@ -7,6 +7,7 @@ import time
 from typing import List, Dict
 
 import requests
+from sympy.physics.units import percent
 
 from common import docx_meta_util
 from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_content_to_md_file, get_md_file_catalogue, \
@@ -27,10 +28,14 @@ MAX_SECTION_LENGTH = 3000  # 3000 字符
 
 
 class SectionReviewer:
-    def __init__(self, criteria_data: str, review_file_path: str, sys_cfg: dict):
+    def __init__(self, uid: int, task_id: int, criteria_data: str, review_file_path: str, sys_cfg: dict):
         """
-        增强版分章节评审系统
+        分章节评审系统
+        :param uid: 用户ID，标记哪个用户提交的任务
+        :param task_id: 任务ID， 标记是哪个任务
         """
+        self.uid = uid
+        self.task_id = task_id
         self.criteria_data = criteria_data
         self.review_file_path = review_file_path
         self.sections_data = []
@@ -45,6 +50,7 @@ class SectionReviewer:
             catalogue: 目录结构
             extract_heading_level: 提取的标题层级，默认提取2级标题的内容
         """
+
         try:
             with open(self.review_file_path, 'r', encoding='utf-8') as file:
                 lines = file.readlines()
@@ -423,19 +429,20 @@ class SectionReviewer:
             if not catalogue:
                 raise ValueError("无法解析文档目录结构")
             logger.info(f"文档目录，{catalogue}")
-
+            update_process_info_by_task_id(self.uid, self.task_id, "开始解析章节内容...")
             # 2. 提取章节内容
             self.sections_data = self.extract_sections_content(catalogue)
             if not self.sections_data:
                 raise ValueError("无法提取章节内容")
-            logger.info(f"章节内容，{self.sections_data}")
-
-            logger.info(f"开始逐章节评审，共{len(self.sections_data)}个章节")
+            logger.debug(f"章节内容，{self.sections_data}")
+            section_count = len(self.sections_data)
+            logger.info(f"开始逐章节评审，共{section_count}个章节")
 
             # 3. 逐章节评审
             for i, section in enumerate(self.sections_data):
                 logger.info(f"评审章节 {i + 1}/{len(self.sections_data)}: {section['title']}")
-
+                current_percent = round((i + 1) / len(self.sections_data) * 100, 1)
+                update_process_info_by_task_id(self.uid, self.task_id, f"正在处理第{i + 1}/{section_count}个章节", current_percent)
                 # 控制章节内容长度，避免过长
                 content_preview = section['content'][:MAX_SECTION_LENGTH] + "..." if len(section['content']) > MAX_SECTION_LENGTH else section[
                     'content']
@@ -465,15 +472,18 @@ class SectionReviewer:
             return f"# 评审过程出现错误\n\n错误信息: {str(e)}\n\n请检查文档格式或联系技术支持。"
 
 
-def start_ai_review(criteria_data: str, review_file_path: str, sys_cfg: dict) -> str:
+def start_ai_review(uid:int, task_id: int, criteria_data: str, review_file_path: str, sys_cfg: dict) -> str:
     """
+    :param uid: 用户ID
+    :param task_id: 当前任务ID
     :param criteria_data: 评审标准和要求文本
     :param review_file_path: 被评审的材料文件的绝对路径
+    :param sys_cfg： 系统配置信息
     根据评审标准文本和评审材料生成评审报告
     """
     try:
         # 创建评审器并执行评审
-        reviewer = SectionReviewer(criteria_data, review_file_path, sys_cfg)
+        reviewer = SectionReviewer(uid, task_id, criteria_data, review_file_path, sys_cfg)
         review_report = reviewer.execute_review()
         return review_report
 
@@ -498,16 +508,13 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
                 f"task_id: {task_id}, criteria_file: {criteria_file}, "
                 f"review_file: {paper_file}")
     try:
-        update_process_info_by_task_id(uid, task_id, "开始解析评审标准...", 0)
-
+        update_process_info_by_task_id(uid, task_id, "开始解析评审标准...")
         # 获取评审标准的文件内容，格式为 Markdown
         criteria_data = get_md_file_content(criteria_file)
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始分析评审材料...", 30)
-
-        update_process_info_by_task_id(uid, task_id, "生成评审报告...", 60)
+        update_process_info_by_task_id(uid, task_id, "开始分析评审材料...")
 
         # 调用AI评审生成
-        review_result = start_ai_review(criteria_data, paper_file, sys_cfg)
+        review_result = start_ai_review(uid, task_id, criteria_data, paper_file, sys_cfg)
 
         # 生成输出文件
         output_file_name = f"output_{task_id}.md"
