@@ -17,27 +17,38 @@ function updateProgressBar() {
     });
 }
 
-// 处理xlsx文件上传
-function handleXlsxUpload(input) {
+// 处理评审标准文件上传（支持xlsx和docx）
+function handleCriteriaUpload(input) {
     const file = input.files[0];
     if (!file) return;
 
     // 验证文件类型
-    if (!file.name.endsWith('.xlsx')) {
-        alert('请上传 .xlsx 格式的 Excel 文档');
+    const allowedExtensions = ['.xlsx', '.docx'];
+    const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+
+    if (!allowedExtensions.includes(fileExtension)) {
+        alert('请上传 .xlsx 或 .docx 格式的文件');
         return;
     }
 
     // 显示文件信息
-    document.getElementById('xlsxFileInfo').style.display = 'block';
-    document.getElementById('xlsxFileName').textContent = file.name;
-    document.getElementById('xlsxFileSize').textContent = formatFileSize(file.size);
+    document.getElementById('criteriaFileInfo').style.display = 'block';
+    document.getElementById('criteriaFileName').textContent = file.name;
+    document.getElementById('criteriaFileSize').textContent = formatFileSize(file.size);
+
+    // 设置文件图标
+    const fileIcon = document.getElementById('criteriaFileIcon');
+    if (fileExtension === '.xlsx') {
+        fileIcon.className = 'fas fa-file-excel';
+    } else if (fileExtension === '.docx') {
+        fileIcon.className = 'fas fa-file-word';
+    }
 
     // 上传文件到后端
-    uploadXlsxFile(file);
+    uploadCriteriaFile(file);
 }
 
-// 处理docx文件上传
+// 处理评审材料文件上传
 function handleDocxUpload(input) {
     const file = input.files[0];
     if (!file) return;
@@ -66,8 +77,8 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// 上传xlsx文件到后端
-async function uploadXlsxFile(file) {
+// 上传评审标准文件到后端（支持xlsx和docx）
+async function uploadCriteriaFile(file) {
     const uid = document.getElementById('uid').value;
 
     const formData = new FormData();
@@ -75,29 +86,36 @@ async function uploadXlsxFile(file) {
     formData.append('uid', uid);
 
     try {
-        const response = await fetch('/xlsx/upload', {
+        // 根据文件类型选择上传接口
+        const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+        const uploadUrl = fileExtension === '.xlsx' ? '/xlsx/upload' : '/docx/upload';
+
+        const response = await fetch(uploadUrl, {
             method: 'POST',
             body: formData
         });
+
         if (!response.ok) {
             throw new Error('评审标准文件上传失败');
         }
+
         const data = await response.json();
 
         // 记录上传的评审标准文件名称
         document.getElementById('review_criteria_file_name').value = data.file_name;
         // 保存任务ID
         document.getElementById('taskId').value = data.task_id;
+
     } catch (error) {
         console.error('上传错误:', error);
         alert('评审标准文件上传失败: ' + error.message);
         // 重置文件选择
         document.getElementById('reviewCriteria').value = '';
-        document.getElementById('xlsxFileInfo').style.display = 'none';
+        document.getElementById('criteriaFileInfo').style.display = 'none';
     }
 }
 
-// 上传docx文件到后端
+// 上传评审材料文件到后端
 async function uploadDocxFile(file) {
     const uid = document.getElementById('uid').value;
 
@@ -110,9 +128,11 @@ async function uploadDocxFile(file) {
             method: 'POST',
             body: formData
         });
+
         if (!response.ok) {
             throw new Error('评审材料文件上传失败');
         }
+
         const data = await response.json();
 
         // 记录上传的评审材料文件名称
@@ -196,7 +216,7 @@ function resetForm() {
     document.getElementById('reviewTopic').value = '';
     document.getElementById('reviewCriteria').value = '';
     document.getElementById('reviewPaperFile').value = '';
-    document.getElementById('xlsxFileInfo').style.display = 'none';
+    document.getElementById('criteriaFileInfo').style.display = 'none';
     document.getElementById('docxFileInfo').style.display = 'none';
     document.getElementById('taskId').value = '';
     document.getElementById('review_criteria_file_name').value = '';

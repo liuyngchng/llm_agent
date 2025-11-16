@@ -36,7 +36,7 @@ def login_index():
         raise RuntimeError("no_app_info_found")
     sys_name = my_enums.AppType.get_app_type(app_source)
     ctx = {
-        "uid": "foo",
+        "uid": -1,
         "sys_name": sys_name,
         "app_source": app_source,
         "warning_info": warning_info,

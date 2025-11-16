@@ -48,18 +48,25 @@
 
             <div class="form-group">
                 <label for="reviewCriteria">【2】评审标准</label>
-                <div class="upload-btn">
-                    <button class="btn btn-primary">
-                        <i class="fas fa-file-excel"></i> 选择评审标准文件 (.xlsx)
-                    </button>
-                    <input type="file" class="file-input" id="reviewCriteria" accept=".xlsx" onchange="handleXlsxUpload(this)">
-                </div>
-                <div class="file-info" id="xlsxFileInfo" style="display: none;">
-                    <div class="file-name">
-                        <i class="fas fa-file-excel"></i>
-                        <span id="xlsxFileName">未选择文件</span>
+                <div class="upload-container">
+                    <i class="fas fa-file-alt"></i>
+                    <h3>上传评审标准</h3>
+                    <p>支持上传 Excel (.xlsx) 或 Word (.docx) 格式的评审标准文件</p>
+
+                    <div class="upload-btn">
+                        <button class="btn btn-primary">
+                            <i class="fas fa-file-alt"></i> 选择评审标准文件
+                        </button>
+                        <input type="file" class="file-input" id="reviewCriteria" accept=".xlsx,.docx" onchange="handleCriteriaUpload(this)">
                     </div>
-                    <div class="file-size" id="xlsxFileSize">-</div>
+
+                    <div class="file-info" id="criteriaFileInfo" style="display: none;">
+                        <div class="file-name">
+                            <i class="fas fa-file-alt" id="criteriaFileIcon"></i>
+                            <span id="criteriaFileName">未选择文件</span>
+                        </div>
+                        <div class="file-size" id="criteriaFileSize">-</div>
+                    </div>
                 </div>
             </div>
 

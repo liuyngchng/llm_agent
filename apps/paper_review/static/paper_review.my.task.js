@@ -7,7 +7,7 @@ async function fetchTasks() {
         const token = localStorage.getItem('token') || '';
         const uid = getUidFromUrl();
 
-        const response = await fetch('/mt_report/my/task', {
+        const response = await fetch('/paper_review/my/task', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ function renderTasksTable(tasks) {
         // 文档下载
         const downloadCell = document.createElement('td');
         downloadCell.innerHTML = `
-            <a href="/mt_report/download/task/${task.task_id}?uid=${uid}" class="action-btn action-download">
+            <a href="/paper_review/download/task/${task.task_id}?uid=${uid}" class="action-btn action-download">
                 <i class="fas fa-download"></i> 全文下载
             </a>
         `;
@@ -243,7 +243,7 @@ async function deleteTask(taskId, docTitle) {
     try {
         const token = localStorage.getItem('token') || '';
 
-        const response = await fetch(`/mt_report/del/task/${taskId}`, {
+        const response = await fetch(`/paper_review/del/task/${taskId}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
