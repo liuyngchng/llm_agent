@@ -17,24 +17,44 @@ function updateProgressBar() {
     });
 }
 
-// 处理文件上传
-function handleFileUpload(input) {
+// 处理xlsx文件上传
+function handleXlsxUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // 验证文件类型
+    if (!file.name.endsWith('.xlsx')) {
+        alert('请上传 .xlsx 格式的 Excel 文档');
+        return;
+    }
+
+    // 显示文件信息
+    document.getElementById('xlsxFileInfo').style.display = 'block';
+    document.getElementById('xlsxFileName').textContent = file.name;
+    document.getElementById('xlsxFileSize').textContent = formatFileSize(file.size);
+
+    // 上传文件到后端
+    uploadXlsxFile(file);
+}
+
+// 处理docx文件上传
+function handleDocxUpload(input) {
     const file = input.files[0];
     if (!file) return;
 
     // 验证文件类型
     if (!file.name.endsWith('.docx')) {
-        alert('请上传 .docx 格式的Word文档');
+        alert('请上传 .docx 格式的 Word 文档');
         return;
     }
 
     // 显示文件信息
-    document.getElementById('fileInfo').style.display = 'block';
-    document.getElementById('fileName').textContent = file.name;
-    document.getElementById('fileSize').textContent = formatFileSize(file.size);
+    document.getElementById('docxFileInfo').style.display = 'block';
+    document.getElementById('docxFileName').textContent = file.name;
+    document.getElementById('docxFileSize').textContent = formatFileSize(file.size);
 
     // 上传文件到后端
-    uploadTemplateFile(file);
+    uploadDocxFile(file);
 }
 
 // 格式化文件大小
@@ -46,8 +66,39 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// 上传文件到后端
-async function uploadTemplateFile(file) {
+// 上传xlsx文件到后端
+async function uploadXlsxFile(file) {
+    const uid = document.getElementById('uid').value;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('uid', uid);
+
+    try {
+        const response = await fetch('/xlsx/upload', {
+            method: 'POST',
+            body: formData
+        });
+        if (!response.ok) {
+            throw new Error('评审标准文件上传失败');
+        }
+        const data = await response.json();
+
+        // 记录上传的评审标准文件名称
+        document.getElementById('review_criteria_file_name').value = data.file_name;
+        // 保存任务ID
+        document.getElementById('taskId').value = data.task_id;
+    } catch (error) {
+        console.error('上传错误:', error);
+        alert('评审标准文件上传失败: ' + error.message);
+        // 重置文件选择
+        document.getElementById('reviewCriteria').value = '';
+        document.getElementById('xlsxFileInfo').style.display = 'none';
+    }
+}
+
+// 上传docx文件到后端
+async function uploadDocxFile(file) {
     const uid = document.getElementById('uid').value;
 
     const formData = new FormData();
@@ -60,100 +111,75 @@ async function uploadTemplateFile(file) {
             body: formData
         });
         if (!response.ok) {
-            throw new Error('文件上传失败');
+            throw new Error('评审材料文件上传失败');
         }
         const data = await response.json();
 
-        // 记录上传的文件模板的名称
-        document.getElementById('file_name').value = data.file_name;
+        // 记录上传的评审材料文件名称
+        document.getElementById('review_paper_file_name').value = data.file_name;
         // 保存任务ID
         document.getElementById('taskId').value = data.task_id;
     } catch (error) {
         console.error('上传错误:', error);
-        alert('文件上传失败: ' + error.message);
+        alert('评审材料文件上传失败: ' + error.message);
         // 重置文件选择
-        document.getElementById('templateFile').value = '';
-        document.getElementById('fileInfo').style.display = 'none';
+        document.getElementById('reviewPaperFile').value = '';
+        document.getElementById('docxFileInfo').style.display = 'none';
     }
 }
 
-// 处理会议内容文件上传
-function handleContentFileUpload(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    // 验证文件类型
-    if (!file.name.endsWith('.txt') && !file.name.endsWith('.md')) {
-        alert('请上传 .txt 或 .md 格式的文件');
-        return;
-    }
-
-    // 显示文件信息
-    document.getElementById('contentFileInfo').style.display = 'block';
-    document.getElementById('contentFileName').textContent = file.name;
-
-    // 读取文件内容
-    const reader = new FileReader();
-    reader.readAsText(file);
-}
-
-// 生成会议纪要
-async function gen_mt_report() {
+// 生成评审报告
+async function gen_review_report() {
     const uid = document.getElementById('uid').value;
-    const token = document.getElementById('t').value;
     const task_id = document.getElementById('taskId').value;
-    const doc_title = document.getElementById('docTitle').value;
-    const file_name = document.getElementById('file_name').value;
+    const doc_title = document.getElementById('reviewTopic').value;
+    const review_criteria_file_name = document.getElementById('review_criteria_file_name').value;
+    const review_paper_file_name = document.getElementById('review_paper_file_name').value;
     const generateBtn = document.getElementById('generateBtn');
-    const contentFile = document.getElementById('contentFile');
 
     // 验证输入
     if (!doc_title.trim()) {
-        alert('请输入会议纪要标题');
+        alert('请输入评审主题');
         return;
     }
 
-    if (!contentFile.files || contentFile.files.length === 0) {
-        alert('请上传会议内容文件');
+    if (!review_criteria_file_name) {
+        alert('请上传评审标准文件');
         return;
     }
 
-    const keywords = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsText(contentFile.files[0]);
-    });
+    if (!review_paper_file_name) {
+        alert('请上传评审材料文件');
+        return;
+    }
 
     // 禁用按钮
     generateBtn.disabled = true;
     generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
 
-    let apiUrl, postData;
-
-    apiUrl = '/mt_report/gen';
-    postData = {
+    const apiUrl = '/review_report/gen';
+    const postData = {
         uid: uid,
         doc_title: doc_title,
-        keywords: keywords,
         task_id: task_id,
-        file_name: file_name
+        review_criteria_file_name: review_criteria_file_name,
+        review_paper_file_name: review_paper_file_name
     };
 
     try {
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(postData)
         });
 
-        if (!response.ok) throw new Error('会议纪要生成任务提交失败');
+        if (!response.ok) throw new Error('评审报告生成任务提交失败');
 
         const result = await response.json();
         if (result.status === "started") {
-            alert('会议纪要生成任务已提交，可在页面右上角"写作任务"中查看进度');
+            alert('评审报告生成任务已提交，可在页面右上角"我的任务"中查看进度');
             resetForm();
         } else {
             throw new Error('任务提交失败');
@@ -167,12 +193,14 @@ async function gen_mt_report() {
 // 重置表单
 function resetForm() {
     // 清空表单数据
-    document.getElementById('docTitle').value = '';
-    document.getElementById('contentFile').value = '';
-    document.getElementById('fileInfo').style.display = 'none';
-    document.getElementById('templateFile').value = '';
+    document.getElementById('reviewTopic').value = '';
+    document.getElementById('reviewCriteria').value = '';
+    document.getElementById('reviewPaperFile').value = '';
+    document.getElementById('xlsxFileInfo').style.display = 'none';
+    document.getElementById('docxFileInfo').style.display = 'none';
     document.getElementById('taskId').value = '';
-    document.getElementById('file_name').value = '';
+    document.getElementById('review_criteria_file_name').value = '';
+    document.getElementById('review_paper_file_name').value = '';
 
     resetGenerateState();
 }
@@ -182,7 +210,7 @@ function resetGenerateState() {
     const generateBtn = document.getElementById('generateBtn');
     if (generateBtn) {
         generateBtn.disabled = false;
-        generateBtn.innerHTML = '提交任务 <i class="fas fa-file-word"></i>';
+        generateBtn.innerHTML = '生成评审报告 <i class="fas fa-file-contract"></i>';
     }
 }
 
