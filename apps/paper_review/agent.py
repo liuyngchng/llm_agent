@@ -4,17 +4,22 @@
 import os
 import json
 import time
-from typing import List, Dict, Any
+from typing import List, Dict
 from common import docx_meta_util
-from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_content_to_md_file, get_md_file_catalogue
+from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_content_to_md_file, get_md_file_catalogue, \
+    convert_docx_to_md
 import logging.config
 
 from common.docx_meta_util import update_process_info_by_task_id
+from common.xlsx_md_util import convert_xlsx_to_md
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 OUTPUT_DIR = "output_doc"
+
+MAX_SECTION_LENGTH = 3000  # 3000 字符
+
 
 
 class SectionReviewer:
@@ -27,9 +32,13 @@ class SectionReviewer:
         self.sections_data = []
         self.review_results = []
 
-    def extract_sections_content(self, catalogue: Dict) -> List[Dict]:
+    def extract_sections_content(self, catalogue: Dict, extract_heading_level: int = 2) -> List[Dict]:
         """
-        从Markdown文件中提取各章节内容
+        按指定标题层级提取章节内容，这个方法很重要，决定着后续的流程是否正确与否
+
+        Args:
+            catalogue: 目录结构
+            extract_heading_level: 提取的标题层级，默认提取2级标题的内容
         """
         try:
             with open(self.review_file_path, 'r', encoding='utf-8') as file:
@@ -37,52 +46,87 @@ class SectionReviewer:
 
             sections = []
 
-            def extract_section_content(start_line, end_line=None):
-                """提取指定行范围内的内容"""
-                if end_line is None:
-                    end_line = len(lines)
-                content_lines = lines[start_line - 1:end_line]
-                return ''.join(content_lines).strip()
+            def collect_all_nodes(node, nodes_list=None):
+                """收集所有节点"""
+                if nodes_list is None:
+                    nodes_list = []
 
-            def process_node(node, parent_title=""):
-                """递归处理目录节点"""
-                current_title = node['title']
-                full_title = f"{parent_title} > {current_title}" if parent_title else current_title
+                if isinstance(node, dict):
+                    nodes_list.append(node)
+                    children = node.get('children', {})
+                    for child in children.values():
+                        collect_all_nodes(child, nodes_list)
 
-                # 提取本节内容
-                start_line = node['line']
+                return nodes_list
 
-                # 找到下一节开始的行（如果有的话）
-                end_line = len(lines) + 1
-                if 'children' in node and node['children']:
-                    # 找到第一个子节点的开始行作为结束位置
-                    first_child = list(node['children'].values())[0]
-                    end_line = first_child['line']
+            def find_next_section_at_level(current_node, current_level, total_lines):
+                """找到下一个同级或更高级别章节的开始行"""
+                all_nodes = collect_all_nodes(catalogue)
+                all_nodes.sort(key=lambda x: x.get('line', 1))
 
-                content = extract_section_content(start_line, end_line)
+                current_line = current_node.get('line', 1)
+                for node in all_nodes:
+                    node_line = node.get('line', 1)
+                    node_level = node.get('level', 1)
+                    if node_line > current_line and node_level <= current_level:
+                        return node_line
 
-                sections.append({
-                    'title': full_title,
-                    'level': node['level'],
-                    'content': content,
-                    'start_line': start_line,
-                    'end_line': end_line - 1 if end_line <= len(lines) else len(lines)
-                })
+                return total_lines + 1
 
-                # 递归处理子节点
-                if 'children' in node:
-                    for child in node['children'].values():
-                        process_node(child, full_title)
+            def extract_content_at_level(node, parent_title="", current_level=1):
+                """按指定层级提取章节内容"""
+                if isinstance(node, dict):
+                    current_title = node.get('title', '')
+                    level = node.get('level', 1)
+                    line_num = node.get('line', 1)
 
-            # 处理所有根节点
-            for root_node in catalogue.values():
-                process_node(root_node)
+                    full_title = f"{parent_title} > {current_title}" if parent_title else current_title
 
-            logger.info(f"成功提取 {len(sections)} 个章节内容")
+                    # 如果当前节点层级等于或小于目标层级，提取内容
+                    if level == extract_heading_level:
+                        # 提取本节内容
+                        start_line = line_num
+
+                        # 找到下一同级或更高级别章节的开始行
+                        end_line = find_next_section_at_level(node, level, len(lines))
+
+                        content = ''.join(lines[start_line - 1:end_line]).strip()
+
+                        sections.append({
+                            'title': full_title,
+                            'level': level,
+                            'content': content,
+                            'start_line': start_line,
+                            'end_line': end_line - 1 if end_line <= len(lines) else len(lines)
+                        })
+
+                        logger.debug(
+                            f"提取章节 '{full_title}': 层级 {level}, 行 {start_line}-{end_line - 1}, 长度 {len(content)} 个字符")
+
+                    # 递归处理子节点
+                    children = node.get('children', {})
+                    for child in children.values():
+                        extract_content_at_level(child, full_title, level)
+
+            # 开始提取
+            extract_content_at_level(catalogue)
+
+            # 按行号排序
+            sections.sort(key=lambda x: x['start_line'])
+
+            logger.info(f"按{extract_heading_level}级标题提取了 {len(sections)} 个章节内容")
+
+            # 输出提取的章节信息
+            for i, section in enumerate(sections[:5]):  # 只显示前5个作为样例
+                logger.info(
+                    f"样例章节{i + 1}: '{section['title']}' (层级{section['level']}), 内容长度: {len(section['content'])}")
+
             return sections
 
         except Exception as e:
             logger.error(f"提取章节内容失败: {str(e)}")
+            import traceback
+            logger.error(f"详细错误信息: {traceback.format_exc()}")
             return []
 
     def review_single_section(self, section_title: str, section_content: str, max_retries: int = 3) -> Dict:
@@ -289,11 +333,13 @@ class SectionReviewer:
             catalogue = get_md_file_catalogue(self.review_file_path)
             if not catalogue:
                 raise ValueError("无法解析文档目录结构")
+            logger.info(f"文档目录，{catalogue}")
 
             # 2. 提取章节内容
             self.sections_data = self.extract_sections_content(catalogue)
             if not self.sections_data:
                 raise ValueError("无法提取章节内容")
+            logger.info(f"章节内容，{self.sections_data}")
 
             logger.info(f"开始逐章节评审，共{len(self.sections_data)}个章节")
 
@@ -302,7 +348,7 @@ class SectionReviewer:
                 logger.info(f"评审章节 {i + 1}/{len(self.sections_data)}: {section['title']}")
 
                 # 控制章节内容长度，避免过长
-                content_preview = section['content'][:3000] + "..." if len(section['content']) > 3000 else section[
+                content_preview = section['content'][:MAX_SECTION_LENGTH] + "..." if len(section['content']) > MAX_SECTION_LENGTH else section[
                     'content']
 
                 section_result = self.review_single_section(
@@ -332,6 +378,8 @@ class SectionReviewer:
 
 def start_ai_review(criteria_data: str, review_file_path: str) -> str:
     """
+    :param criteria_data: 评审标准和要求文本
+    :param review_file_path: 被评审的材料文件的绝对路径
     根据评审标准文本和评审材料生成评审报告
     """
     try:
@@ -349,6 +397,12 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
                            criteria_file: str, paper_file: str):
     """
     生成评审报告
+    :param uid: 用户ID
+    :param doc_type: 评审的文档内容，例如可行性研究报告，概要设计， AI应用设计等
+    :param review_topic : 评审的主题， 例如关于xxxx的评审
+    :param task_id: 任务ID
+    :param criteria_file: 评审标准文件的绝对路径
+    :param paper_file: 评审材料文件的绝对路径
     """
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {review_topic}, "
                 f"task_id: {task_id}, criteria_file: {criteria_file}, "
@@ -377,3 +431,14 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
     except Exception as e:
         update_process_info_by_task_id(uid, task_id, f"任务处理失败: {str(e)}")
         logger.exception("评审报告生成异常", e)
+
+
+if __name__ == '__main__':
+    my_criteria_xlsx_file = "/home/rd/workspace/llm_agent/apps/paper_review/评审标准.xlsx"
+    my_paper_docx_file = "/home/rd/workspace/llm_agent/apps/paper_review/天然气零售系统可行性研究报告.docx"
+    my_paper_file = convert_docx_to_md(my_paper_docx_file, True)
+    logger.info(f"my_paper_file {my_paper_file}")
+    my_criteria_file = convert_xlsx_to_md(my_criteria_xlsx_file, True, True)
+    logger.info(f"my_criteria_file {my_criteria_file}")
+    my_criteria_data = get_md_file_content(my_criteria_file)
+    start_ai_review(my_criteria_data, my_paper_file)
