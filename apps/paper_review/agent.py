@@ -5,12 +5,16 @@ import os
 import json
 import time
 from typing import List, Dict
+
+import requests
+
 from common import docx_meta_util
 from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_content_to_md_file, get_md_file_catalogue, \
     convert_docx_to_md
 import logging.config
 
 from common.docx_meta_util import update_process_info_by_task_id
+from common.sys_init import init_yml_cfg
 from common.xlsx_md_util import convert_xlsx_to_md
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -23,7 +27,7 @@ MAX_SECTION_LENGTH = 3000  # 3000 字符
 
 
 class SectionReviewer:
-    def __init__(self, criteria_data: str, review_file_path: str):
+    def __init__(self, criteria_data: str, review_file_path: str, sys_cfg: dict):
         """
         增强版分章节评审系统
         """
@@ -31,6 +35,7 @@ class SectionReviewer:
         self.review_file_path = review_file_path
         self.sections_data = []
         self.review_results = []
+        self.sys_cfg = sys_cfg
 
     def extract_sections_content(self, catalogue: Dict, extract_heading_level: int = 2) -> List[Dict]:
         """
@@ -170,15 +175,15 @@ class SectionReviewer:
 - 建议要具有可操作性
 """
                 # TODO: 这里调用你的LLM接口
-                # result = self.call_llm(prompt)
-                # 暂时用模拟数据
-                result = {
-                    "score": 75 + (attempt * 5),  # 模拟数据
-                    "strengths": ["结构清晰", "数据详实"],
-                    "issues": ["缺乏最新行业数据", "风险评估不够全面"],
-                    "suggestions": ["补充2024年行业数据", "增加敏感性分析"],
-                    "risk_level": "中"
-                }
+                result = self.call_llm_api(prompt)
+                # # 暂时用模拟数据
+                # result = {
+                #     "score": 75 + (attempt * 5),  # 模拟数据
+                #     "strengths": ["结构清晰", "数据详实"],
+                #     "issues": ["缺乏最新行业数据", "风险评估不够全面"],
+                #     "suggestions": ["补充2024年行业数据", "增加敏感性分析"],
+                #     "risk_level": "中"
+                # }
 
                 # 验证结果格式
                 self._validate_review_result(result)
@@ -191,7 +196,52 @@ class SectionReviewer:
                     return self._get_fallback_result(section_title, str(e))
                 time.sleep(1)  # 重试前等待
 
-    def _validate_review_result(self, result: Dict):
+    def call_llm_api(self, prompt: str) -> dict:
+        """直接调用LLM API，支持流式输出"""
+        key = self.sys_cfg['api']['llm_api_key']
+        model = self.sys_cfg['api']['llm_model_name']
+        uri = f"{self.sys_cfg['api']['llm_api_uri']}/chat/completions"
+        try:
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {key}'
+            }
+
+            # 构建消息
+            messages = [
+                {"role": "user", "content": prompt}
+            ]
+
+            # 构建请求体
+            payload = {
+                'model': model,
+                'messages': messages,
+                'temperature': 1.3,
+            }
+            logger.info(f"start_request, {uri}, {model},, 提示词: {prompt[:400]}")
+            response = requests.post(
+                url=uri,
+                headers=headers,
+                json=payload,
+                timeout=60,
+                verify=False,
+            )
+            logger.info(f"response_status: {response.status_code}")
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"LLM 响应解析成功, {result}")
+                return result
+            else:
+                error_msg = f"LLM API调用失败:{uri},  {response.status_code} - {response.text}"
+                logger.error(error_msg)
+                return error_msg
+        except Exception as e:
+            error_msg = f"LLM API调用异常: {uri}, {str(e)}"
+            logger.error(error_msg)
+            return error_msg
+
+    @staticmethod
+    def _validate_review_result(result: Dict):
         """验证评审结果格式"""
         required_fields = ['score', 'strengths', 'issues', 'suggestions']
         for field in required_fields:
@@ -201,7 +251,8 @@ class SectionReviewer:
         if not isinstance(result['score'], int) or not (0 <= result['score'] <= 100):
             raise ValueError("评分必须在0-100之间")
 
-    def _get_fallback_result(self, section_title: str, error_msg: str) -> Dict:
+    @staticmethod
+    def _get_fallback_result(section_title: str, error_msg: str) -> Dict:
         """获取降级评审结果"""
         return {
             "score": 60,
@@ -227,7 +278,6 @@ class SectionReviewer:
                     'risk_level': result.get('risk_level', '未知')
                 }
                 section_summaries.append(summary)
-
             prompt = f"""
 作为资深评审专家，请基于各章节评审结果，对整篇可行性分析报告进行整体评估：
 
@@ -247,14 +297,14 @@ class SectionReviewer:
 请按照 【评审标准】的模板， 填写相应内容，返回
 """
             # TODO: 调用LLM
-            overall_result = {
-                "overall_score": sum(r['score'] for r in section_results) // len(section_results),
-                "overall_strengths": ["报告结构完整", "数据分析详实"],
-                "overall_issues": ["部分章节深度不足", "风险分析需要加强"],
-                "key_recommendations": ["建议补充行业最新数据", "建议增加敏感性分析"],
-                "review_summary": "报告基本达到要求，但需要在数据更新和风险分析方面进一步加强。"
-            }
-
+            # overall_result = {
+            #     "overall_score": sum(r['score'] for r in section_results) // len(section_results),
+            #     "overall_strengths": ["报告结构完整", "数据分析详实"],
+            #     "overall_issues": ["部分章节深度不足", "风险分析需要加强"],
+            #     "key_recommendations": ["建议补充行业最新数据", "建议增加敏感性分析"],
+            #     "review_summary": "报告基本达到要求，但需要在数据更新和风险分析方面进一步加强。"
+            # }
+            overall_result = self.call_llm_api(prompt)
             return overall_result
 
         except Exception as e:
@@ -376,7 +426,7 @@ class SectionReviewer:
             return f"# 评审过程出现错误\n\n错误信息: {str(e)}\n\n请检查文档格式或联系技术支持。"
 
 
-def start_ai_review(criteria_data: str, review_file_path: str) -> str:
+def start_ai_review(criteria_data: str, review_file_path: str, sys_cfg: dict) -> str:
     """
     :param criteria_data: 评审标准和要求文本
     :param review_file_path: 被评审的材料文件的绝对路径
@@ -384,7 +434,7 @@ def start_ai_review(criteria_data: str, review_file_path: str) -> str:
     """
     try:
         # 创建评审器并执行评审
-        reviewer = SectionReviewer(criteria_data, review_file_path)
+        reviewer = SectionReviewer(criteria_data, review_file_path, sys_cfg)
         review_report = reviewer.execute_review()
         return review_report
 
@@ -394,7 +444,7 @@ def start_ai_review(criteria_data: str, review_file_path: str) -> str:
 
 
 def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: int,
-                           criteria_file: str, paper_file: str):
+                           criteria_file: str, paper_file: str, sys_cfg: dict):
     """
     生成评审报告
     :param uid: 用户ID
@@ -403,6 +453,7 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
     :param task_id: 任务ID
     :param criteria_file: 评审标准文件的绝对路径
     :param paper_file: 评审材料文件的绝对路径
+    :param sys_cfg: 系统配置信息
     """
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {review_topic}, "
                 f"task_id: {task_id}, criteria_file: {criteria_file}, "
@@ -417,7 +468,7 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
         update_process_info_by_task_id(uid, task_id, "生成评审报告...", 60)
 
         # 调用AI评审生成
-        review_result = start_ai_review(criteria_data, paper_file)
+        review_result = start_ai_review(criteria_data, paper_file, sys_cfg)
 
         # 生成输出文件
         output_file_name = f"output_{task_id}.md"
@@ -434,6 +485,8 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
 
 
 if __name__ == '__main__':
+    my_cfg = init_yml_cfg()
+    logger.info("my_cfg", my_cfg)
     my_criteria_xlsx_file = "/home/rd/workspace/llm_agent/apps/paper_review/评审标准.xlsx"
     my_paper_docx_file = "/home/rd/workspace/llm_agent/apps/paper_review/天然气零售系统可行性研究报告.docx"
     my_paper_file = convert_docx_to_md(my_paper_docx_file, True)
@@ -441,4 +494,4 @@ if __name__ == '__main__':
     my_criteria_file = convert_xlsx_to_md(my_criteria_xlsx_file, True, True)
     logger.info(f"my_criteria_file {my_criteria_file}")
     my_criteria_data = get_md_file_content(my_criteria_file)
-    start_ai_review(my_criteria_data, my_paper_file)
+    start_ai_review(my_criteria_data, my_paper_file, my_cfg)

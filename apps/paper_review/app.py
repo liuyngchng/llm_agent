@@ -19,7 +19,7 @@ from flask import (Flask, request, jsonify, send_from_directory,
 from apps.paper_review.agent import generate_review_report
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
-from common.docx_md_util import convert_docx_to_md, get_md_file_content, get_md_file_catalogue
+from common.docx_md_util import convert_docx_to_md
 from common import my_enums, statistic_util
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
@@ -218,7 +218,7 @@ def register_routes(app):
         # 启动后台任务
         threading.Thread(
             target=generate_review_report,
-            args=(uid, doc_type, review_topic, task_id, review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'])
+            args=(uid, doc_type, review_topic, task_id, review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'], my_cfg)
         ).start()
 
         info = {"status": "started", "task_id": task_id}
