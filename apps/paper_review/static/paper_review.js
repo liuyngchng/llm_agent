@@ -84,6 +84,7 @@ async function uploadCriteriaFile(file) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('uid', uid);
+    formData.append('file_type', 'criteria');
 
     try {
         // 根据文件类型选择上传接口
@@ -103,8 +104,6 @@ async function uploadCriteriaFile(file) {
 
         // 记录上传的评审标准文件名称
         document.getElementById('review_criteria_file_name').value = data.file_name;
-        // 保存任务ID
-        document.getElementById('taskId').value = data.task_id;
 
     } catch (error) {
         console.error('上传错误:', error);
@@ -122,7 +121,7 @@ async function uploadDocxFile(file) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('uid', uid);
-
+    formData.append('file_type', 'paper');
     try {
         const response = await fetch('/docx/upload', {
             method: 'POST',
@@ -152,13 +151,13 @@ async function uploadDocxFile(file) {
 async function gen_review_report() {
     const uid = document.getElementById('uid').value;
     const task_id = document.getElementById('taskId').value;
-    const doc_title = document.getElementById('reviewTopic').value;
+    const review_topic = document.getElementById('reviewTopic').value;
     const review_criteria_file_name = document.getElementById('review_criteria_file_name').value;
     const review_paper_file_name = document.getElementById('review_paper_file_name').value;
     const generateBtn = document.getElementById('generateBtn');
 
     // 验证输入
-    if (!doc_title.trim()) {
+    if (!review_topic.trim()) {
         alert('请输入评审主题');
         return;
     }
@@ -180,7 +179,7 @@ async function gen_review_report() {
     const apiUrl = '/review_report/gen';
     const postData = {
         uid: uid,
-        doc_title: doc_title,
+        review_topic: review_topic,
         task_id: task_id,
         review_criteria_file_name: review_criteria_file_name,
         review_paper_file_name: review_paper_file_name

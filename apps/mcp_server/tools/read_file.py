@@ -3,7 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 import logging.config
-from common.docx_md_util import get_md_catalog, get_md_para_by_heading, get_md_file_content
+from common.docx_md_util import get_md_file_catalog, get_md_para_by_heading, get_md_file_content
 from typing import Dict, Any, Optional
 
 logging.config.fileConfig("logging.conf", encoding="utf-8")
@@ -96,7 +96,7 @@ def get_markdown_catalog(file_path: str) -> Dict[str, Any]:
     """
     logger.info(f"triggered_call, {file_path}")
     try:
-        catalog = get_md_catalog(file_path)
+        catalog = get_md_file_catalog(file_path)
         logger.info(f"获取目录结构: {file_path}")
         result = {
             "status": "success",

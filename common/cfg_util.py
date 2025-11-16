@@ -710,15 +710,16 @@ def save_file_info(uid: int, fid: str, full_path: str) -> dict:
         my_dt = insert_del_sqlite(my_conn, sql)
         return my_dt
 
-def get_file_info(fid: int) -> dict:
+def get_file_info(uid: int, fid: str) -> dict:
     """
     根据文件ID查询文件信息
+    :param uid 用户 ID
     :param fid: 文件 ID
-    :return:
+    :return: a dict
     """
-    if not fid:
-        raise RuntimeError(f"param_null_err {fid}")
-    sql = f"select * from file_info where fid = {fid} limit 1"
+    if not fid or not uid:
+        raise RuntimeError(f"param_null_err, {uid}, {fid}")
+    sql = f"select * from file_info where uid = {uid} and fid = '{fid}' limit 1"
     logger.debug(f"get_file_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.debug(f"get_file_info_dt {my_dt}")

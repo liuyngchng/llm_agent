@@ -17,8 +17,8 @@ from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
 from common import docx_meta_util
-from common.cfg_util import save_file_info
-from common.docx_md_util import convert_docx_to_md
+from common.cfg_util import save_file_info, get_file_info
+from common.docx_md_util import convert_docx_to_md, get_md_file_content, get_md_file_catalogue
 from common.docx_para_util import extract_catalogue, get_outline_txt
 from common import my_enums, statistic_util
 from common.my_enums import AppType
@@ -172,7 +172,7 @@ def register_routes(app):
         生成评审报告
         """
         data = request.json
-        uid = data.get("uid")
+        uid = int(data.get("uid"))
         logger.info(f"{uid}, gen_review_report_dt, {data}")
         statistic_util.add_access_count_by_uid(int(uid), 1)
         session_key = f"{uid}_{get_client_ip()}"
@@ -183,30 +183,42 @@ def register_routes(app):
             return jsonify(warning_info), 400
 
         task_id = int(data.get("task_id"))
-        doc_title = data.get("doc_title")
-        review_criteria_file_name = data.get("review_criteria_file_name")
-        review_paper_file_name = data.get("review_paper_file_name")
+        review_topic = data.get("review_topic")
+        review_criteria_file_id = data.get("review_criteria_file_name")
+        review_paper_file_id = data.get("review_paper_file_name")
 
         # 验证输入
-        if not doc_title:
+        if not review_topic:
             err_info = {"error": "评审主题不能为空"}
             logger.error(f"err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
 
-        if not task_id or not review_criteria_file_name or not review_paper_file_name or not uid:
+        if not task_id or not review_criteria_file_id or not review_paper_file_id or not uid:
             err_info = {"error": "缺少任务ID、评审标准文件、评审材料文件或用户ID"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
+        review_paper_file_info = get_file_info(uid, review_paper_file_id)
+        if not review_paper_file_info:
+            err_info = {"error": f"未找到相应的评审文件信息 {review_paper_file_id}"}
+            logger.error(f"err_occurred, {err_info}")
+            return jsonify(err_info), 400
+
+        review_criteria_file_info = get_file_info(uid, review_criteria_file_id)
+        if not review_criteria_file_info:
+            err_info = {"error": f"未找到相应的评审文件信息 {review_criteria_file_info}"}
+            logger.error(f"err_occurred, {err_info}")
+            return jsonify(err_info), 400
+
 
         # 保存任务信息到数据库
         doc_type = my_enums.WriteDocType.REVIEW_REPORT.value
-        docx_meta_util.save_docx_file_info(uid, task_id, doc_type, doc_title,
-                                           "", review_paper_file_name, 0, False)
+        docx_meta_util.save_docx_file_info(uid, task_id, doc_type, review_topic,
+                                           review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'], 0, False)
 
         # 启动后台任务
         threading.Thread(
             target=generate_review_report,
-            args=(uid, doc_type, doc_title, task_id, review_criteria_file_name, review_paper_file_name)
+            args=(uid, doc_type, review_topic, task_id, review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'])
         ).start()
 
         info = {"status": "started", "task_id": task_id}
@@ -227,7 +239,7 @@ def register_routes(app):
             logger.warning(f"{uid}, {warning_info}")
             return redirect(url_for(
                 'auth.login_index',
-                app_source=AppType.paper_review.name.lower(),
+                app_source=AppType.PAPER_REVIEW.name.lower(),
                 warning_info=warning_info
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
@@ -257,7 +269,7 @@ def register_routes(app):
             warning_info = "用户会话信息已失效，请重新登录"
             return redirect(url_for(
                 'auth.login_index',
-                app_source=AppType.paper_review.name.lower(),
+                app_source=AppType.PAPER_REVIEW.name.lower(),
                 warning_info=warning_info
             ))
         logger.info(f"{uid}, get_my_paper_review_task, {data}")
@@ -279,7 +291,7 @@ def register_routes(app):
             logger.warning(f"{uid}, {warning_info}")
             return redirect(url_for(
                 'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
+                app_source=AppType.PAPER_REVIEW.name.lower(),
                 warning_info=warning_info
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
@@ -328,34 +340,29 @@ def register_routes(app):
         return json.dumps({"msg": "删除成功", "task_id": task_id}, ensure_ascii=False), 200
 
 
-def generate_review_report(uid: int, doc_type: str, doc_title: str, task_id: int,
-                           review_criteria_file_name: str, review_paper_file_name: str):
+def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: int,
+                           criteria_file: str, paper_file: str):
     """
     生成评审报告
     :param uid: 用户ID
-    :param doc_type: 文档类型
-    :param doc_title: 文档标题
+    :param doc_type: 生成文档的内容类型
+    :param review_topic: 文档标题
     :param task_id: 任务ID
-    :param review_criteria_file_name: 评审标准文件名
-    :param review_paper_file_name: 评审材料文件名
+    :param criteria_file: 评审标准文件的绝对路径
+    :param paper_file: 评审材料文件的绝对路径
     """
-    logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, "
-                f"task_id: {task_id}, criteria_file: {review_criteria_file_name}, "
-                f"review_file: {review_paper_file_name}")
+    logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {review_topic}, "
+                f"task_id: {task_id}, criteria_file: {criteria_file}, "
+                f"review_file: {paper_file}")
     try:
         docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始解析评审标准...", 0)
 
-        # 解析评审标准Excel文件
-        criteria_file_path = os.path.join(UPLOAD_FOLDER, review_criteria_file_name)
-        # TODO: 添加解析Excel评审标准的代码
-        # criteria_data = parse_criteria_excel(criteria_file_path)
-
+        # 获取评审标准的文件内容，格式为 Markdown
+        criteria_data = get_md_file_content(criteria_file)
         docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始分析评审材料...", 30)
 
-        # 解析评审材料Word文档
-        review_file_path = os.path.join(UPLOAD_FOLDER, review_paper_file_name)
-        catalogue = extract_catalogue(review_file_path)
-        docx_meta_util.save_outline_by_task_id(task_id, catalogue)
+        # 解析评审材料文件的目录
+        catalogue = get_md_file_catalogue(paper_file)
 
         docx_meta_util.update_process_info_by_task_id(uid, task_id, "生成评审报告...", 60)
 

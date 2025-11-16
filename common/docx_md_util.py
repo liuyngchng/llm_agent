@@ -43,10 +43,61 @@ def convert_docx_to_md(docx_path: str, output_abs_path: bool = False) -> str:
         logger.error(f"docx_to_md_error, file {docx_path}, {str(e)}")
         return ""
 
+
+def convert_md_to_docx(md_path: str, output_abs_path: bool = False,
+                       output_dir: str = None, output_filename: str = None) -> str:
+    """
+    将 Markdown 文件转换为 Word 文档
+
+    # 使用前需要安装 pandoc: https://pandoc.org/installing.html
+    # pip install pypandoc
+    # sudo apt-get install pandoc
+    :param md_path: Markdown 文件的路径
+    :param output_abs_path: 是否输出绝对路径
+    :param output_dir: 自定义输出目录，如果为None则使用默认OUTPUT_DIR
+    :param output_filename: 自定义输出文件名，如果为None则使用原文件名
+    :return: Word 文档保存在磁盘的路径
+    """
+    import pypandoc
+    try:
+        # 确定输出目录
+        if output_dir is None:
+            output_dir = OUTPUT_DIR
+        os.makedirs(output_dir, exist_ok=True)
+
+        # 确定输出文件名
+        if output_filename is None:
+            md_file = Path(md_path)
+            docx_filename = md_file.stem + ".docx"
+        else:
+            docx_filename = output_filename
+            if not docx_filename.endswith('.docx'):
+                docx_filename += '.docx'
+
+        docx_path = os.path.join(output_dir, docx_filename)
+
+        # 转换并保存到文件
+        pypandoc.convert_file(md_path, 'docx', outputfile=docx_path, format='md')
+        abs_path = os.path.abspath(docx_path)
+        logger.info(f"成功转换文档: {md_path} -> {docx_path}")
+
+        if output_abs_path:
+            return abs_path
+        else:
+            return docx_path
+
+    except FileNotFoundError:
+        logger.error(f"Markdown文件不存在: {md_path}")
+        return ""
+    except Exception as e:
+        logger.error(f"md_to_docx_error, file {md_path}, {str(e)}")
+        return ""
+
 def get_md_file_content(md_file_path:str, max_length: int = 327670) -> str:
     """
     从 Markdown 文件中获取文件内容
     :param md_file_path: Markdown 文件路径
+    :param max_length: 可读取的最长字符数量
     :return: 文件内容
     """
     try:
@@ -55,7 +106,7 @@ def get_md_file_content(md_file_path:str, max_length: int = 327670) -> str:
         if len(content) <max_length:
             return content
         else:
-            return f"{content[:max_length]}\n\n ***请注意，文件全文太长，已截断。请通过目录按章节浏览。***"
+            return f"{content[:max_length]}\n\n ***请注意，文件字符数量超过 {max_length}，已截断。请通过目录按章节浏览。***"
     except FileNotFoundError:
         logger.error(f"Markdown文件不存在: {md_file_path}")
         raise FileNotFoundError(f"file_not_exist, {md_file_path}")
@@ -63,7 +114,7 @@ def get_md_file_content(md_file_path:str, max_length: int = 327670) -> str:
         logger.error(f"error_occurred")
         return ""
 
-def get_md_catalog(md_file_path: str) -> dict:
+def get_md_file_catalogue(md_file_path: str) -> dict:
     """
     从 Markdown 文件中获取目录
     :param md_file_path: Markdown 文件路径
