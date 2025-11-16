@@ -15,8 +15,8 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
-from apps.docx import docx_meta_util
-from apps.docx.docx_para_util import extract_catalogue, get_outline_txt
+from common import docx_meta_util
+from common.docx_para_util import extract_catalogue, get_outline_txt
 from apps.paper_review.paper_review_util import get_doc_content, get_template_field, get_txt_abs, insert_para_to_doc
 from common import my_enums, statistic_util
 from common.my_enums import AppType

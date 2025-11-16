@@ -3,7 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 import logging.config
-from common.docx_util import get_md_catalog, get_md_para_by_heading, get_md_file_content
+from common.docx_md_util import get_md_catalog, get_md_para_by_heading, get_md_file_content
 from typing import Dict, Any, Optional
 
 logging.config.fileConfig("logging.conf", encoding="utf-8")

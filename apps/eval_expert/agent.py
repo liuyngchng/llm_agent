@@ -11,7 +11,7 @@ from typing import List, Dict, Any
 from pydantic import SecretStr
 
 from common import cfg_util
-from common.docx_util import get_docx_md_file_path
+from common.docx_md_util import get_docx_md_file_path
 from common.mcp_util import async_get_available_tools
 from common.xlsx_util import get_xlsx_md_file_path
 
