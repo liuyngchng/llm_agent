@@ -93,6 +93,11 @@ def register_routes(app):
         logger.error(f"no_file_found_error, {file_name}")
         abort(404)
 
+    @app.route('/webfonts/<path:file_name>')
+    def get_webfonts_file(file_name):
+        font_file_name = f"webfonts/{file_name}"
+        return get_static_file(font_file_name)
+
     @app.route('/')
     def app_home():
         logger.info("redirect_auth_login_index")
