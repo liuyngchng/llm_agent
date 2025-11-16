@@ -200,14 +200,7 @@ class SectionReviewer:
 4. 经济效益合理性 - 经济效益分析是否合理可信
 5. 报告整体质量 - 综合各章节评分给出整体评价
 
-请返回JSON格式的整体评估：
-{{
-    "overall_score": 82,
-    "overall_strengths": ["整体优势1", "整体优势2"],
-    "overall_issues": ["整体问题1", "整体问题2"],
-    "key_recommendations": ["关键建议1", "关键建议2"],
-    "review_summary": "综合评审意见..."
-}}
+请按照 【评审标准】的模板， 填写相应内容，返回
 """
             # TODO: 调用LLM
             overall_result = {
