@@ -16,14 +16,13 @@ import threading
 import psutil
 from xml.etree import ElementTree as ET
 
-from apps.docx import docx_meta_util
 from docx import Document
 from docx.shared import RGBColor, Cm
 
 from apps.docx.docx_cmt_util import refresh_current_heading_xml
-from common import cfg_util
+from common import cfg_util,docx_meta_util
 from apps.docx.txt_gen_util import gen_txt
-from apps.docx.docx_para_util import get_elapsed_time, get_reference_from_vdb, \
+from common.docx_para_util import get_elapsed_time, get_reference_from_vdb, \
     is_3rd_heading, is_txt_para, refresh_current_heading
 from apps.docx.mermaid_render import MermaidRenderer
 
