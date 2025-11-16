@@ -691,12 +691,45 @@ def insert_del_sqlite(db_con, sql: str) -> dict:
         logger.error(f"save_data_err: {e}, sql {sql}")
         return {"result":False, "error": "save data failed"}
 
+def save_file_info(uid: int, fid: str, full_path: str) -> dict:
+    """
+    保存文件信息
+    :param uid: user id
+    :param fid: 文件id
+    :param full_path: 文件存储路径
+    :return:
+    """
+    logger.info(f"save_file_info, {uid}, {fid}, {full_path}")
+    timestamp = time.time()
+    # 生成类似格式（UTC时间）
+    iso_str = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
+    sql = (f"insert into file_info(uid, fid, full_path, timestamp) values "
+           f"({uid}, '{fid}', '{full_path}', '{iso_str}')")
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
+        logger.debug(f"save_file_info_sql, {sql}")
+        my_dt = insert_del_sqlite(my_conn, sql)
+        return my_dt
+
+def get_file_info(fid: int) -> dict:
+    """
+    根据文件ID查询文件信息
+    :param fid: 文件 ID
+    :return:
+    """
+    if not fid:
+        raise RuntimeError(f"param_null_err {fid}")
+    sql = f"select * from file_info where fid = {fid} limit 1"
+    logger.debug(f"get_file_info_sql, {sql}")
+    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.debug(f"get_file_info_dt {my_dt}")
+    return my_dt
+
 
 if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
-    my_dt = get_usr_prompt_template("hi",  {"test":{"test"}}, 123)
-    logger.info(my_dt)
+    test_my_dt = get_usr_prompt_template("hi",  {"test":{"test"}}, 123)
+    logger.info(test_my_dt)
 
 

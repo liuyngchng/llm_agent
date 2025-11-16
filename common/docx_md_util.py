@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 OUTPUT_DIR = "output_doc"
 
 
-def get_docx_md_file_path(docx_path: str, output_abs_path: bool = False) -> str:
+def convert_docx_to_md(docx_path: str, output_abs_path: bool = False) -> str:
     """
     # 使用前需要安装 pandoc: https://pandoc.org/installing.html
     # pip install pypandoc
@@ -240,7 +240,7 @@ def get_md_para_by_heading(md_file_path: str, heading1: str, heading2: str = Non
 # 使用示例
 if __name__ == "__main__":
     my_docx_file = "/home/rd/Downloads/java.tutorial.docx"  # 替换为你的docx文件路径
-    my_md_file_path = get_docx_md_file_path(my_docx_file)
+    my_md_file_path = convert_docx_to_md(my_docx_file)
     if not my_md_file_path:
         logger.info("转换失败")
     logger.info(f"Markdown文件已保存到: {my_md_file_path}")

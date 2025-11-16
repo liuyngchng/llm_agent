@@ -6,6 +6,7 @@
 AI 数字评委
 pip install flask
 """
+import hashlib
 import json
 import logging.config
 import os
@@ -16,12 +17,15 @@ from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
 from common import docx_meta_util
+from common.cfg_util import save_file_info
+from common.docx_md_util import convert_docx_to_md
 from common.docx_para_util import extract_catalogue, get_outline_txt
 from common import my_enums, statistic_util
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info, SESSION_TIMEOUT
 from common.cm_utils import get_console_arg1
+from common.xlsx_md_util import convert_xlsx_to_md
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -79,11 +83,11 @@ def register_routes(app):
         return redirect(url_for('auth.login_index', app_source=my_enums.AppType.PAPER_REVIEW.name.lower()))
 
     @app.route('/xlsx/upload', methods=['POST'])
-    def upload_xlsx_criteria_file():
+    def upload_xlsx():
         """
         上传 Excel xlsx 评审标准文件
         """
-        logger.info(f"upload_xlsx_criteria_file, {request}")
+        logger.info(f"upload_xlsx_file, {request}")
         if 'file' not in request.files:
             return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
         file = request.files['file']
@@ -104,30 +108,33 @@ def register_routes(app):
 
         # 生成任务ID，使用毫秒数
         task_id = int(time.time() * 1000)
-        filename = f"criteria_{task_id}_{file.filename}"
+        filename = f"{task_id}_{file.filename}"
         save_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(save_path)
-        logger.info(f"criteria_file_saved_as {filename}, {task_id}")
+        md_file = convert_xlsx_to_md(save_path, True, True)
+        file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
+        save_file_info(uid, file_md5, md_file)
+        logger.info(f"xlsx_file {file.filename} saved_as {file_md5}, {task_id}")
 
         info = {
             "task_id": task_id,
-            "file_name": filename,
-            "message": "评审标准文件上传成功"
+            "file_name": file_md5,
+            "message": "xlsx 文件上传成功"
         }
         logger.info(f"upload_xlsx_criteria_file, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
     @app.route('/docx/upload', methods=['POST'])
-    def upload_docx_review_file():
+    def upload_docx():
         """
         上传 Word docx 评审材料文档
         """
-        logger.info(f"upload_docx_review_file, {request}")
+        logger.info(f"upload_docx, {request}")
         if 'file' not in request.files:
             return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
         file = request.files['file']
         uid = int(request.form.get('uid'))
-        logger.info(f"{uid}, upload_docx_review_file")
+        logger.info(f"{uid}, upload_docx")
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
@@ -143,22 +150,20 @@ def register_routes(app):
 
         # 生成任务ID，使用毫秒数
         task_id = int(time.time() * 1000)
-        filename = f"review_{task_id}_{file.filename}"
+        filename = f"{task_id}_{file.filename}"
         save_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(save_path)
-        logger.info(f"review_file_saved_as {filename}, {task_id}")
-
-        # 提取文档大纲
-        outline = get_outline_txt(save_path)
-        logger.info(f"get_file_outline,task_id {task_id}, {outline}")
+        md_file = convert_docx_to_md(save_path, True)
+        file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
+        save_file_info(uid, file_md5, md_file)
+        logger.info(f"docx_file {file.filename} saved_as {file_md5}, {task_id}")
 
         info = {
             "task_id": task_id,
-            "file_name": filename,
-            "outline": outline,
-            "message": "评审材料文件上传成功"
+            "file_name": file_md5,
+            "message": "docx 文件上传成功"
         }
-        logger.info(f"upload_docx_review_file, {info}")
+        logger.info(f"upload_docx_file, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
     @app.route("/review_report/gen", methods=['POST'])

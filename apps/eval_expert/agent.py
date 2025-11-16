@@ -11,9 +11,9 @@ from typing import List, Dict, Any
 from pydantic import SecretStr
 
 from common import cfg_util
-from common.docx_md_util import get_docx_md_file_path
+from common.docx_md_util import convert_docx_to_md
 from common.mcp_util import async_get_available_tools
-from common.xlsx_util import get_xlsx_md_file_path
+from common.xlsx_md_util import convert_xlsx_to_md
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -667,9 +667,9 @@ class EvalExpertAgent:
 
         try:
             if file_ext in ['.docx', '.doc']:
-                return get_docx_md_file_path(file_path)
+                return convert_docx_to_md(file_path)
             elif file_ext in ['.xlsx', '.xls']:
-                return get_xlsx_md_file_path(file_path)
+                return convert_xlsx_to_md(file_path)
             elif file_ext == '.txt':
                 with open(file_path, 'r', encoding='utf-8') as f:
                     return file_path

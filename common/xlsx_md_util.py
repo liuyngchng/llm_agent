@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 OUTPUT_DIR = "output_doc"
 
 
-def get_xlsx_md_file_path(excel_path: str, include_sheet_names: bool = True, output_abs_path: bool = False) -> str:
+def convert_xlsx_to_md(excel_path: str, include_sheet_names: bool = True, output_abs_path: bool = False) -> str:
     """
     将 Excel 中的多个 sheet 转换为 markdown 格式的文本并保存到文件
     :param excel_path: Excel 文件路径
@@ -65,7 +65,7 @@ def get_xlsx_md_file_path(excel_path: str, include_sheet_names: bool = True, out
 # 使用示例
 if __name__ == "__main__":
     my_excel_file = "/home/rd/Downloads/1.xlsx"  # 替换为你的 Excel 文件路径
-    md_file_path = get_xlsx_md_file_path(my_excel_file)
+    md_file_path = convert_xlsx_to_md(my_excel_file)
     if md_file_path:
         logger.info(f"Markdown文件已保存到: {md_file_path}")
 
