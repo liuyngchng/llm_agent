@@ -21,6 +21,8 @@ from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
 from common import my_enums, statistic_util
+from common.docx_meta_util import get_docx_file_info
+from common.html_util import get_html_ctx_from_md
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info, SESSION_TIMEOUT
@@ -295,11 +297,10 @@ def register_routes(app):
                 warning_info=warning_info
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
-        filename = f"output_{task_id}.docx"
-        file_path = os.path.join(OUTPUT_DIR, filename)
-        absolute_path = os.path.abspath(file_path)
+        file_path_info = get_docx_file_info(task_id)
+        logger.debug(f"{task_id}, {file_path_info}")
+        absolute_path = file_path_info[0]['file_path']
         logger.info(f"文件检查 - 绝对路径: {absolute_path}")
-
         if not os.path.exists(absolute_path):
             logger.error(f"文件不存在: {absolute_path}")
             abort(404)
@@ -310,12 +311,53 @@ def register_routes(app):
             return send_file(
                 absolute_path,
                 as_attachment=True,
-                download_name=filename,
+                download_name=f"{task_id}_output_paper_review_report.docx",
                 mimetype=DOCX_MIME_TYPE,
             )
         except Exception as e:
             logger.error(f"文件发送失败: {str(e)}")
             abort(500)
+
+    @app.route('/paper_review/preview/task/<task_id>', methods=['GET'])
+    def preview_file_by_task_id(task_id):
+        """
+        根据任务ID下载文件
+        ：param task_id: 任务ID，其对应的文件名格式如下 f"output_{task_id}.docx"
+        """
+        uid = request.args["uid"]
+        logger.info(f"{uid}, preview_file_task_id, {task_id}")
+        session_key = f"{uid}_{get_client_ip()}"
+        app_source = AppType.PAPER_REVIEW.name.lower()
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=app_source,
+                warning_info=warning_info
+            ))
+        statistic_util.add_access_count_by_uid(int(uid), 1)
+        file_path_info = get_docx_file_info(task_id)
+        logger.debug(f"{task_id}, {file_path_info}")
+        absolute_path = file_path_info[0]['file_path']
+        md_absolute_path = absolute_path.replace('.docx', '.md')
+        logger.info(f"文件检查 - 绝对路径: {md_absolute_path}")
+        if not os.path.exists(md_absolute_path):
+            logger.error(f"文件不存在: {md_absolute_path}")
+            abort(404)
+        logger.info(f"文件找到，准备发送: {md_absolute_path}")
+        html_content, toc_content = get_html_ctx_from_md(md_absolute_path)
+        ctx = {
+            "sys_name": AppType.PAPER_REVIEW.value,
+            "warning_info": "",
+            "app_source": app_source,
+            "html_content": html_content,
+            "toc_content": toc_content,
+        }
+        dt_idx = "md.html"
+        logger.debug(f"return_page {dt_idx}, ctx {ctx}")
+        return render_template(dt_idx, **ctx)
 
     @app.route('/paper_review/del/task/<task_id>', methods=['GET'])
     def delete_file_info_by_task_id(task_id):

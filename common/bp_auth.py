@@ -12,6 +12,7 @@ from flask import Blueprint, jsonify, redirect, url_for
 from flask import (request, render_template)
 from common import cfg_util as cfg_utl, statistic_util
 from common import my_enums
+from common.html_util import get_html_ctx_from_md
 from common.sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -231,27 +232,7 @@ def get_usr_manual():
         abs_path = os.path.abspath(markdown_file_name)
     else:
         logger.info(f"file_exist, {abs_path}")
-    toc_content = ""
-    try:
-        if os.path.exists(abs_path):
-            with open(abs_path, 'r', encoding='utf-8') as f:
-                markdown_content = f.read()
-
-            md = markdown.Markdown(
-                extensions=[
-                    'markdown.extensions.extra',
-                    'markdown.extensions.codehilite',
-                    'markdown.extensions.tables',
-                    'markdown.extensions.toc'  # 启用 TOC 扩展
-                ]
-            )
-            html_content = md.convert(markdown_content)
-            toc_content = md.toc if hasattr(md, 'toc') else ""
-        else:
-            html_content = f"<p>用户手册文件不存在: {abs_path}</p>"
-    except Exception as e:
-        logger.error(f"Error reading markdown file: {e}")
-        html_content = f"<p>读取用户手册时出错: {str(e)}</p>"
+    html_content, toc_content = get_html_ctx_from_md(abs_path)
     ctx = {
         "sys_name": sys_name + "_用户使用说明",
         "warning_info": "",
@@ -262,6 +243,10 @@ def get_usr_manual():
     dt_idx = "md.html"
     logger.debug(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
+
+
+
+
 
 def get_client_ip():
     """获取客户端真实 IP"""

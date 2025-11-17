@@ -14,7 +14,7 @@ from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_co
     convert_docx_to_md
 import logging.config
 
-from common.docx_meta_util import update_process_info_by_task_id
+from common.docx_meta_util import update_process_info_by_task_id, save_output_file_path_by_task_id
 from common.sys_init import init_yml_cfg
 from common.xlsx_md_util import convert_xlsx_to_md
 
@@ -397,7 +397,7 @@ class SectionReviewer:
     @staticmethod
     def generate_final_report(section_results: List[Dict], overall_result: Dict) -> str:
         """
-        生成最终评审报告
+        生成最终评审报告的内容
         """
         try:
             report_content = f"""# 可行性分析报告评审报告
@@ -452,7 +452,7 @@ class SectionReviewer:
 
     def execute_review(self) -> str:
         """
-        执行完整的评审流程
+        执行完整的评审流程， 返回生成的报告文本
         """
         try:
             logger.info("开始执行文档评审流程")
@@ -474,8 +474,8 @@ class SectionReviewer:
             # 3. 逐章节评审
             for i, section in enumerate(self.sections_data):
                 logger.info(f"评审章节 {i + 1}/{len(self.sections_data)}: {section['title']}")
-                current_percent = round((i + 1) / len(self.sections_data) * 100, 1)
-                update_process_info_by_task_id(self.uid, self.task_id, f"正在处理第{i + 1}/{section_count}个章节", current_percent -5)
+                current_percent = min(95.0, round((i + 1) / len(self.sections_data) * 100, 1))
+                update_process_info_by_task_id(self.uid, self.task_id, f"正在处理第{i + 1}/{section_count}个章节", current_percent)
                 # 控制章节内容长度，避免过长
                 content_preview = section['content'][:MAX_SECTION_LENGTH] + "..." if len(section['content']) > MAX_SECTION_LENGTH else section[
                     'content']
@@ -490,14 +490,13 @@ class SectionReviewer:
                 logger.info(f"章节[{section['title']}]评审完成，评分: {section_result['score']}")
 
             # 4. 整体评审
-            logger.info("开始整体评审")
-            update_process_info_by_task_id(self.uid, self.task_id, f"正在进行整体评审")
+            logger.info("开始进行评审意见总结")
+            update_process_info_by_task_id(self.uid, self.task_id, f"开始进行评审意见总结")
             overall_result = self.review_whole_report(self.review_results)
 
             # 5. 生成最终报告
             logger.info("生成最终评审报告")
             final_report = self.generate_final_report(self.review_results, overall_result)
-            update_process_info_by_task_id(self.uid, self.task_id, f"评审报告已生成", 100)
             logger.info("文档评审流程完成")
             return final_report
 
@@ -555,9 +554,8 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
         output_md_file = save_content_to_md_file(review_result, output_file_name, output_abs_path=True)
 
         docx_file_full_path = convert_md_to_docx(output_md_file, output_abs_path=True)
+        save_output_file_path_by_task_id(task_id, docx_file_full_path)
         logger.info(f"{uid}, {task_id}, 评审报告生成成功, {docx_file_full_path}")
-
-
         update_process_info_by_task_id(uid, task_id, "评审报告生成完毕", 100)
 
     except Exception as e:

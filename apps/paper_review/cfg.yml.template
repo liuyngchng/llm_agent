@@ -5,7 +5,7 @@ db:
 
 sys:
     #  系统名称(title) 配置
-    name: 文档生成
+    name: AI 数字评委
     #  是否启用认证， true， 登录后才能使用系统;false 无需登录
     auth: true
     #  自定义数据库配置时的权限认证 token

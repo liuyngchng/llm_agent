@@ -206,6 +206,23 @@ tr:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.download-link {
+    color: #52c41a;
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    transition: all 0.3s;
+}
+
+.download-link:hover {
+    background-color: #f6ffed;
+    text-decoration: underline;
+}
+
 .empty-state {
     text-align: center;
     padding: 40px 20px;
