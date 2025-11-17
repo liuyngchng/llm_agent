@@ -21,3 +21,6 @@ sympy
 openai
 tabulate
 lxml
+pypandoc
+pandas
+openpyxl
