@@ -356,7 +356,7 @@ def register_routes(app):
             "toc_content": toc_content,
         }
         dt_idx = "md.html"
-        logger.debug(f"return_page {dt_idx}, ctx {ctx}")
+        logger.debug(f"return_page {dt_idx}")
         return render_template(dt_idx, **ctx)
 
     @app.route('/paper_review/del/task/<task_id>', methods=['GET'])

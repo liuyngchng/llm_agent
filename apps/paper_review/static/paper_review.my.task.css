@@ -222,6 +222,47 @@ tr:hover {
     background-color: #f6ffed;
     text-decoration: underline;
 }
+/* 确保表格单元格正确对齐 */
+#tasksTable td {
+    vertical-align: middle;
+    padding: 12px 8px;
+}
+
+/* 下载操作容器 */
+.download-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+/* 操作按钮容器 */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+/* 下载链接样式调整 */
+.download-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background-color: #4b6cb7;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.download-link:hover {
+    background-color: #3a5a9c;
+    color: white;
+    text-decoration: none;
+}
 
 .empty-state {
     text-align: center;

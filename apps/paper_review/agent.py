@@ -419,7 +419,7 @@ class SectionReviewer:
 ### 关键建议
 {chr(10).join(f"- {recommendation}" for recommendation in overall_result['key_recommendations'])}
 
-## 分章节详细评审
+## 各章节建议
 """
 
             for section_result in section_results:

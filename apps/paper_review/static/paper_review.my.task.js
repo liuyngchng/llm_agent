@@ -34,6 +34,7 @@ async function fetchTasks() {
 }
 
 // 渲染任务表格
+// 渲染任务表格
 function renderTasksTable(tasks) {
     const tableBody = document.querySelector('#tasksTable tbody');
     const emptyState = document.getElementById('emptyState');
@@ -79,31 +80,25 @@ function renderTasksTable(tasks) {
             </div>
         `;
 
-        // 文档下载
+        // 文档下载 - 修复这里
         const downloadCell = document.createElement('td');
         if (task.percent === 100) {
             downloadCell.innerHTML = `
-                <a href="/paper_review/download/task/${task.task_id}?uid=${uid}" class="download-link">
-                    <i class="fas fa-download"></i> 下载
-                </a>
-                <a href="/paper_review/preview/task/${task.task_id}?uid=${uid}" class="download-link">
-                    <i class="fas fa-eye"></i> 预览
-                </a>
+                <div class="download-actions">
+                    <a href="/paper_review/preview/task/${task.task_id}?uid=${uid}" class="download-link" target="_blank">
+                        <i class="fas fa-eye"></i> 预览
+                    </a>
+                    <a href="/paper_review/download/task/${task.task_id}?uid=${uid}" class="download-link">
+                        <i class="fas fa-download"></i> 下载
+                    </a>
+                </div>
             `;
-            downloadCell.style.display = 'flex';
-            downloadCell.style.gap = '10px';
-            downloadCell.style.flexWrap = 'wrap';
         } else {
-            downloadCell.innerHTML = ''; // 未完成时留空
-            downloadCell.style.color = '#999'; // 可选：添加灰色提示
+            downloadCell.innerHTML = '<span style="color: #999;">-</span>';
         }
 
-        // 操作 （刷新/重试/完成）
+        // 操作 - 修复这里
         const actionCell = document.createElement('td');
-        actionCell.style.display = 'flex';
-        actionCell.style.gap = '8px';
-        actionCell.style.flexWrap = 'wrap';
-
         let statusButton = '';
         if (task.status === 'in-progress' || task.status === 'pending') {
             statusButton = `
@@ -131,7 +126,13 @@ function renderTasksTable(tasks) {
                 <i class="fas fa-trash"></i> 删除
             </button>
         `;
-        actionCell.innerHTML = statusButton + deleteButton;
+
+        actionCell.innerHTML = `
+            <div class="action-buttons">
+                ${statusButton}
+                ${deleteButton}
+            </div>
+        `;
 
         row.appendChild(idCell);
         row.appendChild(infoCell);
