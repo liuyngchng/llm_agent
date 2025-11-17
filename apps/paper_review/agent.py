@@ -7,7 +7,7 @@ import time
 from typing import List, Dict
 
 import requests
-from sympy.physics.units import percent
+
 
 from common import docx_meta_util
 from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_content_to_md_file, get_md_file_catalogue, \
@@ -24,6 +24,11 @@ logger = logging.getLogger(__name__)
 OUTPUT_DIR = "output_doc"
 
 MAX_SECTION_LENGTH = 3000  # 3000 字符
+
+# 关闭request请求产生的警告信息 (客户端没有进行服务端 SSL 的证书验证，正常会产生警告信息)， 只要清楚自己在做什么
+import urllib3
+from urllib3.exceptions import InsecureRequestWarning
+urllib3.disable_warnings(category=InsecureRequestWarning)
 
 
 
@@ -470,7 +475,7 @@ class SectionReviewer:
             for i, section in enumerate(self.sections_data):
                 logger.info(f"评审章节 {i + 1}/{len(self.sections_data)}: {section['title']}")
                 current_percent = round((i + 1) / len(self.sections_data) * 100, 1)
-                update_process_info_by_task_id(self.uid, self.task_id, f"正在处理第{i + 1}/{section_count}个章节", current_percent)
+                update_process_info_by_task_id(self.uid, self.task_id, f"正在处理第{i + 1}/{section_count}个章节", current_percent -5)
                 # 控制章节内容长度，避免过长
                 content_preview = section['content'][:MAX_SECTION_LENGTH] + "..." if len(section['content']) > MAX_SECTION_LENGTH else section[
                     'content']
@@ -486,12 +491,13 @@ class SectionReviewer:
 
             # 4. 整体评审
             logger.info("开始整体评审")
+            update_process_info_by_task_id(self.uid, self.task_id, f"正在进行整体评审")
             overall_result = self.review_whole_report(self.review_results)
 
             # 5. 生成最终报告
             logger.info("生成最终评审报告")
             final_report = self.generate_final_report(self.review_results, overall_result)
-
+            update_process_info_by_task_id(self.uid, self.task_id, f"评审报告已生成", 100)
             logger.info("文档评审流程完成")
             return final_report
 
