@@ -53,3 +53,4 @@ sqlite_vss
 **/output_doc
 **/*.xls
 **/*.xlsx
+**/output_doc/*.md
