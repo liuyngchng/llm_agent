@@ -13,7 +13,7 @@
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-comments"></i>AI 评审数字专家</h1>
+            <h1><i class="fas fa-gavel"></i><i class="fas fa-robot"></i> AI 评审数字专家</h1>
             <div class="system-settings-link-container">
                 <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="system-settings-link" target="_blank">
                     <i class="fas fa-sign-out-alt"></i> 退出
@@ -25,6 +25,10 @@
             <!-- 初始欢迎消息 -->
             <div class="message-container bot-message-container">
             </div>
+        </div>
+        <!-- 错误提示区域 -->
+        <div class="error-container" id="error-container" style="display: none;">
+            <div class="error-message" id="error-message"></div>
         </div>
 
         <form id="query-form">
@@ -39,7 +43,7 @@
 
                 <!-- 输入框 -->
                 <input type="text" class="input-field" id="query-input" name="msg"
-                       placeholder="请提交您的评审材料及评审标准，我来给出评审结果..." required autocomplete="off">
+                    placeholder="输入评审要求（可选），或直接上传文件进行评审..." autocomplete="off">
 
                 <!-- 操作按钮 -->
                 <div class="button-container">

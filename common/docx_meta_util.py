@@ -23,8 +23,8 @@ def save_docx_file_info(uid: int, task_id: int, doc_type: str, doc_title: str,
     :param task_id: process task id
     :param doc_type: docx content type
     :param doc_title: docx content title
-    :param keywords: 其他通用的写作要求
-    :param template_file_name: docx template file name
+    :param keywords: 其他通用的写作要求/或者评审的要求
+    :param template_file_name: docx template file name/或者评审的材料
     :param vdb_id: vector db id
     :param is_include_para_txt: 写作的 Word 文档模板中是否包含有文本段落
     :return:
@@ -135,11 +135,12 @@ def save_para_task(task_id: int, tasks: list):
         write_context = task['write_context'].replace("'", "''")
         paragraph_prompt = task['paragraph_prompt'].replace("'", "''")
         user_comment = task['user_comment'].replace("'", "''")
+        catalogue = task['catalogue'].replace("'", "''")
         current_sub_title = task['current_sub_title'].replace("'", "''")
         vdb_dir = task['vdb_dir'].replace("'", "''")
-        namespaces = task['namespaces'].replace("'", "''")
+        namespaces = task.get('namespaces', '').replace("'", "''")
         value_item = (f"({task['task_id']},{task['para_id']},'{heading}','{unique_key}',"
-            f"'{write_context}','{paragraph_prompt}','{user_comment}','{current_sub_title}',"
+            f"'{write_context}','{paragraph_prompt}','{user_comment}','{catalogue}','{current_sub_title}',"
             f"'{vdb_dir}','{namespaces}')")
         if my_values:
             my_values = f"{my_values}, {value_item}"

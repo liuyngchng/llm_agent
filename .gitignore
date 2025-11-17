@@ -50,3 +50,6 @@ sqlite_vss
 **/db_schema/*
 **/whl_py_dir
 **/vdb_idx_*
+**/output_doc
+**/*.xls
+**/*.xlsx

@@ -4,18 +4,21 @@
 
 """
 项目评审数字专家
-pip install gunicorn flask concurrent-log-handler langchain_openai \
- langchain_core langchain_community tabulate pycryptodome
+pip install gunicorn flask concurrent-log-handler requests \
+ pycryptodome
 """
+import asyncio
 import json
 import logging.config
 import os
 import time
 import threading
+from datetime import datetime
 
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, request, redirect, abort, url_for, send_from_directory, render_template
-from apps.eval_expert.eval_expert_agent import EvalExpertAgent
+from flask import Flask, request, redirect, abort, url_for, send_from_directory, render_template, Response
+from apps.eval_expert.agent import EvalExpertAgent
+from common.docx_md_util import get_md_file_content
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, auth_info, get_client_ip, SESSION_TIMEOUT
@@ -126,6 +129,7 @@ def register_routes(app):
         logger.info(f"{uid}, return_statistics_page {dt_idx}")
         return render_template(dt_idx, **ctx)
 
+
     @app.route('/chat/statistic/report', methods=['POST'])
     def get_statistic_report():
         """
@@ -147,61 +151,120 @@ def register_routes(app):
         statistics_list = statistic_util.get_statistics_list()
         return json.dumps(statistics_list, ensure_ascii=False), 200
 
-    @app.route('/chat', methods=['POST'])
-    def chat(catch=None):
-        """
-        curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/chat' \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d '{"msg":"who are you?"}'
-        :return a string
-        """
-        logger.info(f"chat_request {request.form}")
+    @app.route('/chat/stream', methods=['POST'])
+    def chat_stream():
+        """新的流式聊天接口"""
+        logger.info(f"chat_stream_request {request.form}")
         msg = request.form.get('msg', "").strip()
         uid = request.form.get('uid')
         file_infos = request.form.get('file_infos')
+
+        # 验证逻辑
         if not file_infos:
-            warning_info = f"缺少评审文件信息，请上传后再试"
-            logger.error(f"{warning_info}, {msg}, {uid}")
-            return warning_info
+            return json.dumps({"error": "缺少评审文件信息"}, ensure_ascii=False), 400
 
         if not uid:
-            warning_info = f"缺少用户身份信息，请您检查后再试"
-            logger.error(f"{warning_info}, {msg}, {uid}")
-            return warning_info
+            return json.dumps({"error": "缺少用户身份信息"}, ensure_ascii=False), 400
 
         session_key = f"{uid}_{get_client_ip()}"
-        if (not auth_info.get(session_key, None)
-                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户登录信息已失效，请重新登录后再使用本系统"
-            logger.error(f"{warning_info}, {uid}")
-            return warning_info
+        if (not auth_info.get(session_key, None) or
+                time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            return json.dumps({"error": "用户登录信息已失效"}, ensure_ascii=False), 401
 
         logger.info(f"rcv_msg, {msg}, uid {uid}")
         auth_info[session_key] = time.time()
-        logger.info(f"request_file_infos, {file_infos}")
-        file_infos = json.loads(file_infos)
-        eval_expert = EvalExpertAgent(my_cfg)
-        categorize_files = eval_expert.categorize_files(file_infos)
-        logger.info(f"categorize_files, {categorize_files}")
-        # 处理文件内容
-        review_criteria_msg = eval_expert.get_file_content_msg(categorize_files, "review_criteria")
-        project_materials_msg = eval_expert.get_file_content_msg(categorize_files, "project_materials")
-        def generate_stream():
-            full_response = ""
-            stream_input = {
-                "domain": "燃气行业",
-                "review_criteria": review_criteria_msg,
-                "project_materials": project_materials_msg,
-                "msg": msg
-            }
-            logger.info(f"stream_input {stream_input}")
-            for chunk in eval_expert.get_chain().stream(stream_input):
-                full_response += chunk
-                yield chunk
-            logger.info(f"full_response: {full_response}")
 
-        return app.response_class(generate_stream(), mimetype='text/event-stream')
+        def generate():
+            try:
+                # 初始化agent
+                eval_expert = EvalExpertAgent(my_cfg)
 
+                # 在生成器内部运行异步代码
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+                # 处理文件分类
+                file_info_list = json.loads(file_infos)
+                categorize_files = eval_expert.categorize_files(file_info_list)
+                logger.info(f"categorize_files, {categorize_files}")
+
+                # 处理文件内容
+                review_criteria_file = eval_expert.get_file_path_msg(categorize_files, "review_criteria")
+                review_criteria = ''
+                for file in review_criteria_file:
+                    review_criteria += get_md_file_content(file['file_path'])
+                project_material_file = eval_expert.get_file_path_msg(categorize_files, "project_materials")
+
+                stream_input = {
+                    "today": datetime.now().strftime("%Y年%m月%d日"),
+                    "domain": "燃气行业",
+                    "review_criteria": review_criteria,
+                    "project_material_file": project_material_file,
+                    "msg": msg
+                }
+
+                # 使用真正的流式处理
+                collected_chunks = []
+
+                def stream_callback(chunk):
+                    # 立即发送到客户端
+                    data = json.dumps({'content': chunk}, ensure_ascii=False)
+                    yield f"data: {data}\n\n"
+                    collected_chunks.append(chunk)
+                    return ""  # 确保返回字符串
+
+                # 执行真正的流式处理 - 同步方式调用异步函数
+                full_response = loop.run_until_complete(
+                    real_process_with_streaming(eval_expert, stream_input, stream_callback)
+                )
+                loop.close()
+
+                # 发送结束标记
+                yield "data: [DONE]\n\n"
+
+                logger.info(f"流式处理完成，总响应长度: {len(full_response)}")
+
+            except Exception as e:
+                logger.error(f"流式处理错误: {str(e)}")
+                error_msg = json.dumps({'content': f"❌ 处理过程中出现错误: {str(e)}"}, ensure_ascii=False)
+                yield f"data: {error_msg}\n\n"
+                yield "data: [DONE]\n\n"
+
+        return Response(generate(), mimetype='text/event-stream')
+
+    async def real_process_with_streaming(eval_expert, stream_input, stream_callback):
+        """真正的流式处理实现"""
+        try:
+            if not eval_expert.tools:
+                await eval_expert.initialize_tools()
+
+            # 构建提示词
+            prompt = eval_expert.build_prompt(stream_input)
+
+            # 发送开始处理消息
+            stream_callback("🚀 开始处理您的请求...\n\n")
+
+            # 调用LLM API（真正的流式）
+            response = await eval_expert.real_call_llm_api_stream(prompt, stream_callback)
+
+            # 检查响应中是否包含工具调用
+            tool_calls = eval_expert.extract_tool_calls_from_response(response)
+
+            if tool_calls:
+                stream_callback(f"\n🔧 检测到 {len(tool_calls)} 个工具调用，开始执行...\n\n")
+                logger.info(f"检测到工具调用: {len(tool_calls)} 个")
+                final_response = await eval_expert.real_handle_tool_calls_stream(tool_calls, stream_input,
+                                                                                 stream_callback)
+                return final_response
+            else:
+                logger.info("未检测到工具调用，直接返回响应内容")
+                return response
+
+        except Exception as e:
+            error_msg = f"❌ 处理过程中出现错误: {str(e)}"
+            logger.error(f"工具处理过程中出错: {str(e)}")
+            stream_callback(error_msg)
+            return error_msg
 
 
 
@@ -237,6 +300,9 @@ def register_routes(app):
         }
         logger.info(f"{uid}, file_uploaded, {info}")
         return json.dumps(info, ensure_ascii=False), 200
+
+
+
 
 def start_background_tasks():
     """启动后台任务线程"""

@@ -39,6 +39,7 @@ class MsgType(Enum):
 class WriteDocType(Enum):
     """文档类型枚举（英文键，汉字值）"""
     MEETING_REPORT = "会议纪要"
+    REVIEW_REPORT = "评审报告"
     STANDARD = "国家标准(GB/(GB/T))"
     PROPOSAL = "项目计划书"
     YEAR_SUMMARY = "年度工作总结"
@@ -70,6 +71,7 @@ class AppType(Enum):
     OPEN = "开放平台"
     MT_REPORT = "会议纪要整理"
     EVAL_EXPERT = "AI 评审数字专家"
+    PAPER_REVIEW = "AI 数字评委"
 
     @staticmethod
     def get_app_list() -> list:

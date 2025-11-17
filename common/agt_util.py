@@ -18,7 +18,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 
-def get_model(cfg, temperature=1, max_tokens=32768, reasoning=False):
+def get_model(cfg, temperature=1, max_tokens=327680, reasoning=False):
     if cfg['api'].get('is_remote', True):
         model = ChatOpenAI(
             api_key=cfg['api']['llm_api_key'],

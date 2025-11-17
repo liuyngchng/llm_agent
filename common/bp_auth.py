@@ -36,7 +36,7 @@ def login_index():
         raise RuntimeError("no_app_info_found")
     sys_name = my_enums.AppType.get_app_type(app_source)
     ctx = {
-        "uid": "foo",
+        "uid": -1,
         "sys_name": sys_name,
         "app_source": app_source,
         "warning_info": warning_info,
@@ -83,13 +83,18 @@ def login():
         hack_admin = "1"
     else:
         hack_admin = "0"
+    greeting = "欢迎使用本系统"
+    cfg_greeting = cfg_utl.get_const("greeting", app_source)
+    if cfg_greeting:
+        greeting = cfg_greeting
+
     ctx = {
         "uid": uid,
         "usr": user,
         "role": auth_result["role"],
         "t": auth_result["t"],
         "sys_name": sys_name,
-        "greeting": cfg_utl.get_const("greeting", app_source),
+        "greeting": greeting,
         "app_source": app_source,
         "hack_admin": hack_admin,
     }

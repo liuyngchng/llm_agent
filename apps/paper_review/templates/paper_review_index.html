@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta id="paper_review_index.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 数字评委</title>
+    <link rel="stylesheet" href="/static/paper_review.css">
+    <link rel="stylesheet" href="/static/font-awesome.all.min.css">
+    <script type="text/javascript" src="/static/paper_review.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-buttons">
+                <a href="/paper_review/task?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="my-btn" target="_blank">
+                    <i class="fas fa-user"></i> 我的任务
+                </a>
+                <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </a>
+            </div>
+            <h1><i class="fas fa-user-tie"></i> AI 数字评委</h1>
+            <p>上传评审标准和评审材料，智能生成评审结果</p>
+        </header>
+
+        <div class="progress-container">
+            <div class="progress-steps">
+                <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
+                <div class="step active">
+                    <span>1</span>
+                    <div class="step-label">提交评审材料</div>
+                </div>
+                <div class="step">
+                    <span>2</span>
+                    <div class="step-label">下载评审结果</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="step-panel active" id="step1">
+            <h2><i class="fas fa-edit"></i> 提交评审材料</h2>
+
+            <div class="form-group">
+                <label for="reviewTopic">【1】评审主题</label>
+                <input type="text" id="reviewTopic" placeholder="请输入评审主题，如：xxxx可行性研究评审">
+            </div>
+
+            <div class="form-group">
+                <label for="reviewCriteria">【2】评审标准</label>
+                <div class="upload-container">
+                    <i class="fas fa-file-alt"></i>
+                    <h3>上传评审标准</h3>
+                    <p>支持上传 Excel (.xlsx) 或 Word (.docx) 格式的评审标准文件</p>
+
+                    <div class="upload-btn">
+                        <button class="btn btn-primary">
+                            <i class="fas fa-file-alt"></i> 选择评审标准文件
+                        </button>
+                        <input type="file" class="file-input" id="reviewCriteria" accept=".xlsx,.docx" onchange="handleCriteriaUpload(this)">
+                    </div>
+
+                    <div class="file-info" id="criteriaFileInfo" style="display: none;">
+                        <div class="file-name">
+                            <i class="fas fa-file-alt" id="criteriaFileIcon"></i>
+                            <span id="criteriaFileName">未选择文件</span>
+                        </div>
+                        <div class="file-size" id="criteriaFileSize">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="reviewPaperFile">【3】评审材料</label>
+                <div class="upload-container active" id="uploadContainer">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>上传评审材料</h3>
+                    <p>支持上传Word docx 格式的评审材料，系统将基于评审标准生成标准化的评审结果</p>
+
+                    <div class="upload-btn">
+                        <button class="btn btn-primary">
+                            <i class="fas fa-file-word"></i> 选择评审材料
+                        </button>
+                        <input type="file" class="file-input" id="reviewPaperFile" accept=".docx" onchange="handleDocxUpload(this)">
+                    </div>
+
+                    <div class="file-info" id="docxFileInfo" style="display: none;">
+                        <div class="file-name">
+                            <i class="fas fa-file-word"></i>
+                            <span id="docxFileName">未选择文件</span>
+                        </div>
+                        <div class="file-size" id="docxFileSize">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="generateBtn" onclick="gen_review_report()">
+                生成评审报告 <i class="fas fa-file-contract"></i>
+            </button>
+        </div>
+    </div>
+
+    <input type="hidden" id="uid" name="uid" value="{{uid}}">
+    <input type="hidden" id="t" name="t" value="{{t}}">
+    <input type="hidden" id="taskId" name="taskId" value="{{taskId}}">
+    <input type="hidden" id="review_criteria_file_name" name="review_criteria_file_name" value="">
+    <input type="hidden" id="review_paper_file_name" name="review_paper_file_name" value="">
+    <input type="hidden" id="elapsed_time" name="elapsed_time" value="">
+</body>
+</html>

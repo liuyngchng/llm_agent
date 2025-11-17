@@ -15,8 +15,6 @@ from typing import Any, Generator
 from urllib.parse import urlparse
 
 import httpx
-from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
 from common.sys_init import init_yml_cfg
 from common.cm_utils import post_with_retry, build_curl_cmd
 
@@ -29,7 +27,7 @@ logger = logging.getLogger(__name__)
 TOOLS_CACHE = {
     "tools": [],
     "tool_server_map": {},
-    "last_updated": None
+    "last_updated": ""
 }
 
 # 缓存有效期（分钟）
@@ -37,7 +35,7 @@ CACHE_EXPIRY_MINUTES = 30
 
 
 # 配置选项
-class MCPClientConfig:
+class Config:
     """MCP 客户端配置"""
 
     def __init__(self,
@@ -51,7 +49,7 @@ class MCPClientConfig:
         self.max_retries = max_retries  # 最大重试次数
 
 # 使用配置创建客户端工厂
-def create_http_client_factory(config: MCPClientConfig):
+def create_http_client_factory(config: Config):
     """创建可配置的 HTTP 客户端工厂"""
 
     def factory(**kwargs):
@@ -72,7 +70,7 @@ def create_http_client_factory(config: MCPClientConfig):
 
     return factory
 
-client_config = MCPClientConfig(
+cfg = Config(
     verify_https=False,  # 开发环境禁用 SSL 验证
     http_timeout=30,
     sse_timeout=300,
@@ -96,18 +94,19 @@ async def async_get_available_tools(server_list:list[str], force_refresh: bool =
     global TOOLS_CACHE
 
     # 检查缓存是否有效
-    current_time = datetime.now()  # 使用正确的datetime.now()
+    current_time = datetime.now()
     if (not force_refresh and TOOLS_CACHE["last_updated"] and
-            (current_time - TOOLS_CACHE["last_updated"]) < timedelta(minutes=CACHE_EXPIRY_MINUTES)):
+            (current_time - TOOLS_CACHE.get("last_updated")) < timedelta(minutes=CACHE_EXPIRY_MINUTES)):
         logger.info(f"使用缓存的工具列表，总共{len(TOOLS_CACHE["tools"])}个tool, 最后更新于 {TOOLS_CACHE['last_updated']}")
         return TOOLS_CACHE["tools"]
 
     all_tools = []
     tool_server_map = {}
-
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
     for index, server_addr in enumerate(server_list):
         try:
-            async with streamablehttp_client(url=server_addr, timeout=30, httpx_client_factory=create_http_client_factory(client_config)) as (read, write, _):
+            async with streamablehttp_client(url=server_addr, timeout=30, httpx_client_factory=create_http_client_factory(cfg)) as (read, write, _):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     tools_resp = await session.list_tools()
@@ -148,9 +147,11 @@ async def async_call_mcp_tool(server_addr: str, call_tool_name: str, params: dic
     :param params: 工具参数（字典格式）
     :return: 工具执行返回结果
     """
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
     logger.info(f"call_mcp_tool: {call_tool_name}@{server_addr}, params: {params}")
     try:
-        async with streamablehttp_client(url=server_addr, timeout=30, httpx_client_factory=create_http_client_factory(client_config)) as (read, write, _):
+        async with streamablehttp_client(url=server_addr, timeout=30, httpx_client_factory=create_http_client_factory(cfg)) as (read, write, _):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 result = await session.call_tool(call_tool_name, params or {})
@@ -251,7 +252,7 @@ def auto_call_mcp(question: str, cfg: dict) -> str:
 
                     # 执行所有工具调用并收集结果
                     for tool_call in tool_calls:
-                        server_addr = asyncio.run(async_get_tool_server_addr(tool_call['name']))
+                        server_addr = asyncio.run(async_get_tool_server_addr(server_list, tool_call['name']))
                         tool_call_name = get_tool_call_name(tool_call['name'])
                         tool_result = call_mcp_tool(server_addr, tool_call_name, tool_call["arguments"])
                         tool_result_content = str(tool_result.content)
@@ -394,7 +395,7 @@ def auto_call_mcp_yield(question: str, cfg: dict) -> Generator[str, None, None]:
                     # 执行所有工具调用并收集结果
                     for tool_call in tool_calls:
                         # 查找工具对应的服务器
-                        server_addr = asyncio.run(async_get_tool_server_addr(tool_call['name']))
+                        server_addr = asyncio.run(async_get_tool_server_addr(server_list, tool_call['name']))
                         # 获取工具调用名称
                         tool_call_name = get_tool_call_name(tool_call['name'])
                         # 发送工具执行开始信息
