@@ -61,12 +61,19 @@ echo "  -H 'Authorization: Bearer ${api_token}' \\"
 echo "  -d '${json_data}'"
 echo ""
 
-# 执行curl命令（使用临时文件方式更安全）
+# 执行curl命令（使用临时文件方式更安全）并统计时间
 echo "执行结果:"
+start_time=$(date +%s)
 #https://you_host:/v1/chat/completions
 curl -ks --noproxy '*' "${api_uri}/chat/completions" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer ${api_token}" \
   -d "@$tmpfile"
+end_time=$(date +%s)
+
+# 计算执行时间（秒）
+execution_time=$((end_time - start_time))
+echo ""
+echo "执行时间: ${execution_time} 秒"
 
 rm -f "$tmpfile"
