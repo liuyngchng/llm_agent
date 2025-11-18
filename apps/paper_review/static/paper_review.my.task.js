@@ -261,12 +261,8 @@ async function deleteTask(taskId, docTitle) {
                 'Authorization': `Bearer ${token}`
             }
         });
-
         if (!response.ok) throw new Error('删除失败');
-
         const result = await response.json();
-        alert(result.msg || '删除成功');
-
         // 刷新任务列表
         await fetchTasks();
     } catch (error) {

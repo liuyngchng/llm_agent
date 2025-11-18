@@ -31,7 +31,7 @@ urllib3.disable_warnings(category=InsecureRequestWarning)
 
 
 class SectionReviewer:
-    def __init__(self, uid: int, task_id: int, criteria_data: str, review_file_path: str, sys_cfg: dict):
+    def __init__(self, uid: int, task_id: int, criteria_markdown_data: str, review_file_path: str, sys_cfg: dict):
         """
         分章节评审系统
         :param uid: 用户ID，标记哪个用户提交的任务
@@ -39,7 +39,7 @@ class SectionReviewer:
         """
         self.uid = uid
         self.task_id = task_id
-        self.criteria_data = criteria_data
+        self.criteria_markdown_data = criteria_markdown_data
         self.review_file_path = review_file_path
         self.sections_data = []
         self.review_results = []
@@ -159,7 +159,7 @@ class SectionReviewer:
 {section_content}
 
 【评审标准】
-{self.criteria_data}
+{self.criteria_markdown_data}
 
 请从以下维度进行专业评审：
 1. 内容完整性 - 是否涵盖必要要素，有无重大遗漏
@@ -335,7 +335,7 @@ class SectionReviewer:
     {json.dumps(section_summaries, ensure_ascii=False, indent=2)}
 
     【评审标准】
-    {self.criteria_data}
+    {self.criteria_markdown_data}
 
     请从以下维度进行整体评估：
     1. 整体逻辑连贯性 - 各章节之间逻辑是否连贯，论证是否形成完整链条
@@ -496,8 +496,9 @@ class SectionReviewer:
             logger.info("生成最终评审报告")
             final_report = self.generate_final_report(self.review_results, overall_result)
             logger.info("文档评审流程完成")
-            # TODO： 按照生成的评审意见(final_report),按照标准格式文档 (review_criteria，这个是个表格，既包含了评审要求，也预留了最终的打分和
-            #  评审意见的添加位置（单元格）) 填写相应的评审结果
+            # TODO： 按照生成的评审意见(final_report),按照标准格式文档 (SectionReviewer 的 criteria_markdown_data 属性,
+            #  这个是个表格，既包含了评审要求，也预留了最终的打分和评审意见的添加位置（单元格）) 填写相应的评审结果
+            #  这个方法需要调用大模型，让大语言模型自动填写
             formatted_report = self.fill_formatted_report_with_final_report(final_report)
             return formatted_report
 
@@ -505,19 +506,145 @@ class SectionReviewer:
             logger.error(f"评审流程执行失败: {str(e)}")
             return f"# 评审过程出现错误\n\n错误信息: {str(e)}\n\n请检查文档格式或联系技术支持。"
 
+    def fill_formatted_report_with_final_report(self, final_report: str) -> str:
+        """
+        使用大语言模型将最终评审结果自动填写到标准格式的评审表格中
 
-def start_ai_review(uid:int, task_id: int, criteria_data: str, review_file_path: str, sys_cfg: dict) -> str:
+        Args:
+            final_report: 生成的最终评审报告文本
+
+        Returns:
+            填充后的格式化评审报告
+        """
+        try:
+            logger.info("开始使用LLM将评审结果填充到标准格式表格中")
+
+            prompt = f"""
+    作为专业的文档评审专家，请将以下评审结果按照标准评审表格的格式进行填写：
+
+    【标准评审表格格式】
+    {self.criteria_markdown_data}
+
+    【最终评审结果】
+    {final_report}
+
+    请严格按照以下要求进行操作：
+    1. 仔细分析标准评审表格的结构和内容要求
+    2. 从最终评审结果中提取对应的评分、优点、问题、建议等信息
+    3. 将提取的信息准确填写到标准评审表格的相应位置
+    4. 保持表格原有的格式和结构不变
+    5. 对于每个评审项，都需要填写具体的评分和评审意见
+    6. 评审意见要基于最终评审结果中的具体内容，不能凭空编造
+    7. 整体评分和总结部分也要相应填写
+
+    请直接返回填充完整的标准评审表格内容，保持原有的Markdown表格格式。
+    """
+
+            # 调用大语言模型API
+            filled_report = self.call_llm_api_for_formatting(prompt)
+
+            # 验证返回结果
+            if filled_report and self._is_valid_filled_report(filled_report):
+                logger.info("成功生成格式化评审报告")
+                return filled_report
+            else:
+                logger.warning("LLM返回的格式化报告不完整，返回原始报告")
+                return final_report
+
+        except Exception as e:
+            logger.error(f"使用LLM填充格式化报告失败: {str(e)}")
+            # 如果填充失败，返回原始报告
+            return final_report
+
+    def call_llm_api_for_formatting(self, prompt: str) -> str:
+        """专门用于格式化报告的大语言模型调用"""
+        key = self.sys_cfg['api']['llm_api_key']
+        model = self.sys_cfg['api']['llm_model_name']
+        uri = f"{self.sys_cfg['api']['llm_api_uri']}/chat/completions"
+
+        try:
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {key}'
+            }
+
+            # 构建消息
+            messages = [
+                {"role": "system",
+                 "content": "你是一个专业的文档评审专家，擅长将评审结果按照标准表格格式进行整理和填写。请严格按照给定的表格格式要求进行操作。"},
+                {"role": "user", "content": prompt}
+            ]
+
+            # 构建请求体
+            payload = {
+                'model': model,
+                'messages': messages,
+                'temperature': 0.3,  # 降低温度以获得更稳定的输出
+                'max_tokens': 4000  # 增加token限制以容纳完整表格
+            }
+
+            logger.info(f"开始调用LLM进行报告格式化")
+            response = requests.post(
+                url=uri,
+                headers=headers,
+                json=payload,
+                timeout=120,  # 增加超时时间
+                verify=False,
+            )
+
+            logger.info(f"LLM格式化响应状态: {response.status_code}")
+
+            if response.status_code == 200:
+                result = response.json()
+                content = result['choices'][0]['message']['content']
+
+                # 清理返回内容，移除可能的代码块标记
+                if content.strip().startswith('```'):
+                    content = content.strip().split('\n', 1)[1]  # 移除第一行
+                    if content.endswith('```'):
+                        content = content[:-3].strip()
+
+                logger.info(f"成功获取LLM格式化的报告，长度: {len(content)}")
+                return content
+
+            else:
+                error_msg = f"LLM格式化API调用失败: {response.status_code} - {response.text}"
+                logger.error(error_msg)
+                return None
+
+        except Exception as e:
+            error_msg = f"LLM格式化API调用异常: {str(e)}"
+            logger.error(error_msg)
+            return None
+
+    @staticmethod
+    def _is_valid_filled_report(report: str) -> bool:
+        """
+        验证填充后的报告是否有效
+        """
+        if not report or len(report.strip()) < 100:
+            return False
+
+        # 检查是否包含表格特征
+        table_indicators = ['|', '---', '评分', '评审意见']
+        indicators_found = sum(1 for indicator in table_indicators if indicator in report)
+
+        # 如果找到至少2个表格特征，认为报告有效
+        return indicators_found >= 2
+
+
+def start_ai_review(uid:int, task_id: int, criteria_markdown_data: str, review_file_path: str, sys_cfg: dict) -> str:
     """
     :param uid: 用户ID
     :param task_id: 当前任务ID
-    :param criteria_data: 评审标准和要求markdown 文本
+    :param criteria_markdown_data: 评审标准和要求markdown 文本
     :param review_file_path: 被评审的材料文件的绝对路径
     :param sys_cfg： 系统配置信息
     根据评审标准文本和评审材料生成评审报告
     """
     try:
         # 创建评审器并执行评审
-        reviewer = SectionReviewer(uid, task_id, criteria_data, review_file_path, sys_cfg)
+        reviewer = SectionReviewer(uid, task_id, criteria_markdown_data, review_file_path, sys_cfg)
         review_report = reviewer.execute_review()
         return review_report
 
