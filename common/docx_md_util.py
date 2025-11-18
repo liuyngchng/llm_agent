@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+import hashlib
 import logging.config
 import os
 from pathlib import Path
@@ -427,6 +428,19 @@ def extract_sections_content(markdown_file_path: str, catalogue: dict, extract_h
         logger.error(f"详细错误信息: {traceback.format_exc()}")
         return []
 
+
+def calculate_file_md5(file_stream) ->str:
+    """计算文件流的MD5，支持大文件"""
+    md5_hash = hashlib.md5()
+
+    # 分块读取，避免内存占用过大
+    for chunk in iter(lambda: file_stream.read(4096), b""):
+        md5_hash.update(chunk)
+
+    # 重置文件指针
+    file_stream.seek(0)
+    return md5_hash.hexdigest()
+
 # 使用示例
 if __name__ == "__main__":
     my_docx_file = "/home/rd/Downloads/java.tutorial.docx"  # 替换为你的docx文件路径
@@ -437,3 +451,6 @@ if __name__ == "__main__":
     heading1 = "包依赖管理"
     txt = get_md_para_by_heading(my_md_file_path, heading1)
     logger.info(f"txt for {heading1}, {txt[:100]}...")
+
+    file_stream = open("file.txt", "rb")
+    calculate_file_md5(file_stream)

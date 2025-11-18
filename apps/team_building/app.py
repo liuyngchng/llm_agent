@@ -16,7 +16,7 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
-from apps.paper_review.agent import generate_review_report, OUTPUT_DIR
+from apps.team_building.agent import generate_review_report
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
@@ -82,7 +82,7 @@ def register_routes(app):
     @app.route('/')
     def app_home():
         logger.info("redirect_auth_login_index")
-        return redirect(url_for('auth.login_index', app_source=my_enums.AppType.PAPER_REVIEW.name.lower()))
+        return redirect(url_for('auth.login_index', app_source=my_enums.AppType.TEAM_BUILDING.name.lower()))
 
     @app.route('/xlsx/upload', methods=['POST'])
     def upload_xlsx():
@@ -102,7 +102,7 @@ def register_routes(app):
             logger.warning(f"{uid}, {warning_info}")
             return redirect(url_for(
                 'auth.login_index',
-                app_source=AppType.PAPER_REVIEW.name.lower(),
+                app_source=AppType.TEAM_BUILDING.name.lower(),
                 warning_info=warning_info
             ))
         if file.filename == '':
@@ -144,7 +144,7 @@ def register_routes(app):
             logger.warning(f"{uid}, {warning_info}")
             return redirect(url_for(
                 'auth.login_index',
-                app_source=AppType.PAPER_REVIEW.name.lower(),
+                app_source=AppType.TEAM_BUILDING.name.lower(),
                 warning_info=warning_info
             ))
         if file.filename == '':
@@ -166,6 +166,48 @@ def register_routes(app):
             "message": "docx 文件上传成功"
         }
         logger.info(f"upload_docx_file, {info}")
+        return json.dumps(info, ensure_ascii=False), 200
+
+    @app.route('/pic/upload', methods=['POST'])
+    def upload_pic():
+        """
+        上传 手写体的材料图片
+        """
+        logger.info(f"upload_pic, {request}")
+        if 'file' not in request.files:
+            return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
+        file = request.files['file']
+        uid = int(request.form.get('uid'))
+        logger.info(f"{uid}, upload_pic")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=AppType.TEAM_BUILDING.name.lower(),
+                warning_info=warning_info
+            ))
+        if file.filename == '':
+            return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
+
+        # 生成任务ID，使用毫秒数
+        task_id = int(time.time() * 1000)
+        filename = f"{task_id}_{file.filename}"
+        save_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(save_path)
+        md_file = convert_docx_to_md(save_path, True)
+        file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
+        save_file_info(uid, file_md5, md_file)
+        logger.info(f"pic_file {file.filename} saved_as {file_md5}, {task_id}")
+
+        info = {
+            "task_id": task_id,
+            "file_name": file_md5,
+            "message": "图片文件上传成功"
+        }
+        logger.info(f"upload_pic_file, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
     @app.route("/review_report/gen", methods=['POST'])
@@ -227,7 +269,7 @@ def register_routes(app):
         logger.info(f"generate_review_report, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
-    @app.route('/paper_review/task', methods=['GET'])
+    @app.route('/TEAM_BUILDING/task', methods=['GET'])
     def docx_task_index():
         """
         获取当前在进行的写作任务，渲染页面
@@ -241,7 +283,7 @@ def register_routes(app):
             logger.warning(f"{uid}, {warning_info}")
             return redirect(url_for(
                 'auth.login_index',
-                app_source=AppType.PAPER_REVIEW.name.lower(),
+                app_source=AppType.TEAM_BUILDING.name.lower(),
                 warning_info=warning_info
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
@@ -258,7 +300,7 @@ def register_routes(app):
         logger.info(f"{uid}, return_page_with_no_auth {dt_idx}")
         return render_template(dt_idx, **ctx)
 
-    @app.route('/paper_review/my/task', methods=['POST'])
+    @app.route('/TEAM_BUILDING/my/task', methods=['POST'])
     def my_docx_task():
         """
         获取用户的写作任务
@@ -271,14 +313,14 @@ def register_routes(app):
             warning_info = "用户会话信息已失效，请重新登录"
             return redirect(url_for(
                 'auth.login_index',
-                app_source=AppType.PAPER_REVIEW.name.lower(),
+                app_source=AppType.TEAM_BUILDING.name.lower(),
                 warning_info=warning_info
             ))
         # logger.info(f"{uid}, get_my_paper_review_task, {data}")
         task_list = docx_meta_util.get_user_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
 
-    @app.route('/paper_review/download/task/<task_id>', methods=['GET'])
+    @app.route('/TEAM_BUILDING/download/task/<task_id>', methods=['GET'])
     def download_file_by_task_id(task_id):
         """
         根据任务ID下载文件
@@ -293,7 +335,7 @@ def register_routes(app):
             logger.warning(f"{uid}, {warning_info}")
             return redirect(url_for(
                 'auth.login_index',
-                app_source=AppType.PAPER_REVIEW.name.lower(),
+                app_source=AppType.TEAM_BUILDING.name.lower(),
                 warning_info=warning_info
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
@@ -318,7 +360,7 @@ def register_routes(app):
             logger.error(f"文件发送失败: {str(e)}")
             abort(500)
 
-    @app.route('/paper_review/preview/task/<task_id>', methods=['GET'])
+    @app.route('/TEAM_BUILDING/preview/task/<task_id>', methods=['GET'])
     def preview_file_by_task_id(task_id):
         """
         根据任务ID下载文件
@@ -327,7 +369,7 @@ def register_routes(app):
         uid = request.args["uid"]
         logger.info(f"{uid}, preview_file_task_id, {task_id}")
         session_key = f"{uid}_{get_client_ip()}"
-        app_source = AppType.PAPER_REVIEW.name.lower()
+        app_source = AppType.TEAM_BUILDING.name.lower()
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
@@ -349,7 +391,7 @@ def register_routes(app):
         logger.info(f"文件找到，准备发送: {md_absolute_path}")
         html_content, toc_content = get_html_ctx_from_md(md_absolute_path)
         ctx = {
-            "sys_name": AppType.PAPER_REVIEW.value,
+            "sys_name": AppType.TEAM_BUILDING.value,
             "warning_info": "",
             "app_source": app_source,
             "html_content": html_content,
@@ -359,7 +401,7 @@ def register_routes(app):
         logger.debug(f"return_page {dt_idx}")
         return render_template(dt_idx, **ctx)
 
-    @app.route('/paper_review/del/task/<task_id>', methods=['GET'])
+    @app.route('/TEAM_BUILDING/del/task/<task_id>', methods=['GET'])
     def delete_file_info_by_task_id(task_id):
         """
         根据任务ID删除任务
