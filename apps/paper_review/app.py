@@ -376,10 +376,6 @@ def register_routes(app):
 
         return json.dumps({"msg": "删除成功", "task_id": task_id}, ensure_ascii=False), 200
 
-
-
-
-
 # 创建应用实例
 app = create_app()
 
