@@ -269,12 +269,12 @@ def register_routes(app):
         logger.info(f"generate_review_report, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
-    @app.route('/TEAM_BUILDING/task', methods=['GET'])
+    @app.route('/team_building/task', methods=['GET'])
     def docx_task_index():
         """
         获取当前在进行的写作任务，渲染页面
         """
-        logger.info(f"paper_review_index, {request.args}")
+        logger.info(f"team_building_index, {request.args}")
         uid = request.args.get('uid')
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
@@ -296,11 +296,11 @@ def register_routes(app):
             "app_source": app_source,
             "warning_info": warning_info,
         }
-        dt_idx = "paper_review_my_task.html"
+        dt_idx = "team_building_my_task.html"
         logger.info(f"{uid}, return_page_with_no_auth {dt_idx}")
         return render_template(dt_idx, **ctx)
 
-    @app.route('/TEAM_BUILDING/my/task', methods=['POST'])
+    @app.route('/team_building/my/task', methods=['POST'])
     def my_docx_task():
         """
         获取用户的写作任务

@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>材料评审任务</title>
-    <link rel="stylesheet" href="/static/paper_review.my.task.css">
+    <title>{{sys_name}}任务</title>
+    <link rel="stylesheet" href="/static/team_building.my.task.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-tasks"></i> 材料评审任务</h1>
-            <p>查看和管理您的材料评审任务</p>
+            <h1><i class="fas fa-tasks"></i> {{sys_name}}任务</h1>
+            <p>查看和管理您的{{sys_name}}任务</p>
         </header>
 
         <div class="tasks-container">
@@ -36,8 +36,8 @@
 
             <div class="empty-state" id="emptyState" style="display: none;">
                 <i class="fas fa-inbox"></i>
-                <h3>暂无材料评审任务</h3>
-                <p>您还没有创建任何材料评审任务</p>
+                <h3>暂无{{sys_name}}任务</h3>
+                <p>您还没有创建任何{{sys_name}}任务</p>
             </div>
         </div>
     </div>
@@ -47,6 +47,6 @@
     </div>
     <input type="hidden" id ="uid" name="uid" value="{{uid}}">
     <input type="hidden" id ="t" name="t" value="{{t}}">
-    <script type="text/javascript" src="/static/paper_review.my.task.js"></script>
+    <script type="text/javascript" src="/static/team_building.my.task.js"></script>
 </body>
 </html>
