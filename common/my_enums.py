@@ -72,7 +72,7 @@ class AppType(Enum):
     MT_REPORT = "会议纪要整理"
     EVAL_EXPERT = "AI 评审数字专家"
     PAPER_REVIEW = "AI 数字评委"
-    TEAM_BUILDING = "团队建设"
+    TEAM_BUILDING = "AI 党建"
 
     @staticmethod
     def get_app_list() -> list:
