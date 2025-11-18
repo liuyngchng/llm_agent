@@ -495,11 +495,11 @@ class SectionReviewer:
             # 5. 生成最终报告
             logger.info("生成最终评审报告")
             final_report = self.generate_final_report(self.review_results, overall_result)
-            logger.info("文档评审流程完成")
-            # TODO： 按照生成的评审意见(final_report),按照标准格式文档 (SectionReviewer 的 criteria_markdown_data 属性,
-            #  这个是个表格，既包含了评审要求，也预留了最终的打分和评审意见的添加位置（单元格）) 填写相应的评审结果
-            #  这个方法需要调用大模型，让大语言模型自动填写
+
+            update_process_info_by_task_id(self.uid, self.task_id, f"形成格式化的评审意见报告")
+            logger.debug(f"fill_formatted_report_with_final_report\n {final_report}")
             formatted_report = self.fill_formatted_report_with_final_report(final_report)
+            logger.info("文档评审流程完成")
             return formatted_report
 
         except Exception as e:
