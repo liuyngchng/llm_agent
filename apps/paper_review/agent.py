@@ -8,8 +8,6 @@ from typing import List, Dict
 
 import requests
 
-
-from common import docx_meta_util
 from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_content_to_md_file, get_md_file_catalogue, \
     convert_docx_to_md
 import logging.config
@@ -419,7 +417,7 @@ class SectionReviewer:
 ### 关键建议
 {chr(10).join(f"- {recommendation}" for recommendation in overall_result['key_recommendations'])}
 
-## 各章节建议
+## 各章节评审结果
 """
 
             for section_result in section_results:
@@ -498,7 +496,10 @@ class SectionReviewer:
             logger.info("生成最终评审报告")
             final_report = self.generate_final_report(self.review_results, overall_result)
             logger.info("文档评审流程完成")
-            return final_report
+            # TODO： 按照生成的评审意见(final_report),按照标准格式文档 (review_criteria，这个是个表格，既包含了评审要求，也预留了最终的打分和
+            #  评审意见的添加位置（单元格）) 填写相应的评审结果
+            formatted_report = self.fill_formatted_report_with_final_report(final_report)
+            return formatted_report
 
         except Exception as e:
             logger.error(f"评审流程执行失败: {str(e)}")
@@ -509,7 +510,7 @@ def start_ai_review(uid:int, task_id: int, criteria_data: str, review_file_path:
     """
     :param uid: 用户ID
     :param task_id: 当前任务ID
-    :param criteria_data: 评审标准和要求文本
+    :param criteria_data: 评审标准和要求markdown 文本
     :param review_file_path: 被评审的材料文件的绝对路径
     :param sys_cfg： 系统配置信息
     根据评审标准文本和评审材料生成评审报告
@@ -543,11 +544,11 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
     try:
         update_process_info_by_task_id(uid, task_id, "开始解析评审标准...")
         # 获取评审标准的文件内容，格式为 Markdown
-        criteria_data = get_md_file_content(criteria_file)
+        criteria_markdown_data = get_md_file_content(criteria_file)
         update_process_info_by_task_id(uid, task_id, "开始分析评审材料...")
 
         # 调用AI评审生成
-        review_result = start_ai_review(uid, task_id, criteria_data, paper_file, sys_cfg)
+        review_result = start_ai_review(uid, task_id, criteria_markdown_data, paper_file, sys_cfg)
 
         # 生成输出文件
         output_file_name = f"output_{task_id}.md"
@@ -566,11 +567,11 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
 if __name__ == '__main__':
     my_cfg = init_yml_cfg()
     logger.info("my_cfg", my_cfg)
-    my_criteria_xlsx_file = "/home/rd/workspace/llm_agent/apps/paper_review/评审标准.xlsx"
-    my_paper_docx_file = "/home/rd/workspace/llm_agent/apps/paper_review/天然气零售系统可行性研究报告.docx"
+    my_criteria_xlsx_file = "/home/rd/Downloads/1.xlsx"
+    my_paper_docx_file = "/home/rd/Downloads/2.docx"
     my_paper_file = convert_docx_to_md(my_paper_docx_file, True)
     logger.info(f"my_paper_file {my_paper_file}")
     my_criteria_file = convert_xlsx_to_md(my_criteria_xlsx_file, True, True)
     logger.info(f"my_criteria_file {my_criteria_file}")
     my_criteria_data = get_md_file_content(my_criteria_file)
-    start_ai_review(my_criteria_data, my_paper_file, my_cfg)
+    start_ai_review(0, 0, my_criteria_data, my_paper_file, my_cfg)
