@@ -326,6 +326,107 @@ def get_md_para_by_heading(md_file_path: str, heading1: str, heading2: str = Non
         logger.error(f"提取内容失败: {md_file_path}, 错误: {str(e)}")
         return ""
 
+def extract_sections_content(markdown_file_path: str, catalogue: dict, extract_heading_level: int = 2) -> list[dict]:
+    """
+    按指定标题层级提取 Markdown 文件的章节内容
+
+    Args:
+        markdown_file_path: Markdown 文件的绝对路径
+        catalogue: 目录结构
+        extract_heading_level: 提取的标题层级，默认提取2级标题的内容
+    Return:
+        返回[{"heading1-> header2" : "content under heading2"}]
+    """
+
+    try:
+        with open(markdown_file_path, 'r', encoding='utf-8') as file:
+            lines = file.readlines()
+
+        sections = []
+
+        def collect_all_nodes(node, nodes_list=None):
+            """收集所有节点"""
+            if nodes_list is None:
+                nodes_list = []
+
+            if isinstance(node, dict):
+                nodes_list.append(node)
+                children = node.get('children', {})
+                for child in children.values():
+                    collect_all_nodes(child, nodes_list)
+
+            return nodes_list
+
+        def find_next_section_at_level(current_node, current_level, total_lines):
+            """找到下一个同级或更高级别章节的开始行"""
+            all_nodes = collect_all_nodes(catalogue)
+            all_nodes.sort(key=lambda x: x.get('line', 1))
+
+            current_line = current_node.get('line', 1)
+            for node in all_nodes:
+                node_line = node.get('line', 1)
+                node_level = node.get('level', 1)
+                if node_line > current_line and node_level <= current_level:
+                    return node_line
+
+            return total_lines + 1
+
+        def extract_content_at_level(node, parent_title="", current_level=1):
+            """按指定层级提取章节内容"""
+            if isinstance(node, dict):
+                current_title = node.get('title', '')
+                level = node.get('level', 1)
+                line_num = node.get('line', 1)
+
+                full_title = f"{parent_title} > {current_title}" if parent_title else current_title
+
+                # 如果当前节点层级等于或小于目标层级，提取内容
+                if level == extract_heading_level:
+                    # 提取本节内容
+                    start_line = line_num
+
+                    # 找到下一同级或更高级别章节的开始行
+                    end_line = find_next_section_at_level(node, level, len(lines))
+
+                    content = ''.join(lines[start_line - 1:end_line]).strip()
+
+                    sections.append({
+                        'title': full_title,
+                        'level': level,
+                        'content': content,
+                        'start_line': start_line,
+                        'end_line': end_line - 1 if end_line <= len(lines) else len(lines)
+                    })
+
+                    logger.debug(
+                        f"提取章节 '{full_title}': 层级 {level}, 行 {start_line}-{end_line - 1}, 长度 {len(content)} 个字符")
+
+                # 递归处理子节点
+                children = node.get('children', {})
+                for child in children.values():
+                    extract_content_at_level(child, full_title, level)
+
+        # 开始提取
+        extract_content_at_level(catalogue)
+
+        # 按行号排序
+        sections.sort(key=lambda x: x['start_line'])
+
+        logger.info(f"按{extract_heading_level}级标题提取了 {len(sections)} 个章节内容")
+
+        # 输出提取的章节信息
+        for i, section in enumerate(sections[:5]):  # 只显示前5个作为样例
+            logger.info(
+                f"样例章节{i + 1}: '{section['title']}' (层级{section['level']}), 内容长度: {len(section['content'])}")
+
+        return sections
+
+    except Exception as e:
+        logger.error(f"提取章节内容失败: {str(e)}")
+        import traceback
+        logger.error(f"详细错误信息: {traceback.format_exc()}")
+        return []
+
 # 使用示例
 if __name__ == "__main__":
     my_docx_file = "/home/rd/Downloads/java.tutorial.docx"  # 替换为你的docx文件路径
