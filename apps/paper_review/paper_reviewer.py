@@ -9,7 +9,7 @@ from typing import List, Dict
 import requests
 
 from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_content_to_md_file, get_md_file_catalogue, \
-    convert_docx_to_md, extract_sections_content
+    convert_docx_to_md, extract_sections_content, split_md_file_with_catalogue, split_md_content_with_catalogue
 import logging.config
 
 from common.docx_meta_util import update_process_info_by_task_id, save_output_file_path_by_task_id
@@ -27,6 +27,8 @@ MAX_SECTION_LENGTH = 3000  # 3000 字符
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 urllib3.disable_warnings(category=InsecureRequestWarning)
+
+
 
 
 
@@ -406,8 +408,8 @@ class PaperReviewer:
             final_report = self.generate_final_report(self.review_results, overall_result)
 
             update_process_info_by_task_id(self.uid, self.task_id, f"形成格式化的评审意见报告")
-            logger.debug(f"fill_formatted_report_with_final_report\n{final_report}")
-            formatted_report = self.fill_formatted_report_with_final_report(final_report)
+            logger.debug(f"fill_all_formatted_markdown_report_with_final_report\n{final_report}")
+            formatted_report = self.fill_all_formatted_markdown_report_with_final_report(final_report)
             logger.info("文档评审流程完成")
             return formatted_report
 
@@ -415,7 +417,7 @@ class PaperReviewer:
             logger.exception(f"评审流程执行失败")
             return f"# 评审过程出现错误\n\n错误信息: {str(e)}\n\n请检查文档格式或联系技术支持。"
 
-    def fill_formatted_report_with_final_report(self, final_report_txt: str) -> str:
+    def fill_all_formatted_markdown_report_with_final_report(self, final_report_txt: str) -> str:
         """
         使用大语言模型将最终评审结果自动填写到标准格式的评审表格中
 
@@ -425,30 +427,51 @@ class PaperReviewer:
         Returns:
             填充后的格式化评审报告
         """
+        split_md_list = split_md_content_with_catalogue(self.criteria_markdown_data)
+        logger.debug(f"split_md_list, {split_md_list}")
+        all_txt = ""
+        for md in split_md_list:
+            single_title = md['title']
+            single_criteria = md['content']
+            logger.debug(f"get_single_criteria_md, \n##{single_title}\n{single_criteria}")
+            single_report = self.fill_single_md_table(final_report_txt, single_criteria)
+            single_txt = f"## {single_title}  \n\n {single_report}"
+            all_txt = all_txt  + "\n\n" + single_txt
+        return all_txt
+
+    def fill_single_md_table(self, final_report_txt: str, single_criteria: str) -> str:
+        """
+        使用大语言模型将最终评审结果自动填写到标准格式的评审表格中
+
+        Args:
+            final_report_txt: 生成的最终评审报告文本
+            single_criteria: 评审标准中的一个表格
+
+        Returns:
+            填充后的格式化评审报告文本
+        """
+        prompt = f"""
+        作为专业的 {self.review_topic} 评审专家，请将以下评审结果按照标准评审表格的格式进行填写：
+
+        【标准评审表格格式】
+        {single_criteria}
+
+        【最终评审结果】
+        {final_report_txt}
+
+        请严格按照以下要求进行操作：
+        1. 仔细分析标准评审表格的结构和内容要求
+        2. 从最终评审结果中提取对应的评分、优点、问题、建议等信息
+        3. 将提取的信息准确填写到标准评审表格的相应位置
+        4. 保持表格原有的格式和结构不变
+        5. 对于每个评审项，都需要填写具体的评分和评审意见
+        6. 评审意见要基于最终评审结果中的具体内容，不能凭空编造
+        7. 整体评分和总结部分也要相应填写
+
+        请直接返回填充完整的标准评审表格内容，保持原有的Markdown表格格式。
+        """
         try:
             logger.info("开始使用LLM将评审结果填充到标准格式表格中")
-
-            prompt = f"""
-    作为专业的 {self.review_topic} 评审专家，请将以下评审结果按照标准评审表格的格式进行填写：
-
-    【标准评审表格格式】
-    {self.criteria_markdown_data}
-
-    【最终评审结果】
-    {final_report_txt}
-
-    请严格按照以下要求进行操作：
-    1. 仔细分析标准评审表格的结构和内容要求
-    2. 从最终评审结果中提取对应的评分、优点、问题、建议等信息
-    3. 将提取的信息准确填写到标准评审表格的相应位置
-    4. 保持表格原有的格式和结构不变
-    5. 对于每个评审项，都需要填写具体的评分和评审意见
-    6. 评审意见要基于最终评审结果中的具体内容，不能凭空编造
-    7. 整体评分和总结部分也要相应填写
-
-    请直接返回填充完整的标准评审表格内容，保持原有的Markdown表格格式。
-    """
-
             # 调用大语言模型API
             filled_report = self.call_llm_api_for_formatting(prompt)
 
@@ -462,8 +485,8 @@ class PaperReviewer:
 
         except Exception as e:
             logger.error(f"使用LLM填充格式化报告失败: {str(e)}")
-            # 如果填充失败，返回原始报告
-            return final_report_txt
+        # 如果填充失败，返回原始报告
+        return final_report_txt
 
     def call_llm_api_for_formatting(self, prompt: str, max_retries: int = 2) -> str:
         """专门用于格式化报告的大语言模型调用，增加重试机制"""
@@ -632,5 +655,6 @@ if __name__ == '__main__':
     my_criteria_file = convert_xlsx_to_md(my_criteria_xlsx_file, True, True)
     logger.info(f"my_criteria_file {my_criteria_file}")
     my_criteria_data = get_md_file_content(my_criteria_file)
+    split_md = split_md_file_with_catalogue(my_criteria_file)
     my_review_topic = "天然气零售信息系统概要设计文档评审"
     start_ai_review(1, 1, my_review_topic, my_criteria_data, my_paper_file, my_cfg)

@@ -401,7 +401,7 @@ class SectionReviewer:
             final_report = self.generate_final_report(self.review_results, overall_result)
 
             update_process_info_by_task_id(self.uid, self.task_id, f"形成格式化的评审意见报告")
-            logger.debug(f"fill_formatted_report_with_final_report\n {final_report}")
+            logger.debug(f"fill_all_formatted_markdown_report_with_final_report\n {final_report}")
             formatted_report = self.fill_formatted_report_with_final_report(final_report)
             logger.info("文档评审流程完成")
             return formatted_report
@@ -410,7 +410,7 @@ class SectionReviewer:
             logger.exception(f"评审流程执行失败")
             return f"# 评审过程出现错误\n\n错误信息: {str(e)}\n\n请检查文档格式或联系技术支持。"
 
-    def fill_formatted_report_with_final_report(self, final_report: str) -> str:
+    def fill_all_formatted_markdown_report_with_final_report(self, final_report: str) -> str:
         """
         使用大语言模型将最终评审结果自动填写到标准格式的评审表格中
 

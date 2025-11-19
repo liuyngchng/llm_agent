@@ -458,9 +458,11 @@ def test_fill_formatted_report():
         review_file_path,
         my_cfg
     )
-    result = paper_reviewer.fill_formatted_report_with_final_report(final_report_txt)
-    with open('formatted_report.md', 'w', encoding='utf-8') as f:
+    result = paper_reviewer.fill_all_formatted_markdown_report_with_final_report(final_report_txt)
+    output_file = 'formatted_report.md'
+    with open(output_file, 'w', encoding='utf-8') as f:
         f.write(result)
+    logger.info(f"file output {os.path.abspath(output_file)}")
 
 
 

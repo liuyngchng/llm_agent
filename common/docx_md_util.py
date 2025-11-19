@@ -4,6 +4,7 @@
 import hashlib
 import logging.config
 import os
+import re
 from pathlib import Path
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -440,6 +441,99 @@ def calculate_file_md5(file_stream) ->str:
     # 重置文件指针
     file_stream.seek(0)
     return md5_hash.hexdigest()
+
+def split_md_file_with_catalogue(file_path: str, heading_level: int = 2) -> list[dict]:
+    """
+    将Markdown文件按指定标题级别分割，并返回包含目录结构的数据
+
+    Args:
+        file_path: Markdown文件路径
+        heading_level: 标题级别，默认为2(##)
+
+    Returns:
+        包含章节信息的字典列表，每个字典包含:
+        - level: 标题级别
+        - title: 标题内容
+        - content: 章节内容
+        - children: 子章节列表
+    """
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    return split_md_content_with_catalogue(content, heading_level)
+
+
+def split_md_content_with_catalogue(content: str, heading_level: int=2) -> list[dict]:
+    """
+    将Markdown文件按指定标题级别分割，并返回包含目录结构的数据
+
+    Args:
+        content: Markdown 文本
+        heading_level: 标题级别，默认为2(##)
+
+    Returns:
+        包含章节信息的字典列表，每个字典包含:
+        - level: 标题级别
+        - title: 标题内容
+        - content: 章节内容
+        - children: 子章节列表
+    """
+    # 根据heading_level构建正则表达式
+    if heading_level == 1:
+        pattern = r'^(# )(.+)$'
+    elif heading_level == 2:
+        pattern = r'^(## )(.+)$'
+    elif heading_level == 3:
+        pattern = r'^(### )(.+)$'
+    else:
+        raise ValueError("heading_level must be 1, 2, or 3")
+
+    # 分割内容
+    sections = []
+    lines = content.split('\n')
+    current_section = None
+
+    for line in lines:
+        match = re.match(pattern, line)
+        if match:
+            # 保存前一个章节
+            if current_section:
+                sections.append(current_section)
+
+            # 开始新章节
+            current_section = {
+                'level': heading_level,
+                'title': match.group(2).strip(),
+                'content': line + '\n',
+                'children': []
+            }
+
+        elif current_section is not None:
+            # 检查是否是子标题（更高级别的标题）
+
+            sub_match_1 = re.match(r'^(# )(.+)$', line)
+            sub_match_2 = re.match(r'^(## )(.+)$', line) if heading_level == 1 else None
+            sub_match_3 = re.match(r'^(### )(.+)$', line) if heading_level <= 2 else None
+
+            sub_match = sub_match_1 or sub_match_2 or sub_match_3
+            if sub_match and sub_match != match:
+                # 这是子章节
+                sub_level = len(sub_match.group(1).strip())
+                current_section['children'].append({
+                    'level': sub_level,
+                    'title': sub_match.group(2).strip(),
+                    'content': line + '\n',
+                    'children': []
+                })
+            else:
+                # 普通内容行
+                current_section['content'] += line + '\n'
+
+    # 添加最后一个章节
+    if current_section:
+        sections.append(current_section)
+
+    return sections
+
 
 # 使用示例
 if __name__ == "__main__":
