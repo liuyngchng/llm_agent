@@ -514,7 +514,7 @@ class PaperReviewer:
                 payload = {
                     'model': model,
                     'messages': messages,
-                    'temperature': 0.3,
+                    'temperature': 0.1,
                     'max_tokens': 8192,
                     'stream': False  # 确保非流式响应
                 }

@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 import logging.config
 import os
 from pathlib import Path
@@ -6,6 +9,15 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 OUTPUT_DIR = "output_doc"
+
+def convert_md_to_xlsx(markdown_file_path: str, output_abs_path: bool = False) -> str:
+    """
+    将 markdown 文件中的表格转换为 excel 表格，如果markdown 中有多个表格，则excel文件中就有多个sheet页
+    :param markdown_file_path: markdown 文件的绝对路径
+    :param output_abs_path: 是否输出绝对路径
+    return
+        xlsx 文件的路径
+    """
 
 
 def convert_xlsx_to_md(excel_path: str, include_sheet_names: bool = True, output_abs_path: bool = False) -> str:
