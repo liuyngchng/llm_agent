@@ -433,18 +433,18 @@ class PaperReviewer:
         for md in split_md_list:
             single_title = md['title']
             single_criteria = md['content']
-            logger.debug(f"get_single_criteria_md, \n##{single_title}\n{single_criteria}")
-            single_report = self.fill_single_md_table(final_report_txt, single_criteria)
-            single_txt = f"## {single_title}  \n\n {single_report}"
-            all_txt = all_txt  + "\n\n" + single_txt
+            logger.debug(f"get_single_criteria_md, \n{single_criteria}")
+            single_report = self.fill_single_md_table(final_report_txt, single_title, single_criteria)
+            all_txt = all_txt  + "\n\n" + single_report
         return all_txt
 
-    def fill_single_md_table(self, final_report_txt: str, single_criteria: str) -> str:
+    def fill_single_md_table(self, final_report_txt: str, single_criteria_title: str, single_criteria: str) -> str:
         """
         使用大语言模型将最终评审结果自动填写到标准格式的评审表格中
 
         Args:
             final_report_txt: 生成的最终评审报告文本
+            single_criteria_title: 评审标准中的一个表格的标题
             single_criteria: 评审标准中的一个表格
 
         Returns:
@@ -464,20 +464,22 @@ class PaperReviewer:
         2. 从最终评审结果中提取对应的评分、优点、问题、建议等信息
         3. 将提取的信息准确填写到标准评审表格的相应位置
         4. 保持表格原有的格式和结构不变
-        5. 对于每个评审项，都需要填写具体的评分和评审意见
+        5. 对于每个评审项，根据要求填写评分或评审意见
         6. 评审意见要基于最终评审结果中的具体内容，不能凭空编造
         7. 整体评分和总结部分也要相应填写
 
         请直接返回填充完整的标准评审表格内容，保持原有的Markdown表格格式。
         """
         try:
-            logger.info("开始使用LLM将评审结果填充到标准格式表格中")
+            logger.info(f"开始使用LLM将评审结果填充到标准格式表格中, title={single_criteria_title}")
             # 调用大语言模型API
+            start_time = time.time()
             filled_report = self.call_llm_api_for_formatting(prompt)
-
+            end_time = time.time()
+            execution_time = end_time - start_time
             # 验证返回结果
             if filled_report and self._is_valid_filled_report(filled_report):
-                logger.info("成功生成格式化评审报告")
+                logger.info(f"成功生成格式化评审报告, 耗时: {execution_time:.2f} 秒, title={single_criteria_title}")
                 return filled_report
             else:
                 logger.warning("LLM返回的格式化报告不完整，返回原始报告")
@@ -513,14 +515,14 @@ class PaperReviewer:
                     'model': model,
                     'messages': messages,
                     'temperature': 0.3,
-                    'max_tokens': 32767,
+                    'max_tokens': 8192,
                     'stream': False  # 确保非流式响应
                 }
 
                 logger.info(f"开始调用LLM进行报告格式化 (第{attempt + 1}次尝试)")
 
                 # 动态调整超时时间
-                timeout = 180 if attempt == 0 else 300  # 第一次180秒，重试时300秒
+                timeout = 300 if attempt == 0 else 600  # 第一次180秒，重试时300秒
 
                 response = requests.post(
                     url=uri,
