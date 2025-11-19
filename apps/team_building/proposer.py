@@ -30,7 +30,7 @@ urllib3.disable_warnings(category=InsecureRequestWarning)
 
 
 
-class SectionReviewer:
+class Proposer:
     def __init__(self, uid: int, task_id: int, criteria_markdown_data: str, review_file_path: str, sys_cfg: dict):
         """
         分章节评审系统
@@ -548,7 +548,7 @@ def start_ai_review(uid:int, task_id: int, criteria_markdown_data: str, review_f
     """
     try:
         # 创建评审器并执行评审
-        reviewer = SectionReviewer(uid, task_id, criteria_markdown_data, review_file_path, sys_cfg)
+        reviewer = Proposer(uid, task_id, criteria_markdown_data, review_file_path, sys_cfg)
         review_report = reviewer.execute_review()
         return review_report
 
@@ -557,8 +557,8 @@ def start_ai_review(uid:int, task_id: int, criteria_markdown_data: str, review_f
         return f"评审报告生成失败: {str(e)}"
 
 
-def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: int,
-                           criteria_file: str, paper_file: str, sys_cfg: dict):
+def generate_propose(uid: int, doc_type: str, review_topic: str, task_id: int,
+                     criteria_file: str, paper_file: str, sys_cfg: dict):
     """
     生成评审报告
     :param uid: 用户ID

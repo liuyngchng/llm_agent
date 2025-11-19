@@ -16,7 +16,7 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
-from apps.team_building.agent import generate_review_report
+from apps.team_building.proposer import generate_propose
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
@@ -261,12 +261,12 @@ def register_routes(app):
 
         # 启动后台任务
         threading.Thread(
-            target=generate_review_report,
+            target=generate_propose,
             args=(uid, doc_type, review_topic, task_id, review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'], my_cfg)
         ).start()
 
         info = {"status": "started", "task_id": task_id}
-        logger.info(f"generate_review_report, {info}")
+        logger.info(f"generate_propose, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
     @app.route('/team_building/task', methods=['GET'])

@@ -45,11 +45,8 @@
                 <input type="text" id="reviewTopic" list="topicTypes" name="doc_type" placeholder="可以直接输入，也可以从下拉菜单中选取">
                 <datalist id="topicTypes">
                     <option value="">-- 请选择评审主题 --</option>
-                    <option value="xxxx 国家标准评审"></option>
-                    <option value="xxxx 可行性研究报告评审"></option>
-                    <option value="xxxx 信息系统详细设计文档评审"></option>
-                    <option value="xxxx 信息系统概要设计文档评审"></option>
-                    <option value = "xxxx 信息系统软件著作权申请评审"></option>
+                    <option value="思想汇报质量评估"></option>
+                    <option value="积极分子发展建议"></option>
                 </datalist>
             </div>
 
@@ -82,13 +79,13 @@
                 <div class="upload-container active" id="uploadContainer">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <h3>上传评审材料</h3>
-                    <p>支持上传Word docx 格式的评审材料，系统将基于评审标准生成标准化的评审结果</p>
+                    <p>支持上传Word docx 格式文件、JPEG 格式的手写稿图片的评审材料，系统将基于评审标准生成评审结果</p>
 
                     <div class="upload-btn">
                         <button class="btn btn-primary">
                             <i class="fas fa-file-word"></i> 选择评审材料
                         </button>
-                        <input type="file" class="file-input" id="reviewPaperFile" accept=".docx" onchange="handleDocxUpload(this)">
+                        <input type="file" class="file-input" id="reviewPaperFile" accept=".docx,.jpg, .jpeg" onchange="handleMaterialUpload(this)">
                     </div>
 
                     <div class="file-info" id="docxFileInfo" style="display: none;">

@@ -228,7 +228,7 @@ def register_routes(app):
         ).start()
 
         info = {"status": "started", "task_id": task_id}
-        logger.info(f"generate_review_report, {info}")
+        logger.info(f"generate_propose, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
     @app.route('/paper_review/task', methods=['GET'])
