@@ -16,7 +16,7 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
-from apps.paper_review.agent import generate_review_report, OUTPUT_DIR
+from apps.paper_review.paper_reviewer import generate_review_report
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
@@ -214,8 +214,12 @@ def register_routes(app):
 
         # 保存任务信息到数据库
         doc_type = my_enums.WriteDocType.REVIEW_REPORT.value
-        docx_meta_util.save_docx_file_info(uid, task_id, doc_type, review_topic,
-                                           review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'], 0, False)
+        docx_meta_util.save_docx_file_info(
+            uid, task_id, doc_type, review_topic,
+            review_criteria_file_info[0]['full_path'],
+            review_paper_file_info[0]['full_path'],
+            0, False
+        )
 
         # 启动后台任务
         threading.Thread(
@@ -341,7 +345,8 @@ def register_routes(app):
         file_path_info = get_docx_file_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
         absolute_path = file_path_info[0]['file_path']
-        md_absolute_path = absolute_path.replace('.docx', '.md')
+        logger.debug(f"absolute_path, {absolute_path}")
+        md_absolute_path = absolute_path.with_suffix('.md')
         logger.info(f"文件检查 - 绝对路径: {md_absolute_path}")
         if not os.path.exists(md_absolute_path):
             logger.error(f"文件不存在: {md_absolute_path}")
