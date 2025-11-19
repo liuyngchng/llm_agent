@@ -30,15 +30,20 @@ urllib3.disable_warnings(category=InsecureRequestWarning)
 
 
 
-class SectionReviewer:
-    def __init__(self, uid: int, task_id: int, criteria_markdown_data: str, review_file_path: str, sys_cfg: dict):
+class PaperReviewer:
+    def __init__(self, uid: int, task_id: int, review_topic:str, criteria_markdown_data: str, review_file_path: str, sys_cfg: dict):
         """
         分章节评审系统
         :param uid: 用户ID，标记哪个用户提交的任务
         :param task_id: 任务ID， 标记是哪个任务
+        :param review_topic: 评审主题， 例如 xxxx系统概要涉及评审
+        :param criteria_markdown_data: 评审标准 markdown 文本
+        :param review_file_path: 评审文件 markdown 路径
+        :param sys_cfg: 系统配置
         """
         self.uid = uid
         self.task_id = task_id
+        self.review_topic = review_topic
         self.criteria_markdown_data = criteria_markdown_data
         self.review_file_path = review_file_path
         self.sections_data = []
@@ -54,7 +59,7 @@ class SectionReviewer:
         for attempt in range(max_retries):
             try:
                 prompt = f"""
-作为可行性分析报告评审专家，请严格按照评审标准对以下章节进行专业评审：
+作为 {self.review_topic} 评审专家，请严格按照评审标准对以下章节进行专业评审：
 
 【章节标题】
 {section_title}
@@ -233,7 +238,7 @@ class SectionReviewer:
                 section_summaries.append(summary)
 
             prompt = f"""
-    作为资深评审专家，请基于各章节评审结果，对整篇可行性分析报告进行整体评估：
+    作为资深评审专家，请基于各章节评审结果，对整篇 {self.review_topic} 进行整体评估：
 
     【各章节评审概要】
     {json.dumps(section_summaries, ensure_ascii=False, indent=2)}
@@ -401,7 +406,7 @@ class SectionReviewer:
             final_report = self.generate_final_report(self.review_results, overall_result)
 
             update_process_info_by_task_id(self.uid, self.task_id, f"形成格式化的评审意见报告")
-            logger.debug(f"fill_formatted_report_with_final_report\n {final_report}")
+            logger.debug(f"fill_formatted_report_with_final_report\n{final_report}")
             formatted_report = self.fill_formatted_report_with_final_report(final_report)
             logger.info("文档评审流程完成")
             return formatted_report
@@ -410,12 +415,12 @@ class SectionReviewer:
             logger.exception(f"评审流程执行失败")
             return f"# 评审过程出现错误\n\n错误信息: {str(e)}\n\n请检查文档格式或联系技术支持。"
 
-    def fill_formatted_report_with_final_report(self, final_report: str) -> str:
+    def fill_formatted_report_with_final_report(self, final_report_txt: str) -> str:
         """
         使用大语言模型将最终评审结果自动填写到标准格式的评审表格中
 
         Args:
-            final_report: 生成的最终评审报告文本
+            final_report_txt: 生成的最终评审报告文本
 
         Returns:
             填充后的格式化评审报告
@@ -424,13 +429,13 @@ class SectionReviewer:
             logger.info("开始使用LLM将评审结果填充到标准格式表格中")
 
             prompt = f"""
-    作为专业的文档评审专家，请将以下评审结果按照标准评审表格的格式进行填写：
+    作为专业的 {self.review_topic} 评审专家，请将以下评审结果按照标准评审表格的格式进行填写：
 
     【标准评审表格格式】
     {self.criteria_markdown_data}
 
     【最终评审结果】
-    {final_report}
+    {final_report_txt}
 
     请严格按照以下要求进行操作：
     1. 仔细分析标准评审表格的结构和内容要求
@@ -453,12 +458,12 @@ class SectionReviewer:
                 return filled_report
             else:
                 logger.warning("LLM返回的格式化报告不完整，返回原始报告")
-                return final_report
+                return final_report_txt
 
         except Exception as e:
             logger.error(f"使用LLM填充格式化报告失败: {str(e)}")
             # 如果填充失败，返回原始报告
-            return final_report
+            return final_report_txt
 
     def call_llm_api_for_formatting(self, prompt: str) -> str:
         """专门用于格式化报告的大语言模型调用"""
@@ -475,7 +480,7 @@ class SectionReviewer:
             # 构建消息
             messages = [
                 {"role": "system",
-                 "content": "你是一个专业的文档评审专家，擅长将评审结果按照标准表格格式进行整理和填写。请严格按照给定的表格格式要求进行操作。"},
+                 "content": f"你是一个专业的 {self.review_topic} 文档评审专家，擅长将评审结果按照标准表格格式进行整理和填写。请严格按照给定的表格格式要求进行操作。"},
                 {"role": "user", "content": prompt}
             ]
 
@@ -484,7 +489,8 @@ class SectionReviewer:
                 'model': model,
                 'messages': messages,
                 'temperature': 0.3,  # 降低温度以获得更稳定的输出
-                'max_tokens': 4000  # 增加token限制以容纳完整表格
+                'max_tokens': 32767,  # 增加token限制以容纳完整表格
+                'stream': False,
             }
 
             logger.info(f"开始调用LLM进行报告格式化")
@@ -537,10 +543,11 @@ class SectionReviewer:
         return indicators_found >= 2
 
 
-def start_ai_review(uid:int, task_id: int, criteria_markdown_data: str, review_file_path: str, sys_cfg: dict) -> str:
+def start_ai_review(uid:int, task_id: int, review_topic:str, criteria_markdown_data: str, review_file_path: str, sys_cfg: dict) -> str:
     """
     :param uid: 用户ID
     :param task_id: 当前任务ID
+    :param review_topic: 评审主题
     :param criteria_markdown_data: 评审标准和要求markdown 文本
     :param review_file_path: 被评审的材料文件的绝对路径
     :param sys_cfg： 系统配置信息
@@ -548,7 +555,7 @@ def start_ai_review(uid:int, task_id: int, criteria_markdown_data: str, review_f
     """
     try:
         # 创建评审器并执行评审
-        reviewer = SectionReviewer(uid, task_id, criteria_markdown_data, review_file_path, sys_cfg)
+        reviewer = PaperReviewer(uid, task_id, review_topic, criteria_markdown_data, review_file_path, sys_cfg)
         review_report = reviewer.execute_review()
         return review_report
 
@@ -579,7 +586,7 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
         update_process_info_by_task_id(uid, task_id, "开始分析评审材料...")
 
         # 调用AI评审生成
-        review_result = start_ai_review(uid, task_id, criteria_markdown_data, paper_file, sys_cfg)
+        review_result = start_ai_review(uid, task_id, review_topic, criteria_markdown_data, paper_file, sys_cfg)
 
         # 生成输出文件
         output_file_name = f"output_{task_id}.md"
@@ -599,10 +606,11 @@ if __name__ == '__main__':
     my_cfg = init_yml_cfg()
     logger.info("my_cfg", my_cfg)
     my_criteria_xlsx_file = "/home/rd/Downloads/1.xlsx"
-    my_paper_docx_file = "/home/rd/Downloads/2.docx"
+    my_paper_docx_file = "/home/rd/Downloads/3.docx"
     my_paper_file = convert_docx_to_md(my_paper_docx_file, True)
     logger.info(f"my_paper_file {my_paper_file}")
     my_criteria_file = convert_xlsx_to_md(my_criteria_xlsx_file, True, True)
     logger.info(f"my_criteria_file {my_criteria_file}")
     my_criteria_data = get_md_file_content(my_criteria_file)
-    start_ai_review(1, 1, my_criteria_data, my_paper_file, my_cfg)
+    my_review_topic = "天然气零售信息系统概要设计文档评审"
+    start_ai_review(1, 1, my_review_topic, my_criteria_data, my_paper_file, my_cfg)
