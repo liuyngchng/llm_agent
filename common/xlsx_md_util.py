@@ -49,8 +49,8 @@ def convert_xlsx_to_md(excel_path: str, include_sheet_names: bool = True, output
                 markdown_parts.append(markdown_table)
                 markdown_parts.append("")  # 空行分隔
 
-        # 将内容写入文件
-        markdown_content = "\n".join(markdown_parts)
+        # 将内容写入文件 合并的单元格会产生 Unnamed:
+        markdown_content = "\n".join(markdown_parts).replace("Unnamed:", "")
         with open(md_path, 'w', encoding='utf-8') as f:
             f.write(markdown_content)
         abs_path = os.path.abspath(md_path)
@@ -160,7 +160,7 @@ def convert_xlsx_to_md_simple(excel_path: str, include_sheet_names: bool = True,
                 markdown_parts.append(markdown_table)
                 markdown_parts.append("")  # 空行分隔
 
-        markdown_content = "\n".join(markdown_parts)
+        markdown_content = "\n".join(markdown_parts).replace("Unnamed:", "")
         with open(md_path, 'w', encoding='utf-8') as f:
             f.write(markdown_content)
         abs_path = os.path.abspath(md_path)
@@ -212,7 +212,7 @@ def convert_xlsx_to_md_advanced(excel_path: str, include_sheet_names: bool = Tru
 
                 markdown_parts.append("")  # 空行分隔
 
-        markdown_content = "\n".join(markdown_parts)
+        markdown_content = "\n".join(markdown_parts).replace("Unnamed:", "")
         with open(md_path, 'w', encoding='utf-8') as f:
             f.write(markdown_content)
         abs_path = os.path.abspath(md_path)
@@ -241,7 +241,7 @@ def dataframe_to_readable_list(df, sheet_name):
 # 使用示例
 if __name__ == "__main__":
     my_excel_file = "/home/rd/Downloads/1.xlsx"  # 替换为你的 Excel 文件路径
-    md_file_path = convert_xlsx_to_md_advanced(my_excel_file)
+    md_file_path = convert_xlsx_to_md_advanced(my_excel_file, True)
     if md_file_path:
         logger.info(f"Markdown文件已保存到: {md_file_path}")
 
