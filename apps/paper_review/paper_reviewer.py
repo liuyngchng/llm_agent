@@ -465,68 +465,88 @@ class PaperReviewer:
             # 如果填充失败，返回原始报告
             return final_report_txt
 
-    def call_llm_api_for_formatting(self, prompt: str) -> str:
-        """专门用于格式化报告的大语言模型调用"""
+    def call_llm_api_for_formatting(self, prompt: str, max_retries: int = 2) -> str:
+        """专门用于格式化报告的大语言模型调用，增加重试机制"""
         key = self.sys_cfg['api']['llm_api_key']
         model = self.sys_cfg['api']['llm_model_name']
         uri = f"{self.sys_cfg['api']['llm_api_uri']}/chat/completions"
 
-        try:
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {key}'
-            }
+        for attempt in range(max_retries):
+            try:
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {key}'
+                }
 
-            # 构建消息
-            messages = [
-                {"role": "system",
-                 "content": f"你是一个专业的 {self.review_topic} 文档评审专家，擅长将评审结果按照标准表格格式进行整理和填写。请严格按照给定的表格格式要求进行操作。"},
-                {"role": "user", "content": prompt}
-            ]
+                # 构建消息
+                messages = [
+                    {"role": "system",
+                     "content": f"你是一个专业的 {self.review_topic} 文档评审专家，擅长将评审结果按照标准表格格式进行整理和填写。请严格按照给定的表格格式要求进行操作。"},
+                    {"role": "user", "content": prompt}
+                ]
 
-            # 构建请求体
-            payload = {
-                'model': model,
-                'messages': messages,
-                'temperature': 0.3,  # 降低温度以获得更稳定的输出
-                'max_tokens': 32767,  # 增加token限制以容纳完整表格
-                'stream': False,
-            }
+                # 构建请求体 - 优化参数
+                payload = {
+                    'model': model,
+                    'messages': messages,
+                    'temperature': 0.3,
+                    'max_tokens': 32767,
+                    'stream': False  # 确保非流式响应
+                }
 
-            logger.info(f"开始调用LLM进行报告格式化")
-            response = requests.post(
-                url=uri,
-                headers=headers,
-                json=payload,
-                timeout=120,  # 增加超时时间
-                verify=False,
-            )
+                logger.info(f"开始调用LLM进行报告格式化 (第{attempt + 1}次尝试)")
 
-            logger.info(f"LLM格式化响应状态: {response.status_code}")
+                # 动态调整超时时间
+                timeout = 180 if attempt == 0 else 300  # 第一次180秒，重试时300秒
 
-            if response.status_code == 200:
-                result = response.json()
-                content = result['choices'][0]['message']['content']
+                response = requests.post(
+                    url=uri,
+                    headers=headers,
+                    json=payload,
+                    timeout=timeout,
+                    verify=False,
+                )
 
-                # 清理返回内容，移除可能的代码块标记
-                if content.strip().startswith('```'):
-                    content = content.strip().split('\n', 1)[1]  # 移除第一行
-                    if content.endswith('```'):
-                        content = content[:-3].strip()
+                logger.info(f"LLM格式化响应状态: {response.status_code}")
 
-                logger.info(f"成功获取LLM格式化的报告，长度: {len(content)}")
-                return content
+                if response.status_code == 200:
+                    result = response.json()
+                    content = result['choices'][0]['message']['content']
 
-            else:
-                error_msg = f"LLM格式化API调用失败: {response.status_code} - {response.text}"
+                    # 清理返回内容
+                    if content.strip().startswith('```'):
+                        lines = content.strip().split('\n')
+                        if lines[0].startswith('```'):
+                            lines = lines[1:]
+                        if lines and lines[-1].startswith('```'):
+                            lines = lines[:-1]
+                        content = '\n'.join(lines).strip()
+
+                    logger.info(f"成功获取LLM格式化的报告，长度: {len(content)}")
+                    return content
+
+                else:
+                    error_msg = f"LLM格式化API调用失败: {response.status_code} - {response.text}"
+                    logger.error(error_msg)
+                    if attempt == max_retries - 1:
+                        return None
+                    time.sleep(2)  # 重试前等待
+
+            except requests.exceptions.Timeout:
+                logger.warning(f"第{attempt + 1}次调用LLM API超时")
+                if attempt == max_retries - 1:
+                    logger.error("所有重试尝试均超时")
+                    return None
+                time.sleep(3)  # 超时后等待更长时间
+
+            except Exception as e:
+                error_msg = f"LLM格式化API调用异常 (第{attempt + 1}次): {str(e)}"
                 logger.error(error_msg)
-                return None
+                if attempt == max_retries - 1:
+                    return None
+                time.sleep(2)
 
-        except Exception as e:
-            error_msg = f"LLM格式化API调用异常: {str(e)}"
-            logger.error(error_msg)
-            return None
-
+        return None
     @staticmethod
     def _is_valid_filled_report(report: str) -> bool:
         """

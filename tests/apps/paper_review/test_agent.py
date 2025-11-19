@@ -458,7 +458,9 @@ def test_fill_formatted_report():
         review_file_path,
         my_cfg
     )
-    paper_reviewer.fill_formatted_report_with_final_report(final_report_txt)
+    result = paper_reviewer.fill_formatted_report_with_final_report(final_report_txt)
+    with open('formatted_report.md', 'w', encoding='utf-8') as f:
+        f.write(result)
 
 
 
