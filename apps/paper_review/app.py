@@ -315,7 +315,7 @@ def register_routes(app):
             return send_file(
                 absolute_path,
                 as_attachment=True,
-                download_name=f"{task_id}_output_paper_review_report.docx",
+                download_name=f"{task_id}_output_paper_review_report.xlsx",
                 mimetype=DOCX_MIME_TYPE,
             )
         except Exception as e:
@@ -346,7 +346,8 @@ def register_routes(app):
         logger.debug(f"{task_id}, {file_path_info}")
         absolute_path = file_path_info[0]['file_path']
         logger.debug(f"absolute_path, {absolute_path}")
-        md_absolute_path = absolute_path.with_suffix('.md')
+        from pathlib import Path
+        md_absolute_path = str(Path(absolute_path).with_suffix('.md'))
         logger.info(f"文件检查 - 绝对路径: {md_absolute_path}")
         if not os.path.exists(md_absolute_path):
             logger.error(f"文件不存在: {md_absolute_path}")
