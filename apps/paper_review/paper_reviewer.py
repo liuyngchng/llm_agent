@@ -638,10 +638,10 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
         output_file_name = f"output_{task_id}.md"
         output_md_file = save_content_to_md_file(review_result, output_file_name, output_abs_path=True)
 
-        # docx_file_full_path = convert_md_to_docx(output_md_file, output_abs_path=True)
-        xlsx_file_full_path = convert_md_to_xlsx(output_md_file, True)
-        save_output_file_path_by_task_id(task_id, xlsx_file_full_path)
-        logger.info(f"{uid}, {task_id}, 评审报告生成成功, {xlsx_file_full_path}")
+        docx_file_full_path = convert_md_to_docx(output_md_file, output_abs_path=True)
+        # xlsx_file_full_path = convert_md_to_xlsx(output_md_file, True)
+        save_output_file_path_by_task_id(task_id, docx_file_full_path)
+        logger.info(f"{uid}, {task_id}, 评审报告生成成功, {docx_file_full_path}")
         update_process_info_by_task_id(uid, task_id, "评审报告生成完毕", 100)
 
     except Exception as e:

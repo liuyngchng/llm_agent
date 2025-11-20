@@ -315,7 +315,7 @@ def register_routes(app):
             return send_file(
                 absolute_path,
                 as_attachment=True,
-                download_name=f"{task_id}_output_paper_review_report.xlsx",
+                download_name=f"{task_id}_output_paper_review_report.docx",
                 mimetype=DOCX_MIME_TYPE,
             )
         except Exception as e:
