@@ -47,11 +47,12 @@ sqlite_vss
 **/vdb/*
 **/__pycache__
 **/upload_doc/*
+**/output_doc/*
 **/db_schema/*
 **/whl_py_dir
 **/vdb_idx_*
 **/output_doc
 **/*.xls
 **/*.xlsx
-**/output_doc/*.md
+
 tests/**/*.md
