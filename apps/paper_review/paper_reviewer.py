@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
-import os
 import json
 import time
 from typing import List, Dict
@@ -15,7 +14,6 @@ import logging.config
 from common.docx_meta_util import update_process_info_by_task_id, save_output_file_path_by_task_id
 from common.sys_init import init_yml_cfg
 from common.xlsx_md_util import convert_xlsx_to_md
-from common.xlsx_util import convert_md_to_xlsx
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -28,10 +26,6 @@ MAX_SECTION_LENGTH = 3000  # 3000 字符
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 urllib3.disable_warnings(category=InsecureRequestWarning)
-
-
-
-
 
 class PaperReviewer:
     def __init__(self, uid: int, task_id: int, review_topic:str, criteria_markdown_data: str, review_file_path: str, sys_cfg: dict):
@@ -61,50 +55,14 @@ class PaperReviewer:
         """
         for attempt in range(max_retries):
             try:
-                prompt = f"""
-作为 {self.review_topic} 评审专家，请严格按照评审标准对以下章节进行专业评审：
-
-【章节标题】
-{section_title}
-
-【章节内容】
-{section_content}
-
-【评审标准】
-{self.criteria_markdown_data}
-
-请从以下维度进行专业评审：
-1. 内容完整性 - 是否涵盖必要要素，有无重大遗漏
-2. 论证逻辑性 - 论点论据是否合理，逻辑是否严密
-3. 数据充分性 - 数据是否详实，支撑是否有力
-4. 专业规范性 - 是否符合行业规范和标准要求
-5. 风险识别度 - 风险分析是否全面客观
-
-请严格按照以下JSON格式返回评审结果：
-{{
-    "score": 85,
-    "strengths": ["优点1", "优点2"],
-    "issues": ["问题1", "问题2", "问题3"],
-    "suggestions": ["建议1", "建议2"],
-    "risk_level": "低/中/高"
-}}
-
-请确保：
-- score为0-100的整数
-- strengths、issues、suggestions为数组格式
-- 问题描述要具体明确
-- 建议要具有可操作性
-"""
+                template = self.sys_cfg['prompts']['section_review_msg']
+                prompt = template.format(
+                    review_topic=self.review_topic,
+                    section_title=section_title,
+                    section_content=section_content,
+                    criteria=self.criteria_markdown_data
+                )
                 result = self.call_llm_api(prompt)
-                # # 暂时用模拟数据
-                # result = {
-                #     "score": 75 + (attempt * 5),  # 模拟数据
-                #     "strengths": ["结构清晰", "数据详实"],
-                #     "issues": ["缺乏最新行业数据", "风险评估不够全面"],
-                #     "suggestions": ["补充2024年行业数据", "增加敏感性分析"],
-                #     "risk_level": "中"
-                # }
-
                 # 验证结果格式
                 self._validate_review_result(result)
                 return result
@@ -115,6 +73,8 @@ class PaperReviewer:
                     # 最后一次尝试失败，返回基础评审结果
                     return self._get_fallback_result(section_title, str(e))
                 time.sleep(1)  # 重试前等待
+        logger.error("nothing_return_here, pay attention.")
+        return {}
 
     def call_llm_api(self, prompt: str) -> dict:
         """直接调用LLM API，支持流式输出"""
@@ -239,34 +199,12 @@ class PaperReviewer:
                     'risk_level': result.get('risk_level', '未知')
                 }
                 section_summaries.append(summary)
-
-            prompt = f"""
-    作为资深评审专家，请基于各章节评审结果，对整篇 {self.review_topic} 进行整体评估：
-
-    【各章节评审概要】
-    {json.dumps(section_summaries, ensure_ascii=False, indent=2)}
-
-    【评审标准】
-    {self.criteria_markdown_data}
-
-    请从以下维度进行整体评估：
-    1. 整体逻辑连贯性 - 各章节之间逻辑是否连贯，论证是否形成完整链条
-    2. 前后论证一致性 - 前后数据、结论是否一致，有无矛盾之处
-    3. 风险评估全面性 - 整体风险识别是否全面，应对措施是否有效
-    4. 经济效益合理性 - 经济效益分析是否合理可信
-    5. 报告整体质量 - 综合各章节评分给出整体评价
-
-    请按照以下JSON格式返回评审结果：
-    {{
-        "overall_score": 85,
-        "overall_strengths": ["优势1", "优势2"],
-        "overall_issues": ["问题1", "问题2"],
-        "key_recommendations": ["建议1", "建议2"],
-        "review_summary": "整体评价摘要"
-    }}
-
-    请确保返回有效的JSON格式数据。
-    """
+            template = self.sys_cfg['prompts']['paper_review_msg']
+            prompt = template.format(
+                review_topic = self.review_topic,
+                section_summary = json.dumps(section_summaries, ensure_ascii=False, indent=2),
+                criteria = self.criteria_markdown_data,
+            )
             overall_result = self.call_llm_api(prompt)
 
             # 添加结果验证和降级处理
@@ -435,42 +373,28 @@ class PaperReviewer:
             single_title = md['title']
             single_criteria = md['content']
             logger.debug(f"get_single_criteria_md, \n{single_criteria}")
-            single_report = self.fill_single_md_table(final_report_txt, single_title, single_criteria)
+            single_report = self.fill_md_table(final_report_txt, single_title, single_criteria)
             all_txt = all_txt  + "\n\n" + single_report
         return all_txt
 
-    def fill_single_md_table(self, final_report_txt: str, single_criteria_title: str, single_criteria: str) -> str:
+    def fill_md_table(self, conclusion: str, single_criteria_title: str, single_criteria: str) -> str:
         """
         使用大语言模型将最终评审结果自动填写到标准格式的评审表格中
 
         Args:
-            final_report_txt: 生成的最终评审报告文本
+            conclusion: 生成的最终评审结论
             single_criteria_title: 评审标准中的一个表格的标题
             single_criteria: 评审标准中的一个表格
 
         Returns:
             填充后的格式化评审报告文本
         """
-        prompt = f"""
-        作为专业的 {self.review_topic} 评审专家，请将以下评审结果按照标准评审表格的格式进行填写：
-
-        【标准评审表格格式】
-        {single_criteria}
-
-        【最终评审结果】
-        {final_report_txt}
-
-        请严格按照以下要求进行操作：
-        1. 仔细分析标准评审表格的结构和内容要求
-        2. 从最终评审结果中提取对应的评分、优点、问题、建议等信息
-        3. 将提取的信息准确填写到标准评审表格的相应位置
-        4. 保持表格原有的格式和结构不变
-        5. 对于每个评审项，根据要求填写评分或评审意见
-        6. 评审意见要基于最终评审结果中的具体内容，不能凭空编造
-        7. 整体评分和总结部分也要相应填写
-
-        请直接返回填充完整的标准评审表格内容，保持原有的Markdown表格格式。
-        """
+        template = self.sys_cfg['prompts']['fill_md_table_msg']
+        prompt = template.format(
+            review_topic = self.review_topic,
+            criteria=single_criteria,
+            conclusion=conclusion,
+        )
         try:
             logger.info(f"开始使用LLM将评审结果填充到标准格式表格中, title={single_criteria_title}")
             # 调用大语言模型API
@@ -484,12 +408,12 @@ class PaperReviewer:
                 return filled_report
             else:
                 logger.warning("LLM返回的格式化报告不完整，返回原始报告")
-                return final_report_txt
+                return conclusion
 
         except Exception as e:
             logger.error(f"使用LLM填充格式化报告失败: {str(e)}")
         # 如果填充失败，返回原始报告
-        return final_report_txt
+        return conclusion
 
     def call_llm_api_for_formatting(self, prompt: str, max_retries: int = 2) -> str:
         """专门用于格式化报告的大语言模型调用，增加重试机制"""
@@ -555,24 +479,24 @@ class PaperReviewer:
                     error_msg = f"LLM格式化API调用失败: {response.status_code} - {response.text}"
                     logger.error(error_msg)
                     if attempt == max_retries - 1:
-                        return None
+                        return ""
                     time.sleep(2)  # 重试前等待
 
             except requests.exceptions.Timeout:
                 logger.warning(f"第{attempt + 1}次调用LLM API超时")
                 if attempt == max_retries - 1:
                     logger.error("所有重试尝试均超时")
-                    return None
+                    return ""
                 time.sleep(3)  # 超时后等待更长时间
 
             except Exception as e:
                 error_msg = f"LLM格式化API调用异常 (第{attempt + 1}次): {str(e)}"
                 logger.error(error_msg)
                 if attempt == max_retries - 1:
-                    return None
+                    return ""
                 time.sleep(2)
 
-        return None
+        return ""
     @staticmethod
     def _is_valid_filled_report(report: str) -> bool:
         """
