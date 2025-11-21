@@ -182,7 +182,7 @@ def save_para_task(uid: int, task_id: int, tasks: list):
             heading_str = str(task['current_heading'])
         heading = heading_str.replace("'", "''")
         unique_key = task['unique_key'].replace("'", "''")
-        paragraph_prompt = task['paragraph_prompt'].replace("'", "''")
+        para_text = task['para_text'].replace("'", "''")
         user_comment = task['user_comment'].replace("'", "''")
         current_sub_title = task['current_sub_title'].replace("'", "''")
         namespaces = task.get('namespaces', '')
@@ -194,7 +194,7 @@ def save_para_task(uid: int, task_id: int, tasks: list):
         # 生成类似格式（UTC时间）
         create_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
         value_item = (f"({uid}, {task_id},{task['para_id']},'{heading}','{unique_key}',"
-                      f"'{paragraph_prompt}','{user_comment}','{current_sub_title}',"
+                      f"'{para_text}','{user_comment}','{current_sub_title}',"
                       f"'{namespaces}','{create_time}')")  # 注意 namespaces 和 create_time 之间用逗号分隔
 
         if my_values:
@@ -203,23 +203,26 @@ def save_para_task(uid: int, task_id: int, tasks: list):
             my_values = value_item
 
     sql = (f"insert into docx_para_info (uid, task_id, para_id, heading, unique_key, "
-           f"paragraph_prompt, user_comment, current_sub_title, namespaces, create_time) values {my_values}")
+           f"para_text, user_comment, current_sub_title, namespaces, create_time) values {my_values}")
     logger.debug(f"save_docx_para_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.debug(f"save_docx_para_info_dt, {my_dt}")
     return my_dt
 
-def update_para_info(task_id: int, para_id: int, gen_txt: str):
+def update_para_info(task_id: int, para_id: int, gen_txt: str, word_count: int, contains_mermaid: int):
     """
     保存用户文档生成任务的系统子任务清单,,一个文档写作任务的任务ID task_id 对应多个 docx_para_info 记录
     :param task_id: process task id
     :param para_id: 文档段落 ID
     :param gen_txt: 当前段落生成的文本，后续将会将文本插入  para_id 之后
+    :param word_count: 生成文本的字数
+    :param contains_mermaid: 是否包含mermaid脚本
     :return:
     """
     if not task_id or not para_id or not gen_txt:
         raise RuntimeError(f"param_null_err, {task_id}, {para_id}, {gen_txt}")
-    sql = f"update docx_para_info set gen_txt = '{gen_txt}', status=1 where task_id = {task_id} and para_id = {para_id} limit 1"
+    sql = (f"update docx_para_info set gen_txt = '{gen_txt}', word_count= {word_count}, "
+       f"contains_mermaid={contains_mermaid}, status=1 where task_id = {task_id} and para_id = {para_id} limit 1")
     logger.info(f"update_docx_para_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"update_docx_para_info_dt, {my_dt}")
@@ -238,6 +241,34 @@ def get_para_info(task_id: int, para_id: int=-1)-> list:
         sql = f"select * from docx_para_info where task_id = {task_id}"
     else:
         sql = f"select * from docx_para_info where task_id = {task_id} and para_id = {para_id} limit 1"
+    logger.info(f"get_para_info_sql, {sql}")
+    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"get_para_info_dt, {my_dt}")
+    return my_dt
+
+def get_finished_para_list(task_id: int)-> list:
+    """
+    查询用户文档生成需求的并行子任务清单,一个文档写作任务的任务ID task_id 对应多个para_info
+    :param task_id: 文档处理的任务 ID
+    :return:
+    """
+    if not task_id:
+        raise RuntimeError(f"param_null_err, {task_id}")
+    sql = f"select * from docx_para_info where task_id = {task_id} and status = 1 order by para_id desc"
+    logger.info(f"get_para_info_sql, {sql}")
+    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"get_para_info_dt, {my_dt}")
+    return my_dt
+
+def count_mermaid_para(task_id: int)-> list:
+    """
+    查询用户文档生成需求的并行子任务清单,一个文档写作任务的任务ID task_id 对应多个para_info
+    :param task_id: 文档处理的任务 ID
+    :return:
+    """
+    if not task_id:
+        raise RuntimeError(f"param_null_err, {task_id}")
+    sql = f"select count(1) from docx_para_info where task_id = {task_id} and contains_mermaid = 1"
     logger.info(f"get_para_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"get_para_info_dt, {my_dt}")

@@ -9,10 +9,12 @@ CREATE TABLE "docx_para_info" (
 	"gen_txt"	TEXT,
 	"status"	INTEGER DEFAULT 0,
 	"unique_key"	TEXT,
-	"paragraph_prompt"	TEXT,
+	"para_text"	TEXT,
 	"user_comment"	TEXT,
 	"current_sub_title"	TEXT,
 	"namespaces"	TEXT,
+	"contains_mermaid"	INTEGER NOT NULL DEFAULT 0,
+	"word_count"	INTEGER NOT NULL DEFAULT 0,
 	"create_time"	TEXT NOT NULL,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );

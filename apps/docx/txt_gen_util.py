@@ -58,14 +58,14 @@ def gen_docx_outline_stream(uid:int, doc_type: str, doc_title: str, keywords: st
         logger.info("gen_outline_finish, dispose resources")
         dispose(model)
 
-def gen_txt(uid: int, write_context: str, references: str, paragraph_prompt: str, user_comment: str, catalogue: str,
+def gen_txt(uid: int, write_context: str, references: str, para_text: str, user_comment: str, catalogue: str,
             current_sub_title: str, cfg: dict, max_retries=6) -> str | None:
     """
     根据提供的三级目录、参考资料，以及每个章节的具体文本写作要求，输出文本
     :param uid:                 用户请求ID
     :param write_context:       整体的写作背景
     :param references:          可供参考的样例子文本
-    :param paragraph_prompt:    局部章节文本的写作要求
+    :param para_text:           局部章节文本的写作要求
     :param user_comment:        用户添加的批注文本
     :param catalogue:           整个文档的三级目录
     :param current_sub_title:   当前写作章节的目录标题
@@ -100,7 +100,7 @@ def gen_txt(uid: int, write_context: str, references: str, paragraph_prompt: str
                 "catalogue": catalogue,
                 "current_sub_title": current_sub_title,
                 "references": references,
-                "paragraph_prompt": paragraph_prompt,
+                "paragraph_prompt": para_text,
                 "user_comment": user_comment,
             }
             # 计算输入 token 数量
@@ -109,7 +109,7 @@ def gen_txt(uid: int, write_context: str, references: str, paragraph_prompt: str
                 catalogue=catalogue,
                 current_sub_title=current_sub_title,
                 references=references,
-                paragraph_prompt=paragraph_prompt,
+                paragraph_prompt=para_text,
                 user_comment=user_comment,
             )
             # logger.info(f"{uid}, start_calc_txt_token, {input_text}")
@@ -131,7 +131,7 @@ def gen_txt(uid: int, write_context: str, references: str, paragraph_prompt: str
             if attempt < max_retries:
                 continue
             dispose(model)
-            logger.exception(f"all_retries_exhausted_task_gen_txt_failed, {paragraph_prompt}")
+            logger.exception(f"all_retries_exhausted_task_gen_txt_failed, {para_text}")
             raise last_exception
     return None
 
