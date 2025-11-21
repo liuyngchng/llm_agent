@@ -110,20 +110,20 @@ def save_write_doc_ctx(uid: int, task_id: int, doc_ctx: str):
     logger.debug(f"{uid}, update_docx_file_info_docx_ctx_dt, {my_dt}")
     return my_dt
 
-def save_output_doc_path(uid: int, task_id: int, output_doc_path: str):
+def save_output_doc_path(uid: int, task_id: int, output_file_path: str):
     """
     更新docx文件处理任务的文档写作背景信息
     :param uid: user id
     :param task_id: process task id
-    :param output_doc_path: 写作输出文档的物理磁盘绝对路径
+    :param output_file_path: 写作输出文档的物理磁盘绝对路径
     :return:
     """
-    if not uid or not task_id or not output_doc_path:
-        raise RuntimeError(f"{uid}, param_null_err, {task_id}, {output_doc_path}")
-    sql = f"update docx_file_info set output_doc_path = '{output_doc_path}' where task_id = {task_id} limit 1"
+    if not uid or not task_id or not output_file_path:
+        raise RuntimeError(f"{uid}, param_null_err, {task_id}, {output_file_path}")
+    sql = f"update docx_file_info set output_file_path = '{output_file_path}' where task_id = {task_id} limit 1"
     logger.debug(f"{uid}, update_docx_file_info_docx_output_doc_path_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-    logger.debug(f"{uid}, update_docx_file_info_docx_output_doc_path_dt, {my_dt}")
+    logger.debug(f"{uid}, update_docx_file_info_docx_output_file_path_dt, {my_dt}")
     return my_dt
 
 def save_write_doc_vdb_dir(uid: int, task_id: int, vdb_dir: str):
@@ -181,11 +181,9 @@ def save_para_task(task_id: int, tasks: list):
             heading_str = str(task['current_heading'])
         heading = heading_str.replace("'", "''")
         unique_key = task['unique_key'].replace("'", "''")
-        write_context = task['write_context'].replace("'", "''")
         paragraph_prompt = task['paragraph_prompt'].replace("'", "''")
         user_comment = task['user_comment'].replace("'", "''")
         current_sub_title = task['current_sub_title'].replace("'", "''")
-        vdb_dir = task['vdb_dir'].replace("'", "''")
         namespaces = task.get('namespaces', '')
         if namespaces is None:
             namespaces = ''
@@ -195,16 +193,16 @@ def save_para_task(task_id: int, tasks: list):
         # 生成类似格式（UTC时间）
         create_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
         value_item = (f"({task_id},{task['para_id']},'{heading}','{unique_key}',"
-                      f"'{write_context}','{paragraph_prompt}','{user_comment}','{current_sub_title}',"
-                      f"'{vdb_dir}','{namespaces}','{create_time}')")  # 注意 namespaces 和 create_time 之间用逗号分隔
+                      f"'{paragraph_prompt}','{user_comment}','{current_sub_title}',"
+                      f"'{namespaces}','{create_time}')")  # 注意 namespaces 和 create_time 之间用逗号分隔
 
         if my_values:
             my_values = f"{my_values}, {value_item}"
         else:
             my_values = value_item
 
-    sql = (f"insert into docx_para_info (task_id, para_id, heading, unique_key, write_context, "
-           f"paragraph_prompt, user_comment, current_sub_title, vdb_dir, namespaces, create_time) values {my_values}")
+    sql = (f"insert into docx_para_info (task_id, para_id, heading, unique_key, "
+           f"paragraph_prompt, user_comment, current_sub_title, namespaces, create_time) values {my_values}")
     logger.debug(f"save_docx_para_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.debug(f"save_docx_para_info_dt, {my_dt}")

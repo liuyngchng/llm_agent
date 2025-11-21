@@ -591,9 +591,9 @@ def process_doc(uid: int, task_id: int):
             vdb_info = None
         if vdb_info:
             my_vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_info[0]['id']}"
+            save_write_doc_vdb_dir(uid, task_id, my_vdb_dir)
         else:
             my_vdb_dir = ""
-        save_write_doc_vdb_dir(uid, task_id, my_vdb_dir)
         logger.info(f"{uid}, {task_id}, my_vdb_dir_for_gen_doc, {my_vdb_dir}")
         generator = DocxEditor()
         input_file_path = file_info[0]['input_file_path']
