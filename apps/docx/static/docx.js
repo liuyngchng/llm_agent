@@ -158,8 +158,8 @@ function formatFileSize(bytes) {
 async function uploadTemplateFile(file) {
     const outlineContainer = document.getElementById('outlineContainer');
     const uid = document.getElementById('uid').value;
-    const docType = document.getElementById('docTypeInput').value;
-    const docTitle = document.getElementById('docTitle').value;
+    const doc_type = document.getElementById('docTypeInput').value;
+    const doc_title = document.getElementById('docTitle').value;
     const keywords = document.getElementById('keywords').value;
     const vbd_id = document.getElementById('knowledgeBase').value
     outlineContainer.innerHTML = `
