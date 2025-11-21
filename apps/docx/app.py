@@ -19,7 +19,8 @@ from flask import (Flask, request, jsonify, send_from_directory,
 from apps.docx.docx_cmt_util import get_comments_dict
 from apps.docx.txt_gen_util import gen_docx_outline_stream
 from apps.docx.docx_editor import DocxEditor
-from common.docx_meta_util import save_docx_file_info
+from common.docx_meta_util import save_docx_file_info, save_write_doc_ctx, save_write_doc_vdb_dir, update_process_info, \
+    save_output_doc_path
 from common.docx_para_util import gen_docx_template_with_outline_txt, get_outline_txt
 from common import my_enums, statistic_util,docx_meta_util
 from common.my_enums import AppType
@@ -33,6 +34,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 UPLOAD_FOLDER = 'upload_doc'
+OUTPUT_DIR = 'output_doc'
 DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 JSON_MIME_TYPE = 'application/json; charset=utf-8'
 TASK_EXPIRE_TIME_MS = 7200 * 1000  # 任务超时时间，默认2小时
@@ -562,23 +564,26 @@ def process_doc(uid: int, task_id: int):
     file_info = docx_meta_util.get_docx_file_info(task_id)
     if not file_info or not file_info[0]:
         raise FileNotFoundError(f"docx_file_info_not_found_for_task_id, {task_id}")
-    input_file_path = file_info[0]['input_file_path']
-    doc_outline = file_info[0]['doc_outline']
-    doc_title = file_info[0]['doc_title']
-    doc_type = file_info[0]['doc_type']
-    keywords = file_info[0]['keywords']
+
+
     vbd_id = file_info[0]['vdb_id']
     is_include_para_txt = file_info[0]['is_include_para_txt']
     generator = None
     try:
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始解析文档结构...", 0)
+        update_process_info(uid, task_id, "开始解析文档结构...", 0)
         output_file_name = f"output_{task_id}.docx"
-        output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
-        logger.info(f"{uid},{task_id}, doc_output_file_name, {output_file_name}")
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始处理文档...")
+        output_file = os.path.join(OUTPUT_DIR, output_file_name)
+        abs_output_file_path = os.path.abspath(output_file)
+        save_output_doc_path(uid, task_id, abs_output_file_path)
+        logger.info(f"{uid},{task_id}, abs_output_file_path, {abs_output_file_path}")
+        update_process_info(uid, task_id, "开始处理文档...")
+        doc_title = file_info[0]['doc_title']
+        doc_type = file_info[0]['doc_type']
+        keywords = file_info[0]['keywords']
         doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
         if keywords:
             doc_ctx = doc_ctx + f", 其他写作要求是 {keywords}"
+        save_write_doc_ctx(uid, task_id, doc_ctx)
         if vbd_id:
             vdb_info = VdbMeta.get_vdb_by_id(vbd_id)
             logger.info(f"{uid}, {task_id}, vdb_info: {vdb_info}")
@@ -588,29 +593,24 @@ def process_doc(uid: int, task_id: int):
             my_vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_info[0]['id']}"
         else:
             my_vdb_dir = ""
+        save_write_doc_vdb_dir(uid, task_id, my_vdb_dir)
         logger.info(f"{uid}, {task_id}, my_vdb_dir_for_gen_doc, {my_vdb_dir}")
         generator = DocxEditor()
-
+        input_file_path = file_info[0]['input_file_path']
         para_comment_dict = get_comments_dict(input_file_path)
         if para_comment_dict:
             logger.info(f"{uid}, {task_id}, fill_doc_with_comment, {input_file_path}")
             logger.debug(f"{uid}, {task_id}, fill_doc_with_comment, {input_file_path}， comment_dict, {para_comment_dict}")
-            generator.modify_doc_with_comment(
-                uid, task_id, doc_ctx, input_file_path, doc_outline, my_vdb_dir, my_cfg, output_file, para_comment_dict
-            )
+            generator.modify_doc_with_comment(uid, task_id, my_cfg, file_info[0], para_comment_dict)
         elif is_include_para_txt:
             logger.info(f"{uid}, {task_id}, fill_doc_with_para_content, {input_file_path}")
-            generator.fill_doc_with_prompt(
-                uid, task_id, doc_ctx, input_file_path, doc_outline, my_vdb_dir, my_cfg, output_file
-            )
+            generator.fill_doc_with_prompt(uid, task_id, my_cfg, file_info[0])
         else:
             logger.info(f"{uid}, {task_id}, fill_doc_without_para_content, {input_file_path}")
-            generator.fill_doc_without_prompt(
-                uid, task_id, doc_ctx, input_file_path, doc_outline, my_vdb_dir, my_cfg, output_file
-            )
+            generator.fill_doc_without_prompt(uid, task_id, my_cfg, file_info[0])
         generator.shutdown()
     except Exception as e:
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, f"任务处理失败: {str(e)}")
+        docx_meta_util.update_process_info(uid, task_id, f"任务处理失败: {str(e)}")
         logger.exception(f"{uid}, {task_id}, fill_doc_err", e)
     finally:
         # 确保资源被释放

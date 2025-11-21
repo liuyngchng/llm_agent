@@ -336,11 +336,11 @@ def fill_mt_report_with_txt(uid: int, doc_type: str, doc_title: str, keywords: s
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "
                 f"task_id: {task_id}, file_name: {file_name}")
     try:
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始解析模板文档结构...", 0)
+        docx_meta_util.update_process_info(uid, task_id, "开始解析模板文档结构...", 0)
         full_file_name = os.path.join(UPLOAD_FOLDER, file_name)
         catalogue = extract_catalogue(full_file_name)
         docx_meta_util.save_outline_by_task_id(task_id, catalogue)
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始处理文档...")
+        docx_meta_util.update_process_info(uid, task_id, "开始处理文档...")
         doc_all_txt = get_doc_content(full_file_name)
         logger.info(f"doc_all_txt={doc_all_txt}")
         doc_field = get_template_field(uid, my_cfg, doc_all_txt)
@@ -350,9 +350,9 @@ def fill_mt_report_with_txt(uid: int, doc_type: str, doc_title: str, keywords: s
         output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
         logger.info(f"doc_output_file_name_for_task_id:{task_id} {output_file_name}")
         insert_para_to_doc(full_file_name, output_file, fill_para_txt_dict)
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, "文档处理完毕", 100)
+        docx_meta_util.update_process_info(uid, task_id, "文档处理完毕", 100)
     except Exception as e:
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, f"任务处理失败: {str(e)}")
+        docx_meta_util.update_process_info(uid, task_id, f"任务处理失败: {str(e)}")
         logger.exception("文档生成异常", e)
 
 # 创建应用实例

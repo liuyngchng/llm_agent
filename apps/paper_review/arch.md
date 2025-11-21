@@ -191,7 +191,7 @@ class MetaDataManager:
     - save_docx_file_info(): 保存任务元数据
     - get_docx_file_info(): 获取任务信息
     - get_user_task_list(): 获取用户任务列表
-    - update_process_info_by_task_id(): 更新处理进度
+    - update_process_info(): 更新处理进度
     - save_output_file_path_by_task_id(): 保存输出文件路径
 ```
 ### 3.5.2 数据库设计  

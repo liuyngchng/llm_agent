@@ -16,6 +16,8 @@ CREATE TABLE "docx_file_info" (
 	"word_count"	INTEGER DEFAULT 0,
 	"vdb_id"	INTEGER,
 	"is_include_para_txt"	INTEGER,
+	"doc_ctx"	TEXT,
+	"vdb_dir"	TEXT,
 	"create_time"	TEXT,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );

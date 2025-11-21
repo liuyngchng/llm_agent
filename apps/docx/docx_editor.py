@@ -120,58 +120,53 @@ class DocxEditor:
         except:
             return "未知"
 
-    def fill_doc_with_prompt(self, uid:int, task_id: int, doc_ctx: str, input_file: str,
-                             catalogue: str, vdb_dir: str, sys_cfg: dict, output_file: str) -> str:
+    def fill_doc_with_prompt(self, uid:int, task_id: int, sys_cfg: dict, file_info: dict) -> str:
         """
         处理有目录并且有段落写作要求的 Word 文档
         :param uid:             user id
         :param task_id:         任务Id
-        :param doc_ctx:         用户的文档提示语
-        :param input_file:      用户上传的 Word 文档路径（或者根据用户的需求生成的仅含有目录的 Word 文档）
-        :param catalogue:       待写作的 Word 文档的目录信息
-        :param vdb_dir:         矢量数据库的路径
         :param sys_cfg:         系统配置参数
-        :param output_file:     生成后输出的文档文件名
+        :param file_info:       docx_file_info 字典
         """
         start_time = time.time() * 1000
+        input_file_path = file_info['input_file_path']
+        output_file_path = file_info['output_file_path']
         try:
-            logger.info(f"{uid}, {task_id}, 开始处理文档 {input_file}")
-            tasks = DocxEditor._gen_doc_with_prompt_task(uid, task_id, input_file, doc_ctx, catalogue,
-                                                         vdb_dir, sys_cfg)
-            if not tasks:
+            logger.info(f"{uid}, {task_id}, 开始处理文档 {input_file_path}")
+            task_count = DocxEditor._gen_doc_with_prompt_task(uid, task_id, file_info, sys_cfg)
+            if task_count == 0:
                 final_info = f"未检测到需要生成的文本段落"
-                docx_meta_util.update_process_info_by_task_id(uid, task_id, final_info, 100)
+                docx_meta_util.update_process_info(uid, task_id, final_info, 100)
                 import shutil
-                shutil.copy2(input_file, output_file)
-                logger.info(f"{uid}, {task_id}, {final_info}, {input_file}, 输出文件 {output_file}")
+                shutil.copy2(input_file_path, output_file_path)
+                logger.info(f"{uid}, {task_id}, {final_info}, {input_file_path}, 输出文件 {output_file_path}")
                 return final_info
 
-            initial_info = f"需处理 {len(tasks)} 个段落，计划启动 {self.executor._max_workers} 个任务"
+            initial_info = f"需处理 {task_count} 个段落，计划启动 {self.executor._max_workers} 个任务"
             logger.info(f"{uid}, {task_id}, {initial_info}")
-            docx_meta_util.update_process_info_by_task_id(uid, task_id, initial_info, 0)
+            docx_meta_util.update_process_info(uid, task_id, initial_info, 0)
 
-            doc_gen_results = self._submit_tasks(uid, task_id, tasks, start_time, len(tasks), include_mermaid=True)
-            success = DocxEditor._insert_para_to_doc(input_file, output_file, doc_gen_results)
+            doc_gen_results = self._submit_tasks(uid, task_id, start_time, include_mermaid=True)
+            success = DocxEditor._insert_para_to_doc(input_file_path, output_file_path, doc_gen_results)
             if not success:
                 error_info = "文档更新失败"
                 logger.error(f"{uid}, {task_id}, {error_info}")
-                docx_meta_util.update_process_info_by_task_id(uid, task_id, error_info, 100)
+                docx_meta_util.update_process_info(uid, task_id, error_info, 100)
                 return error_info
-            logger.info(f"{uid}, {task_id}, 保存文档完成，{output_file}, 耗时 {get_elapsed_time(start_time)}")
-            docx_meta_util.save_output_file_path_by_task_id(task_id, output_file)
+            logger.info(f"{uid}, {task_id}, 保存文档完成，{output_file_path}, 耗时 {get_elapsed_time(start_time)}")
             # 计算详细统计信息
             success_count = len([r for r in doc_gen_results.values() if r.get('success')])
-            failed_count = len(tasks) - success_count
+            failed_count = task_count - success_count
             # 处理Mermaid图表
             img_count = 0
             try:
                 logger.info(f"{uid}, {task_id}, 开始处理文档中的Mermaid图表")
                 current_info = docx_meta_util.get_docx_file_info(task_id)
                 process_info = f"{current_info[0]['process_info']}, 开始处理文档配图"
-                docx_meta_util.update_process_info_by_task_id(uid, task_id, process_info,95)
+                docx_meta_util.update_process_info(uid, task_id, process_info, 95)
                 mermaid_process_info = DocxEditor._submit_mermaid_task(
                     uid, task_id,
-                    output_file,
+                    output_file_path,
                     sys_cfg['api']['mermaid_api_uri'],
                     doc_gen_results
                 )
@@ -184,32 +179,33 @@ class DocxEditor:
                 failed_count += 1
                 logger.error(f"{uid}, {task_id}, Mermaid图表处理失败: {str(e)}")
             total_time = get_elapsed_time(start_time)
-            final_info = (f"文档处理完成，共执行 {len(tasks)} 个文本生成任务，"
+            final_info = (f"文档处理完成，共执行 {task_count} 个文本生成任务，"
                           f"成功生成 {success_count} 段文本和 {img_count} 张配图，失败任务 {failed_count} 个，{total_time}")
             if failed_count > 0:
                 final_info += f"，失败任务的原因可在日志中查看具体的失败原因"
-            docx_meta_util.update_process_info_by_task_id(uid, task_id, final_info, 100)
-            logger.info(f"{uid}, {task_id}, {final_info}，输出文件: {output_file}")
+            docx_meta_util.update_process_info(uid, task_id, final_info, 100)
+            logger.info(f"{uid}, {task_id}, {final_info}，输出文件: {output_file_path}")
             return final_info
         except Exception as e:
             error_info = f"文档生成过程出现异常: {str(e)}"
             logger.error(f"{uid}, {task_id}, {error_info}")
-            docx_meta_util.update_process_info_by_task_id(uid, task_id, error_info, 100)
+            docx_meta_util.update_process_info(uid, task_id, error_info, 100)
             return error_info
 
     @staticmethod
-    def _gen_doc_with_prompt_task(uid: int, task_id: int, input_doc: str, doc_ctx: str,
-                                  target_doc_catalogue: str, vdb_dir: str, sys_cfg: dict) -> int:
+    def _gen_doc_with_prompt_task(uid: int, task_id: int, file_info:dict, sys_cfg: dict) -> int:
         """
         生成含有目录和段落写作指导的 docx 文档的各个段落文本生成任务，返回总任务数
         :param uid: user id
         :param task_id: doc task id
-        :t
+        :param file_info: docx_file_info
+        :param sys_cfg: 系统配置
+        return 生成的任务数量
         """
         logger.info(f"{uid}, {task_id}, start_gen_doc_task")
         tasks = []
         current_heading = []
-        doc = Document(input_doc) # 读取docx文档
+        doc = Document(file_info['input_file_path'])
         para_count = len(doc.paragraphs)
         for index, para in enumerate(doc.paragraphs):
             refresh_current_heading(para, current_heading)
@@ -219,22 +215,16 @@ class DocxEditor:
                 continue
             task_key =  f"para_{index}"
             task = {
-                # 'task_id': task_id,
                 'unique_key': task_key,
-                'write_context': doc_ctx,
                 'paragraph_prompt': para.text,
                 'user_comment': "",
-                'catalogue': target_doc_catalogue,
                 'current_sub_title': current_heading[0] if current_heading else "",
                 'current_heading': current_heading.copy(),
-                # 'sys_cfg': sys_cfg,
-                'vdb_dir': vdb_dir,
                 'para_id': index,                #  段落索引
-                # 'gen_txt': "",                      # 生成的文本，后续任务添加内容
             }
             tasks.append(task)
         process_info = f"扫描了 {para_count} 段文本， 已创建 {len(tasks)} 个批处理任务"
-        docx_meta_util.update_process_info_by_task_id(uid, task_id, process_info)
+        docx_meta_util.update_process_info(uid, task_id, process_info)
         logger.info(f"{uid}, {task_id}, start_save_doc_task")
         docx_meta_util.save_para_task(task_id, tasks)
         logger.info(f"{uid}, {task_id}, gen_doc_task_count, {len(tasks)}")
@@ -299,7 +289,7 @@ class DocxEditor:
                     progress_info = f"正在处理第 {completed}/{actual_total_tasks} 个任务，{elapsed_time}，剩余{remaining_str}"
                 else:
                     progress_info = f"正在处理第 {completed}/{actual_total_tasks} 个任务，{elapsed_time}"
-                docx_meta_util.update_process_info_by_task_id(uid, task_id, progress_info, percent)
+                docx_meta_util.update_process_info(uid, task_id, progress_info, percent)
                 last_update_time = current_time
         return results
 
@@ -358,7 +348,7 @@ class DocxEditor:
             raise
 
     @staticmethod
-    def _submit_mermaid_task(uid: int, task_id: int, doc_path: str, mermaid_api_uri: str,
+    def _submit_mermaid_task(uid: int, task_id: int, output_file_info: str, mermaid_api_uri: str,
         results: Dict[str, Dict]) -> Dict[str, Any]:
         """
         提交处理文档中的Mermaid script 脚本的任务
@@ -374,10 +364,10 @@ class DocxEditor:
                     mermaid_count += 1
                     logger.debug(f"{uid}, {task_id}, 检测到Mermaid内容: {result.get('generated_text', '')[:100]}...")
             if has_mermaid and mermaid_count > 0:
-                logger.info(f"{uid}, {task_id}, 检测到文档包含Mermaid图表 {mermaid_count}，开始处理: {doc_path}")
+                logger.info(f"{uid}, {task_id}, 检测到文档包含Mermaid图表 {mermaid_count}，开始处理: {output_file_info}")
                 mermaid_instance = MermaidRenderer(kroki_url=mermaid_api_uri)
-                img_count = mermaid_instance.batch_process_mermaid_in_docx(task_id, doc_path)
-                logger.info(f"{uid}, {task_id}, 文档包含Mermaid图表处理完成: {doc_path}")
+                img_count = mermaid_instance.batch_process_mermaid_in_docx(task_id, output_file_info)
+                logger.info(f"{uid}, {task_id}, 文档包含Mermaid图表处理完成: {output_file_info}")
                 return {
                     'success': True,
                     'mermaid_count': mermaid_count,
@@ -385,7 +375,7 @@ class DocxEditor:
                     'img_count': img_count,
                 }
             else:
-                logger.info(f"{uid}, {task_id}, 文档未包含Mermaid图表，跳过处理: {doc_path}")
+                logger.info(f"{uid}, {task_id}, 文档未包含Mermaid图表，跳过处理: {output_file_info}")
                 return {
                     'success': True,
                     'mermaid_count': 0,
@@ -444,59 +434,55 @@ class DocxEditor:
             logger.exception(f"使用段落索引更新文档失败: input_file={input_doc}, output_doc={output_doc}")
             return False
 
-    def modify_doc_with_comment(self, uid: int, task_id: int, doc_ctx: str, input_file: str, catalogue: str,
-         vdb_dir: str, cfg: dict, output_file: str, comments_dict: dict) -> str:
+    def modify_doc_with_comment(self, uid: int, task_id: int, cfg: dict, file_info: dict, comments_dict: dict) -> str:
         """
         处理添加了Word批注的文档,采用直接修改xml的方式修改 word文档，保证与提取批注的方式一致
         :param uid:             用户 ID
         :param task_id:         执行任务的ID
-        :param doc_ctx:         文档写作的背景信息
-        :param input_file:      需要修改的文档路径
-        :param catalogue:       文档的三级目录
-        :param vdb_dir:         向量数据库的目录
         :param cfg:             系统配置，用于使用大模型的能力
-        :param output_file:     输出文档的文件名
+        :param file_info:       docx_file_info 字典
         :param comments_dict:   段落ID和段落批注的对应关系字典
         """
-        if not os.path.exists(input_file):
-            error_info = f"输入文件不存在, file_not_exists, {input_file}"
+        input_file_path = file_info['input_file_path']
+        output_file_path = file_info['output_file_path']
+        if not os.path.exists(input_file_path):
+            error_info = f"输入文件不存在, file_not_exists, {input_file_path}"
             logger.error(f"{uid}, {task_id}, {error_info}")
-            docx_meta_util.update_process_info_by_task_id(uid, task_id, error_info, 100)
+            docx_meta_util.update_process_info(uid, task_id, error_info, 100)
             return error_info
         if not comments_dict:
             warning_info = "文件里未找到批注信息, no_comment_found"
-            logger.warning(f"{uid}, {warning_info}, {input_file}")
-            docx_meta_util.update_process_info_by_task_id(uid, task_id, warning_info, 100)
+            logger.warning(f"{uid}, {warning_info}, {input_file_path}")
+            docx_meta_util.update_process_info(uid, task_id, warning_info, 100)
             return warning_info
         logger.debug(f"{uid}, {task_id}, comments_dict: {comments_dict}")
         start_time = time.time() * 1000
         try:
-            info = f"处理带批注的文档 {input_file}，共找到 {len(comments_dict)} 个批注"
+            info = f"处理带批注的文档 {input_file_path}，共找到 {len(comments_dict)} 个批注"
             logger.info(f"{uid}, {task_id}, {info}")
-            docx_meta_util.update_process_info_by_task_id(uid, task_id, info)
+            docx_meta_util.update_process_info(uid, task_id, info)
             tasks = DocxEditor._collect_doc_with_comment_tasks(
-                uid, task_id, input_file, catalogue, doc_ctx, comments_dict, vdb_dir, cfg
+                uid, task_id, comments_dict, cfg, file_info
             )
             if not tasks:
                 final_info = "未找到有效的批注处理任务"
                 logger.info(f"{uid}, {task_id}, {final_info}")
-                docx_meta_util.update_process_info_by_task_id(uid, task_id, final_info, 100)
+                docx_meta_util.update_process_info(uid, task_id, final_info, 100)
                 import shutil
-                shutil.copy2(input_file, output_file)
+                shutil.copy2(input_file_path, output_file_path)
                 return final_info
             initial_info = f"需处理 {len(tasks)} 个批注段落，启动 {self.executor._max_workers} 个任务"
             logger.info(f"{uid}, {task_id}, {initial_info}")
-            docx_meta_util.update_process_info_by_task_id(uid, task_id, initial_info, 0)
+            docx_meta_util.update_process_info(uid, task_id, initial_info, 0)
             docx_meta_util.save_para_task(task_id, tasks)
             doc_gen_results = self._submit_tasks(uid, task_id, tasks, start_time, len(tasks), include_mermaid=True)
-            success = DocxEditor._update_doc_with_comments(uid, task_id, input_file, output_file, doc_gen_results)
+            success = DocxEditor._update_doc_with_comments(uid, task_id, file_info, doc_gen_results)
             if not success:
                 error_info = "XML方式更新文档失败"
                 logger.error(f"{uid}, {task_id}, {error_info}")
-                docx_meta_util.update_process_info_by_task_id(uid, task_id, error_info, 100)
+                docx_meta_util.update_process_info(uid, task_id, error_info, 100)
                 return error_info
-            logger.info(f"{uid}, {task_id}, 保存批注处理文档完成: {output_file}")
-            docx_meta_util.save_output_file_path_by_task_id(task_id, output_file)
+            logger.info(f"{uid}, {task_id}, 保存批注处理文档完成: {output_file_path}")
             # 统计结果
             success_count = len([r for r in doc_gen_results.values() if r.get('success')])
             failed_count = len(tasks) - success_count
@@ -506,9 +492,9 @@ class DocxEditor:
                 logger.info(f"{uid}, {task_id}, 开始处理文档中的Mermaid图表")
                 current_info = docx_meta_util.get_docx_file_info(task_id)
                 process_info = f"{current_info[0]['process_info']}, 开始处理文档配图"
-                docx_meta_util.update_process_info_by_task_id(uid, task_id, process_info,95)
+                docx_meta_util.update_process_info(uid, task_id, process_info, 95)
                 mermaid_process_info = DocxEditor._submit_mermaid_task(
-                    uid, task_id, output_file, cfg['api']['mermaid_api_uri'], doc_gen_results
+                    uid, task_id, output_file_path, cfg['api']['mermaid_api_uri'], doc_gen_results
                 )
                 img_count = mermaid_process_info.get('img_count', 0)
                 docx_meta_util.update_img_count_by_task_id(task_id, img_count)
@@ -523,17 +509,17 @@ class DocxEditor:
                 f"成功生成 {success_count} 段文本和 {img_count} 张配图，失败 {failed_count} 段，{total_time}")
             if failed_count > 0:
                 final_info += "，失败段落可在日志中查看详情"
-            docx_meta_util.update_process_info_by_task_id(uid, task_id, final_info, 100)
-            logger.info(f"{uid}, {task_id}, {final_info}，输出文件: {output_file}")
+            docx_meta_util.update_process_info(uid, task_id, final_info, 100)
+            logger.info(f"{uid}, {task_id}, {final_info}，输出文件: {output_file_path}")
             return final_info
         except Exception as e:
             error_info = f"批注文档处理过程出现异常: {str(e)}"
             logger.error(f"{uid}, {task_id}, {error_info}")
-            docx_meta_util.update_process_info_by_task_id(uid, task_id, error_info, 100)
+            docx_meta_util.update_process_info(uid, task_id, error_info, 100)
             return error_info
 
     @staticmethod
-    def _update_doc_with_comments(uid: int, task_id: int, input_doc: str, output_doc: str, results: Dict[str, Dict]) -> bool:
+    def _update_doc_with_comments(uid: int, task_id: int, file_info: dict, results: Dict[str, Dict]) -> bool:
         """
         使用 XML 方式更新文档中的批注段落的内容
         """
@@ -544,7 +530,7 @@ class DocxEditor:
             # 创建临时目录
             temp_dir = tempfile.mkdtemp()
             # 解压 docx 文件
-            with zipfile.ZipFile(input_doc, 'r') as z:
+            with zipfile.ZipFile(file_info['input_file_path'], 'r') as z:
                 z.extractall(temp_dir)
             # 读取并修改 document.xml
             document_xml_path = os.path.join(temp_dir, 'word/document.xml')
@@ -580,7 +566,7 @@ class DocxEditor:
             tree.write(document_xml_path, encoding='UTF-8', xml_declaration=True)
 
             # 重新打包为 docx
-            with zipfile.ZipFile(output_doc, 'w', zipfile.ZIP_DEFLATED) as z_out:
+            with zipfile.ZipFile(file_info['output_file_path'], 'w', zipfile.ZIP_DEFLATED) as z_out:
                 for root_dir, _, files in os.walk(temp_dir):
                     for file in files:
                         file_path = os.path.join(root_dir, file)
@@ -631,8 +617,8 @@ class DocxEditor:
             return False
 
     @staticmethod
-    def _collect_doc_with_comment_tasks(uid: int, task_id: int, doc_path: str, catalogue: str, doc_ctx: str,
-                                        comments_dict: dict, vdb_dir: str, cfg: dict) -> List[Dict[str, Any]]:
+    def _collect_doc_with_comment_tasks(uid: int, task_id: int,
+            comments_dict: dict, cfg: dict, file_info:dict) -> List[Dict[str, Any]]:
         """
         收集含有批注的文档的并行处理任务清单（XML版本）
         :param task_id, 任务ID
@@ -697,7 +683,7 @@ class DocxEditor:
                         logger.debug(f"{uid}, {task_id}, 创建批注任务: {task['user_comment']}")
                         tasks.append(task)
                         process_info = f"正在处理第 {para_id}/{para_count} 段文本，已创建 {len(tasks)} 个处理任务"
-                        docx_meta_util.update_process_info_by_task_id(uid, task_id, process_info)
+                        docx_meta_util.update_process_info(uid, task_id, process_info)
 
         except Exception as e:
             logger.error(f"{uid}, {task_id}, 解析文档 XML 时出错: {str(e)}", exc_info=True)
@@ -707,26 +693,23 @@ class DocxEditor:
         return tasks
 
 
-    def fill_doc_without_prompt(self, uid: int, task_id: int, doc_ctx: str, input_file: str,
-                                catalogue: str, vdb_dir: str,
-                                sys_cfg: dict, output_file: str) -> str:
+    def fill_doc_without_prompt(self, uid: int, task_id: int, sys_cfg: dict, file_info: dict) -> str:
         """
         处理只有三级目录，没有任何写作要求段落的word文档
         :param uid: user id
         :param task_id: 执行任务的ID
-        :param doc_ctx: 文档写作背景信息
-        :param input_file: 输入的 Word 文档文件的名称
-        :param vdb_dir: 向量数据库的目录
         :param sys_cfg: 系统配置信息
-        :param catalogue: 输入的 Word 文档文件的目录信息
-        :param output_file: 输出文档的文件名
+        :param file_info: docx_file_info 字典
+
         """
         start_time = time.time() * 1000
         tasks = []
         current_heading = []
-        doc = Document(input_file)
+        input_file_path = file_info['input_file_path']
+        output_file_path = file_info['output_file_path']
+        doc = Document(input_file_path)
         try:
-            logger.info(f"{uid}, 开始处理无提示词文档 {input_file}")
+            logger.info(f"{uid}, 开始处理无提示词文档 {input_file_path}")
             # 收集三级标题任务
             for para_id, para in enumerate(doc.paragraphs):
                 refresh_current_heading(para, current_heading)
@@ -735,38 +718,32 @@ class DocxEditor:
                 task = {
                     'task_id': task_id,
                     'unique_key': f"heading_{para_id}",
-                    'write_context': doc_ctx,
                     'paragraph_prompt': "",
                     'user_comment': "",
-                    'catalogue': catalogue,
                     'current_sub_title': para.text,
                     'current_heading': current_heading.copy(),
-                    'sys_cfg': sys_cfg,
-                    'vdb_dir': vdb_dir,
                     'para_id': para_id,                # 段落索引
-                    'gen_txt': "",                      # 生成的文本，后续任务添加内容
                 }
                 tasks.append(task)
 
             if not tasks:
-                final_info = f"未找到三级标题，输出文档： {output_file}"
+                final_info = f"未找到三级标题，输出文档： {output_file_path}"
                 logger.info(f"{uid}, {final_info}")
-                docx_meta_util.update_process_info_by_task_id(uid, task_id, final_info, 100)
-                doc.save(output_file)
+                docx_meta_util.update_process_info(uid, task_id, final_info, 100)
+                doc.save(output_file_path)
                 return final_info
 
             initial_info = f"需处理 {len(tasks)} 个三级标题，启动 {self.executor._max_workers} 个任务"
             logger.info(f"{uid}, {initial_info}")
-            docx_meta_util.update_process_info_by_task_id(uid, task_id, initial_info, 0)
+            docx_meta_util.update_process_info(uid, task_id, initial_info, 0)
             docx_meta_util.save_para_task(task_id, tasks)
             doc_gen_results = self._submit_tasks(uid, task_id, tasks, start_time, len(tasks), include_mermaid=True)
-            success = DocxEditor._insert_para_to_doc(input_file, output_file, doc_gen_results)
+            success = DocxEditor._insert_para_to_doc(input_file_path, output_file_path, doc_gen_results)
             if not success:
                 error_info = "文档更新失败"
                 logger.error(f"{uid}, {task_id}, {error_info}")
                 return error_info
-            logger.info(f"{uid}, 保存无提示词文档完成: {output_file}")
-            docx_meta_util.save_output_file_path_by_task_id(task_id, output_file)
+            logger.info(f"{uid}, 保存无提示词文档完成: {output_file_path}")
             success_count = len([r for r in doc_gen_results.values() if r.get('success')])
             failed_count = len(tasks) - success_count
             # 处理Mermaid图表
@@ -775,9 +752,9 @@ class DocxEditor:
                 logger.info(f"{uid}, {task_id}, 开始处理文档中的Mermaid图表")
                 current_info = docx_meta_util.get_docx_file_info(task_id)
                 process_info = f"{current_info[0]['process_info']}, 开始处理文档配图"
-                docx_meta_util.update_process_info_by_task_id(uid, task_id,process_info,95)
+                docx_meta_util.update_process_info(uid, task_id, process_info, 95)
                 mermaid_process_info = DocxEditor._submit_mermaid_task(
-                    uid, task_id, output_file, sys_cfg['api']['mermaid_api_uri'], doc_gen_results
+                    uid, task_id, output_file_path, sys_cfg['api']['mermaid_api_uri'], doc_gen_results
                 )
                 img_count = mermaid_process_info.get('img_count', 0)
                 docx_meta_util.update_img_count_by_task_id(task_id, img_count)
@@ -794,13 +771,13 @@ class DocxEditor:
             if failed_count > 0:
                 final_info += ", 失败标题可在日志中查看详情"
 
-            docx_meta_util.update_process_info_by_task_id(uid, task_id, final_info, 100)
-            logger.info(f"{uid}, {task_id}, {final_info}，输出文件: {output_file}")
+            docx_meta_util.update_process_info(uid, task_id, final_info, 100)
+            logger.info(f"{uid}, {task_id}, {final_info}，输出文件: {output_file_path}")
             return final_info
         except Exception as e:
             error_info = f"文档生成过程出现异常: {str(e)}"
             logger.error(f"{uid}, {task_id}, {error_info}")
-            docx_meta_util.update_process_info_by_task_id(uid, task_id, error_info, 100)
+            docx_meta_util.update_process_info(uid, task_id, error_info, 100)
             return error_info
 
 

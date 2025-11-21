@@ -94,8 +94,56 @@ def delete_task(task_id: int):
     logger.info(f"delete_docx_info_by_task_id_dt {my_dt}")
     return my_dt
 
+def save_write_doc_ctx(uid: int, task_id: int, doc_ctx: str):
+    """
+    更新docx文件处理任务的文档写作背景信息
+    :param uid: user id
+    :param task_id: process task id
+    :param doc_ctx: 文档写作背景信息，用于提供给大语言模型，例如： 我正在写一个 xxxx 类型的 xxxx 文档，要求是 xxxx
+    :return:
+    """
+    if not uid or not task_id or not doc_ctx:
+        raise RuntimeError(f"{uid}, param_null_err, {task_id}, {doc_ctx}")
+    sql = f"update docx_file_info set doc_ctx = '{doc_ctx}' where task_id = {task_id} limit 1"
+    logger.debug(f"{uid}, update_docx_file_info_docx_ctx_sql, {sql}")
+    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.debug(f"{uid}, update_docx_file_info_docx_ctx_dt, {my_dt}")
+    return my_dt
 
-def update_process_info_by_task_id(uid: int, task_id: int, process_info: str, percent = -1):
+def save_output_doc_path(uid: int, task_id: int, output_doc_path: str):
+    """
+    更新docx文件处理任务的文档写作背景信息
+    :param uid: user id
+    :param task_id: process task id
+    :param output_doc_path: 写作输出文档的物理磁盘绝对路径
+    :return:
+    """
+    if not uid or not task_id or not output_doc_path:
+        raise RuntimeError(f"{uid}, param_null_err, {task_id}, {output_doc_path}")
+    sql = f"update docx_file_info set output_doc_path = '{output_doc_path}' where task_id = {task_id} limit 1"
+    logger.debug(f"{uid}, update_docx_file_info_docx_output_doc_path_sql, {sql}")
+    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.debug(f"{uid}, update_docx_file_info_docx_output_doc_path_dt, {my_dt}")
+    return my_dt
+
+def save_write_doc_vdb_dir(uid: int, task_id: int, vdb_dir: str):
+    """
+    更新docx文件处理任务的文档写作背景信息
+    :param uid: user id
+    :param task_id: process task id
+    :param vdb_dir: 文档写作时，需要参考的向量库的磁盘绝对物理路径
+    :return:
+    """
+    if not uid or not task_id or not vdb_dir:
+        raise RuntimeError(f"{uid}, param_null_err, {task_id}, {vdb_dir}")
+    sql = f"update docx_file_info set vdb_dir = '{vdb_dir}' where task_id = {task_id} limit 1"
+    logger.debug(f"{uid}, update_docx_file_info_docx_vdb_dir_sql, {sql}")
+    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.debug(f"{uid}, update_docx_file_info_docx_vdb_dir_dt, {my_dt}")
+    return my_dt
+
+
+def update_process_info(uid: int, task_id: int, process_info: str, percent = -1):
     """
     更新docx文件处理任务的处理进度信息
     :param uid: user id
@@ -138,17 +186,23 @@ def save_para_task(task_id: int, tasks: list):
         user_comment = task['user_comment'].replace("'", "''")
         current_sub_title = task['current_sub_title'].replace("'", "''")
         vdb_dir = task['vdb_dir'].replace("'", "''")
-        namespaces = task.get('namespaces', '').replace("'", "''")
+        namespaces = task.get('namespaces', '')
+        if namespaces is None:
+            namespaces = ''
+        namespaces = str(namespaces).replace("'", "''")
+
         timestamp = time.time()
         # 生成类似格式（UTC时间）
         create_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
         value_item = (f"({task_id},{task['para_id']},'{heading}','{unique_key}',"
-            f"'{write_context}','{paragraph_prompt}','{user_comment}','{current_sub_title}',"
-            f"'{vdb_dir}','{namespaces}, {create_time}')")
+                      f"'{write_context}','{paragraph_prompt}','{user_comment}','{current_sub_title}',"
+                      f"'{vdb_dir}','{namespaces}','{create_time}')")  # 注意 namespaces 和 create_time 之间用逗号分隔
+
         if my_values:
             my_values = f"{my_values}, {value_item}"
         else:
             my_values = value_item
+
     sql = (f"insert into docx_para_info (task_id, para_id, heading, unique_key, write_context, "
            f"paragraph_prompt, user_comment, current_sub_title, vdb_dir, namespaces, create_time) values {my_values}")
     logger.debug(f"save_docx_para_info_sql, {sql}")
@@ -201,19 +255,6 @@ def update_gen_txt_count_by_task_id(task_id: int, word_count: int):
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"update_docx_gen_txt_count_dt {my_dt}")
     return my_dt
-
-def save_output_file_path_by_task_id(task_id: int, file_path: str):
-    """
-    保存输出文档物理文件路径信息
-    """
-    if not task_id or not file_path:
-        raise RuntimeError(f"param_null_err, {task_id}, {file_path}")
-    sql = f"update docx_file_info set file_path = '{file_path}' where task_id = {task_id} limit 1"
-    logger.info(f"update_docx_file_path_sql, {sql}")
-    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-    logger.info(f"update_docx_file_path_dt {my_dt}")
-    return my_dt
-
 def save_outline_by_task_id(task_id: int, outline: str):
     """
     保存输出的Word文档的三级目录

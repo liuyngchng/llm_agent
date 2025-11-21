@@ -11,7 +11,7 @@ from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_co
     convert_docx_to_md, extract_sections_content, split_md_file_with_catalogue, split_md_content_with_catalogue
 import logging.config
 
-from common.docx_meta_util import update_process_info_by_task_id, save_output_file_path_by_task_id
+from common.docx_meta_util import update_process_info, save_output_file_path_by_task_id
 from common.sys_init import init_yml_cfg
 from common.xlsx_md_util import convert_xlsx_to_md
 
@@ -310,7 +310,7 @@ class PaperReviewer:
             if not catalogue:
                 raise ValueError("无法解析文档目录结构")
             logger.info(f"文档目录，{catalogue}")
-            update_process_info_by_task_id(self.uid, self.task_id, "开始解析章节内容...")
+            update_process_info(self.uid, self.task_id, "开始解析章节内容...")
             # 2. 提取章节内容
             self.sections_data = extract_sections_content(self.review_file_path, catalogue)
             if not self.sections_data:
@@ -323,7 +323,7 @@ class PaperReviewer:
             for i, section in enumerate(self.sections_data):
                 logger.info(f"评审章节 {i + 1}/{len(self.sections_data)}: {section['title']}")
                 current_percent = min(95.0, round((i + 1) / len(self.sections_data) * 100, 1))
-                update_process_info_by_task_id(self.uid, self.task_id, f"正在处理第{i + 1}/{section_count}个章节", current_percent)
+                update_process_info(self.uid, self.task_id, f"正在处理第{i + 1}/{section_count}个章节", current_percent)
                 # 控制章节内容长度，避免过长
                 content_preview = section['content'][:MAX_SECTION_LENGTH] + "..." if len(section['content']) > MAX_SECTION_LENGTH else section[
                     'content']
@@ -339,14 +339,14 @@ class PaperReviewer:
 
             # 4. 整体评审
             logger.info("开始进行评审意见总结")
-            update_process_info_by_task_id(self.uid, self.task_id, f"开始进行评审意见总结")
+            update_process_info(self.uid, self.task_id, f"开始进行评审意见总结")
             overall_result = self.review_whole_report(self.review_results)
 
             # 5. 生成最终报告
             logger.info("生成最终评审报告")
             final_report = self.generate_final_report(self.review_results, overall_result)
 
-            update_process_info_by_task_id(self.uid, self.task_id, f"形成格式化的评审意见报告")
+            update_process_info(self.uid, self.task_id, f"形成格式化的评审意见报告")
             logger.debug(f"fill_all_formatted_markdown_report_with_final_report\n{final_report}")
             formatted_report = self.fill_all_formatted_markdown_report_with_final_report(final_report)
             logger.info("文档评审流程完成")
@@ -550,10 +550,10 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
                 f"task_id: {task_id}, criteria_file: {criteria_file}, "
                 f"review_file: {paper_file}")
     try:
-        update_process_info_by_task_id(uid, task_id, "开始解析评审标准...")
+        update_process_info(uid, task_id, "开始解析评审标准...")
         # 获取评审标准的文件内容，格式为 Markdown
         criteria_markdown_data = get_md_file_content(criteria_file)
-        update_process_info_by_task_id(uid, task_id, "开始分析评审材料...")
+        update_process_info(uid, task_id, "开始分析评审材料...")
 
         # 调用AI评审生成
         review_result = start_ai_review(uid, task_id, review_topic, criteria_markdown_data, paper_file, sys_cfg)
@@ -566,10 +566,10 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
         # xlsx_file_full_path = convert_md_to_xlsx(output_md_file, True)
         save_output_file_path_by_task_id(task_id, docx_file_full_path)
         logger.info(f"{uid}, {task_id}, 评审报告生成成功, {docx_file_full_path}")
-        update_process_info_by_task_id(uid, task_id, "评审报告生成完毕", 100)
+        update_process_info(uid, task_id, "评审报告生成完毕", 100)
 
     except Exception as e:
-        update_process_info_by_task_id(uid, task_id, f"任务处理失败: {str(e)}")
+        update_process_info(uid, task_id, f"任务处理失败: {str(e)}")
         logger.exception("评审报告生成异常", e)
 
 
