@@ -6,6 +6,7 @@
 在线文档生成工具
 pip install flask
 """
+import hashlib
 import json
 import logging.config
 import os
@@ -18,7 +19,8 @@ from flask import (Flask, request, jsonify, send_from_directory,
 from apps.docx.docx_cmt_util import get_comments_dict
 from apps.docx.txt_gen_util import gen_docx_outline_stream
 from apps.docx.docx_editor import DocxEditor
-from common.docx_para_util import extract_catalogue, gen_docx_template_with_outline_txt, get_outline_txt
+from common.docx_meta_util import save_docx_file_info
+from common.docx_para_util import gen_docx_template_with_outline_txt, get_outline_txt
 from common import my_enums, statistic_util,docx_meta_util
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
@@ -281,19 +283,19 @@ def register_routes(app):
         # 生成任务ID， 使用毫秒数
         task_id = int(time.time() * 1000)
         filename = f"{task_id}_{file.filename}"
-        save_path = os.path.join(UPLOAD_FOLDER, filename)
-        template_file_name = os.path.abspath(save_path)
-        file.save(template_file_name)
-        doc_outline = get_outline_txt(template_file_name)
-        docx_meta_util.save_docx_file_info(
-            uid, task_id, doc_type, doc_title, doc_outline, keywords, template_file_name, vbd_id, True
-        )
-        logger.info(f"{uid}, upload_file_saved_as {filename}, {task_id}")
 
-        logger.info(f"{uid}, get_file_outline, task_id {task_id}, {doc_outline}")
+        save_path = os.path.join(UPLOAD_FOLDER, filename)
+        abs_file_name = os.path.abspath(save_path)
+        file_md5 = hashlib.md5(abs_file_name.encode('utf-8')).hexdigest()
+        file.save(abs_file_name)
+        doc_outline = get_outline_txt(abs_file_name)
+        save_docx_file_info(
+            uid, task_id, doc_type, doc_title, doc_outline, keywords, abs_file_name, vbd_id, True
+        )
+        logger.info(f"{uid}, {task_id}, upload_file_saved_as {abs_file_name}, doc_outline {doc_outline}")
         info = {
             "task_id": task_id,
-            "file_name": filename,
+            "file_name": file_md5,
             "outline": doc_outline
         }
         logger.info(f"{uid}, upload_docx_template_file, {info}")
@@ -322,20 +324,16 @@ def register_routes(app):
             logger.error(f"{uid}, err_occurred, {err_info}")
             return Response(json.dumps(err_info, ensure_ascii=False), 400, mimetype=JSON_MIME_TYPE)
         task_id = int(time.time() * 1000)  # 生成任务ID， 使用毫秒数
+        vbd_id = -1
         if data.get("vbd_id"):
             vbd_id = int(data.get("vbd_id"))
-        else:
-            vbd_id = -1
         keywords = data.get("keywords")
-        template_file_name = gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
-        logger.info(f"{uid}, docx_template_file_generated_with_name, {template_file_name}")
+        full_file_name = gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
+        logger.info(f"{uid}, docx_template_file_generated_with_outline_txt, {full_file_name}")
         docx_meta_util.save_docx_file_info(
-            uid, task_id, doc_type, doc_title, doc_outline, keywords, template_file_name, vbd_id, False
+            uid, task_id, doc_type, doc_title, doc_outline, keywords, full_file_name, vbd_id, False
         )
-        threading.Thread(
-            target=process_doc,
-            args=(uid, task_id, doc_type, doc_title, keywords, template_file_name, vbd_id, False)
-        ).start()
+        threading.Thread(target=process_doc,args=(uid, task_id)).start()
         info = {"status": "started", "task_id": task_id}
         logger.info(f"{uid}, write_doc_with_outline_txt, {info}")
         return json.dumps(info, ensure_ascii=False), 200
@@ -366,21 +364,9 @@ def register_routes(app):
             err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
             logger.error(f"{uid}, err_occurred, {err_info}")
             return jsonify(err_info), 400
-        file_info = docx_meta_util.get_docx_file_info(task_id)
-        full_file_name = file_info[0]['file_path']
-        doc_outline = extract_catalogue(full_file_name)
-        keywords = data.get("keywords")
-        if data.get("vbd_id"):
-            vbd_id = int(data.get("vbd_id"))
-        else:
-            vbd_id = None
-        threading.Thread(
-            target=process_doc,
-            args=(uid, task_id, doc_type, doc_title, keywords, vbd_id, True)
-        ).start()
-
+        threading.Thread(target=process_doc,args=(uid, task_id)).start()
         info = {"status": "started", "task_id": task_id}
-        logger.info(f"{uid}, write_doc_with_docx_template, {info}")
+        logger.info(f"{uid}, write_doc_with_docx_template_task_start, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
     @app.route('/docx/download/<filename>', methods=['GET'])
@@ -568,20 +554,21 @@ def clean_docx_task():
             time.sleep(60)  # 出错后等待1分钟再重试
 
 
-def process_doc(uid: int, task_id: int, doc_type: str, doc_title: str, keywords: str, vbd_id: int, is_include_para_txt=False):
+def process_doc(uid: int, task_id: int):
     """
-    处理 Word 文档
-    :param uid:                 用户ID
-    :param task_id:             任务ID
-    :param doc_type:            docx 文档内容类型
-    :param doc_title:           docx 文档的标题
-    :param keywords:            其他的写作要求
-    :param vbd_id:              vector db id.
-    :param is_include_para_txt: Word 文档中各小节（章节标题下）是否包含有描述性的文本
+    开始处理 Word 文档
     """
-    logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "
-        f"task_id: {task_id}, vbd_id:{vbd_id}, is_include_para_txt: {is_include_para_txt}")
-
+    logger.info(f"uid: {uid}, task_id: {task_id}")
+    file_info = docx_meta_util.get_docx_file_info(task_id)
+    if not file_info or not file_info[0]:
+        raise FileNotFoundError(f"docx_file_info_not_found_for_task_id, {task_id}")
+    input_file_path = file_info[0]['input_file_path']
+    doc_outline = file_info[0]['doc_outline']
+    doc_title = file_info[0]['doc_title']
+    doc_type = file_info[0]['doc_type']
+    keywords = file_info[0]['keywords']
+    vbd_id = file_info[0]['vdb_id']
+    is_include_para_txt = file_info[0]['is_include_para_txt']
     generator = None
     try:
         docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始解析文档结构...", 0)
@@ -603,25 +590,23 @@ def process_doc(uid: int, task_id: int, doc_type: str, doc_title: str, keywords:
             my_vdb_dir = ""
         logger.info(f"{uid}, {task_id}, my_vdb_dir_for_gen_doc, {my_vdb_dir}")
         generator = DocxEditor()
-        file_info = docx_meta_util.get_docx_file_info(task_id)
-        full_file_name = file_info[0]['file_path']
-        catalogue = file_info[0]['outline']
-        para_comment_dict = get_comments_dict(full_file_name)
+
+        para_comment_dict = get_comments_dict(input_file_path)
         if para_comment_dict:
-            logger.info(f"{uid}, {task_id}, fill_doc_with_comment, {full_file_name}")
-            logger.debug(f"{uid}, {task_id}, fill_doc_with_comment, {full_file_name}， comment_dict, {para_comment_dict}")
+            logger.info(f"{uid}, {task_id}, fill_doc_with_comment, {input_file_path}")
+            logger.debug(f"{uid}, {task_id}, fill_doc_with_comment, {input_file_path}， comment_dict, {para_comment_dict}")
             generator.modify_doc_with_comment(
-                uid, task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file, para_comment_dict
+                uid, task_id, doc_ctx, input_file_path, doc_outline, my_vdb_dir, my_cfg, output_file, para_comment_dict
             )
         elif is_include_para_txt:
-            logger.info(f"{uid}, {task_id}, fill_doc_with_para_content, {full_file_name}")
+            logger.info(f"{uid}, {task_id}, fill_doc_with_para_content, {input_file_path}")
             generator.fill_doc_with_prompt(
-                uid, task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
+                uid, task_id, doc_ctx, input_file_path, doc_outline, my_vdb_dir, my_cfg, output_file
             )
         else:
-            logger.info(f"{uid}, {task_id}, fill_doc_without_para_content, {full_file_name}")
+            logger.info(f"{uid}, {task_id}, fill_doc_without_para_content, {input_file_path}")
             generator.fill_doc_without_prompt(
-                uid, task_id, doc_ctx, full_file_name, catalogue, my_vdb_dir, my_cfg, output_file
+                uid, task_id, doc_ctx, input_file_path, doc_outline, my_vdb_dir, my_cfg, output_file
             )
         generator.shutdown()
     except Exception as e:

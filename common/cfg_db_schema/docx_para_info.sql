@@ -11,7 +11,6 @@ CREATE TABLE "docx_para_info" (
 	"write_context"	TEXT,
 	"paragraph_prompt"	TEXT,
 	"user_comment"	TEXT,
-	"catalogue"	TEXT,
 	"current_sub_title"	TEXT,
 	"vdb_dir"	TEXT,
 	"namespaces"	TEXT,

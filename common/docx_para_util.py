@@ -211,7 +211,7 @@ def gen_docx_template_with_outline_txt(task_id: int, os_dir:str, title: str, out
     :param title: 文档标题
     :param outline: 目录文本信息，结构如下，至多支持5级\n1. 一级标题\n  1.1 二级标题\n    1.1.1 三级标题\n
     即outline中的各行文本中，一级标题前没有空格，二级标题前有2个空格，三级标题前有4个空格
-    :return: 包含三级目录的Word docx 文档文件名称，只是文件名，不是fullpath
+    :return: 包含三级目录的Word docx 文档文件的绝对路径名称
     """
     doc = Document()
     title_para = doc.add_paragraph()
