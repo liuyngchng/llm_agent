@@ -258,7 +258,8 @@ def gen_docx_template_with_outline_txt(task_id: int, os_dir:str, title: str, out
     filename = f"{task_id}_outline.docx"
     save_path = os.path.join(os_dir, filename)
     doc.save(save_path)
-    return filename
+    abs_path = os.path.abspath(save_path)
+    return abs_path
 
 
 def get_elapsed_time(start_timestamp: float) -> str:

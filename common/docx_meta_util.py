@@ -15,14 +15,15 @@ from common.my_enums import DataType
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-def save_docx_file_info(uid: int, task_id: int, doc_type: str, doc_title: str,
-                        keywords: str, template_file_name: str, vdb_id: int, is_include_para_txt: int) -> dict:
+def save_docx_file_info(uid: int, task_id: int, doc_type: str, doc_title: str, doc_outline:str,
+                        keywords: str, template_file_name: str,  vdb_id: int, is_include_para_txt: int) -> dict:
     """
     保存docx文件处理任务的相关元数据信息
     :param uid: user id
     :param task_id: process task id
     :param doc_type: docx content type
     :param doc_title: docx content title
+    :param doc_outline: 文档的目录（默认三级目录）
     :param keywords: 其他通用的写作要求/或者评审的要求
     :param template_file_name: docx template file name/或者评审的材料
     :param vdb_id: vector db id
@@ -33,9 +34,9 @@ def save_docx_file_info(uid: int, task_id: int, doc_type: str, doc_title: str,
     timestamp = time.time()
     # 生成类似格式（UTC时间）
     iso_str = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
-    sql = (f"insert into docx_file_info(uid, task_id, doc_type, doc_title, "
+    sql = (f"insert into docx_file_info(uid, task_id, doc_type, doc_title, doc_outline, "
            f"keywords, template_path, vdb_id, is_include_para_txt, create_time) values "
-           f"({uid}, {task_id}, '{doc_type}', '{doc_title}', "
+           f"({uid}, {task_id}, '{doc_type}', '{doc_title}', '{doc_outline}',"
            f"'{keywords}', '{template_file_name}', {vdb_id}, {is_include_para_txt}, '{iso_str}')")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         logger.info(f"save_file_info_sql, {sql}")

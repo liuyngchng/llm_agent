@@ -13,7 +13,7 @@ import threading
 import time
 
 from flask import (Flask, request, jsonify, send_from_directory,
-                   abort, redirect, url_for, stream_with_context, Response, render_template)
+    abort, redirect, url_for, stream_with_context, Response, render_template)
 
 from apps.docx.docx_cmt_util import get_comments_dict
 from apps.docx.txt_gen_util import gen_docx_outline_stream
@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 UPLOAD_FOLDER = 'upload_doc'
 DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+JSON_MIME_TYPE = 'application/json; charset=utf-8'
 TASK_EXPIRE_TIME_MS = 7200 * 1000  # 任务超时时间，默认2小时
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 my_cfg = init_yml_cfg()
@@ -62,7 +63,6 @@ def create_app():
     # 在应用启动时初始化后台任务（使用应用上下文）
     with app.app_context():
         start_background_tasks_once()
-
     return app
 
 
@@ -226,16 +226,18 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
-            logger.warning(f"{uid}, {warning_info}")
-            return jsonify(warning_info), 400
+            ctx = {
+                "error": "用户会话信息已失效，请重新登录",
+            }
+            logger.warning(f"{uid}, {ctx}")
+            return Response(json.dumps(ctx, ensure_ascii=False), 502, mimetype=JSON_MIME_TYPE)
         doc_type = request.json.get("doc_type")
         doc_title = request.json.get("doc_title")
         keywords = request.json.get("keywords")
         if not doc_type or not doc_title:
-            err_info = {"error": "未提交待写作文档的标题或文档类型，请补充"}
-            logger.error(f"{uid}, gen_doc_outline_err, {err_info}")
-            return jsonify(err_info), 400
+            ctx = {"error": "未提交待写作文档的标题或文档类型，请补充"}
+            logger.error(f"{uid}, gen_doc_outline_err, {ctx}")
+            return Response(json.dumps(ctx, ensure_ascii=False), 502, mimetype=JSON_MIME_TYPE)
         return Response(
             stream_with_context(gen_docx_outline_stream(uid, doc_type, doc_title, keywords, my_cfg)),
             mimetype='text/event-stream',
@@ -252,7 +254,10 @@ def register_routes(app):
             return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
         file = request.files['file']
         uid = int(request.form.get('uid'))
-        logger.info(f"{uid}, upload_docx_template_file")
+        doc_type = request.form.get('doc_type')
+        doc_title = request.form.get('doc_title')
+        keywords = request.form.get('keywords')
+        logger.info(f"{uid}, {doc_type}, {doc_title}, {keywords}")
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
@@ -264,21 +269,32 @@ def register_routes(app):
                 warning_info=warning_info
 
             ))
+        if not doc_type or not doc_title:
+            return json.dumps({"error": "缺少文件类型或文件标题参数"}, ensure_ascii=False), 400
         if file.filename == '':
             return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
-
+        vbd_id_str = request.form.get('vbd_id')
+        if vbd_id_str:
+            vbd_id = int(vbd_id_str)
+        else:
+            vbd_id = 0
         # 生成任务ID， 使用毫秒数
         task_id = int(time.time() * 1000)
         filename = f"{task_id}_{file.filename}"
         save_path = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(save_path)
+        template_file_name = os.path.abspath(save_path)
+        file.save(template_file_name)
+        doc_outline = get_outline_txt(template_file_name)
+        docx_meta_util.save_docx_file_info(
+            uid, task_id, doc_type, doc_title, doc_outline, keywords, template_file_name, vbd_id, True
+        )
         logger.info(f"{uid}, upload_file_saved_as {filename}, {task_id}")
-        outline = get_outline_txt(save_path)
-        logger.info(f"{uid}, get_file_outline, task_id {task_id}, {outline}")
+
+        logger.info(f"{uid}, get_file_outline, task_id {task_id}, {doc_outline}")
         info = {
             "task_id": task_id,
             "file_name": filename,
-            "outline": outline
+            "outline": doc_outline
         }
         logger.info(f"{uid}, upload_docx_template_file, {info}")
         return json.dumps(info, ensure_ascii=False), 200
@@ -295,32 +311,26 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
-            logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
-                warning_info=warning_info
-
-            ))
+            err_info = {"error": "用户会话信息已失效，请重新登录"}
+            logger.error(f"{uid}, err_occurred, {err_info}")
+            return Response(json.dumps(err_info, ensure_ascii=False), 502, mimetype=JSON_MIME_TYPE)
         doc_title = data.get("doc_title")
         doc_outline = data.get("doc_outline")
         doc_type = data.get("doc_type")
         if not doc_type or not doc_title or not doc_outline:
             err_info = {"error": "缺少文档类型、标题、目录参数中的一个或多个"}
             logger.error(f"{uid}, err_occurred, {err_info}")
-            return json.dumps(err_info, ensure_ascii=False), 400
+            return Response(json.dumps(err_info, ensure_ascii=False), 400, mimetype=JSON_MIME_TYPE)
         task_id = int(time.time() * 1000)  # 生成任务ID， 使用毫秒数
         if data.get("vbd_id"):
             vbd_id = int(data.get("vbd_id"))
         else:
-            vbd_id = None
+            vbd_id = -1
         keywords = data.get("keywords")
-        template_file_name = gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title,
-                                                                          doc_outline)
+        template_file_name = gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
         logger.info(f"{uid}, docx_template_file_generated_with_name, {template_file_name}")
         docx_meta_util.save_docx_file_info(
-            uid, task_id, doc_type, doc_title, keywords, template_file_name, vbd_id, False
+            uid, task_id, doc_type, doc_title, doc_outline, keywords, template_file_name, vbd_id, False
         )
         threading.Thread(
             target=process_doc,
@@ -342,39 +352,31 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
-            logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
-                warning_info=warning_info
-
-            ))
+            err_info = {"error": "用户会话信息已失效，请重新登录"}
+            logger.error(f"{uid}, err_occurred, {err_info}")
+            return json.dumps(err_info, ensure_ascii=False), 400
         task_id = int(data.get("task_id"))
         doc_type = data.get("doc_type")
         doc_title = data.get("doc_title")
-
         if not doc_type or not doc_title:
             err_info = {"error": "文档类型或文档标题不能为空"}
             logger.error(f"{uid}, err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
-        template_file_name = data.get("file_name")
-
+        if not task_id or not uid:
+            err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
+            logger.error(f"{uid}, err_occurred, {err_info}")
+            return jsonify(err_info), 400
+        file_info = docx_meta_util.get_docx_file_info(task_id)
+        full_file_name = file_info[0]['file_path']
+        doc_outline = extract_catalogue(full_file_name)
         keywords = data.get("keywords")
         if data.get("vbd_id"):
             vbd_id = int(data.get("vbd_id"))
         else:
             vbd_id = None
-        if not task_id or not template_file_name or not uid:
-            err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
-            logger.error(f"{uid}, err_occurred, {err_info}")
-            return jsonify(err_info), 400
-        docx_meta_util.save_docx_file_info(
-            uid, task_id, doc_type, doc_title, keywords, template_file_name, vbd_id, True
-        )
         threading.Thread(
             target=process_doc,
-            args=(uid, task_id, doc_type, doc_title, keywords, template_file_name, vbd_id, True)
+            args=(uid, task_id, doc_type, doc_title, keywords, vbd_id, True)
         ).start()
 
         info = {"status": "started", "task_id": task_id}
@@ -566,8 +568,7 @@ def clean_docx_task():
             time.sleep(60)  # 出错后等待1分钟再重试
 
 
-def process_doc(uid: int, task_id: int, doc_type: str, doc_title: str, keywords: str,
-    file_name: str, vbd_id: int, is_include_para_txt=False):
+def process_doc(uid: int, task_id: int, doc_type: str, doc_title: str, keywords: str, vbd_id: int, is_include_para_txt=False):
     """
     处理 Word 文档
     :param uid:                 用户ID
@@ -575,19 +576,15 @@ def process_doc(uid: int, task_id: int, doc_type: str, doc_title: str, keywords:
     :param doc_type:            docx 文档内容类型
     :param doc_title:           docx 文档的标题
     :param keywords:            其他的写作要求
-    :param file_name:           Word template 模板文件名, 其中包含三级目录，可能含有段落写作的提示词，也可能没有
     :param vbd_id:              vector db id.
     :param is_include_para_txt: Word 文档中各小节（章节标题下）是否包含有描述性的文本
     """
     logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {doc_title}, keywords: {keywords}, "
-        f"task_id: {task_id}, file_name: {file_name}, vbd_id:{vbd_id}, is_include_para_txt: {is_include_para_txt}")
+        f"task_id: {task_id}, vbd_id:{vbd_id}, is_include_para_txt: {is_include_para_txt}")
 
     generator = None
     try:
         docx_meta_util.update_process_info_by_task_id(uid, task_id, "开始解析文档结构...", 0)
-        full_file_name = os.path.join(UPLOAD_FOLDER, file_name)
-        catalogue = extract_catalogue(full_file_name)
-        docx_meta_util.save_outline_by_task_id(task_id, catalogue)
         output_file_name = f"output_{task_id}.docx"
         output_file = os.path.join(UPLOAD_FOLDER, output_file_name)
         logger.info(f"{uid},{task_id}, doc_output_file_name, {output_file_name}")
@@ -606,6 +603,9 @@ def process_doc(uid: int, task_id: int, doc_type: str, doc_title: str, keywords:
             my_vdb_dir = ""
         logger.info(f"{uid}, {task_id}, my_vdb_dir_for_gen_doc, {my_vdb_dir}")
         generator = DocxEditor()
+        file_info = docx_meta_util.get_docx_file_info(task_id)
+        full_file_name = file_info[0]['file_path']
+        catalogue = file_info[0]['outline']
         para_comment_dict = get_comments_dict(full_file_name)
         if para_comment_dict:
             logger.info(f"{uid}, {task_id}, fill_doc_with_comment, {full_file_name}")
@@ -634,7 +634,7 @@ def process_doc(uid: int, task_id: int, doc_type: str, doc_title: str, keywords:
 
 
 # 创建应用实例
-app = create_app()
+my_app = create_app()
 
 # 当直接运行脚本时，启动开发服务器
 if __name__ == '__main__':
@@ -643,4 +643,4 @@ if __name__ == '__main__':
     # 确保后台任务在直接运行时也启动
     # start_background_tasks_once()
     port = get_console_arg1()
-    app.run(host='0.0.0.0', port=port)
+    my_app.run(host='0.0.0.0', port=port)

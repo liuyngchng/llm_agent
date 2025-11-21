@@ -158,6 +158,10 @@ function formatFileSize(bytes) {
 async function uploadTemplateFile(file) {
     const outlineContainer = document.getElementById('outlineContainer');
     const uid = document.getElementById('uid').value;
+    const docType = document.getElementById('docTypeInput').value;
+    const docTitle = document.getElementById('docTitle').value;
+    const keywords = document.getElementById('keywords').value;
+    const vbd_id = document.getElementById('knowledgeBase').value
     outlineContainer.innerHTML = `
         <div class="loading">
             <div class="snake-loader"></div>
@@ -167,6 +171,10 @@ async function uploadTemplateFile(file) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('uid', uid);
+    formData.append('doc_type', doc_type)
+    formData.append('doc_title', doc_title)
+    formData.append('keywords', keywords)
+    formData.append('vbd_id', vbd_id)
     try {
         const response = await fetch('/docx/upload', {
             method: 'POST',
@@ -240,7 +248,9 @@ function generateOutline() {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('生成失败，请重试');
+            return response.json().then(errorData => {
+                throw new Error(errorData.error || '生成失败，请重试');
+            });
         }
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
@@ -455,7 +465,11 @@ async function gen_doc() {
             body: JSON.stringify(postData)
         });
 
-        if (!response.ok) throw new Error('文档生成任务提交失败');
+        if (!response.ok) {
+            return response.json().then(errorData => {
+                throw new Error(errorData.error || '文档生成任务提交失败');
+            });
+        }
 
         const result = await response.json();
         if (result.status === "started") {
