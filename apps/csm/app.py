@@ -112,6 +112,7 @@ def submit_user_question():
     answer = ""
     for classify_result in  classify_results:
         if labels[1] in classify_result:
+            logger.info("process_door_to_door_service")
             content_type = 'text/html; charset=utf-8'
             answer = csm_svc.process_door_to_door_service(uid, labels[1], my_cfg)
             response = make_response(answer)
@@ -120,15 +121,19 @@ def submit_user_question():
             return response
          # for online pay service
         if labels[0] in classify_result:
+            logger.info("process_online_pay_service")
             answer = csm_svc.process_online_pay_service(answer, labels[0])
         # for submit personal information
         elif labels[2] in classify_result:
+            logger.info("process_personal_info_msg")
             answer = csm_svc.process_personal_info_msg(answer, labels[2], uid)
         # for information retrieval
         elif labels[3] in classify_result:
+            logger.info("retrieval_data")
             answer = csm_svc.retrieval_data(answer, labels[3], msg, uid, my_cfg)
         # for redirect to human talk
         elif labels[4] in classify_result:
+            logger.info("talk_with_human")
             answer = csm_svc.talk_with_human(answer, labels, uid, my_cfg)
         # for other labels
         else:

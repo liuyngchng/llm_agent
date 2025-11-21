@@ -100,7 +100,7 @@ def classify_msg(labels: list, msg: str, cfg: dict) -> dict:
 
     classify_label = ';\n'.join(map(str, labels))
     logger.info(f"classify_question: {msg}")
-    template = cfg_util.get_usr_prompt_template('sql_gen_msg', cfg)
+    template = cfg_util.get_usr_prompt_template('csm_cls_msg', cfg)
     prompt = ChatPromptTemplate.from_template(template)
     logger.info(f"prompt {prompt}")
     model = get_model(cfg)
