@@ -623,9 +623,5 @@ my_app = create_app()
 
 # 当直接运行脚本时，启动开发服务器
 if __name__ == '__main__':
-    # result = VdbMeta.get_vdb_file_processing_list()
-    # logger.info(f"vdb_file_processing_list: {result}")
-    # 确保后台任务在直接运行时也启动
-    # start_background_tasks_once()
     port = get_console_arg1()
     my_app.run(host='0.0.0.0', port=port)

@@ -163,16 +163,17 @@ def update_process_info(uid: int, task_id: int, process_info: str, percent = -1)
     logger.info(f"{uid}, update_docx_file_info_dt, {my_dt}")
     return my_dt
 
-def save_para_task(task_id: int, tasks: list):
+def save_para_task(uid: int, task_id: int, tasks: list):
     """
     保存用户文档生成任务的各个段落生成的子任务清单,
     一个文档写作任务的任务ID task_id 对应多个 docx_para_info 记录
+    :param uid: user id
     :param task_id: process task id
     :param tasks: 单个文档生成任务的段落生成任务清单
     :return:
     """
     if not task_id or not tasks:
-        raise RuntimeError(f"save_para_task_param_null_err, {task_id}, {tasks}")
+        raise RuntimeError(f"{uid}, save_para_task_param_null_err, {task_id}, {tasks}")
     my_values = ""
     for task in tasks:
         if isinstance(task['current_heading'], list):
@@ -192,7 +193,7 @@ def save_para_task(task_id: int, tasks: list):
         timestamp = time.time()
         # 生成类似格式（UTC时间）
         create_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
-        value_item = (f"({task_id},{task['para_id']},'{heading}','{unique_key}',"
+        value_item = (f"({uid}, {task_id},{task['para_id']},'{heading}','{unique_key}',"
                       f"'{paragraph_prompt}','{user_comment}','{current_sub_title}',"
                       f"'{namespaces}','{create_time}')")  # 注意 namespaces 和 create_time 之间用逗号分隔
 
@@ -201,7 +202,7 @@ def save_para_task(task_id: int, tasks: list):
         else:
             my_values = value_item
 
-    sql = (f"insert into docx_para_info (task_id, para_id, heading, unique_key, "
+    sql = (f"insert into docx_para_info (uid, task_id, para_id, heading, unique_key, "
            f"paragraph_prompt, user_comment, current_sub_title, namespaces, create_time) values {my_values}")
     logger.debug(f"save_docx_para_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
@@ -224,16 +225,19 @@ def update_para_info(task_id: int, para_id: int, gen_txt: str):
     logger.info(f"update_docx_para_info_dt, {my_dt}")
     return my_dt
 
-def get_para_info(task_id: int, para_id: int)-> list:
+def get_para_info(task_id: int, para_id: int=-1)-> list:
     """
     查询用户文档生成需求的并行子任务清单,一个文档写作任务的任务ID task_id 对应多个para_info
     :param task_id: 文档处理的任务 ID
     :param para_id: 文档段落 ID
     :return:
     """
-    if not task_id or not para_id:
-        raise RuntimeError(f"param_null_err, {task_id}, {para_id}")
-    sql = f"select * from docx_para_info where task_id = {task_id} and para_id = {para_id} limit 1"
+    if not task_id:
+        raise RuntimeError(f"param_null_err, {task_id}")
+    if para_id == -1:
+        sql = f"select * from docx_para_info where task_id = {task_id}"
+    else:
+        sql = f"select * from docx_para_info where task_id = {task_id} and para_id = {para_id} limit 1"
     logger.info(f"get_para_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"get_para_info_dt, {my_dt}")

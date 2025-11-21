@@ -22,6 +22,7 @@ from docx.shared import RGBColor, Cm
 from apps.docx.docx_cmt_util import refresh_current_heading_xml
 from common import cfg_util,docx_meta_util
 from apps.docx.txt_gen_util import gen_txt
+from common.docx_meta_util import get_para_info
 from common.docx_para_util import get_elapsed_time, get_reference_from_vdb, \
     is_3rd_heading, is_txt_para, refresh_current_heading
 from apps.docx.mermaid_render import MermaidRenderer
@@ -145,7 +146,6 @@ class DocxEditor:
             initial_info = f"需处理 {task_count} 个段落，计划启动 {self.executor._max_workers} 个任务"
             logger.info(f"{uid}, {task_id}, {initial_info}")
             docx_meta_util.update_process_info(uid, task_id, initial_info, 0)
-
             doc_gen_results = self._submit_tasks(uid, task_id, start_time, include_mermaid=True)
             success = DocxEditor._insert_para_to_doc(input_file_path, output_file_path, doc_gen_results)
             if not success:
@@ -226,19 +226,16 @@ class DocxEditor:
         process_info = f"扫描了 {para_count} 段文本， 已创建 {len(tasks)} 个批处理任务"
         docx_meta_util.update_process_info(uid, task_id, process_info)
         logger.info(f"{uid}, {task_id}, start_save_doc_task")
-        docx_meta_util.save_para_task(task_id, tasks)
+        docx_meta_util.save_para_task(uid, task_id, tasks)
         logger.info(f"{uid}, {task_id}, gen_doc_task_count, {len(tasks)}")
         return len(tasks)
 
-    def _submit_tasks(self, uid: int, task_id: int, tasks: List[Dict[str, Any]],
-            start_time: float,total_tasks: int, include_mermaid: bool = False) -> Dict[str, Dict]:
+    def _submit_tasks(self, uid: int, task_id: int, start_time: float, include_mermaid: bool = False) -> Dict[str, Dict]:
         """
         提交文本生成任务，开始并行处
         :param uid: user id
         :param task_id: 任务ID
-        :param tasks: 任务列表
         :param start_time: 开始时间
-        :param total_tasks: 总任务数
         :param include_mermaid: 是否包含Mermaid处理任务
         :return 执行完任务的结果
         """
@@ -247,10 +244,12 @@ class DocxEditor:
         future_to_key = {}
         last_update_time = time.time()
         update_interval = 2  # 每2秒更新一次进度，避免过于频繁
-        # 如果包含Mermaid任务，总任务数需要加1
+        para_tasks = get_para_info(task_id)
+        logger.debug(f"{uid}, para_tasks, {para_tasks}")
+        total_tasks = len(para_tasks)
         actual_total_tasks = total_tasks + 1 if include_mermaid else total_tasks
         # 提交所有任务到线程池
-        for task in tasks:
+        for task in para_tasks:
             if task['gen_txt']:
                 logger.info(f"{uid}, {task['task_id']}, ignore_finished_sub_task, para_id={task['para_id']}")
                 continue
@@ -475,7 +474,7 @@ class DocxEditor:
             logger.info(f"{uid}, {task_id}, {initial_info}")
             docx_meta_util.update_process_info(uid, task_id, initial_info, 0)
             docx_meta_util.save_para_task(task_id, tasks)
-            doc_gen_results = self._submit_tasks(uid, task_id, tasks, start_time, len(tasks), include_mermaid=True)
+            doc_gen_results = self._submit_tasks(uid, task_id, start_time, include_mermaid=True)
             success = DocxEditor._update_doc_with_comments(uid, task_id, file_info, doc_gen_results)
             if not success:
                 error_info = "XML方式更新文档失败"
@@ -670,11 +669,8 @@ class DocxEditor:
                             'write_context': doc_ctx,
                             'paragraph_prompt': para_text,
                             'user_comment': comment_text,
-                            'catalogue': catalogue,
                             'current_sub_title': current_heading[0] if current_heading else "",
                             'current_heading': current_heading.copy(),
-                            'sys_cfg': cfg,
-                            'vdb_dir': vdb_dir,
                             'original_para_xml': paragraph,     # 改为保存 XML 元素
                             'para_id': para_id,
                             'namespaces': namespaces,           # 添加命名空间信息
@@ -737,7 +733,7 @@ class DocxEditor:
             logger.info(f"{uid}, {initial_info}")
             docx_meta_util.update_process_info(uid, task_id, initial_info, 0)
             docx_meta_util.save_para_task(task_id, tasks)
-            doc_gen_results = self._submit_tasks(uid, task_id, tasks, start_time, len(tasks), include_mermaid=True)
+            doc_gen_results = self._submit_tasks(uid, task_id, start_time, include_mermaid=True)
             success = DocxEditor._insert_para_to_doc(input_file_path, output_file_path, doc_gen_results)
             if not success:
                 error_info = "文档更新失败"
