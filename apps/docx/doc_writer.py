@@ -250,7 +250,7 @@ class DocxWriter:
         if not docx_file_info or not docx_file_info[0]:
             logger.error(f"{task_id}, docx_file_info_null_exception, {docx_file_info}")
             raise RuntimeError('文档基本信息不存在')
-        para_info_list = get_para_list_with_status(task_id, 0)
+        para_info_list = get_para_list_with_status(task_id, 0, False)
         if not para_info_list:
             logger.warning(f"{uid}, {task_id}, 未找到文档的段落任务信息")
             return {}

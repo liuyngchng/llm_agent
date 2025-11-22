@@ -246,16 +246,21 @@ def get_para_info(task_id: int, para_id: int=-1)-> list:
     logger.info(f"get_para_info_dt, {my_dt}")
     return my_dt
 
-def get_para_list_with_status(task_id: int, status: int)-> list:
+def get_para_list_with_status(task_id: int, status: int, is_order_by_para_id_desc: bool=True)-> list:
     """
     查询用户文档生成需求的并行子任务清单,一个文档写作任务的任务ID task_id 对应多个para_info
     :param task_id: 文档处理的任务 ID
     :param status: 是否已经完成， 0： LLM 尚未生成对应的文本， 1:LLM 已生成对应的文本
+    :param is_order_by_para_id_desc: 是否按照 pard_id 倒序排列，默认倒序
     :return:
     """
     if not task_id:
         raise RuntimeError(f"param_null_err, {task_id}")
-    sql = f"select * from docx_para_info where task_id = {task_id} and status = {status} order by para_id desc"
+    base_sql = f"select * from docx_para_info where task_id = {task_id} and status = {status}"
+    if is_order_by_para_id_desc:
+        sql = f"{base_sql} order by para_id desc"
+    else:
+        sql = f"{base_sql} order by para_id"
     logger.info(f"get_para_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"get_para_info_dt, {my_dt}")

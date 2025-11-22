@@ -1,7 +1,6 @@
 --文档生成docx文件信息表
 CREATE TABLE "docx_file_info" (
 	"id"	INTEGER NOT NULL,
-	"file_name"	TEXT,
 	"uid"	INTEGER,
 	"task_id"	INTEGER,
 	"percent"	INTEGER NOT NULL DEFAULT -1,
