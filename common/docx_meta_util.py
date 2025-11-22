@@ -221,8 +221,8 @@ def update_para_info(task_id: int, para_id: int, gen_txt: str, word_count: int, 
     """
     if not task_id or not para_id or not gen_txt:
         raise RuntimeError(f"param_null_err, {task_id}, {para_id}, {gen_txt}")
-    sql = (f"update docx_para_info set gen_txt = '{gen_txt}', word_count= {word_count}, "
-       f"contains_mermaid={contains_mermaid}, status=1 where task_id = {task_id} and para_id = {para_id} limit 1")
+    sql = (f"update docx_para_info set gen_txt='{gen_txt}', word_count={word_count}, "
+       f"contains_mermaid={contains_mermaid}, status=1 where task_id={task_id} and para_id = {para_id} limit 1")
     logger.info(f"update_docx_para_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"update_docx_para_info_dt, {my_dt}")
@@ -246,15 +246,16 @@ def get_para_info(task_id: int, para_id: int=-1)-> list:
     logger.info(f"get_para_info_dt, {my_dt}")
     return my_dt
 
-def get_finished_para_list(task_id: int)-> list:
+def get_para_list_with_status(task_id: int, status: int)-> list:
     """
     查询用户文档生成需求的并行子任务清单,一个文档写作任务的任务ID task_id 对应多个para_info
     :param task_id: 文档处理的任务 ID
+    :param status: 是否已经完成， 0： LLM 尚未生成对应的文本， 1:LLM 已生成对应的文本
     :return:
     """
     if not task_id:
         raise RuntimeError(f"param_null_err, {task_id}")
-    sql = f"select * from docx_para_info where task_id = {task_id} and status = 1 order by para_id desc"
+    sql = f"select * from docx_para_info where task_id = {task_id} and status = {status} order by para_id desc"
     logger.info(f"get_para_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"get_para_info_dt, {my_dt}")

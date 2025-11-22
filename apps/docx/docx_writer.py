@@ -23,7 +23,7 @@ from docx.shared import RGBColor, Cm
 from apps.docx.docx_cmt_util import refresh_current_heading_xml
 from common import cfg_util,docx_meta_util
 from apps.docx.txt_gen_util import gen_txt
-from common.docx_meta_util import get_para_info, get_docx_file_info, update_para_info, get_finished_para_list, \
+from common.docx_meta_util import get_para_info, get_docx_file_info, update_para_info, get_para_list_with_status, \
     count_mermaid_para
 from common.docx_para_util import get_elapsed_time, get_reference_from_vdb, \
     is_3rd_heading, is_txt_para, refresh_current_heading
@@ -246,17 +246,20 @@ class DocxWriter:
         completed = 0
         future_to_key = {}
         last_update_time = time.time()
-        update_interval = 2  # 每2秒更新一次进度，避免过于频繁
-        para_info_list = get_para_info(task_id)
-        logger.debug(f"{uid}, para_tasks, {para_info_list}")
+        docx_file_info = get_docx_file_info(task_id)
+        if not docx_file_info or not docx_file_info[0]:
+            logger.error(f"{task_id}, docx_file_info_null_exception, {docx_file_info}")
+            raise RuntimeError('文档基本信息不存在')
+        para_info_list = get_para_list_with_status(task_id, 0)
+        if not para_info_list:
+            logger.warning(f"{uid}, {task_id}, 未找到文档的段落任务信息")
+            return {}
         total_tasks = len(para_info_list)
+        logger.debug(f"{uid}, para_tasks_count, {total_tasks}")
         actual_total_tasks = total_tasks + 1 if include_mermaid else total_tasks
         # 提交所有任务到线程池
         for para_info in para_info_list:
-            if para_info['gen_txt']:
-                logger.info(f"{uid}, {para_info['task_id']}, ignore_finished_sub_task, para_id={para_info['para_id']}")
-                continue
-            future = self.executor.submit(DocxWriter._gen_doc_para, para_info, sys_cfg)
+            future = self.executor.submit(DocxWriter._gen_doc_para, docx_file_info[0], para_info, sys_cfg)
             future_to_key[future] = para_info['unique_key']
         # 监控任务进度并收集结果
         for future in as_completed(future_to_key, timeout=self.timeout):
@@ -272,6 +275,7 @@ class DocxWriter:
                 }
 
             completed += 1
+            update_interval = 2  # 每2秒更新一次进度，避免过于频繁
             current_time = time.time()
             if current_time - last_update_time >= update_interval or completed == total_tasks:
                 # 计算进度百分比时考虑Mermaid任务
@@ -295,7 +299,7 @@ class DocxWriter:
         return results
 
     @staticmethod
-    def _gen_doc_para(para_info: dict[str, Any], sys_cfg: dict) -> dict:
+    def _gen_doc_para(doc_info:dict[str, Any], para_info: dict[str, Any], sys_cfg: dict) -> dict:
         """
         按照指定的要求生成单个段落的文本和图表（支持Mermaid图表）
         """
@@ -306,13 +310,10 @@ class DocxWriter:
         para_id = para_info['para_id']
         uid = para_info['uid']
         current_sub_title = para_info['current_sub_title']
-        docx_file_info = get_docx_file_info(task_id)
-        if not docx_file_info or not docx_file_info[0]:
-            logger.error(f"{task_id}, docx_file_info_null_exception, {docx_file_info}")
-            raise RuntimeError('docx_file_info_null_exception')
-        vdb_dir = docx_file_info[0]['vdb_dir']
-        doc_ctx = docx_file_info[0]['doc_ctx']
-        doc_outline = docx_file_info[0]['doc_outline']
+
+        vdb_dir = doc_info['vdb_dir']
+        doc_ctx = doc_info['doc_ctx']
+        doc_outline = doc_info['doc_outline']
         try:
             # 获取参考文本
             references = get_reference_from_vdb(
@@ -394,7 +395,7 @@ class DocxWriter:
         input_file_path = doc_file_info[0]['input_file_path']
         output_file_path = doc_file_info[0]['output_file_path']
         # 已经是按照 para_id 倒序排列的 list了， 可以直接遍历
-        doc_para_info_list = get_finished_para_list(task_id)
+        doc_para_info_list = get_para_list_with_status(task_id, 1)
         try:
             doc = Document(input_file_path)
             paragraphs = doc.paragraphs
@@ -521,7 +522,7 @@ class DocxWriter:
         temp_dir = None
         input_file_path = file_info['input_file_path']
         output_file_path = file_info['output_file_path']
-        docx_para_list = get_finished_para_list(task_id)
+        docx_para_list = get_para_list_with_status(task_id,0)
         try:
             # 创建临时目录
             temp_dir = tempfile.mkdtemp()
