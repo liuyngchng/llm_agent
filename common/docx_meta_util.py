@@ -4,11 +4,9 @@
 """
 处理 docx 文档相关的元数据， 存储在 DB 中
 """
-from datetime import datetime
 import json
 import logging.config
 import sqlite3
-import time
 
 from common.cfg_util import CFG_DB_URI, CFG_DB_FILE, insert_del_sqlite, sqlite_output
 from common.my_enums import DataType
@@ -17,8 +15,9 @@ from common.cm_utils import get_time_str
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-def save_doc_file_info(uid: int, task_id: int, doc_type: str, doc_title: str, doc_outline:str,
-                        keywords: str, input_file_path: str,  vdb_id: int, is_include_para_txt: int) -> dict:
+def save_doc_info(uid: int, task_id: int, doc_type: str, doc_title: str, doc_outline:str,
+                  keywords: str, input_file_path: str, vdb_id: int, is_include_para_txt: int,
+                  doc_ctx: str, output_file_path: str, vdb_dir: str) -> dict:
     """
     保存docx文件处理任务的相关元数据信息
     :param uid: user id
@@ -30,20 +29,25 @@ def save_doc_file_info(uid: int, task_id: int, doc_type: str, doc_title: str, do
     :param input_file_path: docx template file name/或者评审的材料
     :param vdb_id: vector db id
     :param is_include_para_txt: 写作的 Word 文档模板中是否包含有文本段落
+    :param doc_ctx: 进行文本写作的上下文
+    :param output_file_path: 写作完成下载的文档的磁盘绝对路径
+    :param vdb_dir: 向量知识库的磁盘物理绝对路径
     :return:
     """
-    logger.debug(f"save_doc_file_info, {uid}, {task_id}, {doc_type}, {doc_title}, {keywords}, {input_file_path}")
+    logger.debug(f"save_doc_info, {uid}, {task_id}, {doc_type}, {doc_title}, {keywords}, {input_file_path}")
     create_time = get_time_str()
     sql = (f"insert into doc_file_info(uid, task_id, doc_type, doc_title, doc_outline, "
-           f"keywords, input_file_path, vdb_id, is_include_para_txt, create_time) values "
+           f"keywords, input_file_path, vdb_id, is_include_para_txt, "
+           f"doc_ctx, output_file_path, vdb_dir, create_time) values "
            f"({uid}, {task_id}, '{doc_type}', '{doc_title}', '{doc_outline}',"
-           f"'{keywords}', '{input_file_path}', {vdb_id}, {is_include_para_txt}, '{create_time}')")
+           f"'{keywords}', '{input_file_path}', {vdb_id}, {is_include_para_txt}, "
+           f"'{doc_ctx}', '{output_file_path}', '{vdb_dir}', '{create_time}')")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
-        logger.debug(f"save_file_info_sql, {sql}")
+        logger.debug(f"save_doc_info_sql, {sql}")
         my_dt = insert_del_sqlite(my_conn, sql)
         return my_dt
 
-def get_doc_file_info(task_id: int) -> dict:
+def get_doc_info(task_id: int) -> dict:
     """
     根据任务id获取docx文件处理任务的相关元数据信息
     :param task_id: process task id
@@ -92,54 +96,6 @@ def delete_task(task_id: int):
         logger.info(f"delete_docx_info_by_task_id_sql, {sql}")
         my_dt = insert_del_sqlite(my_conn, sql)
     logger.info(f"delete_docx_info_by_task_id_dt {my_dt}")
-    return my_dt
-
-def save_write_doc_ctx(uid: int, task_id: int, doc_ctx: str):
-    """
-    更新docx文件处理任务的文档写作背景信息
-    :param uid: user id
-    :param task_id: process task id
-    :param doc_ctx: 文档写作背景信息，用于提供给大语言模型，例如： 我正在写一个 xxxx 类型的 xxxx 文档，要求是 xxxx
-    :return:
-    """
-    if not uid or not task_id or not doc_ctx:
-        raise RuntimeError(f"{uid}, param_null_err, {task_id}, {doc_ctx}")
-    sql = f"update doc_file_info set doc_ctx = '{doc_ctx}' where task_id = {task_id} limit 1"
-    logger.debug(f"{uid}, update_doc_file_info_docx_ctx_sql, {sql}")
-    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-    logger.debug(f"{uid}, update_doc_file_info_docx_ctx_dt, {my_dt}")
-    return my_dt
-
-def save_output_doc_path(uid: int, task_id: int, output_file_path: str):
-    """
-    更新docx文件处理任务的文档写作背景信息
-    :param uid: user id
-    :param task_id: process task id
-    :param output_file_path: 写作输出文档的物理磁盘绝对路径
-    :return:
-    """
-    if not uid or not task_id or not output_file_path:
-        raise RuntimeError(f"{uid}, param_null_err, {task_id}, {output_file_path}")
-    sql = f"update doc_file_info set output_file_path = '{output_file_path}' where task_id = {task_id} limit 1"
-    logger.debug(f"{uid}, update_doc_file_info_docx_output_doc_path_sql, {sql}")
-    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-    logger.debug(f"{uid}, update_doc_file_info_docx_output_file_path_dt, {my_dt}")
-    return my_dt
-
-def save_write_doc_vdb_dir(uid: int, task_id: int, vdb_dir: str):
-    """
-    更新docx文件处理任务的文档写作背景信息
-    :param uid: user id
-    :param task_id: process task id
-    :param vdb_dir: 文档写作时，需要参考的向量库的磁盘绝对物理路径
-    :return:
-    """
-    if not uid or not task_id or not vdb_dir:
-        raise RuntimeError(f"{uid}, param_null_err, {task_id}, {vdb_dir}")
-    sql = f"update doc_file_info set vdb_dir = '{vdb_dir}' where task_id = {task_id} limit 1"
-    logger.debug(f"{uid}, update_doc_file_info_docx_vdb_dir_sql, {sql}")
-    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-    logger.debug(f"{uid}, update_doc_file_info_docx_vdb_dir_dt, {my_dt}")
     return my_dt
 
 
@@ -221,7 +177,7 @@ def save_para_task(uid: int, task_id: int, tasks: list):
     logger.debug(f"save_doc_para_info_dt, {my_dt}")
     return my_dt
 
-def update_para_info(task_id: int, para_id: int, gen_txt: str, word_count: int, contains_mermaid: int):
+def save_gen_para_txt(task_id: int, para_id: int, gen_txt: str, word_count: int, contains_mermaid: int):
     """
     保存用户文档生成任务的系统子任务清单,,一个文档写作任务的任务ID task_id 对应多个 doc_para_info 记录
     :param task_id: process task id
@@ -236,9 +192,9 @@ def update_para_info(task_id: int, para_id: int, gen_txt: str, word_count: int, 
     update_time = get_time_str()
     sql = (f"update doc_para_info set gen_txt='{gen_txt}',word_count={word_count},contains_mermaid={contains_mermaid},"
        f"update_time='{update_time}',status=1 where task_id={task_id} and para_id = {para_id} limit 1")
-    logger.info(f"update_doc_para_info_sql, {sql}")
+    logger.info(f"save_gen_para_txt_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-    logger.info(f"update_doc_para_info_dt, {my_dt}")
+    logger.info(f"save_gen_para_txt_dt, {my_dt}")
     return my_dt
 
 def get_para_info(task_id: int, para_id: int=-1)-> list:

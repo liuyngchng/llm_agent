@@ -20,8 +20,7 @@ from common.docx_cmt_util import get_comments_dict
 from apps.docx.txt_gen_util import gen_docx_outline_stream
 from apps.docx.doc_writer import DocxWriter
 from common.docx_md_util import convert_docx_to_md
-from common.docx_meta_util import save_doc_file_info, save_write_doc_ctx, save_write_doc_vdb_dir, update_process_info, \
-    save_output_doc_path, get_doc_file_info
+from common.docx_meta_util import save_doc_info, get_doc_info
 from common.docx_para_util import gen_docx_template_with_outline_txt, get_outline_txt
 from common import my_enums, statistic_util,docx_meta_util
 from common.html_util import get_html_ctx_from_md
@@ -294,14 +293,12 @@ def register_routes(app):
         filename = f"{task_id}_{file.filename}"
 
         save_path = os.path.join(UPLOAD_FOLDER, filename)
-        abs_file_name = os.path.abspath(save_path)
-        file_md5 = hashlib.md5(abs_file_name.encode('utf-8')).hexdigest()
-        file.save(abs_file_name)
-        doc_outline = get_outline_txt(abs_file_name)
-        save_doc_file_info(
-            uid, task_id, doc_type, doc_title, doc_outline, keywords, abs_file_name, vbd_id, True
-        )
-        logger.info(f"{uid}, {task_id}, upload_file_saved_as {abs_file_name}, doc_outline {doc_outline}")
+        input_file_path = os.path.abspath(save_path)
+        file_md5 = hashlib.md5(input_file_path.encode('utf-8')).hexdigest()
+        file.save(input_file_path)
+        doc_outline = get_outline_txt(input_file_path)
+        save_doc_args(uid, task_id, doc_type, doc_title, doc_outline, keywords, input_file_path, vbd_id,True)
+        logger.info(f"{uid}, {task_id}, upload_file_saved_as {input_file_path}")
         info = {
             "task_id": task_id,
             "file_name": file_md5,
@@ -337,12 +334,10 @@ def register_routes(app):
         if data.get("vbd_id"):
             vbd_id = int(data.get("vbd_id"))
         keywords = data.get("keywords")
-        full_file_name = gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
-        logger.info(f"{uid}, docx_template_file_generated_with_outline_txt, {full_file_name}")
-        docx_meta_util.save_doc_file_info(
-            uid, task_id, doc_type, doc_title, doc_outline, keywords, full_file_name, vbd_id, False
-        )
-        threading.Thread(target=process_doc,args=(uid, task_id)).start()
+        input_file_path = gen_docx_template_with_outline_txt(task_id, UPLOAD_FOLDER, doc_title, doc_outline)
+        logger.info(f"{uid}, docx_template_file_generated_with_outline_txt, {input_file_path}")
+        save_doc_args(uid, task_id, doc_type, doc_title, doc_outline, keywords, input_file_path, vbd_id, False)
+        threading.Thread(target=process_doc, args=(uid, task_id)).start()
         info = {"status": "started", "task_id": task_id}
         logger.info(f"{uid}, write_doc_with_outline_txt, {info}")
         return json.dumps(info, ensure_ascii=False), 200
@@ -440,7 +435,7 @@ def register_routes(app):
 
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
-        file_path_info = get_doc_file_info(task_id)
+        file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
         absolute_path = file_path_info[0]['output_file_path']
         if not os.path.exists(absolute_path):
@@ -484,7 +479,7 @@ def register_routes(app):
                 warning_info=warning_info
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
-        file_path_info = get_doc_file_info(task_id)
+        file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
         absolute_path = file_path_info[0]['output_file_path']
         logger.debug(f"absolute_path, {absolute_path}")
@@ -546,13 +541,33 @@ def register_routes(app):
                 warning_info=warning_info
 
             ))
-        file_info = docx_meta_util.get_docx_file_info(task_id)
+        file_info = docx_meta_util.get_doc_info(task_id)
         logger.info(f"{uid}, get_docx_file_info, {file_info}")
         if not file_info or len(file_info) == 0:
             return json.dumps({"error": "未找到任务ID对应的文档信息"}, ensure_ascii=False), 400
         file_info[0]['elapsed_time'] = time.time() - task_id
         # logger.info(f"get_doc_process_info, {info}")
         return json.dumps(file_info, ensure_ascii=False), 200
+
+def save_doc_args(uid: int, task_id: int, doc_type: str, doc_title: str,  doc_outline: str,
+                  keywords: str, input_file_path: str,  vbd_id: int, is_include_para_txt: bool):
+
+    doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
+    if keywords:
+        doc_ctx = doc_ctx + f", 其他写作要求是 {keywords}"
+    output_file_name = f"output_{task_id}.docx"
+    output_file = os.path.join(OUTPUT_DIR, output_file_name)
+    output_file_path = os.path.abspath(output_file)
+    if vbd_id:
+        vdb_info = VdbMeta.get_vdb_by_id(vbd_id)
+        vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_info[0]['id']}"
+    else:
+        vdb_dir = ""
+
+    save_doc_info(
+        uid, task_id, doc_type, doc_title, doc_outline, keywords, input_file_path, vbd_id,
+        is_include_para_txt, doc_ctx, output_file_path, vdb_dir
+    )
 
 
 def start_background_tasks():
@@ -611,16 +626,13 @@ def process_doc(uid: int, task_id: int):
     开始处理 Word 文档
     """
     logger.info(f"uid: {uid}, task_id: {task_id}")
-    file_info = docx_meta_util.get_doc_file_info(task_id)
+    file_info = docx_meta_util.get_doc_info(task_id)
     if not file_info or not file_info[0]:
         raise FileNotFoundError(f"docx_file_info_not_found_for_task_id, {task_id}")
     doc_info = file_info[0]
     doc_info['start_time'] = time.time() * 1000
     doc_writer = None
     try:
-        current_percent = doc_info['percent']
-        if current_percent < FILE_TASK_INIT_PERCENT:
-            init_txt_gen_material(uid, task_id, file_info)
         doc_writer = DocxWriter()
         is_include_para_txt = doc_info['is_include_para_txt']
         input_file_path = doc_info['input_file_path']
@@ -644,35 +656,6 @@ def process_doc(uid: int, task_id: int):
         if doc_writer:
             doc_writer.shutdown()
 
-
-def init_txt_gen_material( uid: int, task_id: int, file_info: dict):
-    update_process_info(uid, task_id, "开始解析文档结构...", 0)
-    output_file_name = f"output_{task_id}.docx"
-    output_file = os.path.join(OUTPUT_DIR, output_file_name)
-    abs_output_file_path = os.path.abspath(output_file)
-    save_output_doc_path(uid, task_id, abs_output_file_path)
-    logger.info(f"{uid},{task_id}, abs_output_file_path, {abs_output_file_path}")
-
-    doc_title = file_info[0]['doc_title']
-    doc_type = file_info[0]['doc_type']
-    keywords = file_info[0]['keywords']
-    doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
-    if keywords:
-        doc_ctx = doc_ctx + f", 其他写作要求是 {keywords}"
-    save_write_doc_ctx(uid, task_id, doc_ctx)
-    vbd_id = file_info[0]['vdb_id']
-    if vbd_id:
-        vdb_info = VdbMeta.get_vdb_by_id(vbd_id)
-        logger.info(f"{uid}, {task_id}, vdb_info: {vdb_info}")
-    else:
-        vdb_info = None
-    if vdb_info:
-        my_vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_info[0]['id']}"
-        save_write_doc_vdb_dir(uid, task_id, my_vdb_dir)
-    else:
-        my_vdb_dir = ""
-    logger.info(f"{uid}, {task_id}, my_vdb_dir_for_gen_doc, {my_vdb_dir}")
-    update_process_info(uid, task_id, "开始处理文档...", FILE_TASK_INIT_PERCENT)
 
 
 # 创建应用实例

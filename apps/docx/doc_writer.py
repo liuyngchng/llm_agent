@@ -23,7 +23,7 @@ from docx.shared import RGBColor, Cm
 from common.docx_cmt_util import refresh_current_heading_xml
 from common import cfg_util,docx_meta_util
 from apps.docx.txt_gen_util import gen_txt
-from common.docx_meta_util import get_doc_file_info, update_para_info, get_para_list_with_status, \
+from common.docx_meta_util import get_doc_info, save_gen_para_txt, get_para_list_with_status, \
     count_mermaid_para, set_doc_info_para_task_created_flag, save_para_task, count_para_task
 from common.docx_para_util import get_elapsed_time, get_reference_from_vdb, \
     is_3rd_heading, is_txt_para, refresh_current_heading
@@ -167,7 +167,7 @@ class DocxWriter:
             img_count = 0
             try:
                 logger.info(f"{uid}, {task_id}, 开始处理文档中的Mermaid图表")
-                current_info = docx_meta_util.get_doc_file_info(task_id)
+                current_info = docx_meta_util.get_doc_info(task_id)
                 process_info = f"{current_info[0]['process_info']}, 开始处理文档配图"
                 docx_meta_util.update_process_info(uid, task_id, process_info, 95)
                 mermaid_process_info = DocxWriter._submit_mermaid_task(
@@ -358,7 +358,7 @@ class DocxWriter:
                 contains_mermaid = 1
             else:
                 contains_mermaid = 0
-            update_para_info(task_id, para_id, llm_txt, word_count, contains_mermaid)
+            save_gen_para_txt(task_id, para_id, llm_txt, word_count, contains_mermaid)
             logger.info(f"{uid}, {task_id}, {para_id}, save_para_info_after_gen_doc_para, {llm_txt}")
             return {
                 "success": True
@@ -411,7 +411,7 @@ class DocxWriter:
         :param uid: user id
         :param task_id: 生成文本的任务ID
         """
-        doc_file_info = get_doc_file_info(task_id)
+        doc_file_info = get_doc_info(task_id)
         input_file_path = doc_file_info[0]['input_file_path']
         output_file_path = doc_file_info[0]['output_file_path']
         # 确保输出目录存在
@@ -509,7 +509,7 @@ class DocxWriter:
             img_count = 0
             try:
                 logger.info(f"{uid}, {task_id}, 开始处理文档中的Mermaid图表")
-                current_info = docx_meta_util.get_doc_file_info(task_id)
+                current_info = docx_meta_util.get_doc_info(task_id)
                 process_info = f"{current_info[0]['process_info']}, 开始处理文档配图"
                 docx_meta_util.update_process_info(uid, task_id, process_info, 95)
                 mermaid_process_info = DocxWriter._submit_mermaid_task(
@@ -751,7 +751,7 @@ class DocxWriter:
             img_count = 0
             try:
                 logger.info(f"{uid}, {task_id}, 开始处理文档中的Mermaid图表")
-                current_info = docx_meta_util.get_doc_file_info(task_id)
+                current_info = docx_meta_util.get_doc_info(task_id)
                 process_info = f"{current_info[0]['process_info']}, 开始处理文档配图"
                 docx_meta_util.update_process_info(uid, task_id, process_info, 95)
                 mermaid_process_info = DocxWriter._submit_mermaid_task(
