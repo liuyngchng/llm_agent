@@ -18,7 +18,7 @@ from flask import (Flask, request, jsonify, send_from_directory,
 
 from apps.docx.docx_cmt_util import get_comments_dict
 from apps.docx.txt_gen_util import gen_docx_outline_stream
-from apps.docx.docx_editor import DocxEditor
+from apps.docx.docx_writer import DocxWriter
 from common.docx_meta_util import save_docx_file_info, save_write_doc_ctx, save_write_doc_vdb_dir, update_process_info, \
     save_output_doc_path
 from common.docx_para_util import gen_docx_template_with_outline_txt, get_outline_txt
@@ -595,7 +595,7 @@ def process_doc(uid: int, task_id: int):
         else:
             my_vdb_dir = ""
         logger.info(f"{uid}, {task_id}, my_vdb_dir_for_gen_doc, {my_vdb_dir}")
-        generator = DocxEditor()
+        generator = DocxWriter()
         input_file_path = file_info[0]['input_file_path']
         para_comment_dict = get_comments_dict(input_file_path)
         if para_comment_dict:

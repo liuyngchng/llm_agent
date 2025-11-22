@@ -11,8 +11,9 @@ import os
 import time
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Dict, Any
 import threading
+from typing import Any
+
 import psutil
 from xml.etree import ElementTree as ET
 
@@ -32,7 +33,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 
-class DocxEditor:
+class DocxWriter:
     """
     DOCX文档生成器，使用多线程并行生成文本内容
     1. 任务一共分为3种：
@@ -77,7 +78,7 @@ class DocxEditor:
         """
         try:
             cpu_count = multiprocessing.cpu_count()
-            memory_info = DocxEditor._get_mem_usage()
+            memory_info = DocxWriter._get_mem_usage()
             base_workers = cpu_count
             if self.consider_memory and memory_info['available_percent'] < 20:
                 memory_factor = 0.5
@@ -117,7 +118,7 @@ class DocxEditor:
     def _get_mem_info() -> str:
         """获取内存信息字符串"""
         try:
-            memory = DocxEditor._get_mem_usage()
+            memory = DocxWriter._get_mem_usage()
             return f"{memory['available_percent']:.1f}%可用"
         except:
             return "未知"
@@ -135,7 +136,7 @@ class DocxEditor:
         output_file_path = file_info['output_file_path']
         try:
             logger.info(f"{uid}, {task_id}, 开始处理文档 {input_file_path}")
-            task_count = DocxEditor._gen_doc_with_prompt_task(uid, task_id, file_info, sys_cfg)
+            task_count = DocxWriter._gen_doc_with_prompt_task(uid, task_id, file_info, sys_cfg)
             if task_count == 0:
                 final_info = f"未检测到需要生成的文本段落"
                 docx_meta_util.update_process_info(uid, task_id, final_info, 100)
@@ -148,7 +149,7 @@ class DocxEditor:
             logger.info(f"{uid}, {task_id}, {initial_info}")
             docx_meta_util.update_process_info(uid, task_id, initial_info, 0)
             doc_gen_results = self._submit_tasks(uid, task_id, start_time, sys_cfg, include_mermaid=True)
-            success = DocxEditor._insert_para_to_doc(uid, task_id)
+            success = DocxWriter._insert_para_to_doc(uid, task_id)
             if not success:
                 error_info = "文档更新失败"
                 logger.error(f"{uid}, {task_id}, {error_info}")
@@ -165,11 +166,10 @@ class DocxEditor:
                 current_info = docx_meta_util.get_docx_file_info(task_id)
                 process_info = f"{current_info[0]['process_info']}, 开始处理文档配图"
                 docx_meta_util.update_process_info(uid, task_id, process_info, 95)
-                mermaid_process_info = DocxEditor._submit_mermaid_task(
+                mermaid_process_info = DocxWriter._submit_mermaid_task(
                     uid, task_id,
                     output_file_path,
-                    sys_cfg['api']['mermaid_api_uri'],
-                    doc_gen_results
+                    sys_cfg['api']['mermaid_api_uri']
                 )
                 img_count = mermaid_process_info.get('img_count', 0)
                 docx_meta_util.update_img_count_by_task_id(task_id, img_count)
@@ -232,7 +232,7 @@ class DocxEditor:
         return len(tasks)
 
     def _submit_tasks(self, uid: int, task_id: int, start_time: float, sys_cfg: dict,
-            include_mermaid: bool = False) -> Dict[str, Dict]:
+            include_mermaid: bool = False) -> dict[str, dict]:
         """
         提交文本生成任务，开始并行处
         :param uid: user id
@@ -256,7 +256,7 @@ class DocxEditor:
             if para_info['gen_txt']:
                 logger.info(f"{uid}, {para_info['task_id']}, ignore_finished_sub_task, para_id={para_info['para_id']}")
                 continue
-            future = self.executor.submit(DocxEditor._gen_doc_para, para_info, sys_cfg)
+            future = self.executor.submit(DocxWriter._gen_doc_para, para_info, sys_cfg)
             future_to_key[future] = para_info['unique_key']
         # 监控任务进度并收集结果
         for future in as_completed(future_to_key, timeout=self.timeout):
@@ -405,7 +405,7 @@ class DocxEditor:
             # 从后往前插入，避免索引变化
             for item in doc_para_info_list:
                 para_id = item['para_id']
-                gen_txt = item['gen_txt']
+                para_gen_txt = item['gen_txt']
                 if para_id >= len(paragraphs):  # 添加边界检查
                     logger.warning(f"{uid}, {task_id}, 段落索引 {para_id} 超出范围（总段落数：{len(paragraphs)}），跳过, input_file={input_file_path}")
                     continue
@@ -414,7 +414,7 @@ class DocxEditor:
                 # 创建新段落并插入
                 new_para = doc.add_paragraph()
                 new_para.paragraph_format.first_line_indent = Cm(1)
-                red_run = new_para.add_run(gen_txt)
+                red_run = new_para.add_run(para_gen_txt)
                 red_run.font.color.rgb = RGBColor(0, 0, 0)
 
                 # 插入到原始段落后面
@@ -454,7 +454,7 @@ class DocxEditor:
             info = f"处理带批注的文档 {input_file_path}，共找到 {len(comments_dict)} 个批注"
             logger.info(f"{uid}, {task_id}, {info}")
             docx_meta_util.update_process_info(uid, task_id, info)
-            task_count = DocxEditor._collect_doc_with_comment_tasks(uid, task_id, comments_dict, file_info)
+            task_count = DocxWriter._collect_doc_with_comment_tasks(uid, task_id, comments_dict, file_info)
             if task_count == 0:
                 final_info = "未找到有效的批注处理任务"
                 logger.info(f"{uid}, {task_id}, {final_info}")
@@ -466,7 +466,7 @@ class DocxEditor:
             logger.info(f"{uid}, {task_id}, {initial_info}")
             docx_meta_util.update_process_info(uid, task_id, initial_info, 0)
             doc_gen_results = self._submit_tasks(uid, task_id, start_time, sys_cfg, include_mermaid=True)
-            success = DocxEditor._update_doc_with_comments(uid, task_id, file_info)
+            success = DocxWriter._update_doc_with_comments(uid, task_id, file_info)
             if not success:
                 error_info = "XML方式更新文档失败"
                 logger.error(f"{uid}, {task_id}, {error_info}")
@@ -483,7 +483,7 @@ class DocxEditor:
                 current_info = docx_meta_util.get_docx_file_info(task_id)
                 process_info = f"{current_info[0]['process_info']}, 开始处理文档配图"
                 docx_meta_util.update_process_info(uid, task_id, process_info, 95)
-                mermaid_process_info = DocxEditor._submit_mermaid_task(
+                mermaid_process_info = DocxWriter._submit_mermaid_task(
                     uid, task_id, output_file_path, sys_cfg['api']['mermaid_api_uri']
                 )
                 img_count = mermaid_process_info.get('img_count', 0)
@@ -543,17 +543,17 @@ class DocxEditor:
 
             for item in docx_para_list:
                 para_id = item['para_id']
-                gen_txt = item['gen_txt']
+                para_gen_txt = item['gen_txt']
                 if para_id is None or para_id >= len(paragraphs):
                     logger.warning(f"{uid}, {task_id}, 段落索引 {para_id} 超出范围，跳过")
                     continue
                 paragraph = paragraphs[para_id]
                 logger.debug(
                     f"{uid}, {task_id}, 处理段落 {para_id}: 原始文本长度={len(paragraph.findall('.//w:t', namespaces))},"
-                    f" 新文本长度={len(gen_txt)}"
+                    f" 新文本长度={len(para_gen_txt)}"
                 )
                 # 更新段落文本
-                if DocxEditor._update_para_txt_xml(uid, task_id, paragraph, gen_txt, namespaces):
+                if DocxWriter._update_para_txt_xml(uid, task_id, paragraph, para_gen_txt, namespaces):
                     modified_count += 1
                     logger.debug(f"{uid}, {task_id}, 已更新段落 {para_id}")
 
@@ -720,7 +720,7 @@ class DocxEditor:
             docx_meta_util.update_process_info(uid, task_id, initial_info, 0)
             docx_meta_util.save_para_task(uid, task_id, tasks)
             doc_gen_results = self._submit_tasks(uid, task_id, start_time, sys_cfg, include_mermaid=True)
-            success = DocxEditor._insert_para_to_doc(uid, task_id)
+            success = DocxWriter._insert_para_to_doc(uid, task_id)
             if not success:
                 error_info = "文档更新失败"
                 logger.error(f"{uid}, {task_id}, {error_info}")
@@ -735,8 +735,8 @@ class DocxEditor:
                 current_info = docx_meta_util.get_docx_file_info(task_id)
                 process_info = f"{current_info[0]['process_info']}, 开始处理文档配图"
                 docx_meta_util.update_process_info(uid, task_id, process_info, 95)
-                mermaid_process_info = DocxEditor._submit_mermaid_task(
-                    uid, task_id, output_file_path, sys_cfg['api']['mermaid_api_uri'], doc_gen_results
+                mermaid_process_info = DocxWriter._submit_mermaid_task(
+                    uid, task_id, output_file_path, sys_cfg['api']['mermaid_api_uri']
                 )
                 img_count = mermaid_process_info.get('img_count', 0)
                 docx_meta_util.update_img_count_by_task_id(task_id, img_count)
@@ -772,7 +772,7 @@ class DocxEditor:
         """清理线程池"""
         try:
             self.executor.shutdown(wait=False)
-        except:
+        except Exception:
             pass
 
     def __enter__(self):
