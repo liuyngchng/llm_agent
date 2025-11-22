@@ -46,6 +46,7 @@ def create_app():
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
     app.config['JSON_AS_ASCII'] = False
     app.config['MY_CFG'] = my_cfg
+    app.config['APP_SOURCE'] = my_enums.AppType.CHAT.name.lower()
 
     # 注册蓝图
     app.register_blueprint(auth_bp)

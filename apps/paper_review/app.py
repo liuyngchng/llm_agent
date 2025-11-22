@@ -50,6 +50,7 @@ def create_app():
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     app.config['TASK_EXPIRE_TIME_MS'] = TASK_EXPIRE_TIME_MS
     app.config['MY_CFG'] = my_cfg
+    app.config['APP_SOURCE'] = my_enums.AppType.PAPER_REVIEW.name.lower()
     # 注册蓝图
     app.register_blueprint(auth_bp)
     # 注册路由

@@ -54,6 +54,16 @@
     box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
 }
 
+/* 截断文本样式 */
+.truncated-text {
+    cursor: help;
+    border-bottom: 1px dotted #999;
+}
+
+.truncated-text:hover {
+    color: #4b6cb7;
+}
+
 #tasksTable td {
     vertical-align: middle;
     padding: 12px 8px;

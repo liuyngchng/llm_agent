@@ -8,7 +8,7 @@ import os
 import time
 import markdown
 import logging.config
-from flask import Blueprint, jsonify, redirect, url_for
+from flask import Blueprint, jsonify, redirect, url_for, current_app
 from flask import (request, render_template)
 from common import cfg_util as cfg_utl, statistic_util
 from common import my_enums
@@ -31,7 +31,7 @@ SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 @auth_bp.route('/login', methods=['GET'])
 def login_index():
     # logger.info("login_index")
-    app_source = request.args.get('app_source')
+    app_source = request.args.get('app_source', current_app.config.get('APP_SOURCE'))
     warning_info = request.args.get('warning_info', "")
     if not app_source:
         raise RuntimeError("no_app_info_found")

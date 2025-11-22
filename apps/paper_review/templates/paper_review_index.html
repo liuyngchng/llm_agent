@@ -12,6 +12,12 @@
 <body>
     <div class="container">
         <header>
+    <!-- 企业Logo区域 -->
+            <div class="header-logo">
+                 <i class="fas fa-university logo-icon" id="companyLogo"></i>
+<!--                <img src="/static/logo.png" alt="企业Logo" class="logo-img" id="companyLogo">-->
+            </div>
+
             <div class="header-buttons">
                 <a href="/paper_review/task?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="my-btn" target="_blank">
                     <i class="fas fa-user"></i> 我的任务
@@ -21,22 +27,8 @@
                 </a>
             </div>
             <h1><i class="fas fa-user-tie"></i> AI 数字评委</h1>
-            <p>上传评审标准和评审材料，智能生成评审结果</p>
+            <p>根据评审标准和评审材料，系统自动生成评审结果</p>
         </header>
-
-        <div class="progress-container">
-            <div class="progress-steps">
-                <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
-                <div class="step active">
-                    <span>1</span>
-                    <div class="step-label">提交评审材料</div>
-                </div>
-                <div class="step">
-                    <span>2</span>
-                    <div class="step-label">下载评审结果</div>
-                </div>
-            </div>
-        </div>
 
         <div class="step-panel active" id="step1">
             <h2><i class="fas fa-edit"></i> 提交评审材料</h2>
@@ -63,7 +55,7 @@
 
                     <div class="upload-btn">
                         <button class="btn btn-primary">
-                            <i class="fas fa-file-alt"></i> 选择评审标准文件
+                            <i class="fas fa-file-alt"></i> 选择评审标准
                         </button>
                         <input type="file" class="file-input" id="reviewCriteria" accept=".xlsx,.docx" onchange="handleCriteriaUpload(this)">
                     </div>
@@ -102,9 +94,11 @@
                 </div>
             </div>
 
-            <button class="btn btn-primary" id="generateBtn" onclick="gen_review_report()">
-                生成评审报告 <i class="fas fa-file-contract"></i>
-            </button>
+            <div class="generate-btn-container">
+                <button class="btn btn-primary generate-btn" id="generateBtn" onclick="gen_review_report()">
+                    生成评审报告 <i class="fas fa-file-contract"></i>
+                </button>
+            </div>
         </div>
     </div>
 

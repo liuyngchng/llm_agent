@@ -11,7 +11,7 @@ from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_co
     convert_docx_to_md, extract_sections_content, split_md_file_with_catalogue, split_md_content_with_catalogue
 import logging.config
 
-from common.docx_meta_util import update_process_info, save_output_file_path_by_task_id
+from common.docx_meta_util import update_process_info, save_output_doc_path
 from common.sys_init import init_yml_cfg
 from common.xlsx_md_util import convert_xlsx_to_md
 
@@ -564,7 +564,7 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
 
         docx_file_full_path = convert_md_to_docx(output_md_file, output_abs_path=True)
         # xlsx_file_full_path = convert_md_to_xlsx(output_md_file, True)
-        save_output_file_path_by_task_id(task_id, docx_file_full_path)
+        save_output_doc_path(uid, task_id, docx_file_full_path)
         logger.info(f"{uid}, {task_id}, 评审报告生成成功, {docx_file_full_path}")
         update_process_info(uid, task_id, "评审报告生成完毕", 100)
 

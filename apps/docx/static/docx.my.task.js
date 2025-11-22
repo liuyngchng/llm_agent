@@ -67,8 +67,18 @@ function renderTasksTable(tasks) {
         createTimeCell.textContent = formatDateTime(task.create_time);
 
         // 处理信息
-        const timeCell = document.createElement('td');
-        timeCell.textContent = task.process_info || '未知时间';
+        const processInfoCell = document.createElement('td');
+        const processInfo = task.process_info
+        processInfoCell.textContent = task.process_info;
+        if (processInfo.length > 40) {
+            processInfoCell.innerHTML = `
+                <span class="truncated-text" title="${processInfo.replace(/"/g, '&quot;')}">
+                    ${processInfo.substring(0, 40)}......
+                </span>
+            `;
+        } else {
+            processInfoCell.textContent = processInfo;
+        }
 
         // 处理进度
         const statusCell = document.createElement('td');
@@ -135,7 +145,7 @@ function renderTasksTable(tasks) {
         row.appendChild(idCell);
         row.appendChild(infoCell);
         row.appendChild(createTimeCell);
-        row.appendChild(timeCell);
+        row.appendChild(processInfoCell);
         row.appendChild(statusCell);
         row.appendChild(downloadCell);
         row.appendChild(actionCell);
