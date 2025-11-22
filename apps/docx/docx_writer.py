@@ -262,40 +262,59 @@ class DocxWriter:
             future = self.executor.submit(DocxWriter._gen_doc_para, docx_file_info[0], para_info, sys_cfg)
             future_to_key[future] = para_info['unique_key']
         # 监控任务进度并收集结果
-        for future in as_completed(future_to_key, timeout=self.timeout):
-            key = future_to_key[future]
-            try:
-                result = future.result()
-                results[key] = result
-            except Exception as e:
-                logger.error(f"{uid}, {task_id}, 段落生成失败 {key}: {str(e)}, {task_id}")
-                results[key] = {
-                    'success': False,
-                    'error': str(e),
-                }
+        try:
+            for future in as_completed(future_to_key, timeout=self.timeout):
+                key = future_to_key[future]
+                try:
+                    result = future.result()
+                    results[key] = result
+                except Exception as e:
+                    logger.error(f"{uid}, {task_id}, 段落生成失败 {key}: {str(e)}")
+                    results[key] = {
+                        'success': False,
+                        'error': str(e),
+                    }
 
-            completed += 1
-            update_interval = 2  # 每2秒更新一次进度，避免过于频繁
-            current_time = time.time()
-            if current_time - last_update_time >= update_interval or completed == total_tasks:
-                # 计算进度百分比时考虑Mermaid任务
-                percent = int(completed / actual_total_tasks * 100)
-                elapsed_time = get_elapsed_time(start_time)
-                # 计算预估剩余时间
-                if completed > 0:
-                    elapsed_seconds = (time.time() * 1000 - start_time) / 1000
-                    avg_time_per_task = elapsed_seconds / completed
-                    remaining_tasks = actual_total_tasks - completed
-                    estimated_remaining = avg_time_per_task * remaining_tasks
-                    if estimated_remaining < 60:
-                        remaining_str = f"约 {int(estimated_remaining)} 秒"
+                completed += 1
+                update_interval = 2
+                current_time = time.time()
+                if current_time - last_update_time >= update_interval or completed == total_tasks:
+                    percent = int(completed / actual_total_tasks * 100)
+                    elapsed_time = get_elapsed_time(start_time)
+                    if completed > 0:
+                        elapsed_seconds = (time.time() * 1000 - start_time) / 1000
+                        avg_time_per_task = elapsed_seconds / completed
+                        remaining_tasks = actual_total_tasks - completed
+                        estimated_remaining = avg_time_per_task * remaining_tasks
+                        if estimated_remaining < 60:
+                            remaining_str = f"约 {int(estimated_remaining)} 秒"
+                        else:
+                            remaining_str = f"约 {int(estimated_remaining / 60)} 分 {int(estimated_remaining % 60)} 秒"
+                        progress_info = f"正在处理第 {completed}/{actual_total_tasks} 个任务，{elapsed_time}，剩余{remaining_str}"
                     else:
-                        remaining_str = f"约 {int(estimated_remaining / 60)} 分 {int(estimated_remaining % 60)} 秒"
-                    progress_info = f"正在处理第 {completed}/{actual_total_tasks} 个任务，{elapsed_time}，剩余{remaining_str}"
-                else:
-                    progress_info = f"正在处理第 {completed}/{actual_total_tasks} 个任务，{elapsed_time}"
-                docx_meta_util.update_process_info(uid, task_id, progress_info, percent)
-                last_update_time = current_time
+                        progress_info = f"正在处理第 {completed}/{actual_total_tasks} 个任务，{elapsed_time}"
+                    docx_meta_util.update_process_info(uid, task_id, progress_info, percent)
+                    last_update_time = current_time
+
+        except TimeoutError:
+            logger.warning(f"{uid}, {task_id}, 总体任务执行超时，取消未完成的任务")
+            # 在 as_completed 外部取消未完成的任务
+            cancelled_count = 0
+            completed_before_timeout = completed
+            for future, key in future_to_key.items():
+                if not future.done():
+                    future.cancel()
+                    cancelled_count += 1
+                    results[key] = {
+                        'success': False,
+                        'error': '任务执行超时被取消',
+                    }
+            logger.info(
+                f"{uid}, {task_id}, 超时前已完成 {completed_before_timeout} 个任务，已取消 {cancelled_count} 个超时任务")
+
+            # 更新最终进度信息
+            timeout_info = f"任务执行超时，已完成 {completed_before_timeout}/{total_tasks} 个任务，{cancelled_count} 个任务因超时取消"
+            docx_meta_util.update_process_info(uid, task_id, timeout_info)
         return results
 
     @staticmethod
