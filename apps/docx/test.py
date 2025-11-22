@@ -3,6 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 import logging.config
 
+from apps.docx.app import process_doc
 from common import docx_meta_util
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 if __name__ == '__main__':
-    task_id = 1763719317286
+    task_id = 1763792282890
     result = docx_meta_util.get_para_info(task_id)
     logger.info(f"测试结果: {result}")
+    process_doc(332987902, task_id)

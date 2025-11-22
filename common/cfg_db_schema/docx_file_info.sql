@@ -17,6 +17,7 @@ CREATE TABLE "docx_file_info" (
 	"is_include_para_txt"	INTEGER,
 	"doc_ctx"	TEXT,
 	"vdb_dir"	TEXT,
+	"is_para_task_created"	INTEGER NOT NULL DEFAULT 0,
 	"create_time"	TEXT,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );

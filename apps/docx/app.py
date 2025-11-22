@@ -40,6 +40,7 @@ OUTPUT_DIR = 'output_doc'
 DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 JSON_MIME_TYPE = 'application/json; charset=utf-8'
 TASK_EXPIRE_TIME_MS = 7200 * 1000  # 任务超时时间，默认2小时
+FILE_TASK_INIT_PERCENT=0.01         # 处理进度大于此值，说明基本材料已经初始化完毕
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 my_cfg = init_yml_cfg()
 os.system(
@@ -610,50 +611,27 @@ def process_doc(uid: int, task_id: int):
     file_info = docx_meta_util.get_docx_file_info(task_id)
     if not file_info or not file_info[0]:
         raise FileNotFoundError(f"docx_file_info_not_found_for_task_id, {task_id}")
-
-
-    vbd_id = file_info[0]['vdb_id']
-    is_include_para_txt = file_info[0]['is_include_para_txt']
+    doc_info = file_info[0]
+    doc_info['start_time'] = time.time() * 1000
     doc_writer = None
     try:
-        update_process_info(uid, task_id, "开始解析文档结构...", 0)
-        output_file_name = f"output_{task_id}.docx"
-        output_file = os.path.join(OUTPUT_DIR, output_file_name)
-        abs_output_file_path = os.path.abspath(output_file)
-        save_output_doc_path(uid, task_id, abs_output_file_path)
-        logger.info(f"{uid},{task_id}, abs_output_file_path, {abs_output_file_path}")
-        update_process_info(uid, task_id, "开始处理文档...")
-        doc_title = file_info[0]['doc_title']
-        doc_type = file_info[0]['doc_type']
-        keywords = file_info[0]['keywords']
-        doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
-        if keywords:
-            doc_ctx = doc_ctx + f", 其他写作要求是 {keywords}"
-        save_write_doc_ctx(uid, task_id, doc_ctx)
-        if vbd_id:
-            vdb_info = VdbMeta.get_vdb_by_id(vbd_id)
-            logger.info(f"{uid}, {task_id}, vdb_info: {vdb_info}")
-        else:
-            vdb_info = None
-        if vdb_info:
-            my_vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_info[0]['id']}"
-            save_write_doc_vdb_dir(uid, task_id, my_vdb_dir)
-        else:
-            my_vdb_dir = ""
-        logger.info(f"{uid}, {task_id}, my_vdb_dir_for_gen_doc, {my_vdb_dir}")
+        current_percent = doc_info['percent']
+        if current_percent < FILE_TASK_INIT_PERCENT:
+            init_txt_gen_material(uid, task_id, file_info)
         doc_writer = DocxWriter()
-        input_file_path = file_info[0]['input_file_path']
+        is_include_para_txt = doc_info['is_include_para_txt']
+        input_file_path = doc_info['input_file_path']
         para_comment_dict = get_comments_dict(input_file_path)
         if para_comment_dict:
             logger.info(f"{uid}, {task_id}, fill_doc_with_comment, {input_file_path}")
             logger.debug(f"{uid}, {task_id}, fill_doc_with_comment, {input_file_path}， comment_dict, {para_comment_dict}")
-            doc_writer.modify_doc_with_comment(uid, task_id, my_cfg, file_info[0], para_comment_dict)
+            doc_writer.modify_doc_with_comment(uid, task_id, my_cfg, doc_info, para_comment_dict)
         elif is_include_para_txt:
             logger.info(f"{uid}, {task_id}, fill_doc_with_para_content, {input_file_path}")
-            doc_writer.fill_doc_with_prompt(uid, task_id, my_cfg, file_info[0])
+            doc_writer.fill_doc_with_prompt(uid, task_id, my_cfg, doc_info)
         else:
             logger.info(f"{uid}, {task_id}, fill_doc_without_para_content, {input_file_path}")
-            doc_writer.fill_doc_without_prompt(uid, task_id, my_cfg, file_info[0])
+            doc_writer.fill_doc_without_prompt(uid, task_id, my_cfg, doc_info)
         doc_writer.shutdown()
     except Exception as e:
         docx_meta_util.update_process_info(uid, task_id, f"任务处理失败: {str(e)}")
@@ -662,6 +640,36 @@ def process_doc(uid: int, task_id: int):
         # 确保资源被释放
         if doc_writer:
             doc_writer.shutdown()
+
+
+def init_txt_gen_material( uid: int, task_id: int, file_info: dict):
+    update_process_info(uid, task_id, "开始解析文档结构...", 0)
+    output_file_name = f"output_{task_id}.docx"
+    output_file = os.path.join(OUTPUT_DIR, output_file_name)
+    abs_output_file_path = os.path.abspath(output_file)
+    save_output_doc_path(uid, task_id, abs_output_file_path)
+    logger.info(f"{uid},{task_id}, abs_output_file_path, {abs_output_file_path}")
+
+    doc_title = file_info[0]['doc_title']
+    doc_type = file_info[0]['doc_type']
+    keywords = file_info[0]['keywords']
+    doc_ctx = f"我正在写一个 {doc_type} 类型的文档, 文档标题是 {doc_title}"
+    if keywords:
+        doc_ctx = doc_ctx + f", 其他写作要求是 {keywords}"
+    save_write_doc_ctx(uid, task_id, doc_ctx)
+    vbd_id = file_info[0]['vdb_id']
+    if vbd_id:
+        vdb_info = VdbMeta.get_vdb_by_id(vbd_id)
+        logger.info(f"{uid}, {task_id}, vdb_info: {vdb_info}")
+    else:
+        vdb_info = None
+    if vdb_info:
+        my_vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_info[0]['id']}"
+        save_write_doc_vdb_dir(uid, task_id, my_vdb_dir)
+    else:
+        my_vdb_dir = ""
+    logger.info(f"{uid}, {task_id}, my_vdb_dir_for_gen_doc, {my_vdb_dir}")
+    update_process_info(uid, task_id, "开始处理文档...", FILE_TASK_INIT_PERCENT)
 
 
 # 创建应用实例

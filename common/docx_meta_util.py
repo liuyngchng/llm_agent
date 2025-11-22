@@ -155,9 +155,24 @@ def update_process_info(uid: int, task_id: int, process_info: str, percent = -1)
     if not task_id or not process_info:
         raise RuntimeError(f"{uid}, param_null_err, {task_id}, {process_info}")
     if percent == -1:
-        sql = f"update docx_file_info set process_info = '{process_info}' where task_id = {task_id} limit 1"
+        sql = f"update docx_file_info set process_info = '{process_info}' where uid = {uid} and task_id = {task_id} limit 1"
     else:
-        sql = f"update docx_file_info set process_info = '{process_info}', percent= {percent} where task_id = {task_id} limit 1"
+        sql = f"update docx_file_info set process_info = '{process_info}', percent= {percent} where uid = {uid} and task_id = {task_id} limit 1"
+    logger.info(f"{uid}, update_docx_file_info_sql, {sql}")
+    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"{uid}, update_docx_file_info_dt, {my_dt}")
+    return my_dt
+
+def set_doc_info_para_task_created_flag(uid: int, task_id: int):
+    """
+    在 docx_file_info 中记录 段落生成任务已创建，置位标记位
+    :param uid: user id
+    :param task_id: process task idt
+    :return:
+    """
+    if not task_id:
+        raise RuntimeError(f"{uid}, param_null_err, {task_id}")
+    sql = f"update docx_file_info set is_para_task_created = 1 where task_id = {task_id} limit 1"
     logger.info(f"{uid}, update_docx_file_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"{uid}, update_docx_file_info_dt, {my_dt}")
@@ -261,6 +276,20 @@ def get_para_list_with_status(task_id: int, status: int, is_order_by_para_id_des
         sql = f"{base_sql} order by para_id desc"
     else:
         sql = f"{base_sql} order by para_id"
+    logger.info(f"get_para_info_sql, {sql}")
+    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.info(f"get_para_info_dt, {my_dt}")
+    return my_dt
+
+def count_para_task(task_id: int)-> list:
+    """
+    查询用户文档生成需求的并行子任务清单,一个文档写作任务的任务ID task_id 对应多个para_info
+    :param task_id: 文档处理的任务 ID
+    :return:
+    """
+    if not task_id:
+        raise RuntimeError(f"param_null_err, {task_id}")
+    sql = f"select count(1) from docx_para_info where task_id = {task_id}"
     logger.info(f"get_para_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"get_para_info_dt, {my_dt}")

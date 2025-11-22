@@ -178,12 +178,11 @@ def get_outline_txt(file_name: str) -> str:
 
     return "\n".join(result_lines)
 
-def is_txt_para(para: Paragraph, current_heading:list, sys_cfg: dict) -> bool:
+def is_txt_para(para: Paragraph, current_heading:list) -> bool:
     """
     判断当前段落是否为描述性的文本
     :param para: 写作要求word文档中的一个段落
     :param current_heading: 当前para 所在的目录
-    :param sys_cfg: 系统配置，涉及大模型的地址等
     return False： 不是写作要求； True： 是写作要求
     """
 

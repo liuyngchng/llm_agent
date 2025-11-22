@@ -24,7 +24,7 @@ from apps.docx.docx_cmt_util import refresh_current_heading_xml
 from common import cfg_util,docx_meta_util
 from apps.docx.txt_gen_util import gen_txt
 from common.docx_meta_util import get_para_info, get_docx_file_info, update_para_info, get_para_list_with_status, \
-    count_mermaid_para
+    count_mermaid_para, set_doc_info_para_task_created_flag, save_para_task, count_para_task
 from common.docx_para_util import get_elapsed_time, get_reference_from_vdb, \
     is_3rd_heading, is_txt_para, refresh_current_heading
 from apps.docx.mermaid_render import MermaidRenderer
@@ -131,12 +131,15 @@ class DocxWriter:
         :param sys_cfg:         系统配置参数
         :param file_info:       docx_file_info 字典
         """
-        start_time = time.time() * 1000
         input_file_path = file_info['input_file_path']
         output_file_path = file_info['output_file_path']
         try:
             logger.info(f"{uid}, {task_id}, 开始处理文档 {input_file_path}")
-            task_count = DocxWriter._gen_doc_with_prompt_task(uid, task_id, file_info, sys_cfg)
+            if file_info['is_para_task_created']:
+                task_count = count_para_task(task_id)[0]
+                logger.info(f"{uid}, {task_id}, para_task_created_ignore_collect_task")
+            else:
+                task_count = DocxWriter._collect_doc_with_prompt_task(uid, task_id, input_file_path)
             if task_count == 0:
                 final_info = f"未检测到需要生成的文本段落"
                 docx_meta_util.update_process_info(uid, task_id, final_info, 100)
@@ -147,15 +150,16 @@ class DocxWriter:
 
             initial_info = f"需处理 {task_count} 个段落，计划启动 {self.executor._max_workers} 个任务"
             logger.info(f"{uid}, {task_id}, {initial_info}")
-            docx_meta_util.update_process_info(uid, task_id, initial_info, 0)
-            doc_gen_results = self._submit_tasks(uid, task_id, start_time, sys_cfg, include_mermaid=True)
+            docx_meta_util.update_process_info(uid, task_id, initial_info, 0.02)
+
+            doc_gen_results = self._submit_tasks(uid, task_id, file_info, sys_cfg, include_mermaid=True)
             success = DocxWriter._insert_para_to_doc(uid, task_id)
             if not success:
                 error_info = "文档更新失败"
                 logger.error(f"{uid}, {task_id}, {error_info}")
                 docx_meta_util.update_process_info(uid, task_id, error_info, 100)
                 return error_info
-            logger.info(f"{uid}, {task_id}, 保存文档完成，{output_file_path}, 耗时 {get_elapsed_time(start_time)}")
+            logger.info(f"{uid}, {task_id}, 保存文档完成，{output_file_path}, 耗时 {get_elapsed_time(file_info['start_time'])}")
             # 计算详细统计信息
             success_count = len([r for r in doc_gen_results.values() if r.get('success')])
             failed_count = task_count - success_count
@@ -194,23 +198,22 @@ class DocxWriter:
             return error_info
 
     @staticmethod
-    def _gen_doc_with_prompt_task(uid: int, task_id: int, file_info:dict, sys_cfg: dict) -> int:
+    def _collect_doc_with_prompt_task(uid: int, task_id: int, input_file_path: str) -> int:
         """
         生成含有目录和段落写作指导的 docx 文档的各个段落文本生成任务，返回总任务数
         :param uid: user id
         :param task_id: doc task id
-        :param file_info: docx_file_info
-        :param sys_cfg: 系统配置
+        :param input_file_path: 输入文件的磁盘绝对路径
         return 生成的任务数量
         """
         logger.info(f"{uid}, {task_id}, start_gen_doc_task")
         tasks = []
         current_heading = []
-        doc = Document(file_info['input_file_path'])
+        doc = Document(input_file_path)
         para_count = len(doc.paragraphs)
         for index, para in enumerate(doc.paragraphs):
             refresh_current_heading(para, current_heading)
-            check_if_txt_para = is_txt_para(para, current_heading, sys_cfg)
+            check_if_txt_para = is_txt_para(para, current_heading)
             if not check_if_txt_para:
                 logger.info(f"{task_id}, 跳过非描述性的文本段落 {para.text}")
                 continue
@@ -228,28 +231,26 @@ class DocxWriter:
         docx_meta_util.update_process_info(uid, task_id, process_info)
         logger.info(f"{uid}, {task_id}, start_save_doc_task")
         docx_meta_util.save_para_task(uid, task_id, tasks)
+        set_doc_info_para_task_created_flag(uid, task_id)
         logger.info(f"{uid}, {task_id}, gen_doc_task_count, {len(tasks)}")
         return len(tasks)
 
-    def _submit_tasks(self, uid: int, task_id: int, start_time: float, sys_cfg: dict,
+    def _submit_tasks(self, uid: int, task_id: int, doc_info: dict, sys_cfg: dict,
             include_mermaid: bool = False) -> dict[str, dict]:
         """
         提交文本生成任务，开始并行处
         :param uid: user id
         :param task_id: 任务ID
-        :param start_time: 开始时间
+        :param doc_info: docx_file_info 字典
         :param sys_cfg: 系统配置信息
         :param include_mermaid: 是否包含Mermaid处理任务
         :return 执行完任务的结果
         """
+        start_time = doc_info['start_time']
         results = {}
         completed = 0
         future_to_key = {}
         last_update_time = time.time()
-        docx_file_info = get_docx_file_info(task_id)
-        if not docx_file_info or not docx_file_info[0]:
-            logger.error(f"{task_id}, docx_file_info_null_exception, {docx_file_info}")
-            raise RuntimeError('文档基本信息不存在')
         para_info_list = get_para_list_with_status(task_id, 0, False)
         if not para_info_list:
             logger.warning(f"{uid}, {task_id}, 未找到文档的段落任务信息")
@@ -259,7 +260,7 @@ class DocxWriter:
         actual_total_tasks = total_tasks + 1 if include_mermaid else total_tasks
         # 提交所有任务到线程池
         for para_info in para_info_list:
-            future = self.executor.submit(DocxWriter._gen_doc_para, docx_file_info[0], para_info, sys_cfg)
+            future = self.executor.submit(DocxWriter._gen_doc_para, doc_info, para_info, sys_cfg)
             future_to_key[future] = para_info['unique_key']
         # 监控任务进度并收集结果
         try:
@@ -474,12 +475,15 @@ class DocxWriter:
             docx_meta_util.update_process_info(uid, task_id, warning_info, 100)
             return warning_info
         logger.debug(f"{uid}, {task_id}, comments_dict: {comments_dict}")
-        start_time = time.time() * 1000
         try:
             info = f"处理带批注的文档 {input_file_path}，共找到 {len(comments_dict)} 个批注"
             logger.info(f"{uid}, {task_id}, {info}")
             docx_meta_util.update_process_info(uid, task_id, info)
-            task_count = DocxWriter._collect_doc_with_comment_tasks(uid, task_id, comments_dict, file_info)
+            if file_info['is_para_task_created']:
+                task_count = count_para_task(task_id)[0]
+                logger.info(f"{uid}, {task_id}, para_task_created_ignore_collect_task")
+            else:
+                task_count = DocxWriter._collect_doc_with_comment_task(uid, task_id, comments_dict, input_file_path)
             if task_count == 0:
                 final_info = "未找到有效的批注处理任务"
                 logger.info(f"{uid}, {task_id}, {final_info}")
@@ -489,8 +493,8 @@ class DocxWriter:
                 return final_info
             initial_info = f"需处理 {task_count} 个批注段落，启动 {self.executor._max_workers} 个任务"
             logger.info(f"{uid}, {task_id}, {initial_info}")
-            docx_meta_util.update_process_info(uid, task_id, initial_info, 0)
-            doc_gen_results = self._submit_tasks(uid, task_id, start_time, sys_cfg, include_mermaid=True)
+            docx_meta_util.update_process_info(uid, task_id, initial_info, 0.02)
+            doc_gen_results = self._submit_tasks(uid, task_id, file_info, sys_cfg, include_mermaid=True)
             success = DocxWriter._update_doc_with_comments(uid, task_id, file_info)
             if not success:
                 error_info = "XML方式更新文档失败"
@@ -642,18 +646,16 @@ class DocxWriter:
             return False
 
     @staticmethod
-    def _collect_doc_with_comment_tasks(uid: int, task_id: int,
-            comments_dict: dict, file_info:dict) -> int:
+    def _collect_doc_with_comment_task(uid: int, task_id: int, comments_dict: dict, input_file_path: str) -> int:
         """
         收集含有批注的文档的并行处理任务清单（XML版本）
         :param task_id, 任务ID
         :param comments_dict: 文档批注信息
-        :param file_info, 需要处理的文档信息  docx_file_info
+        :param input_file_path, 需要处理的文件的绝对路径
         """
         tasks = []
         current_heading = []
         logger.info(f"{uid}, {task_id}, 开始收集批注任务，批注字典: {comments_dict}")
-        input_file_path = file_info['input_file_path']
         try:
             with zipfile.ZipFile(input_file_path) as z:
                 namespaces = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
@@ -697,7 +699,8 @@ class DocxWriter:
                     process_info = f"扫描了 {para_count} 段文本， 已创建 {len(tasks)} 个批处理任务"
                     docx_meta_util.update_process_info(uid, task_id, process_info)
                     logger.info(f"{uid}, {task_id}, start_save_doc_file_info_task")
-                    docx_meta_util.save_para_task(uid, task_id, tasks)
+                    save_para_task(uid, task_id, tasks)
+                    set_doc_info_para_task_created_flag(uid, task_id)
                     logger.info(f"{uid}, {task_id}, gen_doc_task_count, {len(tasks)}")
             return len(tasks)
         except Exception as e:
@@ -714,42 +717,29 @@ class DocxWriter:
         :param file_info: docx_file_info 字典
 
         """
-        start_time = time.time() * 1000
-        tasks = []
-        current_heading = []
         input_file_path = file_info['input_file_path']
         output_file_path = file_info['output_file_path']
-        doc = Document(input_file_path)
+
         try:
             logger.info(f"{uid}, 开始处理无提示词文档 {input_file_path}")
-            # 收集三级标题任务
-            for para_id, para in enumerate(doc.paragraphs):
-                refresh_current_heading(para, current_heading)
-                if not is_3rd_heading(para):
-                    continue
-                task = {
-                    'task_id': task_id,
-                    'unique_key': f"heading_{para_id}",
-                    'para_text': "",
-                    'user_comment': "",
-                    'current_sub_title': para.text,
-                    'current_heading': current_heading.copy(),
-                    'para_id': para_id,
-                }
-                tasks.append(task)
-
-            if not tasks:
+            if file_info['is_para_task_created']:
+                task_count = count_para_task(task_id)[0]
+                logger.info(f"{uid}, {task_id}, para_task_created_ignore_collect_task, task_count={task_count}")
+            else:
+                task_count = DocxWriter._collect_doc_without_prompt_task(uid, task_id, input_file_path)
+            if task_count == 0:
                 final_info = f"未找到三级标题，输出文档： {output_file_path}"
                 logger.info(f"{uid}, {final_info}")
                 docx_meta_util.update_process_info(uid, task_id, final_info, 100)
-                doc.save(output_file_path)
+                import shutil
+                shutil.copy2(input_file_path, output_file_path)
                 return final_info
 
-            initial_info = f"需处理 {len(tasks)} 个三级标题，启动 {self.executor._max_workers} 个任务"
+            initial_info = f"需处理 {task_count} 个三级标题，启动 {self.executor._max_workers} 个任务"
             logger.info(f"{uid}, {initial_info}")
-            docx_meta_util.update_process_info(uid, task_id, initial_info, 0)
-            docx_meta_util.save_para_task(uid, task_id, tasks)
-            doc_gen_results = self._submit_tasks(uid, task_id, start_time, sys_cfg, include_mermaid=True)
+            docx_meta_util.update_process_info(uid, task_id, initial_info, 0.02)
+
+            doc_gen_results = self._submit_tasks(uid, task_id, file_info, sys_cfg, include_mermaid=True)
             success = DocxWriter._insert_para_to_doc(uid, task_id)
             if not success:
                 error_info = "文档更新失败"
@@ -757,7 +747,7 @@ class DocxWriter:
                 return error_info
             logger.info(f"{uid}, 保存无提示词文档完成: {output_file_path}")
             success_count = len([r for r in doc_gen_results.values() if r.get('success')])
-            failed_count = len(tasks) - success_count
+            failed_count = task_count - success_count
             # 处理Mermaid图表
             img_count = 0
             try:
@@ -777,8 +767,8 @@ class DocxWriter:
                 failed_count += 1  # 将Mermaid处理失败计入总失败数
                 logger.error(f"{uid}, {task_id}, Mermaid图表处理失败: {str(e)}")
             total_time = get_elapsed_time(start_time)
-            final_info = (f"文档处理完成，共执行 {len(tasks)} 个文本生成任务，"
-                          f"成功生成 {success_count} 段文本和 {img_count} 张配图，失败 {failed_count} 段，{total_time}")
+            final_info = (f"文档处理完成，共执行 {task_count} 个文本生成任务，"
+                f"成功生成 {success_count} 段文本和 {img_count} 张配图，失败 {failed_count} 段，{total_time}")
 
             if failed_count > 0:
                 final_info += ", 失败标题可在日志中查看详情"
@@ -792,6 +782,34 @@ class DocxWriter:
             docx_meta_util.update_process_info(uid, task_id, error_info, 100)
             return error_info
 
+    @staticmethod
+    def _collect_doc_without_prompt_task(uid: int, task_id: int, input_file_path: str) -> int:
+        """
+        对于只含有目录的文档，收集需处理的段落生成任务
+        :param uid: user id
+        :param task_id: 任务ID
+        :param input_file_path: 输入文件的绝对路径
+        """
+        doc = Document(input_file_path)
+        current_heading = []
+        tasks = []
+        for para_id, para in enumerate(doc.paragraphs):
+            refresh_current_heading(para, current_heading)
+            if not is_3rd_heading(para):
+                continue
+            task = {
+                'task_id': task_id,
+                'unique_key': f"heading_{para_id}",
+                'para_text': "",
+                'user_comment': "",
+                'current_sub_title': para.text,
+                'current_heading': current_heading.copy(),
+                'para_id': para_id,
+            }
+            tasks.append(task)
+        docx_meta_util.save_para_task(uid, task_id, tasks)
+        set_doc_info_para_task_created_flag(uid, task_id)
+        return len(tasks)
 
     def shutdown(self):
         """主动关闭线程池"""
