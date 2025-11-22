@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 """
-处理 docx 文档中的文本填充、文本修改、段落添加等任务
+Word 文档文本生成器
 """
 import json
 import logging.config
