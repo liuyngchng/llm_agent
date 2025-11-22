@@ -18,7 +18,7 @@ from flask import (Flask, request, jsonify, send_from_directory,
 
 from apps.docx.docx_cmt_util import get_comments_dict
 from apps.docx.txt_gen_util import gen_docx_outline_stream
-from apps.docx.docx_writer import DocxWriter
+from apps.docx.doc_writer import DocxWriter
 from common.docx_meta_util import save_docx_file_info, save_write_doc_ctx, save_write_doc_vdb_dir, update_process_info, \
     save_output_doc_path
 from common.docx_para_util import gen_docx_template_with_outline_txt, get_outline_txt
@@ -568,7 +568,7 @@ def process_doc(uid: int, task_id: int):
 
     vbd_id = file_info[0]['vdb_id']
     is_include_para_txt = file_info[0]['is_include_para_txt']
-    generator = None
+    doc_writer = None
     try:
         update_process_info(uid, task_id, "开始解析文档结构...", 0)
         output_file_name = f"output_{task_id}.docx"
@@ -595,27 +595,27 @@ def process_doc(uid: int, task_id: int):
         else:
             my_vdb_dir = ""
         logger.info(f"{uid}, {task_id}, my_vdb_dir_for_gen_doc, {my_vdb_dir}")
-        generator = DocxWriter()
+        doc_writer = DocxWriter()
         input_file_path = file_info[0]['input_file_path']
         para_comment_dict = get_comments_dict(input_file_path)
         if para_comment_dict:
             logger.info(f"{uid}, {task_id}, fill_doc_with_comment, {input_file_path}")
             logger.debug(f"{uid}, {task_id}, fill_doc_with_comment, {input_file_path}， comment_dict, {para_comment_dict}")
-            generator.modify_doc_with_comment(uid, task_id, my_cfg, file_info[0], para_comment_dict)
+            doc_writer.modify_doc_with_comment(uid, task_id, my_cfg, file_info[0], para_comment_dict)
         elif is_include_para_txt:
             logger.info(f"{uid}, {task_id}, fill_doc_with_para_content, {input_file_path}")
-            generator.fill_doc_with_prompt(uid, task_id, my_cfg, file_info[0])
+            doc_writer.fill_doc_with_prompt(uid, task_id, my_cfg, file_info[0])
         else:
             logger.info(f"{uid}, {task_id}, fill_doc_without_para_content, {input_file_path}")
-            generator.fill_doc_without_prompt(uid, task_id, my_cfg, file_info[0])
-        generator.shutdown()
+            doc_writer.fill_doc_without_prompt(uid, task_id, my_cfg, file_info[0])
+        doc_writer.shutdown()
     except Exception as e:
         docx_meta_util.update_process_info(uid, task_id, f"任务处理失败: {str(e)}")
         logger.exception(f"{uid}, {task_id}, fill_doc_err", e)
     finally:
         # 确保资源被释放
-        if generator:
-            generator.shutdown()
+        if doc_writer:
+            doc_writer.shutdown()
 
 
 # 创建应用实例
