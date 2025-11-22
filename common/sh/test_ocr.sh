@@ -42,11 +42,38 @@ cat <<EOF > "$tmpfile"
 }
 EOF
 
+# 读取临时文件内容
+json_data=$(cat "$tmpfile")
 
-echo "request llm_api ${api_uri}"
-curl -ks --noproxy '*' ${api_uri}  \
+# 打印完整的curl命令（两种方式）
+
+echo "方式1 - 使用临时文件:"
+echo "curl -ks --noproxy '*' '${api_uri}' \\"
+echo "  -H 'Content-Type: application/json' \\"
+echo "  -H 'Authorization: Bearer ${api_token}' \\"
+echo "  -d '@$tmpfile'"
+echo ""
+
+echo "方式2 - 直接包含JSON数据:"
+echo "curl -ks --noproxy '*' '${api_uri}' \\"
+echo "  -H 'Content-Type: application/json' \\"
+echo "  -H 'Authorization: Bearer ${api_token}' \\"
+echo "  -d '${json_data}'"
+echo ""
+
+# 执行curl命令（使用临时文件方式更安全）并统计时间
+echo "执行结果:"
+start_time=$(date +%s)
+#https://you_host:/v1/chat/completions
+curl -ks --noproxy '*' "${api_uri}/chat/completions" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer ${api_token}" \
-  -d "@$tmpfile" | jq
+  -d "@$tmpfile"
+end_time=$(date +%s)
+
+# 计算执行时间（秒）
+execution_time=$((end_time - start_time))
+echo ""
+echo "执行时间: ${execution_time} 秒"
 
 rm -f "$tmpfile"

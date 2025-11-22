@@ -5,6 +5,70 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* 下载操作容器 */
+.download-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+/* 操作按钮容器 */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+/* 下载链接样式调整 */
+.download-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background-color: #4b6cb7;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.download-link:hover {
+    background-color: #3a5a9c;
+    color: white;
+    text-decoration: none;
+}
+
+/* 预览按钮样式 */
+.action-preview {
+    background-color: #1890ff;
+    color: white;
+    border: 1px solid #1890ff;
+}
+
+.action-preview:hover:not(:disabled) {
+    background-color: #096dd9;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+/* 截断文本样式 */
+.truncated-text {
+    cursor: help;
+    border-bottom: 1px dotted #999;
+}
+
+.truncated-text:hover {
+    color: #4b6cb7;
+}
+
+#tasksTable td {
+    vertical-align: middle;
+    padding: 12px 8px;
+}
+
 body {
     background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
     min-height: 100vh;

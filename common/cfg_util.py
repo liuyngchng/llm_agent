@@ -400,9 +400,9 @@ def get_const(key:str, app: str)->str | None:
             check_info = query_sqlite(my_conn, sql)
             value_dt = check_info['data']
             value = value_dt[0][0]
-            logger.info(f"get_const {value} with key {key}")
+            # logger.debug(f"get_const {value} with key {key}")
         except Exception as e:
-            logger.info(f"no_value_info_found_for_key, {key}")
+            logger.error(f"no_value_info_found_for_key, {key}")
     return value
 
 def get_consts(app: str)-> dict:
@@ -458,7 +458,7 @@ def get_usr_prompt_template(template_name: str,  sys_cfg: dict, uid=0)-> str:
         sql = f"select value from prompt_template where name = '{template_name}' and  uid = {uid} limit 1"
         try:
             prompt_info = query_sqlite(my_conn, sql)
-            prompt = prompt_info.get('data', None)
+            prompt = prompt_info.get('data', [])
             if prompt and prompt[0]:
                 return prompt[0][0]
             if uid != 0:
@@ -674,7 +674,7 @@ def query_sqlite(db_con, query: str) -> dict:
         data = cursor.fetchall()
         return {"columns": columns, "data": data}
     except Exception as e:
-        logger.exception(f"sqlite_query_err, pls_check_your_table_exist_in_sqlite_file_{db_con}_and_sql_is_correct, {query}")
+        logger.exception(f"sqlite_query_err, pls_check_your_sqlite_file_{db_con}_and_sql_is_correct, {query}")
         # raise Exception
         exit(-1)
         # return {"error": str(e)}
@@ -691,12 +691,46 @@ def insert_del_sqlite(db_con, sql: str) -> dict:
         logger.error(f"save_data_err: {e}, sql {sql}")
         return {"result":False, "error": "save data failed"}
 
+def save_file_info(uid: int, fid: str, full_path: str) -> dict:
+    """
+    保存文件信息
+    :param uid: user id
+    :param fid: 文件id
+    :param full_path: 文件存储路径
+    :return:
+    """
+    logger.info(f"save_file_info, {uid}, {fid}, {full_path}")
+    timestamp = time.time()
+    # 生成类似格式（UTC时间）
+    iso_str = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
+    sql = (f"insert into file_info(uid, fid, full_path, timestamp) values "
+           f"({uid}, '{fid}', '{full_path}', '{iso_str}')")
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
+        logger.debug(f"save_file_info_sql, {sql}")
+        my_dt = insert_del_sqlite(my_conn, sql)
+        return my_dt
+
+def get_file_info(uid: int, fid: str) -> dict:
+    """
+    根据文件ID查询文件信息
+    :param uid 用户 ID
+    :param fid: 文件 ID
+    :return: a dict
+    """
+    if not fid or not uid:
+        raise RuntimeError(f"param_null_err, {uid}, {fid}")
+    sql = f"select * from file_info where uid = {uid} and fid = '{fid}' limit 1"
+    logger.debug(f"get_file_info_sql, {sql}")
+    my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
+    logger.debug(f"get_file_info_dt {my_dt}")
+    return my_dt
+
 
 if __name__ == '__main__':
     """
     just for test, not for a production environment.
     """
-    my_dt = get_usr_prompt_template("hi",  {"test":{"test"}}, 123)
-    logger.info(my_dt)
+    test_my_dt = get_usr_prompt_template("hi",  {"test":{"test"}}, 123)
+    logger.info(test_my_dt)
 
 

@@ -11,14 +11,16 @@ import logging.config
 import os
 
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, render_template
+from flask import Flask, render_template, send_from_directory, abort
+
+from common.bp_auth import get_client_ip
 from common.cm_utils import get_console_arg1
 from common.sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=None)
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config['JSON_AS_ASCII'] = False
@@ -35,8 +37,29 @@ def app_home():
     ctx = {
         "host": my_cfg['sys']['host']
     }
-    logger.info(f"ctx, {ctx}")
+    ip = get_client_ip()
+    logger.info(f"ctx, {ctx}, from_ip, {ip}")
+
     return render_template("portal_index.html", **ctx)
+
+@app.route('/static/<path:file_name>')
+def get_static_file(file_name):
+    static_dirs = [
+        os.path.join(os.path.dirname(__file__), '../../common/static'),
+        os.path.join(os.path.dirname(__file__), 'static'),
+    ]
+
+    for static_dir in static_dirs:
+        if os.path.exists(os.path.join(static_dir, file_name)):
+            logger.debug(f"get_static_file, {static_dir}, {file_name}")
+            return send_from_directory(static_dir, file_name)
+    logger.error(f"no_file_found_error, {file_name}")
+    abort(404)
+
+@app.route('/webfonts/<path:file_name>')
+def get_webfonts_file(file_name):
+    font_file_name = f"webfonts/{file_name}"
+    return get_static_file(font_file_name)
 
 
 

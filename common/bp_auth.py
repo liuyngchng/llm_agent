@@ -8,10 +8,11 @@ import os
 import time
 import markdown
 import logging.config
-from flask import Blueprint, jsonify, redirect, url_for
+from flask import Blueprint, jsonify, redirect, url_for, current_app
 from flask import (request, render_template)
 from common import cfg_util as cfg_utl, statistic_util
 from common import my_enums
+from common.html_util import get_html_ctx_from_md
 from common.sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -30,13 +31,13 @@ SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 @auth_bp.route('/login', methods=['GET'])
 def login_index():
     # logger.info("login_index")
-    app_source = request.args.get('app_source')
+    app_source = request.args.get('app_source', current_app.config.get('APP_SOURCE'))
     warning_info = request.args.get('warning_info', "")
     if not app_source:
         raise RuntimeError("no_app_info_found")
     sys_name = my_enums.AppType.get_app_type(app_source)
     ctx = {
-        "uid": "foo",
+        "uid": -1,
         "sys_name": sys_name,
         "app_source": app_source,
         "warning_info": warning_info,
@@ -83,13 +84,18 @@ def login():
         hack_admin = "1"
     else:
         hack_admin = "0"
+    greeting = "欢迎使用本系统"
+    cfg_greeting = cfg_utl.get_const("greeting", app_source)
+    if cfg_greeting:
+        greeting = cfg_greeting
+
     ctx = {
         "uid": uid,
         "usr": user,
         "role": auth_result["role"],
         "t": auth_result["t"],
         "sys_name": sys_name,
-        "greeting": cfg_utl.get_const("greeting", app_source),
+        "greeting": greeting,
         "app_source": app_source,
         "hack_admin": hack_admin,
     }
@@ -117,7 +123,7 @@ def logout():
     logger.info(f"user_logout, {uid}, {app_source}")
     session_key = f"{uid}_{get_client_ip()}"
     auth_info.pop(session_key, None)
-    usr_info = cfg_utl.get_user_info_by_uid(uid)
+    usr_info = cfg_utl.get_user_info_by_uid(int(uid))
     usr_name = usr_info.get('name', '')
     return redirect(url_for('auth.login_index',
                            app_source=app_source,
@@ -226,27 +232,7 @@ def get_usr_manual():
         abs_path = os.path.abspath(markdown_file_name)
     else:
         logger.info(f"file_exist, {abs_path}")
-    toc_content = ""
-    try:
-        if os.path.exists(abs_path):
-            with open(abs_path, 'r', encoding='utf-8') as f:
-                markdown_content = f.read()
-
-            md = markdown.Markdown(
-                extensions=[
-                    'markdown.extensions.extra',
-                    'markdown.extensions.codehilite',
-                    'markdown.extensions.tables',
-                    'markdown.extensions.toc'  # 启用 TOC 扩展
-                ]
-            )
-            html_content = md.convert(markdown_content)
-            toc_content = md.toc if hasattr(md, 'toc') else ""
-        else:
-            html_content = f"<p>用户手册文件不存在: {abs_path}</p>"
-    except Exception as e:
-        logger.error(f"Error reading markdown file: {e}")
-        html_content = f"<p>读取用户手册时出错: {str(e)}</p>"
+    html_content, toc_content = get_html_ctx_from_md(abs_path)
     ctx = {
         "sys_name": sys_name + "_用户使用说明",
         "warning_info": "",
@@ -257,6 +243,10 @@ def get_usr_manual():
     dt_idx = "md.html"
     logger.debug(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
+
+
+
+
 
 def get_client_ip():
     """获取客户端真实 IP"""

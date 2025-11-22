@@ -7,7 +7,7 @@ import logging.config
 from mcp.server.fastmcp import FastMCP
 from mcp.types import Request
 from starlette.responses import JSONResponse
-from apps.mcp_server.tools import db_query
+from apps.mcp_server.tools.read_file import get_mcp_tools
 
 # 移除硬编码的端口，让 uvicorn 控制端口
 app = FastMCP(stateless_http=True, json_response=True, host='0.0.0.0')
@@ -30,7 +30,7 @@ async def health_check(request: Request):
     return JSONResponse({"status": "ok"})
 
 
-@app.custom_route("/tools", methods=["GET"])
+@app.custom_route("/tools/list", methods=["GET"])
 async def get_tools(request: Request):
     """获取所有tools清单"""
     logger.info(f"trigger_get_tools, {request}")
@@ -52,15 +52,22 @@ async def get_tools(request: Request):
 
 def add_your_tools():
     """从MCP服务中添加可调用的工具"""
-    for name, tool_info in db_query.MCP_TOOLS.items():
+    # 确保工具已经被注册
+
+    mcp_tools = get_mcp_tools()
+
+    if not mcp_tools:
+        logger.warning("没有找到注册的MCP工具")
+        return
+
+    for name, tool_info in mcp_tools.items():
         app.add_tool(
             tool_info['func'],
             name=name,
-            title=tool_info['title'],
             description=tool_info['description'],
             structured_output=True
         )
-        logger.info(f"Added MCP tool: {name}")
+        logger.info(f"mcp_tools_added: {name}")
 
 
 def create_starlette_app():
@@ -84,7 +91,7 @@ if __name__ == "__main__":
     uvicorn.run(
         starlette_app,
         host="0.0.0.0",
-        port=19000,  # 直接运行时使用 19001
+        port=19001,  # 直接运行时使用 19001
         ssl_keyfile=key_file,
         ssl_certfile=cert_file,
         log_level="info"

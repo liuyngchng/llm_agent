@@ -67,8 +67,18 @@ function renderTasksTable(tasks) {
         createTimeCell.textContent = formatDateTime(task.create_time);
 
         // 处理信息
-        const timeCell = document.createElement('td');
-        timeCell.textContent = task.process_info || '未知时间';
+        const processInfoCell = document.createElement('td');
+        const processInfo = task.process_info
+        processInfoCell.textContent = task.process_info;
+        if (processInfo.length > 40) {
+            processInfoCell.innerHTML = `
+                <span class="truncated-text" title="${processInfo.replace(/"/g, '&quot;')}">
+                    ${processInfo.substring(0, 40)}......
+                </span>
+            `;
+        } else {
+            processInfoCell.textContent = processInfo;
+        }
 
         // 处理进度
         const statusCell = document.createElement('td');
@@ -83,14 +93,19 @@ function renderTasksTable(tasks) {
         const downloadCell = document.createElement('td');
         if (task.percent === 100) {
             downloadCell.innerHTML = `
-                <a href="/docx/download/task/${task.task_id}?uid=${uid}" class="action-btn action-download">
-                    <i class="fas fa-download"></i> 全文下载
-                </a>
+                <div class="download-actions">
+                    <a href="/docx/preview/task/${task.task_id}?uid=${uid}" class="download-link" target="_blank">
+                        <i class="fas fa-eye"></i> 预览
+                    </a>
+                    <a href="/docx/download/task/${task.task_id}?uid=${uid}" class="download-link">
+                        <i class="fas fa-download"></i> 下载
+                    </a>
+                </div>
             `;
         } else {
-            downloadCell.innerHTML = ''; // 未完成时留空
-            downloadCell.style.color = '#999'; // 可选：添加灰色提示
+            downloadCell.innerHTML = '<span style="color: #999;">-</span>';
         }
+
 
         // 操作 （刷新/重试/完成）
         const actionCell = document.createElement('td');
@@ -130,7 +145,7 @@ function renderTasksTable(tasks) {
         row.appendChild(idCell);
         row.appendChild(infoCell);
         row.appendChild(createTimeCell);
-        row.appendChild(timeCell);
+        row.appendChild(processInfoCell);
         row.appendChild(statusCell);
         row.appendChild(downloadCell);
         row.appendChild(actionCell);
@@ -258,8 +273,6 @@ async function deleteTask(taskId, docTitle) {
         if (!response.ok) throw new Error('删除失败');
 
         const result = await response.json();
-        alert(result.msg || '删除成功');
-
         // 刷新任务列表
         await fetchTasks();
     } catch (error) {

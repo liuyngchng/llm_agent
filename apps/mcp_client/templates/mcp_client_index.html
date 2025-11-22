@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP 演示</title>
+    <script type="text/javascript"  src="/static/marked.min.js"></script>
+    <script type="text/javascript" src="/static/purify.min.js?a=111"></script>
+    <link rel="stylesheet" href="/static/font-awesome.all.min.css">
+    <link rel="stylesheet" href="/static/mcp_client.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-robot"></i> MCP 演示</h1>
+        </header>
+
+        <div class="input-area">
+            <div class="form-group">
+                <label for="question-input"><i class="fas fa-question-circle"></i> 请输入您的问题</label>
+                <textarea id="question-input" placeholder="请输入您的问题...">都有哪些工具？</textarea>
+            </div>
+
+            <div class="stream-toggle">
+                <input type="checkbox" id="stream-toggle" checked>
+                <label for="stream-toggle">启用流式响应</label>
+            </div>
+
+            <div class="btn-container">
+                <button id="submit-btn" class="btn btn-primary" onclick="submitQuestion()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+
+
+        </div>
+
+        <div class="form-group">
+            <label for="result-area"><i class="fas fa-results"></i> 处理结果</label>
+            <div id="result-area" class="result-area">
+                <p style="color: #777; text-align: center;">结果将显示在这里...</p>
+            </div>
+        </div>
+        <div id="loading-overlay" class="loading-overlay"></div>
+        <div id="loading" class="loading">
+            <i class="fas fa-sync-alt fa-spin"></i>处理中，请稍候...
+        </div>
+    </div>
+
+    <script type="text/javascript" src="/static/mcp_client.js"></script>
+</body>
+</html>
