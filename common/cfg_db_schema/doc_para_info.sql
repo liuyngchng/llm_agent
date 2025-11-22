@@ -16,5 +16,6 @@ CREATE TABLE "doc_para_info" (
 	"contains_mermaid"	INTEGER NOT NULL DEFAULT 0,
 	"word_count"	INTEGER NOT NULL DEFAULT 0,
 	"create_time"	TEXT NOT NULL,
+	"update_time"	TEXT,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );

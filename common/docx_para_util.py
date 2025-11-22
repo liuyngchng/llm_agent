@@ -102,7 +102,7 @@ def refresh_current_heading(para: Paragraph, heading: list) -> bool:
     level = int(para.style.name.split()[-1])  # 提取数字
     headings = {1: [], 2: [], 3: [], 4: [], 5: []}  # 按需扩展层级
     headings[level].append(para.text)
-    logger.info(f"heading_part_caught: H{level}: {para.text}")
+    logger.debug(f"heading_part_caught: H{level}: {para.text}")
     if None == heading:
         logger.error("heading_list_cant't_be_refresh")
         return True

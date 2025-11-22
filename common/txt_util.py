@@ -44,6 +44,13 @@ def strip_prefix_no(txt: str) -> str:
     return re.sub(r'^\d+(\.\d+)*\s*', '', txt.strip())
 
 
+def get_current_time_str():
+    import time
+    from datetime import datetime
+    timestamp = time.time()
+    create_time = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+
 if __name__ == "__main__":
     txt = "2.1.2.2数据管理现状分析"
     print(strip_prefix_no(txt))
