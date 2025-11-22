@@ -20,10 +20,10 @@ from xml.etree import ElementTree as ET
 from docx import Document
 from docx.shared import RGBColor, Cm
 
-from apps.docx.docx_cmt_util import refresh_current_heading_xml
+from common.docx_cmt_util import refresh_current_heading_xml
 from common import cfg_util,docx_meta_util
 from apps.docx.txt_gen_util import gen_txt
-from common.docx_meta_util import get_para_info, get_docx_file_info, update_para_info, get_para_list_with_status, \
+from common.docx_meta_util import get_doc_file_info, update_para_info, get_para_list_with_status, \
     count_mermaid_para, set_doc_info_para_task_created_flag, save_para_task, count_para_task
 from common.docx_para_util import get_elapsed_time, get_reference_from_vdb, \
     is_3rd_heading, is_txt_para, refresh_current_heading
@@ -123,19 +123,19 @@ class DocxWriter:
         except:
             return "未知"
 
-    def fill_doc_with_prompt(self, uid:int, task_id: int, sys_cfg: dict, file_info: dict) -> str:
+    def fill_doc_with_prompt(self, uid:int, task_id: int, sys_cfg: dict, doc_info: dict) -> str:
         """
         处理有目录并且有段落写作要求的 Word 文档
         :param uid:             user id
         :param task_id:         任务Id
         :param sys_cfg:         系统配置参数
-        :param file_info:       docx_file_info 字典
+        :param doc_info:       doc_file_info 字典
         """
-        input_file_path = file_info['input_file_path']
-        output_file_path = file_info['output_file_path']
+        input_file_path = doc_info['input_file_path']
+        output_file_path = doc_info['output_file_path']
         try:
             logger.info(f"{uid}, {task_id}, 开始处理文档 {input_file_path}")
-            if file_info['is_para_task_created']:
+            if doc_info['is_para_task_created']:
                 task_count = count_para_task(task_id)[0]
                 logger.info(f"{uid}, {task_id}, para_task_created_ignore_collect_task")
             else:
@@ -152,14 +152,14 @@ class DocxWriter:
             logger.info(f"{uid}, {task_id}, {initial_info}")
             docx_meta_util.update_process_info(uid, task_id, initial_info, 0.02)
 
-            doc_gen_results = self._submit_tasks(uid, task_id, file_info, sys_cfg, include_mermaid=True)
+            doc_gen_results = self._submit_tasks(uid, task_id, doc_info, sys_cfg, include_mermaid=True)
             success = DocxWriter._insert_para_to_doc(uid, task_id)
             if not success:
                 error_info = "文档更新失败"
                 logger.error(f"{uid}, {task_id}, {error_info}")
                 docx_meta_util.update_process_info(uid, task_id, error_info, 100)
                 return error_info
-            logger.info(f"{uid}, {task_id}, 保存文档完成，{output_file_path}, 耗时 {get_elapsed_time(file_info['start_time'])}")
+            logger.info(f"{uid}, {task_id}, 保存文档完成，{output_file_path}, 耗时 {get_elapsed_time(doc_info['start_time'])}")
             # 计算详细统计信息
             success_count = len([r for r in doc_gen_results.values() if r.get('success')])
             failed_count = task_count - success_count
@@ -167,7 +167,7 @@ class DocxWriter:
             img_count = 0
             try:
                 logger.info(f"{uid}, {task_id}, 开始处理文档中的Mermaid图表")
-                current_info = docx_meta_util.get_docx_file_info(task_id)
+                current_info = docx_meta_util.get_doc_file_info(task_id)
                 process_info = f"{current_info[0]['process_info']}, 开始处理文档配图"
                 docx_meta_util.update_process_info(uid, task_id, process_info, 95)
                 mermaid_process_info = DocxWriter._submit_mermaid_task(
@@ -183,7 +183,7 @@ class DocxWriter:
             except Exception as e:
                 failed_count += 1
                 logger.error(f"{uid}, {task_id}, Mermaid图表处理失败: {str(e)}")
-            total_time = get_elapsed_time(start_time)
+            total_time = get_elapsed_time(doc_info['start_time'])
             final_info = (f"文档处理完成，共执行 {task_count} 个文本生成任务，"
                           f"成功生成 {success_count} 段文本和 {img_count} 张配图，失败任务 {failed_count} 个，{total_time}")
             if failed_count > 0:
@@ -411,7 +411,7 @@ class DocxWriter:
         :param uid: user id
         :param task_id: 生成文本的任务ID
         """
-        doc_file_info = get_docx_file_info(task_id)
+        doc_file_info = get_doc_file_info(task_id)
         input_file_path = doc_file_info[0]['input_file_path']
         output_file_path = doc_file_info[0]['output_file_path']
         # 确保输出目录存在
@@ -453,17 +453,17 @@ class DocxWriter:
             logger.exception(f"{uid}, {task_id}, 使用段落索引更新文档失败: input_file={input_file_path}, output_doc={output_file_path}")
             return False
 
-    def modify_doc_with_comment(self, uid: int, task_id: int, sys_cfg: dict, file_info: dict, comments_dict: dict) -> str:
+    def modify_doc_with_comment(self, uid: int, task_id: int, sys_cfg: dict, doc_info: dict, comments_dict: dict) -> str:
         """
         处理添加了Word批注的文档,采用直接修改xml的方式修改 word文档，保证与提取批注的方式一致
         :param uid:             用户 ID
         :param task_id:         执行任务的ID
         :param sys_cfg:             系统配置，用于使用大模型的能力
-        :param file_info:       docx_file_info 字典
+        :param doc_info:       docx_file_info 字典
         :param comments_dict:   段落ID和段落批注的对应关系字典
         """
-        input_file_path = file_info['input_file_path']
-        output_file_path = file_info['output_file_path']
+        input_file_path = doc_info['input_file_path']
+        output_file_path = doc_info['output_file_path']
         if not os.path.exists(input_file_path):
             error_info = f"输入文件不存在, file_not_exists, {input_file_path}"
             logger.error(f"{uid}, {task_id}, {error_info}")
@@ -479,7 +479,7 @@ class DocxWriter:
             info = f"处理带批注的文档 {input_file_path}，共找到 {len(comments_dict)} 个批注"
             logger.info(f"{uid}, {task_id}, {info}")
             docx_meta_util.update_process_info(uid, task_id, info)
-            if file_info['is_para_task_created']:
+            if doc_info['is_para_task_created']:
                 task_count = count_para_task(task_id)[0]
                 logger.info(f"{uid}, {task_id}, para_task_created_ignore_collect_task")
             else:
@@ -494,8 +494,8 @@ class DocxWriter:
             initial_info = f"需处理 {task_count} 个批注段落，启动 {self.executor._max_workers} 个任务"
             logger.info(f"{uid}, {task_id}, {initial_info}")
             docx_meta_util.update_process_info(uid, task_id, initial_info, 0.02)
-            doc_gen_results = self._submit_tasks(uid, task_id, file_info, sys_cfg, include_mermaid=True)
-            success = DocxWriter._update_doc_with_comments(uid, task_id, file_info)
+            doc_gen_results = self._submit_tasks(uid, task_id, doc_info, sys_cfg, include_mermaid=True)
+            success = DocxWriter._update_doc_with_comments(uid, task_id, doc_info)
             if not success:
                 error_info = "XML方式更新文档失败"
                 logger.error(f"{uid}, {task_id}, {error_info}")
@@ -509,7 +509,7 @@ class DocxWriter:
             img_count = 0
             try:
                 logger.info(f"{uid}, {task_id}, 开始处理文档中的Mermaid图表")
-                current_info = docx_meta_util.get_docx_file_info(task_id)
+                current_info = docx_meta_util.get_doc_file_info(task_id)
                 process_info = f"{current_info[0]['process_info']}, 开始处理文档配图"
                 docx_meta_util.update_process_info(uid, task_id, process_info, 95)
                 mermaid_process_info = DocxWriter._submit_mermaid_task(
@@ -523,7 +523,7 @@ class DocxWriter:
             except Exception as e:
                 failed_count += 1
                 logger.error(f"{uid}, {task_id}, Mermaid图表处理失败: {str(e)}")
-            total_time = get_elapsed_time(start_time)
+            total_time = get_elapsed_time(doc_info['start_time'])
             final_info = (f"批注文档处理完成，共处理 {task_count} 个批注段落，"
                 f"成功生成 {success_count} 段文本和 {img_count} 张配图，失败 {failed_count} 段，{total_time}")
             if failed_count > 0:
@@ -708,21 +708,21 @@ class DocxWriter:
             return 0
 
 
-    def fill_doc_without_prompt(self, uid: int, task_id: int, sys_cfg: dict, file_info: dict) -> str:
+    def fill_doc_without_prompt(self, uid: int, task_id: int, sys_cfg: dict, doc_info: dict) -> str:
         """
         处理只有三级目录，没有任何写作要求段落的word文档
         :param uid: user id
         :param task_id: 执行任务的ID
         :param sys_cfg: 系统配置信息
-        :param file_info: docx_file_info 字典
+        :param doc_info: docx_file_info 字典
 
         """
-        input_file_path = file_info['input_file_path']
-        output_file_path = file_info['output_file_path']
+        input_file_path = doc_info['input_file_path']
+        output_file_path = doc_info['output_file_path']
 
         try:
             logger.info(f"{uid}, 开始处理无提示词文档 {input_file_path}")
-            if file_info['is_para_task_created']:
+            if doc_info['is_para_task_created']:
                 task_count = count_para_task(task_id)[0]
                 logger.info(f"{uid}, {task_id}, para_task_created_ignore_collect_task, task_count={task_count}")
             else:
@@ -739,7 +739,7 @@ class DocxWriter:
             logger.info(f"{uid}, {initial_info}")
             docx_meta_util.update_process_info(uid, task_id, initial_info, 0.02)
 
-            doc_gen_results = self._submit_tasks(uid, task_id, file_info, sys_cfg, include_mermaid=True)
+            doc_gen_results = self._submit_tasks(uid, task_id, doc_info, sys_cfg, include_mermaid=True)
             success = DocxWriter._insert_para_to_doc(uid, task_id)
             if not success:
                 error_info = "文档更新失败"
@@ -752,7 +752,7 @@ class DocxWriter:
             img_count = 0
             try:
                 logger.info(f"{uid}, {task_id}, 开始处理文档中的Mermaid图表")
-                current_info = docx_meta_util.get_docx_file_info(task_id)
+                current_info = docx_meta_util.get_doc_file_info(task_id)
                 process_info = f"{current_info[0]['process_info']}, 开始处理文档配图"
                 docx_meta_util.update_process_info(uid, task_id, process_info, 95)
                 mermaid_process_info = DocxWriter._submit_mermaid_task(
@@ -766,7 +766,7 @@ class DocxWriter:
             except Exception as e:
                 failed_count += 1  # 将Mermaid处理失败计入总失败数
                 logger.error(f"{uid}, {task_id}, Mermaid图表处理失败: {str(e)}")
-            total_time = get_elapsed_time(start_time)
+            total_time = get_elapsed_time(doc_info['start_time'])
             final_info = (f"文档处理完成，共执行 {task_count} 个文本生成任务，"
                 f"成功生成 {success_count} 段文本和 {img_count} 张配图，失败 {failed_count} 段，{total_time}")
 

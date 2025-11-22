@@ -1,5 +1,5 @@
 --文档生成docx文件信息表
-CREATE TABLE "docx_file_info" (
+CREATE TABLE "doc_file_info" (
 	"id"	INTEGER NOT NULL,
 	"uid"	INTEGER,
 	"task_id"	INTEGER,

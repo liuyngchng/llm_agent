@@ -217,10 +217,10 @@ CREATE TABLE docx_file_info (
     img_count INTEGER             -- 图片数量
 );
 ```
-docx_para_info表：
+doc_para_info表：
 
 ```sql
-CREATE TABLE docx_para_info (
+CREATE TABLE doc_para_info (
     id INTEGER PRIMARY KEY,
     task_id INTEGER,              -- 任务ID
     para_id INTEGER,              -- 段落ID
