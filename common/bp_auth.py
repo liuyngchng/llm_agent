@@ -6,14 +6,13 @@
 """
 import os
 import time
-import markdown
 import logging.config
 from flask import Blueprint, jsonify, redirect, url_for, current_app
 from flask import (request, render_template)
 from common import cfg_util as cfg_utl, statistic_util
 from common import my_enums
 from common.html_util import get_html_ctx_from_md
-from common.sys_init import init_yml_cfg
+
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -24,7 +23,6 @@ template_folder = os.path.join(common_dir, 'common', 'templates')
 auth_bp = Blueprint('auth', __name__,
                    template_folder=template_folder)
 auth_info = {}
-my_cfg = init_yml_cfg()
 
 SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 
@@ -42,7 +40,7 @@ def login_index():
         "app_source": app_source,
         "warning_info": warning_info,
     }
-    auth_flag = my_cfg['sys']['auth']
+    auth_flag = get_cfg()['sys']['auth']
     if auth_flag:
         login_idx = "login.html"
         # logger.info(f"return_page_for_app_source {app_source}, {login_idx}")
@@ -68,7 +66,7 @@ def login():
     t = request.form.get('t').strip()
     app_source = request.form.get('app_source')
     logger.info(f"user_login: {user}, {t}, {app_source}, IP={get_client_ip()}")
-    auth_result = cfg_utl.auth_user(user, t, my_cfg)
+    auth_result = cfg_utl.auth_user(user, t, current_app.config.get('CFG'))
     logger.info(f"user_login_result: {user}, {t}, {auth_result}")
     sys_name = my_enums.AppType.get_app_type(app_source)
     if not auth_result["pass"]:
@@ -158,7 +156,7 @@ def reg_user():
     dt_idx = "reg_usr_index.html"
     logger.info(f"reg_user_req, {request.form}, from_IP {get_client_ip()}")
     ctx = {
-        "sys_name": my_cfg['sys']['name']+ "_新用户注册",
+        "sys_name": current_app.config.get('CFG')['sys']['name']+ "_新用户注册",
         "user": "",
         "warning_info": "",
         "app_source": request.form.get('app_source')
@@ -257,3 +255,11 @@ def get_client_ip():
     else:
         ip = request.remote_addr
     return ip
+
+def get_cfg():
+    """获取配置，优先从应用上下文获取，如果没有则直接初始化"""
+    try:
+        from flask import current_app
+        return current_app.config.get('CFG')
+    except RuntimeError:
+        raise

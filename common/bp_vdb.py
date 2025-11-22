@@ -37,8 +37,6 @@ FILE_PROCESS_EXPIRE_MS = 7200000  # 文件处理超时毫秒数，默认2小时
 # 确保上传目录存在
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-my_cfg = init_yml_cfg()
-
 # 添加全局任务管理字典，支持对已经开始处理的任务进行删除
 active_tasks = {}
 task_lock = threading.Lock()
@@ -90,7 +88,7 @@ def vdb_index():
         "uid": uid,
         "t": t,
         "vdb_status": vdb_status,
-        "sys_name": my_cfg['sys']['name'],
+        "sys_name": get_cfg()['sys']['name'],
         "warning_info": ""
     }
     dt_idx = "vdb_index.html"
@@ -346,7 +344,7 @@ def search_vdb():
         return json.dumps({"error": "缺少参数"}, ensure_ascii=False), 400
     my_vector_db_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
 
-    search_result = search_txt(search_input, my_vector_db_dir, 0.1, my_cfg['api'], 3)
+    search_result = search_txt(search_input, my_vector_db_dir, 0.1, get_cfg()['api'], 3)
     logger.info(f"search_result_for_[{search_input}], {search_result}")
     if search_result:
         search_result = search_result.replace("\n", "<br>")
@@ -387,6 +385,14 @@ def is_task_cancelled(file_id: int) -> bool:
         return (file_id in active_tasks and
                 active_tasks[file_id].get('cancelled', False))
 
+def get_cfg():
+    """获取配置，优先从应用上下文获取，如果没有则直接初始化"""
+    try:
+        from flask import current_app
+        return current_app.config.get('CFG')
+    except RuntimeError:
+        raise
+
 def process_doc():
     file_list = VdbMeta.get_vdb_file_processing_list()
     if not file_list or len(file_list) == 0:
@@ -424,8 +430,8 @@ def process_doc():
                 continue
             info = "开始解析文档结构..."
             VdbMeta.update_vdb_file_process_info(file_id, info, 0)
-            vdb_util.vector_file(file_id, cur_file_path,
-                                 output_vdb_dir, my_cfg['api'], 300, 80)
+            vdb_util.vector_file(file_id, cur_file_path, output_vdb_dir,
+                 get_cfg()['api'], 300, 80)
 
             # 清理完成的任务
             with task_lock:

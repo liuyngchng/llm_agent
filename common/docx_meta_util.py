@@ -12,7 +12,7 @@ import time
 
 from common.cfg_util import CFG_DB_URI, CFG_DB_FILE, insert_del_sqlite, sqlite_output
 from common.my_enums import DataType
-from common.txt_util import get_current_time_str
+from common.cm_utils import get_time_str
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ def save_doc_file_info(uid: int, task_id: int, doc_type: str, doc_title: str, do
     :return:
     """
     logger.debug(f"save_doc_file_info, {uid}, {task_id}, {doc_type}, {doc_title}, {keywords}, {input_file_path}")
-    create_time = get_current_time_str()
+    create_time = get_time_str()
     sql = (f"insert into doc_file_info(uid, task_id, doc_type, doc_title, doc_outline, "
            f"keywords, input_file_path, vdb_id, is_include_para_txt, create_time) values "
            f"({uid}, {task_id}, '{doc_type}', '{doc_title}', '{doc_outline}',"
@@ -204,7 +204,7 @@ def save_para_task(uid: int, task_id: int, tasks: list):
         if namespaces is None:
             namespaces = ''
         namespaces = str(namespaces).replace("'", "''")
-        create_time = get_current_time_str()
+        create_time = get_time_str()
         value_item = (f"({uid}, {task_id},{task['para_id']},'{heading}','{unique_key}',"
                       f"'{para_text}','{user_comment}','{current_sub_title}',"
                       f"'{namespaces}','{create_time}')")  # 注意 namespaces 和 create_time 之间用逗号分隔
@@ -233,7 +233,7 @@ def update_para_info(task_id: int, para_id: int, gen_txt: str, word_count: int, 
     """
     if not task_id or not para_id or not gen_txt:
         raise RuntimeError(f"param_null_err, {task_id}, {para_id}, {gen_txt}")
-    update_time = get_current_time_str()
+    update_time = get_time_str()
     sql = (f"update doc_para_info set gen_txt='{gen_txt}',word_count={word_count},contains_mermaid={contains_mermaid},"
        f"update_time='{update_time}',status=1 where task_id={task_id} and para_id = {para_id} limit 1")
     logger.info(f"update_doc_para_info_sql, {sql}")

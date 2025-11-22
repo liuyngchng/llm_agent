@@ -53,23 +53,26 @@ background_tasks_lock = threading.Lock()
 
 
 def create_app():
+    logger.info("init")
     """应用工厂函数"""
     app = Flask(__name__, static_folder=None)
     app.config['JSON_AS_ASCII'] = False
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     app.config['TASK_EXPIRE_TIME_MS'] = TASK_EXPIRE_TIME_MS
-    app.config['MY_CFG'] = my_cfg
+    app.config['CFG'] = my_cfg
     app.config['APP_SOURCE'] = my_enums.AppType.DOCX.name.lower()
-
+    logger.info("reg_blueprint")
     # 注册蓝图
     app.register_blueprint(auth_bp)
     app.register_blueprint(vdb_bp)
 
     # 注册路由
+    logger.info("reg_route")
     register_routes(app)
 
     # 在应用启动时初始化后台任务（使用应用上下文）
     with app.app_context():
+        logger.info("start_bg_task")
         start_background_tasks_once()
     return app
 

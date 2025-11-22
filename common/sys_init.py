@@ -4,6 +4,8 @@
 """
 系统初始化类
 """
+from typing import Any
+
 import yaml
 import os
 import logging.config
@@ -13,10 +15,11 @@ logger = logging.getLogger(__name__)
 
 __init_cfg__ = {}
 
-def init_yml_cfg(cfg_file="cfg.yml")-> dict[str, any]:
+def init_yml_cfg(cfg_file="cfg.yml")-> dict[str, Any]:
     """
     yaml cfg.yml, you can copy cfg.yml.template and rewrite to your own cfg.yml
     """
+    logger.info("init_yml")
     global __init_cfg__
     if __init_cfg__:
         logger.debug(f"cfg_already_inited_return_variable__init_cfg__")
@@ -27,6 +30,7 @@ def init_yml_cfg(cfg_file="cfg.yml")-> dict[str, any]:
         print(info)
         exit(-2)
     # 读取配置
+    logger.info(f"open {cfg_file}")
     with open(cfg_file, 'r', encoding='utf-8') as f:
         __init_cfg__ = yaml.safe_load(f)
     logger.debug(f"init_cfg_from_cfg_file, {__init_cfg__}")
