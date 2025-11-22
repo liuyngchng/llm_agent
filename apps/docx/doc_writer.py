@@ -136,7 +136,7 @@ class DocxWriter:
         try:
             logger.info(f"{uid}, {task_id}, 开始处理文档 {input_file_path}")
             if doc_info['is_para_task_created']:
-                task_count = count_para_task(task_id)[0]
+                task_count = count_para_task(task_id)[0]['count(1)']
                 logger.info(f"{uid}, {task_id}, para_task_created_ignore_collect_task")
             else:
                 task_count = DocxWriter._collect_doc_with_prompt_task(uid, task_id, input_file_path)
@@ -150,7 +150,7 @@ class DocxWriter:
 
             initial_info = f"需处理 {task_count} 个段落，计划启动 {self.executor._max_workers} 个任务"
             logger.info(f"{uid}, {task_id}, {initial_info}")
-            docx_meta_util.update_process_info(uid, task_id, initial_info, 0.02)
+            docx_meta_util.update_process_info(uid, task_id, initial_info)
 
             doc_gen_results = self._submit_tasks(uid, task_id, doc_info, sys_cfg, include_mermaid=True)
             success = DocxWriter._insert_para_to_doc(uid, task_id)
@@ -480,7 +480,7 @@ class DocxWriter:
             logger.info(f"{uid}, {task_id}, {info}")
             docx_meta_util.update_process_info(uid, task_id, info)
             if doc_info['is_para_task_created']:
-                task_count = count_para_task(task_id)[0]
+                task_count = count_para_task(task_id)[0]['count(1)']
                 logger.info(f"{uid}, {task_id}, para_task_created_ignore_collect_task")
             else:
                 task_count = DocxWriter._collect_doc_with_comment_task(uid, task_id, comments_dict, input_file_path)
@@ -493,7 +493,7 @@ class DocxWriter:
                 return final_info
             initial_info = f"需处理 {task_count} 个批注段落，启动 {self.executor._max_workers} 个任务"
             logger.info(f"{uid}, {task_id}, {initial_info}")
-            docx_meta_util.update_process_info(uid, task_id, initial_info, 0.02)
+            docx_meta_util.update_process_info(uid, task_id, initial_info)
             doc_gen_results = self._submit_tasks(uid, task_id, doc_info, sys_cfg, include_mermaid=True)
             success = DocxWriter._update_doc_with_comments(uid, task_id, doc_info)
             if not success:
@@ -723,7 +723,7 @@ class DocxWriter:
         try:
             logger.info(f"{uid}, 开始处理无提示词文档 {input_file_path}")
             if doc_info['is_para_task_created']:
-                task_count = count_para_task(task_id)[0]
+                task_count = count_para_task(task_id)[0]['count(1)']
                 logger.info(f"{uid}, {task_id}, para_task_created_ignore_collect_task, task_count={task_count}")
             else:
                 task_count = DocxWriter._collect_doc_without_prompt_task(uid, task_id, input_file_path)
@@ -737,8 +737,7 @@ class DocxWriter:
 
             initial_info = f"需处理 {task_count} 个三级标题，启动 {self.executor._max_workers} 个任务"
             logger.info(f"{uid}, {initial_info}")
-            docx_meta_util.update_process_info(uid, task_id, initial_info, 0.02)
-
+            docx_meta_util.update_process_info(uid, task_id, initial_info)
             doc_gen_results = self._submit_tasks(uid, task_id, doc_info, sys_cfg, include_mermaid=True)
             success = DocxWriter._insert_para_to_doc(uid, task_id)
             if not success:
