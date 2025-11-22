@@ -19,10 +19,12 @@ from flask import (Flask, request, jsonify, send_from_directory,
 from apps.docx.docx_cmt_util import get_comments_dict
 from apps.docx.txt_gen_util import gen_docx_outline_stream
 from apps.docx.doc_writer import DocxWriter
+from common.docx_md_util import convert_docx_to_md
 from common.docx_meta_util import save_docx_file_info, save_write_doc_ctx, save_write_doc_vdb_dir, update_process_info, \
-    save_output_doc_path
+    save_output_doc_path, get_docx_file_info
 from common.docx_para_util import gen_docx_template_with_outline_txt, get_outline_txt
 from common import my_enums, statistic_util,docx_meta_util
+from common.html_util import get_html_ctx_from_md
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info, SESSION_TIMEOUT
@@ -433,13 +435,9 @@ def register_routes(app):
 
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
-        filename = f"output_{task_id}.docx"
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
-        absolute_path = os.path.abspath(file_path)
-        logger.info(f"{uid}, 文件检查 - 相对路径: {file_path}")
-        logger.info(f"{uid}, 文件检查 - 绝对路径: {absolute_path}")
-        logger.info(f"{uid}, 文件检查 - UPLOAD_FOLDER: {UPLOAD_FOLDER}")
-        logger.info(f"{uid}, 文件检查 - 当前工作目录: {os.getcwd()}")
+        file_path_info = get_docx_file_info(task_id)
+        logger.debug(f"{task_id}, {file_path_info}")
+        absolute_path = file_path_info[0]['output_file_path']
         if not os.path.exists(absolute_path):
             logger.error(f"{uid}, 文件不存在: {absolute_path}")
             abort(404)
@@ -454,12 +452,59 @@ def register_routes(app):
             return send_file(
                 absolute_path,
                 as_attachment=True,
-                download_name=filename,
+                download_name=f"output_doc_{task_id}.docx",
                 mimetype=DOCX_MIME_TYPE,
             )
         except Exception as e:
             logger.error(f"{uid}, 文件发送失败: {str(e)}")
             abort(500)
+
+    @app.route('/docx/preview/task/<task_id>', methods=['GET'])
+    def preview_file_by_task_id(task_id):
+        """
+        根据任务ID预览
+        ：param task_id: 任务ID，其对应的文件名格式如下 f"output_{task_id}.docx"
+        """
+        uid = request.args["uid"]
+        logger.info(f"{uid}, preview_file_task_id, {task_id}")
+        session_key = f"{uid}_{get_client_ip()}"
+        app_source = AppType.DOCX.name.lower()
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = "用户会话信息已失效，请重新登录"
+            logger.warning(f"{uid}, {warning_info}")
+            return redirect(url_for(
+                'auth.login_index',
+                app_source=app_source,
+                warning_info=warning_info
+            ))
+        statistic_util.add_access_count_by_uid(int(uid), 1)
+        file_path_info = get_docx_file_info(task_id)
+        logger.debug(f"{task_id}, {file_path_info}")
+        absolute_path = file_path_info[0]['output_file_path']
+        logger.debug(f"absolute_path, {absolute_path}")
+        if not os.path.exists(absolute_path):
+            logger.error(f"文件不存在: {absolute_path}")
+            abort(404)
+
+        from pathlib import Path
+        md_absolute_path = str(Path(absolute_path).with_suffix('.md'))
+        logger.info(f"文件检查 - 绝对路径: {md_absolute_path}")
+        if not os.path.exists(md_absolute_path):
+            logger.error(f"文件不存在,开始生成: {md_absolute_path}")
+            md_absolute_path = convert_docx_to_md(absolute_path, True)
+        logger.info(f"文件找到，准备发送: {md_absolute_path}")
+        html_content, toc_content = get_html_ctx_from_md(md_absolute_path)
+        ctx = {
+            "sys_name": AppType.DOCX.value,
+            "warning_info": "",
+            "app_source": app_source,
+            "html_content": html_content,
+            "toc_content": toc_content,
+        }
+        dt_idx = "md.html"
+        logger.debug(f"return_page {dt_idx}")
+        return render_template(dt_idx, **ctx)
 
     @app.route('/docx/del/task/<task_id>', methods=['GET'])
     def delete_file_info_by_task_id(task_id):

@@ -413,6 +413,11 @@ class DocxWriter:
         doc_file_info = get_docx_file_info(task_id)
         input_file_path = doc_file_info[0]['input_file_path']
         output_file_path = doc_file_info[0]['output_file_path']
+        # 确保输出目录存在
+        output_dir = os.path.dirname(output_file_path)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+            logger.info(f"{uid}, {task_id}, 创建输出目录: {output_dir}")
         # 已经是按照 para_id 倒序排列的 list了， 可以直接遍历
         doc_para_info_list = get_para_list_with_status(task_id, 1)
         try:
@@ -541,6 +546,11 @@ class DocxWriter:
         temp_dir = None
         input_file_path = file_info['input_file_path']
         output_file_path = file_info['output_file_path']
+        # 确保输出目录存在
+        output_dir = os.path.dirname(output_file_path)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+            logger.info(f"{uid}, {task_id}, 创建输出目录: {output_dir}")
         docx_para_list = get_para_list_with_status(task_id,0)
         try:
             # 创建临时目录

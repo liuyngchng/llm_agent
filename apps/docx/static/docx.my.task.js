@@ -83,14 +83,19 @@ function renderTasksTable(tasks) {
         const downloadCell = document.createElement('td');
         if (task.percent === 100) {
             downloadCell.innerHTML = `
-                <a href="/docx/download/task/${task.task_id}?uid=${uid}" class="action-btn action-download">
-                    <i class="fas fa-download"></i> 全文下载
-                </a>
+                <div class="download-actions">
+                    <a href="/docx/preview/task/${task.task_id}?uid=${uid}" class="download-link" target="_blank">
+                        <i class="fas fa-eye"></i> 预览
+                    </a>
+                    <a href="/docx/download/task/${task.task_id}?uid=${uid}" class="download-link">
+                        <i class="fas fa-download"></i> 下载
+                    </a>
+                </div>
             `;
         } else {
-            downloadCell.innerHTML = ''; // 未完成时留空
-            downloadCell.style.color = '#999'; // 可选：添加灰色提示
+            downloadCell.innerHTML = '<span style="color: #999;">-</span>';
         }
+
 
         // 操作 （刷新/重试/完成）
         const actionCell = document.createElement('td');

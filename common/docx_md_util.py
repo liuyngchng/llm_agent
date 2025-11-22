@@ -71,7 +71,14 @@ def convert_docx_to_md(docx_path: str, output_abs_path: bool = False) -> str:
         md_path = os.path.join(OUTPUT_DIR, md_filename)
 
         # 转换并保存到文件
-        pypandoc.convert_file(docx_path, 'md', outputfile=md_path, format='docx')
+        pypandoc.convert_file(
+            docx_path, 'md', outputfile=md_path, format='docx',
+            extra_args=[
+                '--number-sections',          # 自动编号
+                '--number-offset=0',          # 编号起始值
+                '--top-level-division=chapter' # 顶层分割级别
+            ]
+        )
         abs_path = os.path.abspath(md_path)
         logger.info(f"成功转换文档: {docx_path} -> {md_path}")
         if output_abs_path:
