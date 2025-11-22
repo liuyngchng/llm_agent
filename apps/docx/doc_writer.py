@@ -217,7 +217,7 @@ class DocxWriter:
             task_key =  f"para_{index}"
             task = {
                 'unique_key': task_key,
-                'paragraph_prompt': para.text,
+                'para_text': para.text,
                 'user_comment': "",
                 'current_sub_title': current_heading[0] if current_heading else "",
                 'current_heading': current_heading.copy(),

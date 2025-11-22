@@ -674,7 +674,7 @@ def query_sqlite(db_con, query: str) -> dict:
         data = cursor.fetchall()
         return {"columns": columns, "data": data}
     except Exception as e:
-        logger.exception(f"sqlite_query_err, pls_check_your_table_exist_in_sqlite_file_{db_con}_and_sql_is_correct, {query}")
+        logger.exception(f"sqlite_query_err, pls_check_your_sqlite_file_{db_con}_and_sql_is_correct, {query}")
         # raise Exception
         exit(-1)
         # return {"error": str(e)}

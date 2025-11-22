@@ -34,7 +34,11 @@ def get_reference_from_vdb(keywords: str, vdb_dir: str, sys_cfg: dict) -> str:
     :param sys_cfg: 系统配置
     :return: 文本
     """
+    logger.debug(f"vdb_dir, {vdb_dir}")
     reference = ""
+    if not vdb_dir:
+        return reference
+
     try:
         if "" != vdb_dir and os.path.exists(vdb_dir):
             reference = search_txt(keywords, vdb_dir, 0.2, sys_cfg, 2).strip()
