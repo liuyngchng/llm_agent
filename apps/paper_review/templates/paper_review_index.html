@@ -34,8 +34,8 @@
             <h2><i class="fas fa-edit"></i> 提交评审材料</h2>
             <div class="form-group">
                 <label for="reviewTopic">【1】评审主题</label>
-                <input type="text" id="reviewTopic" list="topicTypes" name="doc_type" placeholder="可以直接输入，也可以从下拉菜单中选取">
-                <datalist id="topicTypes">
+                <input type="text" id="reviewTopic" list="topicList" name="doc_title" placeholder="可以直接输入，也可以从下拉菜单中选取">
+                <datalist id="topicList">
                     <option value="">-- 请选择评审主题 --</option>
                     <option value="xxxx 国家标准评审"></option>
                     <option value="xxxx 可行性研究报告评审"></option>
@@ -45,9 +45,20 @@
                     <option value = "xxxx AI 技能大赛参赛作品评审"></option>
                 </datalist>
             </div>
+            <div class="form-group">
+                <label for="reviewTopic">【2】评审类别</label>
+                <input type="text" id="reviewType" list="typeList" name="doc_type" placeholder="可以直接输入，也可以从下拉菜单中选取">
+                <datalist id="typeList">
+                    <option value="">-- 请选择评审类别 --</option>
+                    <option value="国标制定评审"></option>
+                    <option value="项目可行性研究评审"></option>
+                    <option value="招投标评审"></option>
+                    <option value="学术论文评审"></option>
+                </datalist>
+            </div>
 
             <div class="form-group">
-                <label for="reviewCriteria">【2】评审标准</label>
+                <label for="reviewCriteria">【3】评审标准</label>
                 <div class="upload-container">
                     <i class="fas fa-file-alt"></i>
                     <h3>上传评审标准</h3>
@@ -71,7 +82,7 @@
             </div>
 
             <div class="form-group">
-                <label for="reviewPaperFile">【3】评审材料</label>
+                <label for="reviewPaperFile">【4】评审材料</label>
                 <div class="upload-container active" id="uploadContainer">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <h3>上传评审材料</h3>

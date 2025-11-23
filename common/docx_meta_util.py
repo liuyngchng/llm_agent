@@ -36,12 +36,20 @@ def save_doc_info(uid: int, task_id: int, doc_type: str, doc_title: str, doc_out
     """
     logger.debug(f"save_doc_info, {uid}, {task_id}, {doc_type}, {doc_title}, {keywords}, {input_file_path}")
     create_time = get_time_str()
+    escaped_doc_type = doc_type.replace("'", "''") if doc_type else ""
+    escaped_doc_title = doc_title.replace("'", "''") if doc_title else ""
+    escaped_doc_outline = doc_outline.replace("'", "''") if doc_outline else ""
+    escaped_keywords = keywords.replace("'", "''") if keywords else ""
+    escaped_input_file_path = input_file_path.replace("'", "''") if input_file_path else ""
+    escaped_doc_ctx = doc_ctx.replace("'", "''") if doc_ctx else ""
+    escaped_output_file_path = output_file_path.replace("'", "''") if output_file_path else ""
+    escaped_vdb_dir = vdb_dir.replace("'", "''") if vdb_dir else ""
     sql = (f"insert into doc_file_info(uid, task_id, doc_type, doc_title, doc_outline, "
            f"keywords, input_file_path, vdb_id, is_include_para_txt, "
            f"doc_ctx, output_file_path, vdb_dir, create_time) values "
-           f"({uid}, {task_id}, '{doc_type}', '{doc_title}', '{doc_outline}',"
-           f"'{keywords}', '{input_file_path}', {vdb_id}, {is_include_para_txt}, "
-           f"'{doc_ctx}', '{output_file_path}', '{vdb_dir}', '{create_time}')")
+           f"({uid}, {task_id}, '{escaped_doc_type}', '{escaped_doc_title}', '{escaped_doc_outline}',"
+           f"'{escaped_keywords}', '{escaped_input_file_path}', {vdb_id}, {is_include_para_txt}, "
+           f"'{escaped_doc_ctx}', '{escaped_output_file_path}', '{escaped_vdb_dir}', '{create_time}')")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         logger.debug(f"save_doc_info_sql, {sql}")
         my_dt = insert_del_sqlite(my_conn, sql)
@@ -189,8 +197,9 @@ def save_gen_para_txt(task_id: int, para_id: int, gen_txt: str, word_count: int,
     """
     if not task_id or not para_id or not gen_txt:
         raise RuntimeError(f"param_null_err, {task_id}, {para_id}, {gen_txt}")
+    escaped_gen_txt = gen_txt.replace("'", "''")
     update_time = get_time_str()
-    sql = (f"update doc_para_info set gen_txt='{gen_txt}',word_count={word_count},contains_mermaid={contains_mermaid},"
+    sql = (f"update doc_para_info set gen_txt='{escaped_gen_txt}',word_count={word_count},contains_mermaid={contains_mermaid},"
        f"update_time='{update_time}',status=1 where task_id={task_id} and para_id = {para_id} limit 1")
     logger.info(f"save_gen_para_txt_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)

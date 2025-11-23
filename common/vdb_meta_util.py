@@ -112,9 +112,9 @@ class VdbMeta:
     @staticmethod
     def get_vdb_file_processing_list():
         sql = f"select * from vdb_file_info where percent != 100 limit 100"
-        logger.info(f"get_vdb_processing_file_list_sql, {sql}")
+        logger.debug(f"get_vdb_processing_file_list_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-        logger.info(f"get_vdb_processing_file_list_dt {my_dt}")
+        logger.debug(f"get_vdb_processing_file_list_dt {my_dt}")
         return my_dt
 
     @staticmethod
@@ -122,9 +122,9 @@ class VdbMeta:
         if not uid:
             raise RuntimeError(f"get_default_vdb_param_null_err, {uid}")
         sql = f"select id, name from vdb_info where uid = {uid} and is_default = 1 limit 1"
-        logger.info(f"get_default_vdb_sql, {sql}")
+        logger.debug(f"get_default_vdb_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-        logger.info(f"get_default_vdb_dt {my_dt}")
+        logger.debug(f"get_default_vdb_dt {my_dt}")
         return my_dt
 
     @staticmethod
@@ -132,9 +132,9 @@ class VdbMeta:
         if not vbd_id:
             raise RuntimeError(f"get_vdb_by_id_param_null_err, {vbd_id}")
         sql = f"select id, name from vdb_info where id = {vbd_id} limit 1"
-        logger.info(f"get_vdb_by_id_sql, {sql}")
+        logger.debug(f"get_vdb_by_id_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-        logger.info(f"get_vdb_by_id_dt {my_dt}")
+        logger.debug(f"get_vdb_by_id_dt {my_dt}")
         return my_dt
 
     @staticmethod
@@ -142,13 +142,13 @@ class VdbMeta:
         if not uid or not vdb_id:
             raise RuntimeError(f"set_default_vdb_param_null_err, {uid}, {vdb_id}")
         sql = f"update vdb_info set is_default = 1 where uid = {uid} and id = {vdb_id} limit 1"
-        logger.info(f"set_default_vdb_sql, {sql}")
+        logger.debug(f"set_default_vdb_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-        logger.info(f"set_default_vdb_dt {my_dt}")
+        logger.debug(f"set_default_vdb_dt {my_dt}")
         sql = f"update vdb_info set is_default = 0 where uid = {uid} and id != {vdb_id}"
-        logger.info(f"set_default_vdb_exclude_sql, {sql}")
+        logger.debug(f"set_default_vdb_exclude_sql, {sql}")
         my_dt1 = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-        logger.info(f"set_default_vdb_exclude_dt {my_dt1}")
+        logger.debug(f"set_default_vdb_exclude_dt {my_dt1}")
         return my_dt
 
     @staticmethod
@@ -156,9 +156,9 @@ class VdbMeta:
         if not uid or not file_name or not vdb_id:
             raise RuntimeError(f"param_null_err {file_name}, {uid}, {vdb_id}")
         sql = f"select * from vdb_file_info where name = '{file_name}' and uid = {uid} and vdb_id = {vdb_id} limit 1"
-        logger.info(f"get_file_info_sql, {sql}")
+        logger.debug(f"get_file_info_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-        logger.info(f"get_file_info_dt {my_dt}")
+        logger.debug(f"get_file_info_dt {my_dt}")
         return my_dt
 
     @staticmethod
@@ -166,9 +166,9 @@ class VdbMeta:
         if not uid or not file_md5 or not vdb_id:
             raise RuntimeError(f"param_null_err {file_md5}, {uid}, {vdb_id}")
         sql = f"select * from vdb_file_info where file_md5 = '{file_md5}' and uid = {uid} and vdb_id = {vdb_id} limit 1"
-        logger.info(f"get_file_info_sql, {sql}")
+        logger.debug(f"get_file_info_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-        logger.info(f"get_file_info_dt {my_dt}")
+        logger.debug(f"get_file_info_dt {my_dt}")
         return my_dt
 
     @staticmethod
@@ -176,9 +176,9 @@ class VdbMeta:
         if not task_id:
             raise RuntimeError(f"param_null_err {task_id}")
         sql = f"select * from vdb_file_info where task_id = {task_id} limit 1"
-        logger.info(f"get_file_info_by_task_id, {sql}")
+        logger.debug(f"get_file_info_by_task_id, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-        logger.info(f"get_file_info_by_task_id_dt {my_dt}")
+        logger.debug(f"get_file_info_by_task_id_dt {my_dt}")
         return my_dt
 
     @staticmethod
@@ -186,9 +186,9 @@ class VdbMeta:
         if not file_id:
             raise RuntimeError(f"file_id_param_null_err {file_id}")
         sql = f"select * from vdb_file_info where id = {file_id} limit 1"
-        logger.info(f"get_file_sql, {sql}")
+        logger.debug(f"get_file_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-        logger.info(f"get_file_info_by_id_dt {my_dt}")
+        logger.debug(f"get_file_info_by_id_dt {my_dt}")
         return my_dt
 
     @staticmethod

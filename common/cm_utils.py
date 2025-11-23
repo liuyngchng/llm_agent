@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 chinese_pattern = re.compile(r'[\u4e00-\u9fff]')
 english_pattern = re.compile(r'[a-zA-Z]')
 
+OUTPUT_DIR = "output_doc"
+
 
 def calc_txt_token(txt: str) -> int:
     """默认需要联网"""

@@ -2,23 +2,25 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 import json
+import os.path
 import time
 from typing import List, Dict
 
 import requests
 
+from common.cm_utils import OUTPUT_DIR
 from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_content_to_md_file, get_md_file_catalogue, \
     convert_docx_to_md, extract_sections_content, split_md_file_with_catalogue, split_md_content_with_catalogue
 import logging.config
 
-from common.docx_meta_util import update_process_info, save_output_doc_path
+from common.docx_meta_util import update_process_info
 from common.sys_init import init_yml_cfg
 from common.xlsx_md_util import convert_xlsx_to_md
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-OUTPUT_DIR = "output_doc"
+
 
 MAX_SECTION_LENGTH = 3000  # 3000 字符
 
@@ -558,13 +560,13 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
         # 调用AI评审生成
         review_result = start_ai_review(uid, task_id, review_topic, criteria_markdown_data, paper_file, sys_cfg)
 
-        # 生成输出文件
-        output_file_name = f"output_{task_id}.md"
-        output_md_file = save_content_to_md_file(review_result, output_file_name, output_abs_path=True)
 
+        # 构建完整的文件路径
+        output_file_name = f"{OUTPUT_DIR}/output_{task_id}.md"
+        output_file_path = os.path.abspath(output_file_name)
+        output_md_file = save_content_to_md_file(review_result, output_file_path, output_abs_path=True)
         docx_file_full_path = convert_md_to_docx(output_md_file, output_abs_path=True)
         # xlsx_file_full_path = convert_md_to_xlsx(output_md_file, True)
-        save_output_doc_path(uid, task_id, docx_file_full_path)
         logger.info(f"{uid}, {task_id}, 评审报告生成成功, {docx_file_full_path}")
         update_process_info(uid, task_id, "评审报告生成完毕", 100)
 

@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 if __name__ == '__main__':
-    task_id = 1763792282890
+    uid =332987902
+    task_id = 1763862741113
     result = docx_meta_util.get_para_info(task_id)
     logger.info(f"测试结果: {result}")
-    process_doc(332987902, task_id)
+    process_doc(uid, task_id)

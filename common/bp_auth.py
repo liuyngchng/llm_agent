@@ -260,6 +260,7 @@ def get_cfg():
     """获取配置，优先从应用上下文获取，如果没有则直接初始化"""
     try:
         from flask import current_app
-        return current_app.config.get('CFG')
+        cfg = current_app.config.get('CFG')
+        return cfg
     except RuntimeError:
         raise

@@ -20,7 +20,7 @@ from common.docx_cmt_util import get_comments_dict
 from apps.docx.txt_gen_util import gen_docx_outline_stream
 from apps.docx.doc_writer import DocxWriter
 from common.docx_md_util import convert_docx_to_md
-from common.docx_meta_util import save_doc_info, get_doc_info
+from common.docx_meta_util import save_doc_info, get_doc_info, update_process_info
 from common.docx_para_util import gen_docx_template_with_outline_txt, get_outline_txt
 from common import my_enums, statistic_util,docx_meta_util
 from common.html_util import get_html_ctx_from_md
@@ -558,16 +558,16 @@ def save_doc_args(uid: int, task_id: int, doc_type: str, doc_title: str,  doc_ou
     output_file_name = f"output_{task_id}.docx"
     output_file = os.path.join(OUTPUT_DIR, output_file_name)
     output_file_path = os.path.abspath(output_file)
+    vdb_dir = ""
     if vbd_id:
         vdb_info = VdbMeta.get_vdb_by_id(vbd_id)
-        vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_info[0]['id']}"
-    else:
-        vdb_dir = ""
-
+        if vdb_info and vdb_info[0]:
+            vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_info[0]['id']}"
     save_doc_info(
         uid, task_id, doc_type, doc_title, doc_outline, keywords, input_file_path, vbd_id,
         is_include_para_txt, doc_ctx, output_file_path, vdb_dir
     )
+    update_process_info(uid, task_id, "任务开始初始化", 0)
 
 
 def start_background_tasks():

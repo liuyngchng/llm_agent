@@ -21,7 +21,7 @@ from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
 from common import my_enums, statistic_util
-from common.docx_meta_util import get_docx_file_info
+from common.docx_meta_util import get_doc_info
 from common.html_util import get_html_ctx_from_md
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
@@ -33,6 +33,7 @@ logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 UPLOAD_FOLDER = 'upload_doc'
+OUTPUT_DIR = "output_doc"
 TASK_EXPIRE_TIME_MS = 7200 * 1000  # 任务超时时间，默认2小时
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 my_cfg = init_yml_cfg()
@@ -49,7 +50,7 @@ def create_app():
     app.config['JSON_AS_ASCII'] = False
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     app.config['TASK_EXPIRE_TIME_MS'] = TASK_EXPIRE_TIME_MS
-    app.config['MY_CFG'] = my_cfg
+    app.config['CFG'] = my_cfg
     app.config['APP_SOURCE'] = my_enums.AppType.PAPER_REVIEW.name.lower()
     # 注册蓝图
     app.register_blueprint(auth_bp)
@@ -187,12 +188,17 @@ def register_routes(app):
 
         task_id = int(data.get("task_id"))
         review_topic = data.get("review_topic")
+        review_type = data.get("review_type")
         review_criteria_file_id = data.get("review_criteria_file_name")
         review_paper_file_id = data.get("review_paper_file_name")
 
         # 验证输入
         if not review_topic:
             err_info = {"error": "评审主题不能为空"}
+            logger.error(f"err_occurred, {err_info}")
+            return json.dumps(err_info, ensure_ascii=False), 400
+        if not review_type:
+            err_info = {"error": "评审类别不能为空"}
             logger.error(f"err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
 
@@ -212,20 +218,21 @@ def register_routes(app):
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
 
-
-        # 保存任务信息到数据库
-        doc_type = my_enums.WriteDocType.REVIEW_REPORT.value
-        docx_meta_util.save_docx_file_info(
-            uid, task_id, doc_type, review_topic,
-            review_criteria_file_info[0]['full_path'],
+        docx_ctx = f"我正在做一个 {review_type} 的评审，评审主题是 {review_topic}"
+        output_file_name = f"{OUTPUT_DIR}/output_{task_id}.docx"
+        output_file_path = os.path.abspath(output_file_name)
+        docx_meta_util.save_doc_info(
+            uid, task_id, review_type, review_topic,
+            review_criteria_file_info[0]['full_path'], "",
             review_paper_file_info[0]['full_path'],
-            0, False
+            0, False,
+            docx_ctx, output_file_path, ""
         )
 
         # 启动后台任务
         threading.Thread(
             target=generate_review_report,
-            args=(uid, doc_type, review_topic, task_id, review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'], my_cfg)
+            args=(uid, review_type, review_topic, task_id, review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'], my_cfg)
         ).start()
 
         info = {"status": "started", "task_id": task_id}
@@ -302,7 +309,7 @@ def register_routes(app):
                 warning_info=warning_info
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
-        file_path_info = get_docx_file_info(task_id)
+        file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
         absolute_path = file_path_info[0]['file_path']
         logger.info(f"文件检查 - 绝对路径: {absolute_path}")

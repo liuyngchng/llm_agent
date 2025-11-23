@@ -152,6 +152,7 @@ async function gen_review_report() {
     const uid = document.getElementById('uid').value;
     const task_id = document.getElementById('taskId').value;
     const review_topic = document.getElementById('reviewTopic').value;
+    const review_type = document.getElementById('reviewType').value;
     const review_criteria_file_name = document.getElementById('review_criteria_file_name').value;
     const review_paper_file_name = document.getElementById('review_paper_file_name').value;
     const generateBtn = document.getElementById('generateBtn');
@@ -159,6 +160,10 @@ async function gen_review_report() {
     // 验证输入
     if (!review_topic.trim()) {
         alert('请输入评审主题');
+        return;
+    }
+    if (!review_type.trim()) {
+        alert('请输入评审类别');
         return;
     }
 
@@ -180,6 +185,7 @@ async function gen_review_report() {
     const postData = {
         uid: uid,
         review_topic: review_topic,
+        review_type: review_type,
         task_id: task_id,
         review_criteria_file_name: review_criteria_file_name,
         review_paper_file_name: review_paper_file_name
