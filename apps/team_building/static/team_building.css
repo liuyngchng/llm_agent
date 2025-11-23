@@ -245,7 +245,7 @@ textarea {
 }
 
 .btn {
-    padding: 14px 30px;
+    padding: 10px 30px;
     border: none;
     border-radius: 8px;
     font-size: 1rem;
@@ -256,6 +256,31 @@ textarea {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    width: 150px;
+}
+
+
+.upload-btn .btn {
+    padding: 6px 20px;
+    height: 40px;
+    min-height: 40px;
+    font-size: 0.9rem;
+}
+
+.upload-btn .btn i {
+    font-size: 0.9rem;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#generateBtn {
+    padding: 12px 30px;
+    height: 48px;
+    min-height: 48px;
+    font-size: 1rem;
 }
 
 .btn-primary {

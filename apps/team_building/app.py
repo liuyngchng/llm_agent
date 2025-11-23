@@ -3,7 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 """
-AI 数字评委
+AI 团建
 pip install flask
 """
 import hashlib

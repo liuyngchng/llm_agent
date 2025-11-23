@@ -59,7 +59,7 @@
 
                     <div class="upload-btn">
                         <button class="btn btn-primary">
-                            <i class="fas fa-file-alt"></i> 选择评审标准文件
+                            <i class="fas fa-file-alt"></i> 选择标准
                         </button>
                         <input type="file" class="file-input" id="reviewCriteria" accept=".xlsx,.docx" onchange="handleCriteriaUpload(this)">
                     </div>
@@ -83,7 +83,7 @@
 
                     <div class="upload-btn">
                         <button class="btn btn-primary">
-                            <i class="fas fa-file-word"></i> 选择评审材料
+                            <i class="fas fa-file-word"></i> 选择材料
                         </button>
                         <input type="file" class="file-input" id="reviewPaperFile" accept=".docx,.jpg, .jpeg" onchange="handleMaterialUpload(this)">
                     </div>
@@ -98,9 +98,11 @@
                 </div>
             </div>
 
-            <button class="btn btn-primary" id="generateBtn" onclick="gen_review_report()">
-                生成评审报告 <i class="fas fa-file-contract"></i>
-            </button>
+            <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
+                <button class="btn btn-primary" id="generateBtn" onclick="gen_review_report()">
+                    生成报告 <i class="fas fa-file-contract"></i>
+                </button>
+            </div>
         </div>
     </div>
 
