@@ -58,6 +58,8 @@ class PaperReviewer:
         for attempt in range(max_retries):
             try:
                 template = self.sys_cfg['prompts']['section_review_msg']
+                if not template:
+                    raise RuntimeError("prompts_section_review_msg_err")
                 prompt = template.format(
                     review_topic=self.review_topic,
                     section_title=section_title,
@@ -70,7 +72,7 @@ class PaperReviewer:
                 return result
 
             except Exception as e:
-                logger.warning(f"第{attempt + 1}次评审章节[{section_title}]失败: {str(e)}")
+                logger.exception(f"第{attempt + 1}次评审章节[{section_title}]失败")
                 if attempt == max_retries - 1:
                     # 最后一次尝试失败，返回基础评审结果
                     return self._get_fallback_result(section_title, str(e))
@@ -202,6 +204,8 @@ class PaperReviewer:
                 }
                 section_summaries.append(summary)
             template = self.sys_cfg['prompts']['paper_review_msg']
+            if not template:
+                raise RuntimeError("prompts_paper_review_msg_err")
             prompt = template.format(
                 review_topic = self.review_topic,
                 section_summary = json.dumps(section_summaries, ensure_ascii=False, indent=2),
@@ -310,7 +314,8 @@ class PaperReviewer:
             # 1. 解析目录结构
             catalogue = get_md_file_catalogue(self.review_file_path)
             if not catalogue:
-                raise ValueError("无法解析文档目录结构")
+                info = f"无法解析文档目录结构, {self.review_file_path}"
+                raise ValueError(info)
             logger.info(f"文档目录，{catalogue}")
             update_process_info(self.uid, self.task_id, "开始解析章节内容...")
             # 2. 提取章节内容
@@ -392,6 +397,8 @@ class PaperReviewer:
             填充后的格式化评审报告文本
         """
         template = self.sys_cfg['prompts']['fill_md_table_msg']
+        if not template:
+            raise RuntimeError("prompts_fill_md_table_msg_err")
         prompt = template.format(
             review_topic = self.review_topic,
             criteria=single_criteria,

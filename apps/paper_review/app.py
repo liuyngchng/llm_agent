@@ -311,7 +311,7 @@ def register_routes(app):
         statistic_util.add_access_count_by_uid(int(uid), 1)
         file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
-        absolute_path = file_path_info[0]['file_path']
+        absolute_path = file_path_info[0]['output_file_path']
         logger.info(f"文件检查 - 绝对路径: {absolute_path}")
         if not os.path.exists(absolute_path):
             logger.error(f"文件不存在: {absolute_path}")
@@ -350,9 +350,9 @@ def register_routes(app):
                 warning_info=warning_info
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
-        file_path_info = get_docx_file_info(task_id)
+        file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
-        absolute_path = file_path_info[0]['file_path']
+        absolute_path = file_path_info[0]['output_file_path']
         logger.debug(f"absolute_path, {absolute_path}")
         from pathlib import Path
         md_absolute_path = str(Path(absolute_path).with_suffix('.md'))

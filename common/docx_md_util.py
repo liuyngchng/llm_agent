@@ -7,13 +7,10 @@ import os
 import re
 from pathlib import Path
 
+from common.cm_utils import OUTPUT_DIR
+
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-
-
-
-
-
 
 def save_content_to_md_file(md_txt: str, file_path: str, output_abs_path: bool = False) -> str:
     """
@@ -173,11 +170,15 @@ def convert_md_to_docx(md_path: str, output_abs_path: bool = False,
 def get_md_file_content(md_file_path:str, max_length: int = 327670) -> str:
     """
     从 Markdown 文件中获取文件内容
-    :param md_file_path: Markdown 文件路径
+    :param md_file_path: Markdown 文件的绝对路径
     :param max_length: 可读取的最长字符数量
     :return: 文件内容
     """
+    if not os.path.exists(md_file_path):
+        logger.error(f"文件不存在, {md_file_path}")
+        raise RuntimeError(f"文件不存在, {md_file_path}")
     try:
+
         with open(md_file_path, 'r', encoding='utf-8') as file:
             content = file.read()
         if len(content) <max_length:
