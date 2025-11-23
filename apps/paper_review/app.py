@@ -219,7 +219,7 @@ def register_routes(app):
             return jsonify(err_info), 400
 
         docx_ctx = f"我正在做一个 {review_type} 的评审，评审主题是 {review_topic}"
-        output_file_name = f"{OUTPUT_DIR}/output_{task_id}.docx"
+        output_file_name = f"{OUTPUT_DIR}/output_{task_id}.md"
         output_file_path = os.path.abspath(output_file_name)
         docx_meta_util.save_doc_info(
             uid, task_id, review_type, review_topic,
@@ -232,7 +232,7 @@ def register_routes(app):
         # 启动后台任务
         threading.Thread(
             target=generate_review_report,
-            args=(uid, review_type, review_topic, task_id, review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'], my_cfg)
+            args=(uid, task_id, review_type, review_topic,  review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'], my_cfg)
         ).start()
 
         info = {"status": "started", "task_id": task_id}

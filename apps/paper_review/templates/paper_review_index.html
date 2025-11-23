@@ -33,16 +33,16 @@
         <div class="step-panel active" id="step1">
             <h2><i class="fas fa-edit"></i> 提交评审材料</h2>
             <div class="form-group">
-                <label for="reviewTopic">【1】评审主题</label>
+                <label for="reviewTopic">【1】材料名称/题目</label>
                 <input type="text" id="reviewTopic" list="topicList" name="doc_title" placeholder="可以直接输入，也可以从下拉菜单中选取">
                 <datalist id="topicList">
                     <option value="">-- 请选择评审主题 --</option>
-                    <option value="xxxx 国家标准评审"></option>
-                    <option value="xxxx 可行性研究报告评审"></option>
-                    <option value="xxxx 信息系统详细设计文档评审"></option>
-                    <option value="xxxx 信息系统概要设计文档评审"></option>
-                    <option value = "xxxx 信息系统软件著作权申请评审"></option>
-                    <option value = "xxxx AI 技能大赛参赛作品评审"></option>
+                    <option value="xxxx 国家标准"></option>
+                    <option value="xxxx 可行性研究报告"></option>
+                    <option value="xxxx 信息系统详细设计文档"></option>
+                    <option value="xxxx 信息系统概要设计文档"></option>
+                    <option value = "xxxx 信息系统软件著作权申请"></option>
+                    <option value = "xxxx 信息系统功能设计"></option>
                 </datalist>
             </div>
             <div class="form-group">
@@ -88,6 +88,7 @@
                     <i class="fas fa-cloud-upload-alt"></i>
                     <h3>上传评审材料</h3>
                     <p>支持上传Word docx 格式的评审材料，系统将基于评审标准生成标准化的评审结果</p>
+                    <p>** Word 文档需要至少包含二级标题</p>
 
                     <div class="upload-btn">
                         <button class="btn btn-primary">

@@ -2,18 +2,16 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 import json
-import os.path
 import time
 from typing import List, Dict
 
 import requests
 
-from common.cm_utils import OUTPUT_DIR
 from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_content_to_md_file, get_md_file_catalogue, \
     convert_docx_to_md, extract_sections_content, split_md_file_with_catalogue, split_md_content_with_catalogue
 import logging.config
 
-from common.docx_meta_util import update_process_info
+from common.docx_meta_util import update_process_info, get_doc_info
 from common.sys_init import init_yml_cfg
 from common.xlsx_md_util import convert_xlsx_to_md
 
@@ -248,13 +246,12 @@ class PaperReviewer:
                 "review_summary": "评审系统出现技术问题，建议专家进行完整人工评审。"
             }
 
-    @staticmethod
-    def generate_final_report(section_results: List[Dict], overall_result: Dict) -> str:
+    def generate_final_report(self, section_results: List[Dict], overall_result: Dict) -> str:
         """
         生成最终评审报告的内容
         """
         try:
-            report_content = f"""# 可行性分析报告评审报告
+            report_content = f"""# 【 {self.review_topic} 】 评审报告
 
 ## 评审概述
 - 评审时间: {time.strftime('%Y-%m-%d %H:%M:%S')}
@@ -355,9 +352,10 @@ class PaperReviewer:
 
             update_process_info(self.uid, self.task_id, f"形成格式化的评审意见报告")
             logger.debug(f"fill_all_formatted_markdown_report_with_final_report\n{final_report}")
-            formatted_report = self.fill_all_formatted_markdown_report_with_final_report(final_report)
+            # formatted_report = self.fill_all_formatted_markdown_report_with_final_report(final_report)
             logger.info("文档评审流程完成")
-            return formatted_report
+            return final_report
+            # return formatted_report
 
         except Exception as e:
             logger.exception(f"评审流程执行失败")
@@ -371,7 +369,7 @@ class PaperReviewer:
             final_report_txt: 生成的最终评审报告文本
 
         Returns:
-            填充后的格式化评审报告
+            填充后的格式化评审报告文本
         """
         split_md_list = split_md_content_with_catalogue(self.criteria_markdown_data)
         logger.debug(f"split_md_list, {split_md_list}")
@@ -543,7 +541,7 @@ def start_ai_review(uid:int, task_id: int, review_topic:str, criteria_markdown_d
         return f"评审报告生成失败: {str(e)}"
 
 
-def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: int,
+def generate_review_report(uid: int, task_id: int, doc_type: str, review_topic: str,
                            criteria_file: str, paper_file: str, sys_cfg: dict):
     """
     生成评审报告
@@ -555,9 +553,8 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
     :param paper_file: 评审材料文件的绝对路径
     :param sys_cfg: 系统配置信息
     """
-    logger.info(f"uid: {uid}, doc_type: {doc_type}, doc_title: {review_topic}, "
-                f"task_id: {task_id}, criteria_file: {criteria_file}, "
-                f"review_file: {paper_file}")
+    logger.info(f"{uid}, {task_id},doc_type: {doc_type}, doc_title: {review_topic}, "
+                f"criteria_file: {criteria_file}, review_file: {paper_file}")
     try:
         update_process_info(uid, task_id, "开始解析评审标准...")
         # 获取评审标准的文件内容，格式为 Markdown
@@ -567,10 +564,12 @@ def generate_review_report(uid: int, doc_type: str, review_topic: str, task_id: 
         # 调用AI评审生成
         review_result = start_ai_review(uid, task_id, review_topic, criteria_markdown_data, paper_file, sys_cfg)
 
+        doc_info = get_doc_info(task_id)
+        if not doc_info or not doc_info[0]:
+            info = f"no_doc_info_found_for_task_id ,{task_id}"
+            raise RuntimeError(info)
+        output_file_path = doc_info[0]['output_file_path']
 
-        # 构建完整的文件路径
-        output_file_name = f"{OUTPUT_DIR}/output_{task_id}.md"
-        output_file_path = os.path.abspath(output_file_name)
         output_md_file = save_content_to_md_file(review_result, output_file_path, output_abs_path=True)
         docx_file_full_path = convert_md_to_docx(output_md_file, output_abs_path=True)
         # xlsx_file_full_path = convert_md_to_xlsx(output_md_file, True)
