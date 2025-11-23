@@ -79,7 +79,10 @@ def convert_docx_to_md(docx_path: str, output_abs_path: bool = False) -> str:
                 '--top-level-division=chapter' # 顶层分割级别
             ]
         )
+
         abs_path = os.path.abspath(md_path)
+        # 修复 Mermaid 图表格式
+        _fix_mermaid_charts(abs_path)
         logger.info(f"成功转换文档: {docx_path} -> {md_path}")
         if output_abs_path:
             return abs_path
@@ -89,6 +92,44 @@ def convert_docx_to_md(docx_path: str, output_abs_path: bool = False) -> str:
     except Exception as e:
         logger.error(f"docx_to_md_error, file {docx_path}, {str(e)}")
         return ""
+
+
+def _fix_mermaid_charts(md_file_path: str):
+    """
+    修复 Markdown 文件中的 Mermaid 图表格式
+    将转义的 Mermaid 代码转换为标准的 ```mermaid 代码块格式
+    """
+    try:
+        with open(md_file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # 匹配转义的 Mermaid 代码块
+        # 匹配 <mermaid> 标签格式
+        mermaid_pattern1 = r'\\<mermaid\\>([\s\S]*?)\\</mermaid\\>'
+
+        # 匹配可能存在的其他转义格式
+        mermaid_pattern2 = r'&lt;mermaid&gt;([\s\S]*?)&lt;/mermaid&gt;'
+
+        def replace_mermaid(match):
+            mermaid_content = match.group(1)
+            # 清理转义字符
+            cleaned_content = mermaid_content.replace('\\', '').replace('&gt;', '>').replace('&lt;', '<')
+            # 移除多余的换行和空格
+            cleaned_content = re.sub(r'\n\s*\n', '\n', cleaned_content).strip()
+            return f"```mermaid\n{cleaned_content}\n```"
+
+        # 应用替换
+        new_content = re.sub(mermaid_pattern1, replace_mermaid, content)
+        new_content = re.sub(mermaid_pattern2, replace_mermaid, new_content)
+
+        # 如果内容有变化，则写回文件
+        if new_content != content:
+            with open(md_file_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            logger.info(f"已修复 Mermaid 图表格式: {md_file_path}")
+
+    except Exception as e:
+        logger.error(f"修复 Mermaid 图表失败: {md_file_path}, 错误: {str(e)}")
 
 
 def convert_md_to_docx(md_path: str, output_abs_path: bool = False,
@@ -544,8 +585,8 @@ def split_md_content_with_catalogue(content: str, heading_level: int=2) -> list[
 
 # 使用示例
 if __name__ == "__main__":
-    my_docx_file = "/home/rd/Downloads/java.tutorial.docx"  # 替换为你的docx文件路径
-    my_md_file_path = convert_docx_to_md(my_docx_file)
+    my_docx_file = "/home/rd/workspace/llm_agent/apps/docx/output_doc/output_1763814024469.docx"  # 替换为你的docx文件路径
+    my_md_file_path = convert_docx_to_md(my_docx_file, True)
     if not my_md_file_path:
         logger.info("转换失败")
     logger.info(f"Markdown文件已保存到: {my_md_file_path}")
@@ -553,5 +594,3 @@ if __name__ == "__main__":
     txt = get_md_para_by_heading(my_md_file_path, heading1)
     logger.info(f"txt for {heading1}, {txt[:100]}...")
 
-    file_stream = open("file.txt", "rb")
-    calculate_file_md5(file_stream)
