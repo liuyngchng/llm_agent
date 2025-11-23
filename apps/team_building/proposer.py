@@ -12,7 +12,7 @@ from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_co
     convert_docx_to_md, extract_sections_content
 import logging.config
 
-from common.docx_meta_util import update_process_info, save_output_file_path_by_task_id
+from common.docx_meta_util import update_process_info
 from common.sys_init import init_yml_cfg
 from common.xlsx_md_util import convert_xlsx_to_md
 
@@ -586,7 +586,7 @@ def generate_propose(uid: int, doc_type: str, review_topic: str, task_id: int,
         output_md_file = save_content_to_md_file(review_result, output_file_name, output_abs_path=True)
 
         docx_file_full_path = convert_md_to_docx(output_md_file, output_abs_path=True)
-        save_output_file_path_by_task_id(task_id, docx_file_full_path)
+        # save_output_file_path_by_task_id(task_id, docx_file_full_path)
         logger.info(f"{uid}, {task_id}, 评审报告生成成功, {docx_file_full_path}")
         update_process_info(uid, task_id, "评审报告生成完毕", 100)
 

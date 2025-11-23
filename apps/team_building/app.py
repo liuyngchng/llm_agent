@@ -21,7 +21,7 @@ from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
 from common import my_enums, statistic_util
-from common.docx_meta_util import get_docx_file_info
+from common.docx_meta_util import get_doc_info
 from common.html_util import get_html_ctx_from_md
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
@@ -49,7 +49,7 @@ def create_app():
     app.config['JSON_AS_ASCII'] = False
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     app.config['TASK_EXPIRE_TIME_MS'] = TASK_EXPIRE_TIME_MS
-    app.config['MY_CFG'] = my_cfg
+    app.config['CFG'] = my_cfg
     # 注册蓝图
     app.register_blueprint(auth_bp)
     # 注册路由
@@ -339,7 +339,7 @@ def register_routes(app):
                 warning_info=warning_info
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
-        file_path_info = get_docx_file_info(task_id)
+        file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
         absolute_path = file_path_info[0]['file_path']
         logger.info(f"文件检查 - 绝对路径: {absolute_path}")
@@ -380,7 +380,7 @@ def register_routes(app):
                 warning_info=warning_info
             ))
         statistic_util.add_access_count_by_uid(int(uid), 1)
-        file_path_info = get_docx_file_info(task_id)
+        file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
         absolute_path = file_path_info[0]['file_path']
         md_absolute_path = absolute_path.replace('.docx', '.md')
