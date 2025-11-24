@@ -29,7 +29,7 @@ prompts:
 
     # 基于知识库进行问答
     section_review_msg: |
-        作为 {review_topic} 评审专家，请严格按照评审标准对以下章节进行专业评审：
+        作为 {review_type} 评审专家，请严格按照评审标准对评审材料 "{review_topic}" 以下章节进行专业评审：
         
         【章节标题】
         {section_title}
@@ -63,7 +63,7 @@ prompts:
         - 建议要具有可操作性
 
     paper_review_msg: |
-        作为资深评审专家，请基于各章节评审结果，对整篇 {review_topic} 进行整体评估：
+        作为 {review_type} 资深评审专家，请基于各章节评审结果，对评审材料 "{review_topic}" 进行整体评估：
       
         【各章节评审概要】
         {section_summary}
@@ -90,7 +90,7 @@ prompts:
         请确保返回有效的JSON格式数据。
 
     fill_md_table_msg: |
-        作为专业的 {review_topic} 评审专家，请将以下评审结果按照标准评审表格的格式进行填写：
+        作为专业的 {review_type} 评审专家，请将评审材料 "{review_topic}" 的以下评审结果按照标准评审表格的格式进行填写：
       
         【标准评审表格格式】
         {criteria}

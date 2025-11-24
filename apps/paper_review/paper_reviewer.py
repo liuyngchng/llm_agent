@@ -28,11 +28,12 @@ from urllib3.exceptions import InsecureRequestWarning
 urllib3.disable_warnings(category=InsecureRequestWarning)
 
 class PaperReviewer:
-    def __init__(self, uid: int, task_id: int, review_topic:str, criteria_markdown_data: str, review_file_path: str, sys_cfg: dict):
+    def __init__(self, uid: int, task_id: int, review_type: str, review_topic:str, criteria_markdown_data: str, review_file_path: str, sys_cfg: dict):
         """
         分章节评审系统
         :param uid: 用户ID，标记哪个用户提交的任务
         :param task_id: 任务ID， 标记是哪个任务
+        :param review_type: 评审类型, 例如 信息系统概要设计评审
         :param review_topic: 评审主题， 例如 xxxx系统概要涉及评审
         :param criteria_markdown_data: 评审标准 markdown 文本
         :param review_file_path: 评审文件 markdown 路径
@@ -40,6 +41,7 @@ class PaperReviewer:
         """
         self.uid = uid
         self.task_id = task_id
+        self.review_type = review_type
         self.review_topic = review_topic
         self.criteria_markdown_data = criteria_markdown_data
         self.review_file_path = review_file_path
@@ -59,6 +61,7 @@ class PaperReviewer:
                 if not template:
                     raise RuntimeError("prompts_section_review_msg_err")
                 prompt = template.format(
+                    review_type = self.review_type,
                     review_topic=self.review_topic,
                     section_title=section_title,
                     section_content=section_content,
@@ -205,6 +208,7 @@ class PaperReviewer:
             if not template:
                 raise RuntimeError("prompts_paper_review_msg_err")
             prompt = template.format(
+                review_type = self.review_type,
                 review_topic = self.review_topic,
                 section_summary = json.dumps(section_summaries, ensure_ascii=False, indent=2),
                 criteria = self.criteria_markdown_data,
@@ -398,6 +402,7 @@ class PaperReviewer:
         if not template:
             raise RuntimeError("prompts_fill_md_table_msg_err")
         prompt = template.format(
+            review_type = self.review_type,
             review_topic = self.review_topic,
             criteria=single_criteria,
             conclusion=conclusion,
@@ -520,10 +525,12 @@ class PaperReviewer:
         return indicators_found >= 2
 
 
-def start_ai_review(uid:int, task_id: int, review_topic:str, criteria_markdown_data: str, review_file_path: str, sys_cfg: dict) -> str:
+def start_ai_review(uid:int, task_id: int, review_type: str, review_topic:str,
+        criteria_markdown_data: str, review_file_path: str, sys_cfg: dict) -> str:
     """
     :param uid: 用户ID
     :param task_id: 当前任务ID
+    :param review_type 评审类型
     :param review_topic: 评审主题
     :param criteria_markdown_data: 评审标准和要求markdown 文本
     :param review_file_path: 被评审的材料文件的绝对路径
@@ -532,7 +539,7 @@ def start_ai_review(uid:int, task_id: int, review_topic:str, criteria_markdown_d
     """
     try:
         # 创建评审器并执行评审
-        reviewer = PaperReviewer(uid, task_id, review_topic, criteria_markdown_data, review_file_path, sys_cfg)
+        reviewer = PaperReviewer(uid, task_id, review_type, review_topic, criteria_markdown_data, review_file_path, sys_cfg)
         review_report = reviewer.execute_review()
         return review_report
 
@@ -562,7 +569,7 @@ def generate_review_report(uid: int, task_id: int, doc_type: str, review_topic: 
         update_process_info(uid, task_id, "开始分析评审材料...")
 
         # 调用AI评审生成
-        review_result = start_ai_review(uid, task_id, review_topic, criteria_markdown_data, paper_file, sys_cfg)
+        review_result = start_ai_review(uid, task_id, doc_type, review_topic, criteria_markdown_data, paper_file, sys_cfg)
 
         doc_info = get_doc_info(task_id)
         if not doc_info or not doc_info[0]:
