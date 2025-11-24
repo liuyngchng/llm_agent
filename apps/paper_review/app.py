@@ -28,7 +28,7 @@ from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.cm_utils import get_console_arg1
 from common.xlsx_md_util import convert_xlsx_to_md
-from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR, TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE
+from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR, TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -222,7 +222,8 @@ def register_routes(app):
         paper_file = review_paper_file_info[0]['full_path']
         docx_meta_util.save_doc_info(
             uid, task_id, review_type, review_topic, criteria_file, "",paper_file ,
-            0, False, docx_ctx, output_file_path, ""
+            0, False, docx_ctx, output_file_path, "",
+            output_file_type=criteria_file_type
         )
 
         # 启动后台任务
@@ -308,19 +309,34 @@ def register_routes(app):
         file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
         absolute_path = file_path_info[0]['output_file_path']
-        logger.info(f"文件检查 - 绝对路径: {absolute_path}")
-        if not os.path.exists(absolute_path):
-            logger.error(f"文件不存在: {absolute_path}")
+        output_file_type = file_path_info[0]['output_file_type']
+        output_file_suffix = ".docx"
+        mimetype = DOCX_MIME_TYPE
+        if FileType.XLSX.value == output_file_type:
+            output_file_suffix = ".xlsx"
+            mimetype = XLSX_MIME_TYPE
+        # 分离目录和文件名
+        dir_path, filename = os.path.split(absolute_path)
+        # 分离文件名和扩展名
+        name, _ = os.path.splitext(filename)
+        # 构建新的文件路径
+        output_file_path = str(os.path.join(dir_path, name + output_file_suffix))
+
+        print(output_file_path)
+        logger.info(f"文件检查 - 绝对路径: {output_file_path}")
+        if not os.path.exists(output_file_path):
+            logger.error(f"文件不存在: {output_file_path}")
             abort(404)
-        logger.info(f"文件找到，准备发送: {absolute_path}")
+        logger.info(f"文件找到，准备发送: {output_file_path}")
+
         try:
             from flask import send_file
-            logger.info(f"使用 send_file 发送: {absolute_path}")
+            logger.info(f"使用 send_file 发送: {output_file_path}")
             return send_file(
-                absolute_path,
+                output_file_path,
                 as_attachment=True,
-                download_name=f"{task_id}_output_paper_review_report.docx",
-                mimetype=DOCX_MIME_TYPE,
+                download_name=f"{task_id}_output_paper_review_report{output_file_suffix}",
+                mimetype=mimetype,
             )
         except Exception as e:
             logger.error(f"文件发送失败: {str(e)}")

@@ -11,6 +11,7 @@ from flask import Blueprint, jsonify, redirect, url_for, current_app
 from flask import (request, render_template)
 from common import cfg_util as cfg_utl, statistic_util
 from common import my_enums
+from common.const import get_const
 from common.html_util import get_html_ctx_from_md
 
 
@@ -82,7 +83,7 @@ def login():
     else:
         hack_admin = "0"
     greeting = "欢迎使用本系统"
-    cfg_greeting = cfg_utl.get_const("greeting", app_source)
+    cfg_greeting = get_const("greeting", app_source)
     if cfg_greeting:
         greeting = cfg_greeting
 

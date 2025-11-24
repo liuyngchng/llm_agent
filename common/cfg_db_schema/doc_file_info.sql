@@ -7,6 +7,7 @@ CREATE TABLE "doc_file_info" (
 	"process_info"	TEXT NOT NULL DEFAULT '已上传，待处理',
 	"input_file_path"	TEXT,
 	"output_file_path"	TEXT,
+	"output_file_type"	INTEGER NOT NULL DEFAULT 0,
 	"doc_type"	TEXT,
 	"doc_title"	TEXT,
 	"keywords"	TEXT,

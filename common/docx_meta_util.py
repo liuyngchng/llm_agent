@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def save_doc_info(uid: int, task_id: int, doc_type: str, doc_title: str, doc_outline:str,
                   keywords: str, input_file_path: str, vdb_id: int, is_include_para_txt: int,
-                  doc_ctx: str, output_file_path: str, vdb_dir: str) -> dict:
+                  doc_ctx: str, output_file_path: str, vdb_dir: str, output_file_type: int =0) -> dict:
     """
     保存docx文件处理任务的相关元数据信息
     :param uid: user id
@@ -32,25 +32,26 @@ def save_doc_info(uid: int, task_id: int, doc_type: str, doc_title: str, doc_out
     :param is_include_para_txt: 写作的 Word 文档模板中是否包含有文本段落
     :param doc_ctx: 进行文本写作的上下文
     :param output_file_path: 写作完成下载的文档的磁盘绝对路径
+    :param output_file_type: 输出文件的类型， 0： docx; 1： xlsx
     :param vdb_dir: 向量知识库的磁盘物理绝对路径
     :return:
     """
     logger.debug(f"save_doc_info, {uid}, {task_id}, {doc_type}, {doc_title}, {keywords}, {input_file_path}")
     create_time = get_time_str()
-    escaped_doc_type = doc_type.replace("'", "''") if doc_type else ""
-    escaped_doc_title = doc_title.replace("'", "''") if doc_title else ""
-    escaped_doc_outline = doc_outline.replace("'", "''") if doc_outline else ""
-    escaped_keywords = keywords.replace("'", "''") if keywords else ""
-    escaped_input_file_path = input_file_path.replace("'", "''") if input_file_path else ""
-    escaped_doc_ctx = doc_ctx.replace("'", "''") if doc_ctx else ""
-    escaped_output_file_path = output_file_path.replace("'", "''") if output_file_path else ""
+    esc_doc_type = doc_type.replace("'", "''") if doc_type else ""
+    esc_doc_title = doc_title.replace("'", "''") if doc_title else ""
+    esc_doc_outline = doc_outline.replace("'", "''") if doc_outline else ""
+    esc_keywords = keywords.replace("'", "''") if keywords else ""
+    esc_input_file_path = input_file_path.replace("'", "''") if input_file_path else ""
+    esc_doc_ctx = doc_ctx.replace("'", "''") if doc_ctx else ""
+    esc_output_file_path = output_file_path.replace("'", "''") if output_file_path else ""
     escaped_vdb_dir = vdb_dir.replace("'", "''") if vdb_dir else ""
     sql = (f"insert into doc_file_info(uid, task_id, doc_type, doc_title, doc_outline, "
            f"keywords, input_file_path, vdb_id, is_include_para_txt, "
-           f"doc_ctx, output_file_path, vdb_dir, create_time) values "
-           f"({uid}, {task_id}, '{escaped_doc_type}', '{escaped_doc_title}', '{escaped_doc_outline}',"
-           f"'{escaped_keywords}', '{escaped_input_file_path}', {vdb_id}, {is_include_para_txt}, "
-           f"'{escaped_doc_ctx}', '{escaped_output_file_path}', '{escaped_vdb_dir}', '{create_time}')")
+           f"doc_ctx, output_file_path, vdb_dir, output_file_type, create_time) values "
+           f"({uid}, {task_id}, '{esc_doc_type}', '{esc_doc_title}', '{esc_doc_outline}',"
+           f"'{esc_keywords}', '{esc_input_file_path}', {vdb_id}, {is_include_para_txt}, "
+           f"'{esc_doc_ctx}', '{esc_output_file_path}', '{escaped_vdb_dir}', {output_file_type},'{create_time}')")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         logger.debug(f"save_doc_info_sql, {sql}")
         my_dt = insert_del_sqlite(my_conn, sql)
