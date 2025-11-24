@@ -11,7 +11,7 @@ import sys
 import time
 import requests
 
-from common.cfg_util import get_const
+from common.const import get_const
 from common.my_enums import AppType
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")

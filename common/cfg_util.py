@@ -18,13 +18,11 @@ import base64
 import functools
 
 from common.cm_utils import get_time_str
-from common.const import CFG_DB_FILE
+from common.const import CFG_DB_FILE, USER_SAMPLE_DATA_DB, CFG_DB_URI
 from common.my_enums import DataType
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-
-
 
 def auth_user(user:str, t: str, cfg: dict) -> dict:
     auth_result ={"pass": False, "uid": "", "msg":""}
@@ -389,18 +387,7 @@ def decrypt(dt: str, key: str) -> str:
     # logger.info(f"get_pln_txt_for_cypher_txt, {pln_txt}, {dt}")
     return pln_txt
 
-def get_const(key:str, app: str)->str | None:
-    value = None
-    with sqlite3.connect(CFG_DB_FILE) as my_conn:
-        try:
-            sql = f"select value from const where key='{key}' and app='{app}' limit 1"
-            check_info = query_sqlite(my_conn, sql)
-            value_dt = check_info['data']
-            value = value_dt[0][0]
-            # logger.debug(f"get_const {value} with key {key}")
-        except Exception as e:
-            logger.error(f"no_value_info_found_for_key, {key}")
-    return value
+
 
 def get_consts(app: str)-> dict:
     const = {}

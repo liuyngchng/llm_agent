@@ -262,7 +262,7 @@ def clean_sheet_name(sheet_name: str, index: int) -> str:
     """
     清理工作表名称，确保符合 Excel 限制
     - 最大 31 个字符
-    - 不能包含特殊字符: \ / * ? [ ] :
+    - 不能包含特殊字符: \\ / * ? [ ] :
     """
     # 替换非法字符
     cleaned = re.sub(r'[\\/*?\[\]:]', '_', sheet_name)
