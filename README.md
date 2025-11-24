@@ -11,15 +11,16 @@ gitee 平台地址为：[https://gitee.com/liuyngchng/gitee_llm_agent](https://g
 | No.   | 名称      | 服务类型 | 端口 | 描述         |
 |---------| --- |------------|------------|------------|
 | 1 | apps/gateway | HTTP/HTTPS | 18000 | 开放平台，提供与其他平台进行集成的接口 |
-| 2 | apps/chat2sql | HTTP/HTTPS | 19001 | AI 数据库查询，支持MySQL, Oracle, DM8 |
-| 3 | apps/chat | HTTP/HTTPS | 19002 | AI 知识库问答, 提供基于知识库的问答能力 |
-| 4 | apps/docx | HTTP/HTTPS | 19003 | AI 文档生成，支持在线生成 Word docx文档 |
-| 5 | apps/csm | HTTP/HTTPS | 19004 | AI 客服，提供 AI 辅助人工客服的能力 |
+| 2 | apps/chat2sql | HTTP/HTTPS | 19001 | 数据库查询，支持MySQL, Oracle, DM8 |
+| 3 | apps/chat | HTTP/HTTPS | 19002 | 知识库问答, 提供基于知识库的问答能力 |
+| 4 | apps/docx | HTTP/HTTPS | 19003 | 文档生成，支持在线生成 Word docx文档 |
+| 5 | apps/csm | HTTP/HTTPS | 19004 | 客服机器人，提供 AI 辅助人工客服的能力 |
 | 6 | apps/mcp_client | HTTP/HTTPS | 19005 | MCP client，通过Web 界面 |
 | 7 | apps/mcp_server | HTTP/HTTPS | 19006 | MCP server， 提供 MCP tools 查询服务 |
-| 8 | apps/ord_gen | HTTP/HTTPS | 19007 | AI 订单生成    |
-| 9 | apps/mt_report | HTTP/HTTPS | 19008 | AI 会议纪要整理 |
-| 10 | apps/paper_review | HTTP/HTTPS | 19009 | AI 数字评委 |
+| 8 | apps/ord_gen | HTTP/HTTPS | 19007 | 订单自动生成  |
+| 9 | apps/mt_report | HTTP/HTTPS | 19008 | 会议纪要整理 |
+| 10 | apps/paper_review | HTTP/HTTPS | 19009 | 数字评委 |
+| 11 | apps/team_building | HTTP/HTTPS | 19010 | 团队建设与管理 |
 | 11 | apps/llm | HTTP/HTTPS | 16000 | 兼容 OpenAI 接口格式的大语言模型服务 |
 | 12 | apps/embedding | HTTP/HTTPS | 17000 | 兼容 OpenAI 接口格式的文本嵌入模型服务 |
 | 13 | apps/portal | HTTPS | 443 | 集成所有应用的入口地址，提供所有地址导航 |
