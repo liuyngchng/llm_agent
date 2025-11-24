@@ -48,6 +48,7 @@ class WriteDocType(Enum):
     DETAILED_DESIGN_DOCUMENT = "详细设计文档"
     PRELIMINARY_DESIGN_DOCUMENT = "概要设计文档"
     SOFTWARE_COPYRIGHT_REG = "软件著作权申报"
+    TEAM_BUILDING = "部门党建"
 
     @staticmethod
     def get_doc_type_desc(input_str: str) -> str:
@@ -56,7 +57,7 @@ class WriteDocType(Enum):
         try:
             return WriteDocType[input_upper].value
         except KeyError:
-            return None  # 或抛出异常
+            raise
 
 
 class AppType(Enum):

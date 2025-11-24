@@ -21,14 +21,14 @@ from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
 from common import my_enums, statistic_util
-from common.docx_meta_util import get_doc_info
+from common.docx_meta_util import get_doc_info, save_doc_info
 from common.html_util import get_html_ctx_from_md
-from common.my_enums import AppType
+from common.my_enums import AppType, FileType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.cm_utils import get_console_arg1
 from common.xlsx_md_util import convert_xlsx_to_md
-from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE
+from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, OUTPUT_DIR
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -41,16 +41,14 @@ os.system(
 
 def create_app():
     """应用工厂函数"""
-    app = Flask(__name__, static_folder=None)
-    app.config['JSON_AS_ASCII'] = False
-    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-    app.config['TASK_EXPIRE_TIME_MS'] = TASK_EXPIRE_TIME_MS
-    app.config['CFG'] = my_cfg
-    # 注册蓝图
-    app.register_blueprint(auth_bp)
-    # 注册路由
-    register_routes(app)
-    return app
+    my_app = Flask(__name__, static_folder=None)
+    my_app.config['JSON_AS_ASCII'] = False
+    my_app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    my_app.config['TASK_EXPIRE_TIME_MS'] = TASK_EXPIRE_TIME_MS
+    my_app.config['CFG'] = my_cfg
+    my_app.register_blueprint(auth_bp)
+    register_routes(my_app)
+    return my_app
 
 
 def register_routes(app):
@@ -78,7 +76,10 @@ def register_routes(app):
     @app.route('/')
     def app_home():
         logger.info("redirect_auth_login_index")
-        return redirect(url_for('auth.login_index', app_source=my_enums.AppType.TEAM_BUILDING.name.lower()))
+        return redirect(url_for(
+            'auth.login_index',
+            app_source=my_enums.AppType.TEAM_BUILDING.name.lower()
+        ))
 
     @app.route('/xlsx/upload', methods=['POST'])
     def upload_xlsx():
@@ -111,7 +112,7 @@ def register_routes(app):
         file.save(save_path)
         md_file = convert_xlsx_to_md(save_path, True, True)
         file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
-        save_file_info(uid, file_md5, md_file)
+        save_file_info(uid, file_md5, md_file, FileType.XLSX.value)
         logger.info(f"xlsx_file {file.filename} saved_as {file_md5}, {task_id}")
 
         info = {
@@ -223,6 +224,7 @@ def register_routes(app):
             return jsonify(warning_info), 400
 
         task_id = int(data.get("task_id"))
+
         review_topic = data.get("review_topic")
         review_criteria_file_id = data.get("review_criteria_file_name")
         review_paper_file_id = data.get("review_paper_file_name")
@@ -248,17 +250,24 @@ def register_routes(app):
             err_info = {"error": f"未找到相应的评审文件信息 {review_criteria_file_info}"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
-
+        criteria_file = review_criteria_file_info[0]['full_path']
+        paper_file = review_paper_file_info[0]['full_path']
 
         # 保存任务信息到数据库
-        doc_type = my_enums.WriteDocType.REVIEW_REPORT.value
-        docx_meta_util.save_docx_file_info(uid, task_id, doc_type, review_topic,
-                                           review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'], 0, False)
+        doc_type = my_enums.WriteDocType.TEAM_BUILDING.value
+        docx_ctx = f"我正在做一个 {doc_type} 的 {review_topic} 的评审任务"
+        output_file = f"{OUTPUT_DIR}/output_{task_id}.md"
+        output_file_path = os.path.abspath(output_file)
+        save_doc_info(
+            uid, task_id, doc_type, review_topic, "",
+            criteria_file, paper_file, 0, 0, docx_ctx,
+            output_file_path,"", FileType.DOCX.value
+        )
 
         # 启动后台任务
         threading.Thread(
             target=generate_propose,
-            args=(uid, doc_type, review_topic, task_id, review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'], my_cfg)
+            args=(uid, doc_type, review_topic, task_id, criteria_file, paper_file, my_cfg)
         ).start()
 
         info = {"status": "started", "task_id": task_id}
