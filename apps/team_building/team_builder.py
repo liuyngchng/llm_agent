@@ -1,0 +1,560 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+import json
+import os
+import logging.config
+import base64
+import time
+from typing import List, Dict
+
+import requests
+from PIL import Image
+import io
+
+from common.docx_meta_util import update_process_info
+
+logging.config.fileConfig('logging.conf', encoding="utf-8")
+logger = logging.getLogger(__name__)
+
+
+class TeamBuilder:
+    def __init__(self, uid: int, task_id: int, review_type: str, review_topic: str,
+                 criteria_markdown_data: str, review_file_path: str, criteria_file_type, sys_cfg: dict):
+        """
+        思想汇报手写体评审系统
+        :param uid: 用户ID，标记哪个用户提交的任务
+        :param task_id: 任务ID，标记是哪个任务
+        :param review_type: 评审类型, 例如 思想汇报评审
+        :param review_topic: 评审主题，例如 xxx同志思想汇报评审
+        :param criteria_markdown_data: 评审标准 markdown 文本
+        :param review_file_path: 评审文件路径（图片或文档）
+        :param criteria_file_type: 评审标准的文件类型
+        :param sys_cfg: 系统配置
+        """
+        self.uid = uid
+        self.task_id = task_id
+        self.review_type = review_type
+        self.review_topic = review_topic
+        self.criteria_markdown_data = criteria_markdown_data
+        self.criteria_file_type = criteria_file_type
+        self.review_file_path = review_file_path
+        self.sys_cfg = sys_cfg
+        self.ocr_text = ""
+        self.review_results = {}
+
+    def call_llm_api_for_ocr(self, image_path: str, prompt: str = "请识别图片中的手写文字，准确输出所有文本内容") -> str:
+        """
+        调用大语言模型进行OCR文本识别
+        """
+        try:
+            # 读取并编码图片
+            with open(image_path, "rb") as image_file:
+                base64_image = base64.b64encode(image_file.read()).decode('utf-8')
+
+            key = self.sys_cfg['api']['llm_api_key']
+            model = self.sys_cfg['api']['llm_model_name']
+            uri = f"{self.sys_cfg['api']['llm_api_uri']}/chat/completions"
+
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {key}'
+            }
+
+            # 构建消息 - 支持图片的模型需要特殊格式
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}"
+                            }
+                        }
+                    ]
+                }
+            ]
+
+            payload = {
+                'model': model,
+                'messages': messages,
+                'max_tokens': 4000,
+                'temperature': 0.1
+            }
+
+            logger.info(f"开始OCR识别: {image_path}")
+            response = requests.post(
+                url=uri,
+                headers=headers,
+                json=payload,
+                timeout=120,
+                verify=False,
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                ocr_text = result['choices'][0]['message']['content']
+                logger.info(f"OCR识别成功，识别文本长度: {len(ocr_text)}")
+                return ocr_text
+            else:
+                error_msg = f"OCR API调用失败: {response.status_code} - {response.text}"
+                logger.error(error_msg)
+                return ""
+
+        except Exception as e:
+            logger.error(f"OCR识别异常: {str(e)}")
+            return ""
+
+    @staticmethod
+    def preprocess_image(image_path: str) -> str:
+        """
+        图片预处理（如果需要）
+        """
+        try:
+            # 简单的图片预处理 - 调整大小和增强对比度
+            with Image.open(image_path) as img:
+                # 调整图片大小，提高识别效率
+                if max(img.size) > 2000:
+                    img.thumbnail((2000, 2000), Image.Resampling.LANCZOS)
+
+                # 转换为RGB模式
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+
+                # 保存处理后的图片
+                processed_path = image_path.replace('.', '_processed.')
+                img.save(processed_path, 'JPEG', quality=85)
+                logger.info(f"图片预处理完成: {processed_path}")
+                return processed_path
+
+        except Exception as e:
+            logger.error(f"图片预处理失败: {str(e)}")
+            return image_path  # 返回原路径
+
+    def extract_text_from_image(self, max_retries: int = 2) -> str:
+        """
+        从图片中提取文本（支持多种图片格式）
+        """
+        supported_formats = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.heic', '.heif']
+        file_ext = os.path.splitext(self.review_file_path.lower())[1]
+
+        if file_ext not in supported_formats:
+            logger.error(f"不支持的图片格式: {file_ext}")
+            return ""
+
+        for attempt in range(max_retries):
+            try:
+                # 预处理图片
+                processed_path = self.preprocess_image(self.review_file_path)
+
+                # OCR识别
+                ocr_prompt = """请准确识别这张思想汇报手写图片中的所有文字内容。要求：
+                1. 保持原文的段落结构
+                2. 准确识别手写字体，包括可能的连笔字
+                3. 保留标点符号
+                4. 如有个别字无法识别，用[?]标记
+                5. 输出纯文本格式"""
+
+                ocr_text = self.call_llm_api_for_ocr(processed_path, ocr_prompt)
+
+                if ocr_text and len(ocr_text.strip()) > 10:  # 确保有有效内容
+                    self.ocr_text = ocr_text
+                    logger.info(f"成功提取文本，长度: {len(ocr_text)}")
+
+                    # 清理临时处理的图片
+                    if processed_path != self.review_file_path and os.path.exists(processed_path):
+                        os.remove(processed_path)
+
+                    return ocr_text
+                else:
+                    logger.warning(f"第{attempt + 1}次OCR识别返回空文本或文本过短")
+
+            except Exception as e:
+                logger.error(f"第{attempt + 1}次文本提取失败: {str(e)}")
+                if attempt == max_retries - 1:
+                    return ""
+
+        return ""
+
+    def evaluate_thought_report(self) -> Dict:
+        """
+        评价思想汇报写作质量
+        """
+        try:
+            template = self.sys_cfg['prompts']['thought_report_evaluation_msg']
+            if not template:
+                raise RuntimeError("未找到思想汇报评价提示词模板")
+
+            prompt = template.format(
+                review_type=self.review_type,
+                review_topic=self.review_topic,
+                report_content=self.ocr_text,
+                criteria=self.criteria_markdown_data
+            )
+
+            result = self.call_llm_api(prompt)
+            self._validate_evaluation_result(result)
+            return result
+
+        except Exception as e:
+            logger.error(f"思想汇报评价失败: {str(e)}")
+            return self._get_fallback_evaluation_result(str(e))
+
+    @staticmethod
+    def _validate_evaluation_result(result: Dict):
+        """验证评价结果格式"""
+        required_fields = ['overall_score', 'content_quality', 'ideological_depth',
+                           'writing_standard', 'strengths', 'improvement_suggestions']
+        for field in required_fields:
+            if field not in result:
+                raise ValueError(f"评价结果缺少必要字段: {field}")
+
+        if not isinstance(result['overall_score'], int) or not (0 <= result['overall_score'] <= 100):
+            raise ValueError("整体评分必须在0-100之间")
+
+    @staticmethod
+    def _get_fallback_evaluation_result(error_msg: str) -> Dict:
+        """获取降级评价结果"""
+        return {
+            "overall_score": 60,
+            "content_quality": "内容完整但需要进一步深化",
+            "ideological_depth": "思想表达基本清晰",
+            "writing_standard": "格式基本规范",
+            "strengths": ["态度端正", "内容完整"],
+            "improvement_suggestions": [f"技术问题: {error_msg}", "建议人工复核"],
+            "evaluation_failed": True
+        }
+
+    def generate_party_member_development_suggestion(self, employee_data: str) -> str:
+        """
+        根据部门员工信息生成党员发展建议
+        :param employee_data: 员工信息的markdown文本
+        :return: 党员发展建议报告
+        """
+        try:
+            template = self.sys_cfg['prompts']['party_member_development_msg']
+            if not template:
+                raise RuntimeError("未找到党员发展建议提示词模板")
+
+            prompt = template.format(
+                review_type=self.review_type,
+                review_topic=self.review_topic,
+                employee_data=employee_data,
+                criteria=self.criteria_markdown_data
+            )
+
+            result = self.call_llm_api_for_development_suggestion(prompt)
+            return self._format_development_suggestion(result)
+
+        except Exception as e:
+            logger.error(f"生成党员发展建议失败: {str(e)}")
+            return self._get_fallback_development_suggestion(str(e))
+
+    def call_llm_api_for_development_suggestion(self, prompt: str) -> Dict:
+        """
+        专门用于党员发展建议的LLM调用
+        """
+        try:
+            key = self.sys_cfg['api']['llm_api_key']
+            model = self.sys_cfg['api']['llm_model_name']
+            uri = f"{self.sys_cfg['api']['llm_api_uri']}/chat/completions"
+
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {key}'
+            }
+
+            messages = [
+                {
+                    "role": "system",
+                    "content": "你是一名党组织负责人，擅长分析员工信息并提出党员发展建议。请基于员工的政治表现、工作能力、思想状况等方面进行分析。"
+                },
+                {"role": "user", "content": prompt}
+            ]
+
+            payload = {
+                'model': model,
+                'messages': messages,
+                'temperature': 0.3,
+                'max_tokens': 3000
+            }
+
+            logger.info("开始生成党员发展建议")
+            response = requests.post(
+                url=uri,
+                headers=headers,
+                json=payload,
+                timeout=120,
+                verify=False,
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                content = result['choices'][0]['message']['content']
+
+                # 解析JSON结果
+                try:
+                    if content.strip().startswith('```json'):
+                        json_str = content.strip().replace('```json', '').replace('```', '').strip()
+                        return json.loads(json_str)
+                    else:
+                        return json.loads(content)
+                except json.JSONDecodeError:
+                    # 如果不是JSON，返回原始文本
+                    return {"suggestion_text": content}
+            else:
+                error_msg = f"党员发展建议API调用失败: {response.status_code}"
+                logger.error(error_msg)
+                return {"error": error_msg}
+
+        except Exception as e:
+            logger.error(f"党员发展建议API调用异常: {str(e)}")
+            return {"error": str(e)}
+
+    def _format_development_suggestion(self, result: Dict) -> str:
+        """格式化党员发展建议报告"""
+        try:
+            if "error" in result:
+                return f"生成党员发展建议时出现错误: {result['error']}"
+
+            # 如果有结构化的数据，按格式输出
+            if "suggestions" in result:
+                report = f"""# 【{self.review_topic}】党员发展建议报告
+
+## 生成时间
+{time.strftime('%Y-%m-%d %H:%M:%S')}
+
+## 总体分析
+{result.get('overall_analysis', '基于员工信息进行的总体分析')}
+
+## 重点发展对象建议
+"""
+
+                for i, suggestion in enumerate(result['suggestions'], 1):
+                    report += f"""
+### 建议 {i}: {suggestion.get('employee_name', '员工')}
+- **发展优先级**: {suggestion.get('priority', '中')}
+- **主要优势**: {suggestion.get('strengths', '待补充')}
+- **培养方向**: {suggestion.get('development_direction', '待补充')}
+- **建议措施**: {suggestion.get('suggested_actions', '待补充')}
+"""
+
+                report += f"""
+## 培养计划建议
+{result.get('training_plan', '具体的培养计划和建议')}
+
+## 注意事项
+{result.get('precautions', '发展党员过程中需要注意的事项')}
+
+---
+*本建议基于AI分析生成，请党组织结合实际情况进行决策*
+"""
+            else:
+                # 如果是文本格式的结果
+                report = result.get('suggestion_text', '未能生成有效的党员发展建议')
+
+            return report
+
+        except Exception as e:
+            logger.error(f"格式化党员发展建议失败: {str(e)}")
+            return "党员发展建议格式化失败，请查看原始数据。"
+
+    @staticmethod
+    def _get_fallback_development_suggestion(error_msg: str) -> str:
+        """获取降级的党员发展建议"""
+        return f"""# 党员发展建议生成失败
+
+## 错误信息
+{error_msg}
+
+## 建议
+请检查员工信息数据的完整性和格式，或联系技术支持。
+"""
+
+    def generate_evaluation_report(self) -> str:
+        """
+        生成思想汇报评价报告
+        """
+        try:
+            evaluation = self.evaluate_thought_report()
+
+            report_content = f"""# 【{self.review_topic}】思想汇报评价报告
+
+## 基本信息
+- 评价时间: {time.strftime('%Y-%m-%d %H:%M:%S')}
+- 整体评分: {evaluation['overall_score']}/100
+- 评价结论: {'优秀' if evaluation['overall_score'] >= 85 else '良好' if evaluation['overall_score'] >= 70 else '合格' if evaluation['overall_score'] >= 60 else '需要改进'}
+
+## 详细评价
+
+### 内容质量
+{evaluation['content_quality']}
+
+### 思想深度  
+{evaluation['ideological_depth']}
+
+### 写作规范
+{evaluation['writing_standard']}
+
+### 主要优点
+{chr(10).join(f"- {strength}" for strength in evaluation['strengths'])}
+
+### 改进建议
+{chr(10).join(f"- {suggestion}" for suggestion in evaluation['improvement_suggestions'])}
+
+## 识别文本预览
+{self.ocr_text[:500]}...
+（完整文本共{len(self.ocr_text)}字）
+## 评价说明
+本评价报告基于AI自动识别和评价生成，建议结合党组织人工评审最终确定。
+"""
+
+            return report_content
+
+        except Exception as e:
+            logger.error(f"生成评价报告失败: {str(e)}")
+            return f"# 评价报告生成失败\n\n错误信息: {str(e)}\n\n请检查图片质量或联系技术支持。"
+
+    def execute_evaluation(self) -> str:
+        """
+        执行完整的思想汇报评价流程
+        """
+        try:
+            logger.info("开始执行思想汇报评价流程")
+
+            # 1. OCR文本识别
+            update_process_info(self.uid, self.task_id, "开始识别手写文字...")
+            ocr_result = self.extract_text_from_image()
+
+            if not ocr_result:
+                raise ValueError("无法从图片中识别出有效文本，请检查图片质量")
+
+            # 2. 文本质量评价
+            update_process_info(self.uid, self.task_id, "正在分析思想汇报内容...")
+            evaluation_report = self.generate_evaluation_report()
+
+            logger.info("思想汇报评价流程完成")
+            return evaluation_report
+
+        except Exception as e:
+            logger.exception("思想汇报评价流程执行失败")
+            return f"# 评价过程出现错误\n\n错误信息: {str(e)}\n\n请检查文件格式或联系技术支持。"
+
+    def call_llm_api(self, prompt: str) -> dict:
+        """直接调用LLM API"""
+        key = self.sys_cfg['api']['llm_api_key']
+        model = self.sys_cfg['api']['llm_model_name']
+        uri = f"{self.sys_cfg['api']['llm_api_uri']}/chat/completions"
+        try:
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {key}'
+            }
+
+            messages = [
+                {"role": "user", "content": prompt}
+            ]
+
+            payload = {
+                'model': model,
+                'messages': messages,
+                'temperature': 0.7,
+                'response_format': {"type": "json_object"}
+            }
+
+            logger.info(f"开始LLM请求: {uri}, {model}")
+            response = requests.post(
+                url=uri,
+                headers=headers,
+                json=payload,
+                timeout=120,
+                verify=False,
+            )
+
+            logger.info(f"响应状态: {response.status_code}")
+            if response.status_code == 200:
+                result = response.json()
+                content = result['choices'][0]['message']['content']
+                logger.debug(f"LLM返回的原始内容: {content}")
+
+                try:
+                    if content.strip().startswith('```json'):
+                        json_str = content.strip().replace('```json', '').replace('```', '').strip()
+                        parsed_result = json.loads(json_str)
+                    else:
+                        parsed_result = json.loads(content)
+
+                    logger.info("成功解析LLM返回的JSON")
+                    return parsed_result
+
+                except json.JSONDecodeError as e:
+                    logger.error(f"解析LLM返回的JSON失败: {str(e)}")
+                    logger.error(f"原始内容: {content}")
+                    return self._get_fallback_evaluation_result(f"JSON解析失败: {str(e)}")
+
+            else:
+                error_msg = f"LLM API调用失败: {response.status_code} - {response.text}"
+                logger.error(error_msg)
+                return self._get_fallback_evaluation_result(f"API调用失败: {response.status_code}")
+
+        except Exception as e:
+            error_msg = f"LLM API调用异常: {str(e)}"
+            logger.error(error_msg)
+            return self._get_fallback_evaluation_result(f"API调用异常: {str(e)}")
+
+
+def start_thought_evaluation(uid: int, task_id: int, review_type: str, review_topic: str,
+                             criteria_markdown_data: str, review_file_path: str, criteria_file_type: int,
+                             sys_cfg: dict) -> str:
+    """
+    开始思想汇报评价流程
+    :param uid: 用户ID
+    :param task_id: 任务ID
+    :param review_type: 评审类型
+    :param review_topic: 评审主题
+    :param criteria_markdown_data: 评审标准markdown文本
+    :param review_file_path: 思想汇报文件路径（图片）
+    :param criteria_file_type: 评审标准文件类型
+    :param sys_cfg: 系统配置
+    """
+    try:
+        evaluator = TeamBuilder(uid, task_id, review_type, review_topic, criteria_markdown_data,
+                                review_file_path, criteria_file_type, sys_cfg)
+        evaluation_report = evaluator.execute_evaluation()
+        return evaluation_report
+
+    except Exception as e:
+        logger.error(f"思想汇报评价生成失败: {str(e)}")
+        return f"思想汇报评价生成失败: {str(e)}"
+
+
+def generate_party_member_suggestion(uid: int, task_id: int, review_type: str, review_topic: str,
+                                     criteria_markdown_data: str, employee_data: str, sys_cfg: dict) -> str:
+    """
+    生成党员发展建议
+    :param uid: 用户ID
+    :param task_id: 任务ID
+    :param review_type: 评审类型
+    :param review_topic: 评审主题
+    :param criteria_markdown_data: 评审标准markdown文本
+    :param employee_data: 员工信息markdown文本
+    :param sys_cfg: 系统配置
+    :return: 党员发展建议报告
+    """
+    try:
+        # 使用空的review_file_path和默认的criteria_file_type
+        builder = TeamBuilder(uid, task_id, review_type, review_topic,
+                              criteria_markdown_data, "", 0, sys_cfg)
+
+        update_process_info(uid, task_id, "正在分析员工信息并生成党员发展建议...")
+        suggestion_report = builder.generate_party_member_development_suggestion(employee_data)
+
+        logger.info("党员发展建议生成成功")
+        return suggestion_report
+
+    except Exception as e:
+        logger.error(f"党员发展建议生成失败: {str(e)}")
+        update_process_info(uid, task_id, f"党员发展建议生成失败: {str(e)}")
+        return f"党员发展建议生成失败: {str(e)}"

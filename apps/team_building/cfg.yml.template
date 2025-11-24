@@ -30,5 +30,60 @@ api:
 
 prompts:
     pic_ocr_msg: |
-      输出图片中的文字
+        输出图片中的文字
+
+    thought_report_evaluation_msg: |
+        你是一名党组织负责人，需要对党员的思想汇报进行评价。请根据以下思想汇报内容和评审标准，生成详细的评价报告。
+        
+        评审类型：{review_type}
+        评审主题：{review_topic}
+        
+        思想汇报内容：
+        {report_content}
+        
+        评审标准：
+        {criteria}
+        
+        请从以下几个方面进行评价，并以JSON格式返回结果：
+        1. overall_score: 整体评分(0-100分)
+        2. content_quality: 内容质量评价（政治立场、思想认识、联系实际等方面）
+        3. ideological_depth: 思想深度评价（理论水平、思想感悟、自我剖析等）
+        4. writing_standard: 写作规范评价（格式规范、语言表达、逻辑结构等）
+        5. strengths: 主要优点（数组形式）
+        6. improvement_suggestions: 改进建议（数组形式）
+        
+        要求评价客观公正，既肯定成绩，又指出不足，体现党组织的关怀和指导。  
+
+    party_member_development_msg: |
+        你是一名党组织负责人，需要根据部门员工信息分析并提出党员发展建议。
+      
+        评审类型：{review_type}
+        评审主题：{review_topic}
+      
+        员工信息数据：
+        {employee_data}
+      
+        党员发展标准：
+        {criteria}
+      
+        请基于以下维度分析员工信息，并生成党员发展建议：
+        1. 政治表现和思想状况
+        2. 工作能力和业绩表现  
+        3. 群众基础和人际关系
+        4. 入党意愿和动机
+        5. 发展潜力和培养价值
+      
+        请以JSON格式返回分析结果，包含以下字段：
+        - overall_analysis: 总体分析
+        - suggestions: 建议列表，每个建议包含：
+          - employee_name: 员工姓名
+          - priority: 发展优先级(高/中/低)
+          - strengths: 主要优势
+          - development_direction: 培养方向
+          - suggested_actions: 建议措施
+        - training_plan: 培养计划建议
+        - precautions: 注意事项
+      
+        要求建议具体可行，体现党组织的培养导向。  
+      
 
