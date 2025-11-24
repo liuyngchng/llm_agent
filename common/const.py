@@ -15,25 +15,49 @@ CFG_DB_URI=f"sqlite:///{CFG_DB_FILE}"
 
 DORIS_HTTP_REQ_NOT_200_ERR = "http_request_to_doris_return_status_not_200_exception"
 
+# 输出文件的目录
 OUTPUT_DIR = "output_doc"
-SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
+
+#session 过期时间，default 2 hours
+SESSION_TIMEOUT = 72000
+
+# 通过页面用户上传的文件存储的目录
 UPLOAD_FOLDER = 'upload_doc'
+
+# 用户级向量数据库目录前缀
 VDB_PREFIX = "./vdb/vdb_idx_"
-FILE_PROCESS_EXPIRE_MS = 7200000  # 文件处理超时毫秒数，默认2小时
 
-DB_CONN_TIMEOUT=20      # 连接超时(秒)
-DB_RW_TIMEOUT=50       # 数据读写超时(秒)
+# 文件处理超时毫秒数，默认2小时
+FILE_PROCESS_EXPIRE_MS = 7200000
 
-MIN_DESC_TXT_LEN = 10               # 描述性文本的最小长度
+# 数据库连接超时(秒)
+DB_CONN_TIMEOUT=20
+
+# 数据库读写超时(秒)
+DB_RW_TIMEOUT=50
+
+# 大模型判断为描述性文本的最小长度
+MIN_DESC_TXT_LEN = 10
+
+# Word docx 文档的 MIME 类型
 DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+# Excel xlsx 文档的 MIME 类型
 XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+# PPT pptx 文档的  MIME 类型
 PPTX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+# JSON MIME 类型
 JSON_MIME_TYPE = 'application/json; charset=utf-8'
+
+# 文件处理任务超时时间
 TASK_EXPIRE_TIME_MS = 7200 * 1000  # 任务超时时间，默认2小时
+
+# 文件处理初始化进度百分比节点
 FILE_TASK_INIT_PERCENT=0.01         # 处理进度大于此值，说明基本材料已经初始化完毕
 
+# 聊天最大历史消息数量
 MAX_HISTORY_SIZE = 19
 
+# 提交给大语言模型的最大字数
 MAX_SECTION_LENGTH = 3000  # 3000 字符
 
 
