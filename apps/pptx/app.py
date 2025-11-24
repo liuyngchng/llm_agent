@@ -19,21 +19,19 @@ from apps.pptx import pptx_meta_util
 from common import my_enums, statistic_util
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
-from common.bp_auth import auth_bp, get_client_ip, auth_info, SESSION_TIMEOUT
+from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.cm_utils import get_console_arg1
+from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, TASK_EXPIRE_TIME_MS, PPTX_MIME_TYPE
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-UPLOAD_FOLDER = 'upload_doc'
-TASK_EXPIRE_TIME_MS = 7200 * 1000  # 任务超时时间，默认2小时
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 
-PPTX_MIME_TYPE ="application/vnd.openxmlformats-officedocument.presentationml.presentation"
 
 def create_app():
     """应用工厂函数"""

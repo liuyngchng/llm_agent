@@ -12,15 +12,14 @@ from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_co
 import logging.config
 
 from common.docx_meta_util import update_process_info, get_doc_info
+from common.my_enums import FileType
 from common.sys_init import init_yml_cfg
 from common.xlsx_md_util import convert_xlsx_to_md
+from common.xlsx_util import convert_md_to_xlsx
+from common.const import MAX_SECTION_LENGTH
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-
-
-
-MAX_SECTION_LENGTH = 3000  # 3000 字符
 
 # 关闭request请求产生的警告信息 (客户端没有进行服务端 SSL 的证书验证，正常会产生警告信息)， 只要清楚自己在做什么
 import urllib3
@@ -28,7 +27,8 @@ from urllib3.exceptions import InsecureRequestWarning
 urllib3.disable_warnings(category=InsecureRequestWarning)
 
 class PaperReviewer:
-    def __init__(self, uid: int, task_id: int, review_type: str, review_topic:str, criteria_markdown_data: str, review_file_path: str, sys_cfg: dict):
+    def __init__(self, uid: int, task_id: int, review_type: str, review_topic:str,
+         criteria_markdown_data: str, review_file_path: str, criteria_file_type, sys_cfg: dict):
         """
         分章节评审系统
         :param uid: 用户ID，标记哪个用户提交的任务
@@ -37,6 +37,7 @@ class PaperReviewer:
         :param review_topic: 评审主题， 例如 xxxx系统概要涉及评审
         :param criteria_markdown_data: 评审标准 markdown 文本
         :param review_file_path: 评审文件 markdown 路径
+        :param criteria_file_type: 评审标准的文件类型
         :param sys_cfg: 系统配置
         """
         self.uid = uid
@@ -44,6 +45,7 @@ class PaperReviewer:
         self.review_type = review_type
         self.review_topic = review_topic
         self.criteria_markdown_data = criteria_markdown_data
+        self.criteria_file_type = criteria_file_type
         self.review_file_path = review_file_path
         self.sections_data = []
         self.review_results = []
@@ -353,13 +355,14 @@ class PaperReviewer:
             # 5. 生成最终报告
             logger.info("生成最终评审报告")
             final_report = self.generate_final_report(self.review_results, overall_result)
-
-            update_process_info(self.uid, self.task_id, f"形成格式化的评审意见报告")
-            logger.debug(f"fill_all_formatted_markdown_report_with_final_report\n{final_report}")
-            # formatted_report = self.fill_all_formatted_markdown_report_with_final_report(final_report)
+            if FileType.XLSX.value == self.criteria_file_type:
+                update_process_info(self.uid, self.task_id, f"形成格式化的评审意见报告")
+                logger.debug(f"fill_all_formatted_markdown_report_with_final_report\n{final_report}")
+                formatted_report = self.fill_all_formatted_markdown_report_with_final_report(final_report)
+            else:
+                formatted_report = final_report
             logger.info("文档评审流程完成")
-            return final_report
-            # return formatted_report
+            return formatted_report
 
         except Exception as e:
             logger.exception(f"评审流程执行失败")
@@ -526,7 +529,7 @@ class PaperReviewer:
 
 
 def start_ai_review(uid:int, task_id: int, review_type: str, review_topic:str,
-        criteria_markdown_data: str, review_file_path: str, sys_cfg: dict) -> str:
+        criteria_markdown_data: str, review_file_path: str, criteria_file_type: int , sys_cfg: dict) -> str:
     """
     :param uid: 用户ID
     :param task_id: 当前任务ID
@@ -534,12 +537,13 @@ def start_ai_review(uid:int, task_id: int, review_type: str, review_topic:str,
     :param review_topic: 评审主题
     :param criteria_markdown_data: 评审标准和要求markdown 文本
     :param review_file_path: 被评审的材料文件的绝对路径
+    :param criteria_file_type: 评审标准文件的类型
     :param sys_cfg： 系统配置信息
     根据评审标准文本和评审材料生成评审报告
     """
     try:
         # 创建评审器并执行评审
-        reviewer = PaperReviewer(uid, task_id, review_type, review_topic, criteria_markdown_data, review_file_path, sys_cfg)
+        reviewer = PaperReviewer(uid, task_id, review_type, review_topic, criteria_markdown_data, review_file_path, criteria_file_type, sys_cfg)
         review_report = reviewer.execute_review()
         return review_report
 
@@ -549,7 +553,7 @@ def start_ai_review(uid:int, task_id: int, review_type: str, review_topic:str,
 
 
 def generate_review_report(uid: int, task_id: int, doc_type: str, review_topic: str,
-                           criteria_file: str, paper_file: str, sys_cfg: dict):
+                           criteria_file: str, paper_file: str, criteria_file_type: int, sys_cfg: dict):
     """
     生成评审报告
     :param uid: 用户ID
@@ -558,6 +562,7 @@ def generate_review_report(uid: int, task_id: int, doc_type: str, review_topic: 
     :param task_id: 任务ID
     :param criteria_file: 评审标准文件的绝对路径
     :param paper_file: 评审材料文件的绝对路径
+    :param criteria_file_type: 评审标准文件的类型
     :param sys_cfg: 系统配置信息
     """
     logger.info(f"{uid}, {task_id},doc_type: {doc_type}, doc_title: {review_topic}, "
@@ -569,7 +574,8 @@ def generate_review_report(uid: int, task_id: int, doc_type: str, review_topic: 
         update_process_info(uid, task_id, "开始分析评审材料...")
 
         # 调用AI评审生成
-        review_result = start_ai_review(uid, task_id, doc_type, review_topic, criteria_markdown_data, paper_file, sys_cfg)
+        review_result = start_ai_review(uid, task_id, doc_type, review_topic,
+            criteria_markdown_data, paper_file, criteria_file_type, sys_cfg)
 
         doc_info = get_doc_info(task_id)
         if not doc_info or not doc_info[0]:
@@ -578,9 +584,12 @@ def generate_review_report(uid: int, task_id: int, doc_type: str, review_topic: 
         output_file_path = doc_info[0]['output_file_path']
 
         output_md_file = save_content_to_md_file(review_result, output_file_path, output_abs_path=True)
-        docx_file_full_path = convert_md_to_docx(output_md_file, output_abs_path=True)
-        # xlsx_file_full_path = convert_md_to_xlsx(output_md_file, True)
-        logger.info(f"{uid}, {task_id}, 评审报告生成成功, {docx_file_full_path}")
+
+        if FileType.XLSX.value ==  criteria_file_type:
+            output_file = convert_md_to_xlsx(output_md_file, True)
+        else:
+            output_file = convert_md_to_docx(output_md_file, True)
+        logger.info(f"{uid}, {task_id}, 评审报告生成成功, {output_file}")
         update_process_info(uid, task_id, "评审报告生成完毕", 100)
 
     except Exception as e:
@@ -600,4 +609,4 @@ if __name__ == '__main__':
     my_criteria_data = get_md_file_content(my_criteria_file)
     split_md = split_md_file_with_catalogue(my_criteria_file)
     my_review_topic = "天然气零售信息系统概要设计文档评审"
-    start_ai_review(1, 1, my_review_topic, my_criteria_data, my_paper_file, my_cfg)
+    start_ai_review(1, 1, my_review_topic, my_criteria_data, my_paper_file, 0, my_cfg)

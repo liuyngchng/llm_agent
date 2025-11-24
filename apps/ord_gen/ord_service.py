@@ -15,11 +15,10 @@ from datetime import datetime
 
 from common.my_enums import AiServiceStatus
 from common.cm_utils import convert_list_to_html_table
+from common.const import MAX_HISTORY_SIZE
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-
-MAX_HISTORY_SIZE = 19
 
 class OrderService:
     """

@@ -25,23 +25,19 @@ from common.docx_meta_util import get_doc_info
 from common.html_util import get_html_ctx_from_md
 from common.my_enums import AppType, FileType
 from common.sys_init import init_yml_cfg
-from common.bp_auth import auth_bp, get_client_ip, auth_info, SESSION_TIMEOUT
+from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.cm_utils import get_console_arg1
 from common.xlsx_md_util import convert_xlsx_to_md
+from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR, TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-UPLOAD_FOLDER = 'upload_doc'
-OUTPUT_DIR = "output_doc"
-TASK_EXPIRE_TIME_MS = 7200 * 1000  # 任务超时时间，默认2小时
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
-DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def create_app():
@@ -221,18 +217,18 @@ def register_routes(app):
         docx_ctx = f"我正在做一个 {review_type} 的评审，评审主题是 {review_topic}"
         output_file_name = f"{OUTPUT_DIR}/output_{task_id}.md"
         output_file_path = os.path.abspath(output_file_name)
+        criteria_file = review_criteria_file_info[0]['full_path']
+        criteria_file_type = review_criteria_file_info[0]['file_suffix']
+        paper_file = review_paper_file_info[0]['full_path']
         docx_meta_util.save_doc_info(
-            uid, task_id, review_type, review_topic,
-            review_criteria_file_info[0]['full_path'], "",
-            review_paper_file_info[0]['full_path'],
-            0, False,
-            docx_ctx, output_file_path, ""
+            uid, task_id, review_type, review_topic, criteria_file, "",paper_file ,
+            0, False, docx_ctx, output_file_path, ""
         )
 
         # 启动后台任务
         threading.Thread(
             target=generate_review_report,
-            args=(uid, task_id, review_type, review_topic,  review_criteria_file_info[0]['full_path'], review_paper_file_info[0]['full_path'], my_cfg)
+            args=(uid, task_id, review_type, review_topic,  criteria_file, paper_file, criteria_file_type, my_cfg)
         ).start()
 
         info = {"status": "started", "task_id": task_id}
@@ -391,9 +387,9 @@ def register_routes(app):
         return json.dumps({"msg": "删除成功", "task_id": task_id}, ensure_ascii=False), 200
 
 # 创建应用实例
-app = create_app()
+my_app = create_app()
 
 # 当直接运行脚本时，启动开发服务器
 if __name__ == '__main__':
     port = get_console_arg1()
-    app.run(host='0.0.0.0', port=port)
+    my_app.run(host='0.0.0.0', port=port)

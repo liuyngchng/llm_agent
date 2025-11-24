@@ -18,6 +18,7 @@ from werkzeug.utils import secure_filename
 
 from common import vdb_util, statistic_util
 from common.bp_auth import get_client_ip, auth_info, SESSION_TIMEOUT
+from common.const import UPLOAD_FOLDER, VDB_PREFIX, FILE_PROCESS_EXPIRE_MS
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.vdb_meta_util import VdbMeta
@@ -29,11 +30,6 @@ logger = logging.getLogger(__name__)
 vdb_bp = Blueprint('vdb', __name__)
 
 
-VDB_PREFIX = "./vdb/vdb_idx_"
-
-UPLOAD_FOLDER = "upload_doc"
-
-FILE_PROCESS_EXPIRE_MS = 7200000  # 文件处理超时毫秒数，默认2小时
 # 确保上传目录存在
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 

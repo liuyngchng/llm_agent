@@ -24,16 +24,14 @@ import logging.config
 import pymysql
 import oracledb
 import dmPython
+
+from common.const import DB_CONN_TIMEOUT, DB_RW_TIMEOUT
 from common.my_enums import DataType, DBType
 from urllib.parse import urlparse, unquote, urlencode, quote
 from common.sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-
-DB_CONN_TIMEOUT=20      # 连接超时(秒)
-DB_RW_TIMEOUT=50       # 数据读写超时(秒)
-
 
 pd.set_option('display.float_format', '{:.0f}'.format)  # 设置pandas显示整数
 class DbUtl:

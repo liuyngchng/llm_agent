@@ -18,17 +18,12 @@ import base64
 import functools
 
 from common.cm_utils import get_time_str
+from common.const import CFG_DB_FILE
 from common.my_enums import DataType
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-user_sample_data_db = "user_info.db"
-AI_GEN_TAG="[_AI生成_]"
 
-CFG_DB_FILE = "cfg.db"
-CFG_DB_URI=f"sqlite:///{CFG_DB_FILE}"
-
-DORIS_HTTP_REQ_NOT_200_ERR = "http_request_to_doris_return_status_not_200_exception"
 
 
 def auth_user(user:str, t: str, cfg: dict) -> dict:
@@ -580,7 +575,7 @@ def get_user_sample_data(sql: str)-> dict:
     get sample data for user consumption data
     """
     const = {}
-    with sqlite3.connect(user_sample_data_db) as my_conn:
+    with sqlite3.connect(USER_SAMPLE_DATA_DB) as my_conn:
         try:
             check_info = query_sqlite(my_conn, sql)
             value_dt = check_info['data']
@@ -595,7 +590,7 @@ def get_user_sample_data(sql: str)-> dict:
 def get_user_sample_data_rd_cfg_dict(cfg_dict: dict) -> dict:
     user_sample_data_rd_dict = {}
     user_sample_data_rd_dict["db"]["type"] = "sqlite"
-    user_sample_data_rd_dict["db"]["name"] = user_sample_data_db
+    user_sample_data_rd_dict["db"]["name"] = USER_SAMPLE_DATA_DB
     user_sample_data_rd_dict["api"] = cfg_dict["api"]
     return user_sample_data_rd_dict
 

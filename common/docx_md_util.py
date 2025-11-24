@@ -7,7 +7,7 @@ import os
 import re
 from pathlib import Path
 
-from common.cm_utils import OUTPUT_DIR
+from common.const import OUTPUT_DIR
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)

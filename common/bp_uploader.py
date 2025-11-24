@@ -11,6 +11,7 @@ import logging.config
 from flask import Blueprint
 from flask import (request,)
 
+from common.const import UPLOAD_FOLDER
 from common.sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -19,12 +20,10 @@ logger = logging.getLogger(__name__)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 common_dir = os.path.dirname(current_dir)
 template_folder = os.path.join(common_dir, 'common', 'templates')
-uploader_bp = Blueprint('uploader', __name__,
-                   template_folder=template_folder)
+uploader_bp = Blueprint('uploader', __name__, template_folder=template_folder)
 my_cfg = init_yml_cfg()
 
-SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
-UPLOAD_FOLDER = 'upload_doc'
+
 
 @uploader_bp.route('/upload', methods=['POST'])
 def upload_file():

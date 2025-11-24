@@ -8,7 +8,8 @@ import json
 import logging.config
 import sqlite3
 
-from common.cfg_util import CFG_DB_URI, CFG_DB_FILE, insert_del_sqlite, sqlite_output
+from common.cfg_util import insert_del_sqlite, sqlite_output
+from common.const import CFG_DB_URI, CFG_DB_FILE
 from common.my_enums import DataType
 from common.cm_utils import get_time_str
 

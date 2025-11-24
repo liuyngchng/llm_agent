@@ -15,13 +15,10 @@ import logging.config
 from common.docx_meta_util import update_process_info
 from common.sys_init import init_yml_cfg
 from common.xlsx_md_util import convert_xlsx_to_md
+from common.const import OUTPUT_DIR, MAX_SECTION_LENGTH
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-
-OUTPUT_DIR = "output_doc"
-
-MAX_SECTION_LENGTH = 3000  # 3000 字符
 
 # 关闭request请求产生的警告信息 (客户端没有进行服务端 SSL 的证书验证，正常会产生警告信息)， 只要清楚自己在做什么
 import urllib3

@@ -15,26 +15,23 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
-from apps.docx import docx_meta_util
-from apps.docx.docx_para_util import extract_catalogue, get_outline_txt
+from common import docx_meta_util
+from common.docx_para_util import extract_catalogue, get_outline_txt
 from apps.mt_report.mt_report_util import get_doc_content, get_template_field, get_txt_abs, insert_para_to_doc
 from common import my_enums, statistic_util
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
-from common.bp_auth import auth_bp, get_client_ip, auth_info, SESSION_TIMEOUT
+from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.cm_utils import get_console_arg1
+from common.const import  SESSION_TIMEOUT, UPLOAD_FOLDER, TASK_EXPIRE_TIME_MS,DOCX_MIME_TYPE
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-
-UPLOAD_FOLDER = 'upload_doc'
-TASK_EXPIRE_TIME_MS = 7200 * 1000  # 任务超时时间，默认2小时
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 my_cfg = init_yml_cfg()
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
-DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 def create_app():
     """应用工厂函数"""

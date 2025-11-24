@@ -18,13 +18,13 @@ from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
+from common.const import MIN_DESC_TXT_LEN
 from common.vdb_util import search_txt
 from common.sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
-MIN_DESC_TXT_LEN = 10               # 描述性文本的最小长度
 
 def get_reference_from_vdb(keywords: str, vdb_dir: str, sys_cfg: dict) -> str:
     """
@@ -296,5 +296,5 @@ if __name__ == "__main__":
     doc_catalogue = extract_catalogue(my_target_doc)
     logger.info(f"my_target_doc_catalogue: {doc_catalogue}")
     my_vdb_dir = "./vdb/vdb_idx_332987902_26"
-    task_id = int(time.time())
+    my_task_id = int(time.time())
     output_file = 'doc_output.docx'

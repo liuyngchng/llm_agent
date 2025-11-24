@@ -16,9 +16,10 @@ import threading
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, redirect, abort, url_for, send_from_directory, render_template
 from apps.chat.chat_agent import ChatAgent
+from common.const import SESSION_TIMEOUT
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
-from common.bp_auth import auth_bp, auth_info, get_client_ip, SESSION_TIMEOUT
+from common.bp_auth import auth_bp, auth_info, get_client_ip
 from common.bp_vdb import vdb_bp, VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task
 from common.cm_utils import get_console_arg1
 from common.vdb_meta_util import VdbMeta

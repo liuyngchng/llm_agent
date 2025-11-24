@@ -20,11 +20,10 @@ logger = logging.getLogger(__name__)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 common_dir = os.path.dirname(current_dir)
 template_folder = os.path.join(common_dir, 'common', 'templates')
-auth_bp = Blueprint('auth', __name__,
-                   template_folder=template_folder)
+auth_bp = Blueprint('auth', __name__,template_folder=template_folder)
 auth_info = {}
 
-SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
+  # session timeout second , default 2 hours
 
 @auth_bp.route('/login', methods=['GET'])
 def login_index():

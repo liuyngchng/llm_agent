@@ -8,11 +8,10 @@ import re
 from pathlib import Path
 import pandas as pd
 
+from common.const import OUTPUT_DIR
+
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-
-OUTPUT_DIR = "output_doc"
-
 
 def convert_md_to_xlsx(markdown_file_path: str, output_abs_path: bool = False) -> str:
     """

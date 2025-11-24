@@ -29,7 +29,6 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 
-SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 my_cfg = init_yml_cfg()
 
 @app.route('/')

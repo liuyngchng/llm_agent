@@ -5,10 +5,12 @@ import logging.config
 import os
 from pathlib import Path
 
+import pandas as pd
+
+from common.const import OUTPUT_DIR
+
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
-
-OUTPUT_DIR = "output_doc"
 
 def convert_xlsx_to_md(excel_path: str, include_sheet_names: bool = True, output_abs_path: bool = False) -> str:
     """
@@ -16,6 +18,7 @@ def convert_xlsx_to_md(excel_path: str, include_sheet_names: bool = True, output
     能够更好地处理合并单元格
     :param excel_path: Excel 文件路径
     :param include_sheet_names: 是否包含工作表名称
+    :param output_abs_path: 是否输出绝对路径
     :return: markdown 文件的磁盘路径
     """
     import pandas as pd
