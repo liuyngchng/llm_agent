@@ -112,9 +112,17 @@ class Const(Enum):
     BILL_ADDR_SVG   = "bill_addr_svg"
     CSM_SERVICE     = "csm_service"
 
+class FileType(Enum):
+    DOCX = 0
+    XLSX = 1
+    MARKDOWN = 2
+
 
 
 if __name__ == "__main__":
+    a = FileType.DOCX.value
+    print(f"a = {a}")
+
     print(MsgType.ERROR.value)
     dt_type = "chart_js"
     if dt_type in (YieldType.CHART_JS.value, YieldType.MSG.value):

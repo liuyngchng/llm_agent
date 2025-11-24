@@ -16,6 +16,8 @@ from decimal import Decimal
 from typing import Any
 import base64
 import functools
+
+from common.cm_utils import get_time_str
 from common.my_enums import DataType
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -691,20 +693,19 @@ def insert_del_sqlite(db_con, sql: str) -> dict:
         logger.error(f"save_data_err: {e}, sql {sql}")
         return {"result":False, "error": "save data failed"}
 
-def save_file_info(uid: int, fid: str, full_path: str) -> dict:
+def save_file_info(uid: int, fid: str, full_path: str, file_suffix:int = 0) -> dict:
     """
     保存文件信息
     :param uid: user id
     :param fid: 文件id
     :param full_path: 文件存储路径
+    :param file_suffix: 文件类型 , 0: docx; 1: xlsx
     :return:
     """
-    logger.info(f"save_file_info, {uid}, {fid}, {full_path}")
-    timestamp = time.time()
-    # 生成类似格式（UTC时间）
-    iso_str = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
-    sql = (f"insert into file_info(uid, fid, full_path, timestamp) values "
-           f"({uid}, '{fid}', '{full_path}', '{iso_str}')")
+    logger.debug(f"save_file_info, {uid}, {fid}, {full_path}")
+    timestamp = get_time_str()
+    sql = (f"insert into file_info(uid, fid, full_path, file_suffix, timestamp) values "
+           f"({uid}, '{fid}', '{full_path}', '{file_suffix}', '{timestamp}')")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         logger.debug(f"save_file_info_sql, {sql}")
         my_dt = insert_del_sqlite(my_conn, sql)

@@ -23,7 +23,7 @@ from common.docx_md_util import convert_docx_to_md
 from common import my_enums, statistic_util
 from common.docx_meta_util import get_doc_info
 from common.html_util import get_html_ctx_from_md
-from common.my_enums import AppType
+from common.my_enums import AppType, FileType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info, SESSION_TIMEOUT
 from common.cm_utils import get_console_arg1
@@ -117,7 +117,7 @@ def register_routes(app):
         file.save(save_path)
         md_file = convert_xlsx_to_md(save_path, True, True)
         file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
-        save_file_info(uid, file_md5, md_file)
+        save_file_info(uid, file_md5, md_file, FileType.XLSX.value)
         logger.info(f"xlsx_file {file.filename} saved_as {file_md5}, {task_id}")
 
         info = {
@@ -159,7 +159,7 @@ def register_routes(app):
         file.save(save_path)
         md_file = convert_docx_to_md(save_path, True)
         file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
-        save_file_info(uid, file_md5, md_file)
+        save_file_info(uid, file_md5, md_file, FileType.DOCX.value)
         logger.info(f"docx_file {file.filename} saved_as {file_md5}, {task_id}")
 
         info = {
