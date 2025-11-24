@@ -124,9 +124,9 @@ def update_process_info(uid: int, task_id: int, process_info: str, percent = -1)
         sql = f"update doc_file_info set process_info = '{process_info}' where uid = {uid} and task_id = {task_id} limit 1"
     else:
         sql = f"update doc_file_info set process_info = '{process_info}', percent= {percent} where uid = {uid} and task_id = {task_id} limit 1"
-    logger.info(f"{uid}, update_doc_file_info_sql, {sql}")
+    logger.debug(f"{uid}, {task_id}, update_doc_file_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-    logger.info(f"{uid}, update_doc_file_info_dt, {my_dt}")
+    logger.debug(f"{uid}, {task_id}, update_doc_file_info_dt, {my_dt}")
     return my_dt
 
 def set_doc_info_para_task_created_flag(uid: int, task_id: int):

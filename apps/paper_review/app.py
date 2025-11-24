@@ -328,16 +328,11 @@ def register_routes(app):
             logger.error(f"文件不存在: {output_file_path}")
             abort(404)
         logger.info(f"文件找到，准备发送: {output_file_path}")
-
+        download_name=f"{task_id}_output_paper_review_report{output_file_suffix}"
         try:
             from flask import send_file
             logger.info(f"使用 send_file 发送: {output_file_path}")
-            return send_file(
-                output_file_path,
-                as_attachment=True,
-                download_name=f"{task_id}_output_paper_review_report{output_file_suffix}",
-                mimetype=mimetype,
-            )
+            return send_file(output_file_path, as_attachment=True, download_name=download_name,mimetype=mimetype)
         except Exception as e:
             logger.error(f"文件发送失败: {str(e)}")
             abort(500)
