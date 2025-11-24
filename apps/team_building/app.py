@@ -194,10 +194,10 @@ def register_routes(app):
         filename = f"{task_id}_{file.filename}"
         save_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(save_path)
-        md_file = convert_docx_to_md(save_path, True)
-        file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
-        save_file_info(uid, file_md5, md_file)
-        logger.info(f"pic_file {file.filename} saved_as {file_md5}, {task_id}")
+        abs_file_path = os.path.abspath(save_path)
+        file_md5 = hashlib.md5(abs_file_path.encode('utf-8')).hexdigest()
+        save_file_info(uid, file_md5, abs_file_path)
+        logger.info(f"pic_file_saved_as, {file.filename}  {file_md5}, {task_id}")
 
         info = {
             "task_id": task_id,
