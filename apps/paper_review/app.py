@@ -398,9 +398,9 @@ def register_routes(app):
         return json.dumps({"msg": "删除成功", "task_id": task_id}, ensure_ascii=False), 200
 
 # 创建应用实例
-my_app = create_app()
+app = create_app()
 
 # 当直接运行脚本时，启动开发服务器
 if __name__ == '__main__':
     port = get_console_arg1()
-    my_app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port)

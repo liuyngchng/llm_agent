@@ -356,7 +356,7 @@ class PaperReviewer:
             logger.info("生成最终评审报告")
             final_report = self.generate_final_report(self.review_results, overall_result)
             if FileType.XLSX.value == self.criteria_file_type:
-                update_process_info(self.uid, self.task_id, f"形成格式化的评审意见报告")
+                update_process_info(self.uid, self.task_id, f"准备输出格式化的评审意见报告")
                 logger.debug(f"fill_all_formatted_markdown_report_with_final_report\n{final_report}")
                 formatted_report = self.fill_all_formatted_markdown_report_with_final_report(final_report)
             else:
