@@ -524,6 +524,7 @@ def start_thought_evaluation(uid: int, task_id: int, review_type: str, review_to
     :param criteria_file_type: 评审标准文件类型
     :param sys_cfg: 系统配置
     """
+    logger.info(f"{uid}, {task_id}, start_thought_evaluation")
     try:
         evaluator = TeamBuilder(uid, task_id, review_type, review_topic, criteria_markdown_data,
                                 review_file_path, criteria_file_type, sys_cfg)
@@ -548,6 +549,7 @@ def generate_party_member_suggestion(uid: int, task_id: int, review_type: str, r
     :param sys_cfg: 系统配置
     :return: 党员发展建议报告
     """
+    logger.info(f"{uid}, {task_id}, generate_party_member_suggestion")
     try:
         # 使用空的review_file_path和默认的criteria_file_type
         builder = TeamBuilder(uid, task_id, review_type, review_topic,
