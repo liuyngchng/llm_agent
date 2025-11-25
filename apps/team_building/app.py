@@ -242,7 +242,7 @@ def register_routes(app):
         """
         获取当前在进行的写作任务，渲染页面
         """
-        logger.info(f"paper_review_index, {request.args}")
+        logger.info(f"team_building_index, {request.args}")
         uid = request.args.get('uid')
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
@@ -264,7 +264,7 @@ def register_routes(app):
             "app_source": app_source,
             "warning_info": warning_info,
         }
-        dt_idx = "paper_review_my_task.html"
+        dt_idx = "team_building_my_task.html"
         logger.info(f"{uid}, return_page_with_no_auth {dt_idx}")
         return render_template(dt_idx, **ctx)
 
@@ -284,7 +284,7 @@ def register_routes(app):
                 app_source=AppType.TEAM_BUILDING.name.lower(),
                 warning_info=warning_info
             ))
-        # logger.info(f"{uid}, get_my_paper_review_task, {data}")
+        # logger.info(f"{uid}, get_my_team_building_task, {data}")
         task_list = docx_meta_util.get_user_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
 
@@ -329,7 +329,7 @@ def register_routes(app):
             logger.error(f"文件不存在: {output_file_path}")
             abort(404)
         logger.info(f"文件找到，准备发送: {output_file_path}")
-        download_name=f"{task_id}_output_paper_review_report{output_file_suffix}"
+        download_name=f"{task_id}_output_team_building_report{output_file_suffix}"
         try:
             from flask import send_file
             logger.info(f"使用 send_file 发送: {output_file_path}")
