@@ -16,7 +16,7 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
-from apps.team_building.team_builder import start_thought_evaluation
+from apps.team_building.team_builder import start_thought_evaluation, start_extract_text_from_image
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
@@ -155,6 +155,44 @@ def register_routes(app):
         save_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(save_path)
         md_file = convert_docx_to_md(save_path, True)
+        file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
+        save_file_info(uid, file_md5, md_file, FileType.DOCX.value)
+        logger.info(f"docx_file {file.filename} saved_as {file_md5}, {task_id}")
+
+        info = {
+            "task_id": task_id,
+            "file_name": file_md5,
+            "message": "docx 文件上传成功"
+        }
+        logger.info(f"upload_docx_file, {info}")
+        return json.dumps(info, ensure_ascii=False), 200
+
+    @app.route('/img/upload', methods=['POST'])
+    def upload_docx():
+        """
+        上传 图片评审材料文档
+        """
+        logger.info(f"upload_docx, {request}")
+        if 'file' not in request.files:
+            return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
+        file = request.files['file']
+        uid = int(request.form.get('uid'))
+        logger.info(f"{uid}, upload_docx")
+        session_key = f"{uid}_{get_client_ip()}"
+        if (not auth_info.get(session_key, None)
+                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+            warning_info = {"error":"用户会话信息已失效，请重新登录"}
+            logger.warning(f"{uid}, {warning_info}")
+            return json.dumps(warning_info, ensure_ascii=False), 400
+        if file.filename == '':
+            return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
+
+        # 生成任务ID，使用毫秒数
+        task_id = int(time.time() * 1000)
+        filename = f"{task_id}_{file.filename}"
+        save_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(save_path)
+        md_file = start_extract_text_from_image(uid, task_id, save_path, "png", my_cfg)
         file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
         save_file_info(uid, file_md5, md_file, FileType.DOCX.value)
         logger.info(f"docx_file {file.filename} saved_as {file_md5}, {task_id}")

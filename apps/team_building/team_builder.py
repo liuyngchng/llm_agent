@@ -504,6 +504,11 @@ class TeamBuilder:
             logger.error(error_msg)
             return self._get_fallback_evaluation_result(f"API调用异常: {str(e)}")
 
+def start_extract_text_from_image(uid: int, task_id: int, image_file_path: str, image_file_type: str, sys_cfg: dict) -> str:
+    # TODO 需要实现这个函数, 抽取完的文本放入一个 markdown 文件中，返回 markdown 文件的绝对路径
+    return ""
+
+
 
 def start_thought_evaluation(uid: int, task_id: int, review_type: str, review_topic: str,
                              criteria_markdown_data: str, review_file_path: str, criteria_file_type: int,

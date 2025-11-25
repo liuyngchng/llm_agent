@@ -48,6 +48,10 @@ function handleCriteriaUpload(input) {
     uploadCriteriaFile(file);
 }
 
+function handleReviewMaterialUpload(input) {
+// 处理图片、Word docx 文档上传
+}
+
 // 处理评审材料文件上传
 function handleDocxUpload(input) {
     const file = input.files[0];
