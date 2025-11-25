@@ -82,10 +82,10 @@ def login():
         hack_admin = "1"
     else:
         hack_admin = "0"
-    greeting = "欢迎使用本系统"
-    cfg_greeting = get_const("greeting", app_source)
-    if cfg_greeting:
-        greeting = cfg_greeting
+    greeting = get_const("greeting", app_source)
+    arg1 = get_const("arg1", app_source)
+    arg2 = get_const("arg2", app_source)
+    arg3 = get_const("arg3", app_source)
 
     ctx = {
         "uid": uid,
@@ -96,6 +96,9 @@ def login():
         "greeting": greeting,
         "app_source": app_source,
         "hack_admin": hack_admin,
+        "arg1": arg1,
+        "arg2": arg2,
+        "arg3": arg3,
     }
     session_key = f"{auth_result['uid']}_{get_client_ip()}"
     auth_info[session_key] = time.time()

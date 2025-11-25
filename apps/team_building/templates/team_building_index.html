@@ -37,12 +37,9 @@
                 <input type="text" id="reviewTopic" list="topicList" name="doc_title" placeholder="可以直接输入，也可以从下拉菜单中选取">
                 <datalist id="topicList">
                     <option value="">-- 请选择评审主题 --</option>
-                    <option value="xxxx 国家标准"></option>
-                    <option value="xxxx 可行性研究报告"></option>
-                    <option value="xxxx 信息系统详细设计文档"></option>
-                    <option value="xxxx 信息系统概要设计文档"></option>
-                    <option value = "xxxx 信息系统软件著作权申请"></option>
-                    <option value = "xxxx 信息系统功能设计"></option>
+                    {% for topic in arg1 %}
+                    <option value="{{ topic }}">{{ topic }}</option>
+                    {% endfor %}
                 </datalist>
             </div>
             <div class="form-group">
@@ -50,11 +47,9 @@
                 <input type="text" id="reviewType" list="typeList" name="doc_type" placeholder="可以直接输入，也可以从下拉菜单中选取">
                 <datalist id="typeList">
                     <option value="">-- 请选择评审类别 --</option>
-                    <option value="AI 技能大赛参赛作品评审"></option>
-                    <option value="国标制定评审"></option>
-                    <option value="项目可行性研究评审"></option>
-                    <option value="招投标评审"></option>
-                    <option value="学术论文评审"></option>
+                    {% for topic in arg2 %}
+                    <option value="{{ topic }}">{{ topic }}</option>
+                    {% endfor %}
                 </datalist>
             </div>
 

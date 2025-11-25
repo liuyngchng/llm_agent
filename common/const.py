@@ -3,6 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 import sqlite3
 import logging.config
+from typing import Any
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -60,8 +61,10 @@ MAX_HISTORY_SIZE = 19
 # 提交给大语言模型的最大字数
 MAX_SECTION_LENGTH = 3000  # 3000 字符
 
+import json
 
-def get_const(key:str, app: str)->str | None:
+
+def get_const(key: str, app: str) -> Any:
     value = None
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
@@ -69,10 +72,16 @@ def get_const(key:str, app: str)->str | None:
             check_info = query_sqlite(my_conn, sql)
             value_dt = check_info['data']
             value = value_dt[0][0]
-            # logger.debug(f"get_const {value} with key {key}")
         except Exception as e:
             logger.error(f"no_value_info_found_for_key, {key}")
-    return value
+
+    if not value:
+        return key
+
+    try:
+        return json.loads(value.strip())
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        return value
 
 
 def query_sqlite(db_con, query: str) -> dict:
