@@ -16,19 +16,20 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
-from apps.team_building.proposer import generate_propose
+from apps.team_building.team_builder import start_thought_evaluation
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
 from common import my_enums, statistic_util
-from common.docx_meta_util import get_doc_info, save_doc_info
+from common.docx_meta_util import get_doc_info
 from common.html_util import get_html_ctx_from_md
 from common.my_enums import AppType, FileType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.cm_utils import get_console_arg1
 from common.xlsx_md_util import convert_xlsx_to_md
-from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, OUTPUT_DIR
+from common.const import (SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR,
+    TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE)
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -39,16 +40,20 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 
+
 def create_app():
     """应用工厂函数"""
-    my_app = Flask(__name__, static_folder=None)
-    my_app.config['JSON_AS_ASCII'] = False
-    my_app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-    my_app.config['TASK_EXPIRE_TIME_MS'] = TASK_EXPIRE_TIME_MS
-    my_app.config['CFG'] = my_cfg
-    my_app.register_blueprint(auth_bp)
-    register_routes(my_app)
-    return my_app
+    app = Flask(__name__, static_folder=None)
+    app.config['JSON_AS_ASCII'] = False
+    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    app.config['TASK_EXPIRE_TIME_MS'] = TASK_EXPIRE_TIME_MS
+    app.config['CFG'] = my_cfg
+    app.config['APP_SOURCE'] = my_enums.AppType.TEAM_BUILDING.name.lower()
+    # 注册蓝图
+    app.register_blueprint(auth_bp)
+    # 注册路由
+    register_routes(app)
+    return app
 
 
 def register_routes(app):
@@ -76,10 +81,7 @@ def register_routes(app):
     @app.route('/')
     def app_home():
         logger.info("redirect_auth_login_index")
-        return redirect(url_for(
-            'auth.login_index',
-            app_source=my_enums.AppType.TEAM_BUILDING.name.lower()
-        ))
+        return redirect(url_for('auth.login_index', app_source=my_enums.AppType.TEAM_BUILDING.name.lower()))
 
     @app.route('/xlsx/upload', methods=['POST'])
     def upload_xlsx():
@@ -154,7 +156,7 @@ def register_routes(app):
         file.save(save_path)
         md_file = convert_docx_to_md(save_path, True)
         file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
-        save_file_info(uid, file_md5, md_file)
+        save_file_info(uid, file_md5, md_file, FileType.DOCX.value)
         logger.info(f"docx_file {file.filename} saved_as {file_md5}, {task_id}")
 
         info = {
@@ -163,48 +165,6 @@ def register_routes(app):
             "message": "docx 文件上传成功"
         }
         logger.info(f"upload_docx_file, {info}")
-        return json.dumps(info, ensure_ascii=False), 200
-
-    @app.route('/pic/upload', methods=['POST'])
-    def upload_pic():
-        """
-        上传 手写体的材料图片
-        """
-        logger.info(f"upload_pic, {request}")
-        if 'file' not in request.files:
-            return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
-        file = request.files['file']
-        uid = int(request.form.get('uid'))
-        logger.info(f"{uid}, upload_pic")
-        session_key = f"{uid}_{get_client_ip()}"
-        if (not auth_info.get(session_key, None)
-                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
-            logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.TEAM_BUILDING.name.lower(),
-                warning_info=warning_info
-            ))
-        if file.filename == '':
-            return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
-
-        # 生成任务ID，使用毫秒数
-        task_id = int(time.time() * 1000)
-        filename = f"{task_id}_{file.filename}"
-        save_path = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(save_path)
-        abs_file_path = os.path.abspath(save_path)
-        file_md5 = hashlib.md5(abs_file_path.encode('utf-8')).hexdigest()
-        save_file_info(uid, file_md5, abs_file_path)
-        logger.info(f"pic_file_saved_as, {file.filename}  {file_md5}, {task_id}")
-
-        info = {
-            "task_id": task_id,
-            "file_name": file_md5,
-            "message": "图片文件上传成功"
-        }
-        logger.info(f"upload_pic_file, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
     @app.route("/review_report/gen", methods=['POST'])
@@ -224,14 +184,18 @@ def register_routes(app):
             return jsonify(warning_info), 400
 
         task_id = int(data.get("task_id"))
-
         review_topic = data.get("review_topic")
+        review_type = data.get("review_type")
         review_criteria_file_id = data.get("review_criteria_file_name")
         review_paper_file_id = data.get("review_paper_file_name")
 
         # 验证输入
         if not review_topic:
             err_info = {"error": "评审主题不能为空"}
+            logger.error(f"err_occurred, {err_info}")
+            return json.dumps(err_info, ensure_ascii=False), 400
+        if not review_type:
+            err_info = {"error": "评审类别不能为空"}
             logger.error(f"err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
 
@@ -250,24 +214,23 @@ def register_routes(app):
             err_info = {"error": f"未找到相应的评审文件信息 {review_criteria_file_info}"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
-        criteria_file = review_criteria_file_info[0]['full_path']
-        paper_file = review_paper_file_info[0]['full_path']
 
-        # 保存任务信息到数据库
-        doc_type = my_enums.WriteDocType.TEAM_BUILDING.value
-        docx_ctx = f"我正在做一个 {doc_type} 的 {review_topic} 的评审任务"
-        output_file = f"{OUTPUT_DIR}/output_{task_id}.md"
-        output_file_path = os.path.abspath(output_file)
-        save_doc_info(
-            uid, task_id, doc_type, review_topic, "",
-            criteria_file, paper_file, 0, 0, docx_ctx,
-            output_file_path,"", FileType.DOCX.value
+        docx_ctx = f"我正在做一个 {review_type} 的评审，评审主题是 {review_topic}"
+        output_file_name = f"{OUTPUT_DIR}/output_{task_id}.md"
+        output_file_path = os.path.abspath(output_file_name)
+        criteria_file = review_criteria_file_info[0]['full_path']
+        criteria_file_type = review_criteria_file_info[0]['file_suffix']
+        paper_file = review_paper_file_info[0]['full_path']
+        docx_meta_util.save_doc_info(
+            uid, task_id, review_type, review_topic, criteria_file, "",paper_file ,
+            0, False, docx_ctx, output_file_path, "",
+            output_file_type=criteria_file_type
         )
 
         # 启动后台任务
         threading.Thread(
-            target=generate_propose,
-            args=(uid, doc_type, review_topic, task_id, criteria_file, paper_file, my_cfg)
+            target=start_thought_evaluation,
+            args=(uid, task_id, review_type, review_topic,  criteria_file, paper_file, criteria_file_type, my_cfg)
         ).start()
 
         info = {"status": "started", "task_id": task_id}
@@ -279,7 +242,7 @@ def register_routes(app):
         """
         获取当前在进行的写作任务，渲染页面
         """
-        logger.info(f"team_building_index, {request.args}")
+        logger.info(f"paper_review_index, {request.args}")
         uid = request.args.get('uid')
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
@@ -301,7 +264,7 @@ def register_routes(app):
             "app_source": app_source,
             "warning_info": warning_info,
         }
-        dt_idx = "team_building_my_task.html"
+        dt_idx = "paper_review_my_task.html"
         logger.info(f"{uid}, return_page_with_no_auth {dt_idx}")
         return render_template(dt_idx, **ctx)
 
@@ -325,7 +288,7 @@ def register_routes(app):
         task_list = docx_meta_util.get_user_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
 
-    @app.route('/TEAM_BUILDING/download/task/<task_id>', methods=['GET'])
+    @app.route('/team_building/download/task/<task_id>', methods=['GET'])
     def download_file_by_task_id(task_id):
         """
         根据任务ID下载文件
@@ -346,26 +309,36 @@ def register_routes(app):
         statistic_util.add_access_count_by_uid(int(uid), 1)
         file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
-        absolute_path = file_path_info[0]['file_path']
-        logger.info(f"文件检查 - 绝对路径: {absolute_path}")
-        if not os.path.exists(absolute_path):
-            logger.error(f"文件不存在: {absolute_path}")
+        absolute_path = file_path_info[0]['output_file_path']
+        output_file_type = file_path_info[0]['output_file_type']
+        output_file_suffix = ".docx"
+        mimetype = DOCX_MIME_TYPE
+        if FileType.XLSX.value == output_file_type:
+            output_file_suffix = ".xlsx"
+            mimetype = XLSX_MIME_TYPE
+        # 分离目录和文件名
+        dir_path, filename = os.path.split(absolute_path)
+        # 分离文件名和扩展名
+        name, _ = os.path.splitext(filename)
+        # 构建新的文件路径
+        output_file_path = str(os.path.join(dir_path, name + output_file_suffix))
+
+        print(output_file_path)
+        logger.info(f"文件检查 - 绝对路径: {output_file_path}")
+        if not os.path.exists(output_file_path):
+            logger.error(f"文件不存在: {output_file_path}")
             abort(404)
-        logger.info(f"文件找到，准备发送: {absolute_path}")
+        logger.info(f"文件找到，准备发送: {output_file_path}")
+        download_name=f"{task_id}_output_paper_review_report{output_file_suffix}"
         try:
             from flask import send_file
-            logger.info(f"使用 send_file 发送: {absolute_path}")
-            return send_file(
-                absolute_path,
-                as_attachment=True,
-                download_name=f"{task_id}_output_paper_review_report.docx",
-                mimetype=DOCX_MIME_TYPE,
-            )
+            logger.info(f"使用 send_file 发送: {output_file_path}")
+            return send_file(output_file_path, as_attachment=True, download_name=download_name,mimetype=mimetype)
         except Exception as e:
             logger.error(f"文件发送失败: {str(e)}")
             abort(500)
 
-    @app.route('/TEAM_BUILDING/preview/task/<task_id>', methods=['GET'])
+    @app.route('/team_building/preview/task/<task_id>', methods=['GET'])
     def preview_file_by_task_id(task_id):
         """
         根据任务ID下载文件
@@ -387,8 +360,10 @@ def register_routes(app):
         statistic_util.add_access_count_by_uid(int(uid), 1)
         file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
-        absolute_path = file_path_info[0]['file_path']
-        md_absolute_path = absolute_path.replace('.docx', '.md')
+        absolute_path = file_path_info[0]['output_file_path']
+        logger.debug(f"absolute_path, {absolute_path}")
+        from pathlib import Path
+        md_absolute_path = str(Path(absolute_path).with_suffix('.md'))
         logger.info(f"文件检查 - 绝对路径: {md_absolute_path}")
         if not os.path.exists(md_absolute_path):
             logger.error(f"文件不存在: {md_absolute_path}")
@@ -406,7 +381,7 @@ def register_routes(app):
         logger.debug(f"return_page {dt_idx}")
         return render_template(dt_idx, **ctx)
 
-    @app.route('/TEAM_BUILDING/del/task/<task_id>', methods=['GET'])
+    @app.route('/team_building/del/task/<task_id>', methods=['GET'])
     def delete_file_info_by_task_id(task_id):
         """
         根据任务ID删除任务

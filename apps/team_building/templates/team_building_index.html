@@ -2,56 +2,64 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta id="team_building_index.html">
+    <meta id="paper_review_index.html">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{sys_name}}</title>
-    <link rel="stylesheet" href="/static/team_building.css">
+    <title>AI 数字评委</title>
+    <link rel="stylesheet" href="/static/paper_review.css">
     <link rel="stylesheet" href="/static/font-awesome.all.min.css">
-    <script type="text/javascript" src="/static/team_building.js"></script>
+    <script type="text/javascript" src="/static/paper_review.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
+    <!-- 企业Logo区域 -->
+            <div class="header-logo">
+                 <i class="fas fa-university logo-icon" id="companyLogo"></i>
+<!--                <img src="/static/logo.png" alt="企业Logo" class="logo-img" id="companyLogo">-->
+            </div>
+
             <div class="header-buttons">
-                <a href="/team_building/task?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="my-btn" target="_blank">
+                <a href="/paper_review/task?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="my-btn" target="_blank">
                     <i class="fas fa-user"></i> 我的任务
                 </a>
                 <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i> 退出
                 </a>
             </div>
-            <h1><i class="fas fa-flag"></i>{{sys_name}}</h1>
-            <p>上传评审标准和评审材料，智能生成评审结果</p>
+            <h1><i class="fas fa-user-tie"></i> AI 数字评委</h1>
+            <p>根据评审标准和评审材料，系统自动生成评审结果</p>
         </header>
-
-        <div class="progress-container">
-            <div class="progress-steps">
-                <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
-                <div class="step active">
-                    <span>1</span>
-                    <div class="step-label">提交评审材料</div>
-                </div>
-                <div class="step">
-                    <span>2</span>
-                    <div class="step-label">下载评审结果</div>
-                </div>
-            </div>
-        </div>
 
         <div class="step-panel active" id="step1">
             <h2><i class="fas fa-edit"></i> 提交评审材料</h2>
             <div class="form-group">
-                <label for="reviewTopic">【1】评审主题</label>
-                <input type="text" id="reviewTopic" list="topicTypes" name="doc_type" placeholder="可以直接输入，也可以从下拉菜单中选取">
-                <datalist id="topicTypes">
+                <label for="reviewTopic">【1】材料名称/题目</label>
+                <input type="text" id="reviewTopic" list="topicList" name="doc_title" placeholder="可以直接输入，也可以从下拉菜单中选取">
+                <datalist id="topicList">
                     <option value="">-- 请选择评审主题 --</option>
-                    <option value="思想汇报质量评估"></option>
-                    <option value="积极分子发展建议"></option>
+                    <option value="xxxx 国家标准"></option>
+                    <option value="xxxx 可行性研究报告"></option>
+                    <option value="xxxx 信息系统详细设计文档"></option>
+                    <option value="xxxx 信息系统概要设计文档"></option>
+                    <option value = "xxxx 信息系统软件著作权申请"></option>
+                    <option value = "xxxx 信息系统功能设计"></option>
+                </datalist>
+            </div>
+            <div class="form-group">
+                <label for="reviewTopic">【2】评审类别</label>
+                <input type="text" id="reviewType" list="typeList" name="doc_type" placeholder="可以直接输入，也可以从下拉菜单中选取">
+                <datalist id="typeList">
+                    <option value="">-- 请选择评审类别 --</option>
+                    <option value="AI 技能大赛参赛作品评审"></option>
+                    <option value="国标制定评审"></option>
+                    <option value="项目可行性研究评审"></option>
+                    <option value="招投标评审"></option>
+                    <option value="学术论文评审"></option>
                 </datalist>
             </div>
 
             <div class="form-group">
-                <label for="reviewCriteria">【2】评审标准</label>
+                <label for="reviewCriteria">【3】评审标准</label>
                 <div class="upload-container">
                     <i class="fas fa-file-alt"></i>
                     <h3>上传评审标准</h3>
@@ -59,7 +67,7 @@
 
                     <div class="upload-btn">
                         <button class="btn btn-primary">
-                            <i class="fas fa-file-alt"></i> 选择标准
+                            <i class="fas fa-file-alt"></i> 选择评审标准
                         </button>
                         <input type="file" class="file-input" id="reviewCriteria" accept=".xlsx,.docx" onchange="handleCriteriaUpload(this)">
                     </div>
@@ -75,17 +83,18 @@
             </div>
 
             <div class="form-group">
-                <label for="reviewPaperFile">【3】评审材料</label>
+                <label for="reviewPaperFile">【4】评审材料</label>
                 <div class="upload-container active" id="uploadContainer">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <h3>上传评审材料</h3>
-                    <p>支持上传Word docx 格式文件、JPEG 格式的手写稿图片的评审材料，系统将基于评审标准生成评审结果</p>
+                    <p>支持上传Word docx 格式的评审材料，系统将基于评审标准生成标准化的评审结果</p>
+                    <p>** Word 文档需要至少包含二级标题</p>
 
                     <div class="upload-btn">
                         <button class="btn btn-primary">
-                            <i class="fas fa-file-word"></i> 选择材料
+                            <i class="fas fa-file-word"></i> 选择评审材料
                         </button>
-                        <input type="file" class="file-input" id="reviewPaperFile" accept=".docx, .jpg, .jpeg, .png, .bmp, .tiff, .webp, .heic', .heif" onchange="handleMaterialUpload(this)">
+                        <input type="file" class="file-input" id="reviewPaperFile" accept=".docx" onchange="handleDocxUpload(this)">
                     </div>
 
                     <div class="file-info" id="docxFileInfo" style="display: none;">
@@ -98,9 +107,9 @@
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
-                <button class="btn btn-primary" id="generateBtn" onclick="gen_review_report()">
-                    生成报告 <i class="fas fa-file-contract"></i>
+            <div class="generate-btn-container">
+                <button class="btn btn-primary generate-btn" id="generateBtn" onclick="gen_review_report()">
+                    生成评审报告 <i class="fas fa-file-contract"></i>
                 </button>
             </div>
         </div>
