@@ -27,7 +27,7 @@ def save_doc_info(uid: int, task_id: int, doc_type: str, doc_title: str, doc_out
     :param doc_title: docx content title
     :param doc_outline: 文档的目录（默认三级目录）
     :param keywords: 其他通用的写作要求/或者评审的要求
-    :param input_file_path: docx template file name/或者评审的材料
+    :param input_file_path: docx template file name/或者评审的材料, 这里可能是多个文档，多个文档的路径以','进行分割
     :param vdb_id: vector db id
     :param is_include_para_txt: 写作的 Word 文档模板中是否包含有文本段落
     :param doc_ctx: 进行文本写作的上下文

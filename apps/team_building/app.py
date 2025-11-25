@@ -16,7 +16,8 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
-from apps.team_building.team_builder import start_thought_evaluation, start_extract_text_from_image
+from apps.team_building.team_builder import start_thought_evaluation, start_extract_text_from_image, \
+    generate_party_member_suggestion
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
@@ -244,13 +245,13 @@ def register_routes(app):
             err_info = {"error": "缺少任务ID、评审标准文件、评审材料文件或用户ID"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
-        review_paper_file_info = []
+        review_paper_file_list = []
         if review_paper_file_id:
-             review_paper_file_info.append(get_file_info(uid, review_paper_file_id))
+             review_paper_file_list.append(get_file_info(uid, review_paper_file_id)[0]['full_path'])
         else:
             for img_file in review_image_file_names:
-                review_paper_file_info.append(get_file_info(uid, img_file))
-        if not review_paper_file_info:
+                review_paper_file_list.append(get_file_info(uid, img_file)[0]['full_path'])
+        if not review_paper_file_list:
             err_info = {"error": f"未找到相应的评审文件信息 {review_paper_file_id}, {review_image_file_names}"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
@@ -265,8 +266,8 @@ def register_routes(app):
         output_file_path = os.path.abspath(output_file_name)
         criteria_file = review_criteria_file_info[0]['full_path']
         criteria_file_type = review_criteria_file_info[0]['file_suffix']
-        if review_paper_file_id:
-            paper_file = review_paper_file_info[0]['full_path']
+        if review_image_file_names:
+            paper_file = ",".join(review_paper_file_list)
             docx_meta_util.save_doc_info(
                 uid, task_id, review_type, review_topic, criteria_file, "",paper_file ,
                 0, False, docx_ctx, output_file_path, "",
@@ -279,7 +280,7 @@ def register_routes(app):
                 args=(uid, task_id, review_type, review_topic,  criteria_file, paper_file, criteria_file_type, my_cfg)
             ).start()
         else:
-            paper_file = review_paper_file_info[0]['full_path']
+            paper_file = review_paper_file_list[0]
             docx_meta_util.save_doc_info(
                 uid, task_id, review_type, review_topic, criteria_file, "", paper_file,
                 0, False, docx_ctx, output_file_path, "",
@@ -288,7 +289,7 @@ def register_routes(app):
 
             # 启动后台任务
             threading.Thread(
-                target=start_thought_evaluation,
+                target=generate_party_member_suggestion,
                 args=(uid, task_id, review_type, review_topic, criteria_file, paper_file, criteria_file_type, my_cfg)
             ).start()
 
