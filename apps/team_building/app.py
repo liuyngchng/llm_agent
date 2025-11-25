@@ -168,7 +168,7 @@ def register_routes(app):
         return json.dumps(info, ensure_ascii=False), 200
 
     @app.route('/img/upload', methods=['POST'])
-    def upload_docx():
+    def upload_img():
         """
         上传 图片评审材料文档
         """
@@ -190,11 +190,12 @@ def register_routes(app):
         # 生成任务ID，使用毫秒数
         task_id = int(time.time() * 1000)
         filename = f"{task_id}_{file.filename}"
+        file_type = ""  # TODO : 获取文件类型
         save_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(save_path)
-        md_file = start_extract_text_from_image(uid, task_id, save_path, "png", my_cfg)
-        file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
-        save_file_info(uid, file_md5, md_file, FileType.DOCX.value)
+        abs_file_path = os.path.abspath(save_path)
+        file_md5 = hashlib.md5(abs_file_path.encode('utf-8')).hexdigest()
+        save_file_info(uid, file_md5, abs_file_path, FileType.get_file_type(file_type))
         logger.info(f"docx_file {file.filename} saved_as {file_md5}, {task_id}")
 
         info = {

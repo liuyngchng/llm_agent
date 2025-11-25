@@ -117,6 +117,17 @@ class FileType(Enum):
     DOCX = 0
     XLSX = 1
     MARKDOWN = 2
+    PNG = 3
+    JPG = 4
+
+    @staticmethod
+    def get_file_type(file_type: str) -> int:
+        """根据输入字符串获取对应的文件类型枚举值"""
+        file_type = file_type.upper()  # 转换为大写匹配枚举键
+        try:
+            return FileType[file_type].value
+        except KeyError:
+            return 0
 
 
 
