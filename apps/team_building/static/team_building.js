@@ -48,8 +48,106 @@ function handleCriteriaUpload(input) {
     uploadCriteriaFile(file);
 }
 
-function handleReviewMaterialUpload(input) {
-// 处理图片、Word docx 文档上传
+// 处理图片上传
+function handleImageUpload(input) {
+    const files = input.files;
+    if (!files || files.length === 0) return;
+
+    // 验证文件类型
+    const allowedExtensions = ['.png', '.jpg', '.jpeg'];
+    let hasInvalidFile = false;
+
+    for (let file of files) {
+        const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+        if (!allowedExtensions.includes(fileExtension)) {
+            hasInvalidFile = true;
+            break;
+        }
+    }
+
+    if (hasInvalidFile) {
+        alert('请上传 .png、.jpg 或 .jpeg 格式的图片文件');
+        input.value = '';
+        return;
+    }
+
+    // 显示文件信息
+    document.getElementById('imageFileInfo').style.display = 'block';
+    document.getElementById('imageFileName').textContent = `${files.length}个图片文件`;
+    document.getElementById('imageFileCount').textContent = `${files.length}个文件`;
+
+    // 显示图片预览
+    showImagePreviews(files);
+
+    // 上传文件到后端
+    uploadImageFiles(files);
+}
+
+// 显示图片预览
+function showImagePreviews(files) {
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const previewsDiv = document.getElementById('imagePreviews');
+
+    previewsDiv.innerHTML = ''; // 清空之前的预览
+    previewContainer.style.display = 'block';
+
+    Array.from(files).forEach((file, index) => {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'image-preview-item';
+            previewDiv.innerHTML = `
+                <img src="${e.target.result}" alt="${file.name}">
+                <div class="image-info">
+                    <span class="image-name">${file.name}</span>
+                    <span class="image-size">${formatFileSize(file.size)}</span>
+                </div>
+            `;
+            previewsDiv.appendChild(previewDiv);
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
+// 上传图片文件到后端
+async function uploadImageFiles(files) {
+    const uid = document.getElementById('uid').value;
+    const uploadedFileNames = [];
+
+    try {
+        // 逐个上传图片文件
+        for (let file of files) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('uid', uid);
+            formData.append('file_type', 'image');
+
+            const response = await fetch('/img/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`图片文件 ${file.name} 上传失败`);
+            }
+
+            const data = await response.json();
+            uploadedFileNames.push(data.file_name);
+        }
+
+        // 保存所有上传的图片文件名称（JSON格式）
+        document.getElementById('review_image_file_names').value = JSON.stringify(uploadedFileNames);
+
+    } catch (error) {
+        console.error('上传错误:', error);
+        alert('图片文件上传失败: ' + error.message);
+        // 重置文件选择
+        document.getElementById('reviewImageFile').value = '';
+        document.getElementById('imageFileInfo').style.display = 'none';
+        document.getElementById('imagePreviewContainer').style.display = 'none';
+    }
 }
 
 // 处理评审材料文件上传
@@ -151,7 +249,7 @@ async function uploadDocxFile(file) {
     }
 }
 
-// 生成评审报告
+
 async function gen_review_report() {
     const uid = document.getElementById('uid').value;
     const task_id = document.getElementById('taskId').value;
@@ -159,6 +257,7 @@ async function gen_review_report() {
     const review_type = document.getElementById('reviewType').value;
     const review_criteria_file_name = document.getElementById('review_criteria_file_name').value;
     const review_paper_file_name = document.getElementById('review_paper_file_name').value;
+    const review_image_file_names = document.getElementById('review_image_file_names').value;
     const generateBtn = document.getElementById('generateBtn');
 
     // 验证输入
@@ -176,8 +275,9 @@ async function gen_review_report() {
         return;
     }
 
-    if (!review_paper_file_name) {
-        alert('请上传评审材料文件');
+    // 验证至少上传了Word文档或图片
+    if (!review_paper_file_name && !review_image_file_names) {
+        alert('请上传Word文档或图片文件');
         return;
     }
 
@@ -192,7 +292,8 @@ async function gen_review_report() {
         review_type: review_type,
         task_id: task_id,
         review_criteria_file_name: review_criteria_file_name,
-        review_paper_file_name: review_paper_file_name
+        review_paper_file_name: review_paper_file_name,
+        review_image_file_names: review_image_file_names ? JSON.parse(review_image_file_names) : []
     };
 
     try {
@@ -219,17 +320,25 @@ async function gen_review_report() {
     }
 }
 
+
 // 重置表单
 function resetForm() {
     // 清空表单数据
     document.getElementById('reviewTopic').value = '';
+    document.getElementById('reviewType').value = '';
     document.getElementById('reviewCriteria').value = '';
     document.getElementById('reviewPaperFile').value = '';
+    document.getElementById('reviewImageFile').value = '';
+
     document.getElementById('criteriaFileInfo').style.display = 'none';
     document.getElementById('docxFileInfo').style.display = 'none';
+    document.getElementById('imageFileInfo').style.display = 'none';
+    document.getElementById('imagePreviewContainer').style.display = 'none';
+
     document.getElementById('taskId').value = '';
     document.getElementById('review_criteria_file_name').value = '';
     document.getElementById('review_paper_file_name').value = '';
+    document.getElementById('review_image_file_names').value = '';
 
     resetGenerateState();
 }

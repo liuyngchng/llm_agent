@@ -82,22 +82,52 @@
                 <div class="upload-container active" id="uploadContainer">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <h3>上传评审材料</h3>
-                    <p>支持上传Word docx、PNG 格式图片的评审材料，系统将基于评审标准生成标准化的评审结果</p>
+                    <p>支持上传Word docx、PNG、JPG 格式图片的评审材料，系统将基于评审标准生成标准化的评审结果</p>
                     <p>** Word 文档需要至少包含二级标题</p>
 
-                    <div class="upload-btn">
-                        <button class="btn btn-primary">
-                            <i class="fas fa-file-word"></i> 选择评审材料
-                        </button>
-                        <input type="file" class="file-input" id="reviewPaperFile" accept=".docx" onchange="handleDocxUpload(this)">
+                    <!-- Word文档和图片上传区域 - 左右布局 -->
+                    <div class="upload-row">
+                        <!-- Word文档上传区域 -->
+                        <div class="upload-section">
+                            <h4><i class="fas fa-file-word"></i> Word文档上传</h4>
+                            <div class="upload-btn">
+                                <button class="btn btn-primary" type="button">
+                                    <i class="fas fa-file-word"></i> 选择文档
+                                </button>
+                                <input type="file" class="file-input" id="reviewPaperFile" accept=".docx" onchange="handleDocxUpload(this)">
+                            </div>
+                            <div class="file-info" id="docxFileInfo" style="display: none;">
+                                <div class="file-name">
+                                    <i class="fas fa-file-word"></i>
+                                    <span id="docxFileName">未选择文件</span>
+                                </div>
+                                <div class="file-size" id="docxFileSize">-</div>
+                            </div>
+                        </div>
+
+                        <!-- 图片上传区域 -->
+                        <div class="upload-section">
+                            <h4><i class="fas fa-image"></i> 图片上传</h4>
+                            <div class="upload-btn">
+                                <button class="btn btn-primary" type="button">
+                                    <i class="fas fa-image"></i> 选择图片
+                                </button>
+                                <input type="file" class="file-input" id="reviewImageFile" accept=".png,.jpg,.jpeg" onchange="handleImageUpload(this)" multiple>
+                            </div>
+                            <div class="file-info" id="imageFileInfo" style="display: none;">
+                                <div class="file-name">
+                                    <i class="fas fa-images"></i>
+                                    <span id="imageFileName">未选择文件</span>
+                                </div>
+                                <div class="file-count" id="imageFileCount">-</div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="file-info" id="docxFileInfo" style="display: none;">
-                        <div class="file-name">
-                            <i class="fas fa-file-word"></i>
-                            <span id="docxFileName">未选择文件</span>
-                        </div>
-                        <div class="file-size" id="docxFileSize">-</div>
+                    <!-- 图片预览区域 -->
+                    <div class="image-preview-container" id="imagePreviewContainer" style="display: none;">
+                        <h5>图片预览</h5>
+                        <div class="image-previews" id="imagePreviews"></div>
                     </div>
                 </div>
             </div>
@@ -115,6 +145,7 @@
     <input type="hidden" id="taskId" name="taskId" value="{{taskId}}">
     <input type="hidden" id="review_criteria_file_name" name="review_criteria_file_name" value="">
     <input type="hidden" id="review_paper_file_name" name="review_paper_file_name" value="">
+    <input type="hidden" id="review_image_file_names" name="review_image_file_names" value="">
     <input type="hidden" id="elapsed_time" name="elapsed_time" value="">
 </body>
 </html>
