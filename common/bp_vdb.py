@@ -17,10 +17,8 @@ from flask import (request, jsonify, Blueprint, render_template, redirect, url_f
 from werkzeug.utils import secure_filename
 
 from common import vdb_util, statistic_util
-from common.bp_auth import get_client_ip, auth_info, SESSION_TIMEOUT
-from common.const import UPLOAD_FOLDER, VDB_PREFIX, FILE_PROCESS_EXPIRE_MS
-from common.my_enums import AppType
-from common.sys_init import init_yml_cfg
+from common.bp_auth import get_client_ip, auth_info
+from common.const import UPLOAD_FOLDER, VDB_PREFIX, FILE_PROCESS_EXPIRE_MS, SESSION_TIMEOUT
 from common.vdb_meta_util import VdbMeta
 from common.vdb_util import search_txt
 
