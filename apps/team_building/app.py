@@ -29,7 +29,7 @@ from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.cm_utils import get_console_arg1
 from common.xlsx_md_util import convert_xlsx_to_md
 from common.const import (SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR,
-    TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE)
+                          TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE, get_const)
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -157,14 +157,14 @@ def register_routes(app):
         md_file = convert_docx_to_md(save_path, True)
         file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
         save_file_info(uid, file_md5, md_file, FileType.DOCX.value)
-        logger.info(f"docx_file {file.filename} saved_as {file_md5}, {task_id}")
+        logger.info(f"{uid}, {task_id}, docx_file_saved_as, {file.filename}  {file_md5}")
 
         info = {
             "task_id": task_id,
             "file_name": file_md5,
             "message": "docx 文件上传成功"
         }
-        logger.info(f"upload_docx_file, {info}")
+        logger.info(f"{uid}, {task_id}, upload_docx_file, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
     @app.route('/img/upload', methods=['POST'])
@@ -172,7 +172,7 @@ def register_routes(app):
         """
         上传 图片评审材料文档
         """
-        logger.info(f"upload_docx, {request}")
+        logger.info(f"upload_img, {request}")
         if 'file' not in request.files:
             return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
         file = request.files['file']
@@ -190,20 +190,20 @@ def register_routes(app):
         # 生成任务ID，使用毫秒数
         task_id = int(time.time() * 1000)
         filename = f"{task_id}_{file.filename}"
-        file_type = ""  # TODO : 获取文件类型
+        # 获取文件扩展名并确定文件类型
+        file_extension = os.path.splitext(file.filename)[1].lower()[1:]
         save_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(save_path)
         abs_file_path = os.path.abspath(save_path)
         file_md5 = hashlib.md5(abs_file_path.encode('utf-8')).hexdigest()
-        save_file_info(uid, file_md5, abs_file_path, FileType.get_file_type(file_type))
-        logger.info(f"docx_file {file.filename} saved_as {file_md5}, {task_id}")
-
+        save_file_info(uid, file_md5, abs_file_path, FileType.get_file_type(file_extension))
+        logger.info(f"{uid}, {task_id}, img_file_saved_as, {file.filename}  {file_md5}, {task_id}")
         info = {
             "task_id": task_id,
             "file_name": file_md5,
             "message": "docx 文件上传成功"
         }
-        logger.info(f"upload_docx_file, {info}")
+        logger.info(f"{uid}, {task_id}, upload_img_file, {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
     @app.route("/review_report/gen", methods=['POST'])
@@ -244,12 +244,16 @@ def register_routes(app):
             err_info = {"error": "缺少任务ID、评审标准文件、评审材料文件或用户ID"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
-        review_paper_file_info = get_file_info(uid, review_paper_file_id)
+        review_paper_file_info = []
+        if review_paper_file_id:
+             review_paper_file_info.append(get_file_info(uid, review_paper_file_id))
+        else:
+            for img_file in review_image_file_names:
+                review_paper_file_info.append(get_file_info(uid, img_file))
         if not review_paper_file_info:
-            err_info = {"error": f"未找到相应的评审文件信息 {review_paper_file_id}"}
+            err_info = {"error": f"未找到相应的评审文件信息 {review_paper_file_id}, {review_image_file_names}"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
-
         review_criteria_file_info = get_file_info(uid, review_criteria_file_id)
         if not review_criteria_file_info:
             err_info = {"error": f"未找到相应的评审文件信息 {review_criteria_file_info}"}
@@ -261,18 +265,32 @@ def register_routes(app):
         output_file_path = os.path.abspath(output_file_name)
         criteria_file = review_criteria_file_info[0]['full_path']
         criteria_file_type = review_criteria_file_info[0]['file_suffix']
-        paper_file = review_paper_file_info[0]['full_path']
-        docx_meta_util.save_doc_info(
-            uid, task_id, review_type, review_topic, criteria_file, "",paper_file ,
-            0, False, docx_ctx, output_file_path, "",
-            output_file_type=criteria_file_type
-        )
+        if review_paper_file_id:
+            paper_file = review_paper_file_info[0]['full_path']
+            docx_meta_util.save_doc_info(
+                uid, task_id, review_type, review_topic, criteria_file, "",paper_file ,
+                0, False, docx_ctx, output_file_path, "",
+                output_file_type=criteria_file_type
+            )
 
-        # 启动后台任务
-        threading.Thread(
-            target=start_thought_evaluation,
-            args=(uid, task_id, review_type, review_topic,  criteria_file, paper_file, criteria_file_type, my_cfg)
-        ).start()
+            # 启动后台任务
+            threading.Thread(
+                target=start_thought_evaluation,
+                args=(uid, task_id, review_type, review_topic,  criteria_file, paper_file, criteria_file_type, my_cfg)
+            ).start()
+        else:
+            paper_file = review_paper_file_info[0]['full_path']
+            docx_meta_util.save_doc_info(
+                uid, task_id, review_type, review_topic, criteria_file, "", paper_file,
+                0, False, docx_ctx, output_file_path, "",
+                output_file_type=criteria_file_type
+            )
+
+            # 启动后台任务
+            threading.Thread(
+                target=start_thought_evaluation,
+                args=(uid, task_id, review_type, review_topic, criteria_file, paper_file, criteria_file_type, my_cfg)
+            ).start()
 
         info = {"status": "started", "task_id": task_id}
         logger.info(f"generate_propose, {info}")

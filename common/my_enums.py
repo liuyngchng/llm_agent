@@ -119,6 +119,11 @@ class FileType(Enum):
     MARKDOWN = 2
     PNG = 3
     JPG = 4
+    JPEG = 4
+    GIF = 5
+    BMP = 6
+    WEBP = 7
+
 
     @staticmethod
     def get_file_type(file_type: str) -> int:

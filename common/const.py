@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+import functools
 import sqlite3
 import logging.config
 from typing import Any
@@ -64,6 +65,7 @@ MAX_SECTION_LENGTH = 3000  # 3000 字符
 import json
 
 
+@functools.lru_cache(maxsize=128)
 def get_const(key: str, app: str) -> Any:
     value = None
     with sqlite3.connect(CFG_DB_FILE) as my_conn:

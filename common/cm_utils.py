@@ -9,6 +9,8 @@ import logging.config
 import re
 import sys
 import time
+from datetime import datetime
+
 import requests
 
 from common.const import get_const
@@ -425,12 +427,8 @@ def llm_health_check(llm_api_uri: str, llm_api_key: str, llm_model_name: str) ->
         check_result['msg'] = msg
         return check_result
 
-def get_time_str()-> str:
+def get_time_str() -> str:
     """
-    获取当前本地时间字符串，格式 YYYY-mm-DD HH:MM:SS
+    获取当前本地时间字符串，格式 YYYY-mm-DD HH:MM:SS.fff
     """
-    import time
-    from datetime import datetime
-    timestamp = time.time()
-    local_time = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
-    return local_time
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
