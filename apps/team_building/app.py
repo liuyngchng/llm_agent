@@ -227,6 +227,7 @@ def register_routes(app):
         review_type = data.get("review_type")
         review_criteria_file_id = data.get("review_criteria_file_name")
         review_paper_file_id = data.get("review_paper_file_name")
+        review_image_file_names = data.get("review_image_file_names")
 
         # 验证输入
         if not review_topic:
@@ -238,7 +239,8 @@ def register_routes(app):
             logger.error(f"err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
 
-        if not task_id or not review_criteria_file_id or not review_paper_file_id or not uid:
+        if (not task_id or not review_criteria_file_id or not uid or
+                (not review_paper_file_id  and not review_image_file_names)):
             err_info = {"error": "缺少任务ID、评审标准文件、评审材料文件或用户ID"}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400

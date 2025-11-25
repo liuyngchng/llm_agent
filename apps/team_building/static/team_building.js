@@ -134,6 +134,7 @@ async function uploadImageFiles(files) {
             }
 
             const data = await response.json();
+            document.getElementById('taskId').value = data.task_id;
             uploadedFileNames.push(data.file_name);
         }
 
