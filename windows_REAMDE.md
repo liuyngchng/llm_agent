@@ -1,6 +1,8 @@
 # 1. 项目介绍
 
-本项目为 `Python` 工程，工程下有多个 `Python` 应用， 每个 "./apps/some_app" 都可以单独工作，是一个Web应用，或者HTTP接口。 "./common" 文件夹为公共组件，是各 `Python` 应用的共用部分。详细介绍请阅读项目根目录下的 README.md 文件。
+本项目为 `Python` 工程，工程下有多个 `Python` 应用， 每个 "./apps/some_app" 都可以单独工作，是一个Web应用，或者HTTP接口。
+
+ "./common" 文件夹为公共组件，是各 `Python` 应用的共用部分。详细介绍请阅读项目根目录下的 README.md 文件。
 
 # 2. 运行环境配置
 
@@ -56,23 +58,31 @@ pip install -r requirements.txt
 
 ## 2.5 SQLite browser
 
-``SQLite browser` 是文件数据库 `SQLite` 的图形化管理工具。本系统使用了 `SQLite` 数据库进行相关的配置，为了通过GUI界面对 `SQLite` 数据库进行操作，需要下载`SQLite browser`。 `Window` 系统下的安装说明详见链接  https://sqlitebrowser.org/dl/，下载 “DB Browser for SQLite - Standard installer for 64-bit Windows”。
+``SQLite browser` 是文件数据库 `SQLite` 的图形化管理工具。本系统使用了 `SQLite` 数据库进行相关的配置，为了通过GUI界面对 `SQLite` 数据库进行操作，需要下载`SQLite browser`。
+
+ `Window` 系统下的安装说明详见链接  https://sqlitebrowser.org/dl/，下载 “DB Browser for SQLite - Standard installer for 64-bit Windows”。
 
 当然，如果对 `SQLite`的相关命令很熟悉，可以忽略此部分。
 
 # 3. 系统配置
 
+下面以通过命令行启动单个应用`apps/chat`程序为例，进行系统配置说明。
+
 ## 3.1 cfg.db
 
 文件 `cfg.db` 是项目中很多关系型数据的 `SQLite` 配置文件，不可或缺，一般存在于项目根目录和各个应用根(apps/some_app/)目录
 
-源代码根目录下的 cfg.db.template 是 `SQLite` 配置数据库模板，拷贝这个文件，并命名为 cfg.db，用SQLite browser 打开可操作相关的配置。
+源代码各个应用根目录（apps/some_app/）下的 cfg.db.template 是 `SQLite` 配置数据库模板。
 
-或者可以先不配置，直接运行，看看程序是否报错，有报错再看是否需要配置或修改数据库表等。cfg.db 中的数据库表结构详见 项目根目录下 common/cfg_db_schema 下的sql文件。
+拷贝准备启动的应用（apps/chat/）目录下的 `cfg.db.template` 至项目根目录，并命名为 cfg.db，用SQLite browser 打开可操作相关的配置。
+
+cfg.db 中的数据库表结构详见项目根目录下 common/cfg_db_schema 下的各个 sql 文件。
 
 ## 3.2 cfg.yml
 
-cfg.yml 是系统运行的配置文件，用于配置各种模型（大语言模型、文本嵌入模型、语音识别模型、图像识别模型）的 API，Key，一级相关提示词等信息， 拷贝项目根目录下的 `cfg.yml.template` 文件，重命名为 `cfg.yml`， 配置相应信息。
+cfg.yml 是系统运行的配置文件，用于配置各种模型（大语言模型、文本嵌入模型、语音识别模型、图像识别模型）的 API，Key，一级相关提示词等信息。
+
+ 拷贝各个应用根目录（apps/chat/）下的 `cfg.yml.template` 文件至项目根目录，重命名为 `cfg.yml`， 配置相应信息。
 
 ## 3.3 logging.conf
 
@@ -84,6 +94,8 @@ cfg.yml 是系统运行的配置文件，用于配置各种模型（大语言模
 
 （3）输出那些模块（可以简单理解为哪些python文件、文件夹）的日志。
 
+ 拷贝各个应用根目录（apps/chat/）下的 `cfg.yml.template` 文件至项目根目录，重命名为 `cfg.yml`， 配置相应信息。
+
 ## 3.4 NLTK
 
 **NLTK**（Natural Language Toolkit）是针对自然语言处理设计的Python开源工具集，集成了处理常见NLP任务的模块和标准化语料库。如果使用到本项目中的知识库（文档向量化）功能（即使调用远程的文本嵌入 API 也需要），则本地还需要安装 `NLTK` 的中英文分词数据包， 详见 `NLTK` 官网（https://www.nltk.org/data.html）。
@@ -94,11 +106,11 @@ cfg.yml 是系统运行的配置文件，用于配置各种模型（大语言模
 
 ## 4.1 控制台运行
 
-以运行`应用` `docx` 为例， 可以在 Windows 控制台（CMD）中通过执行以下命令启动应用。
+以运行`应用` `chat` 为例， 可以在 Windows 控制台（CMD）中通过执行以下命令启动应用。
 
 ```sh
-# 这样运行，执行的是 apps/docx/app.py 这个文件, 当前目录为项目根目录
-python -m apps.docx.app
+# 这样运行，执行的是 apps/chat/app.py 这个文件, 当前目录为项目根目录
+python -m apps.chat.app
 ```
 
 此时，运行时的当前目录 "./" 为项目文件根目录， 读取的 cfg.db, cfg.yml, logging.conf 都是项目根目录下的对应文件。
@@ -117,7 +129,7 @@ python -m apps.docx.app
 
 ## 4.2 IDE 运行
 
-如果试用集成开发环境，如 VS Code, PyCharm 等运行某个app， 例如运行 apps/chat/app.py，那么这时候运行时的当前目录为 apps/chat/, 读取的 cfg.db, cfg.yml, logging.conf 均为  apps/chat/ 下的对应文件。
+如果使用集成开发环境，如 VS Code, PyCharm 等运行某个app， 例如运行 apps/chat/app.py，那么这时候运行时的当前目录为 apps/chat/, 读取的 cfg.db, cfg.yml, logging.conf 均为  apps/chat/ 下的对应文件。系统配置需要修改 apps/chat/ 目录下的相应文件。
 
 # 5. 虚拟环境设置
 
