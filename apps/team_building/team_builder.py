@@ -421,7 +421,7 @@ class TeamBuilder:
 {self.ocr_text[:500]}...
 （完整文本共{len(self.ocr_text)}字）
 ## 评价说明
-本评价报告基于AI自动识别和评价生成，建议结合党组织人工评审最终确定。
+本评价报告基于AI自动识别和评价生成，建议结合人工评审最终确定。
 """
             return report_content
         except Exception as e:
@@ -433,7 +433,7 @@ class TeamBuilder:
         执行完整的思想汇报评价流程
         """
         try:
-            logger.info("开始执行思想汇报评价流程")
+            logger.info("开始执行文本质量评估流程")
 
             # 1. OCR文本识别
             update_process_info(self.uid, self.task_id, "开始识别手写文字...", 1)
@@ -441,16 +441,16 @@ class TeamBuilder:
 
             if not ocr_result:
                 raise ValueError("无法从图片中识别出有效文本，请检查图片质量")
-
+            logger.debug(f"ocr_result_txt=\n{ocr_result}")
             # 2. 文本质量评价
-            update_process_info(self.uid, self.task_id, "正在分析思想汇报内容...", 30)
+            update_process_info(self.uid, self.task_id, "文本已提取，开始分析内容质量...", 30)
             evaluation_report = self.generate_evaluation_report()
 
-            logger.info("思想汇报评价流程完成")
+            logger.info("已对文本质量作出评估")
             return evaluation_report
 
         except Exception as e:
-            logger.exception("思想汇报评价流程执行失败")
+            logger.exception("已对文本质量作出评估执行失败")
             return f"# 评价过程出现错误\n\n错误信息: {str(e)}\n\n请检查文件格式或联系技术支持。"
 
     def call_llm_api(self, prompt: str) -> dict:
