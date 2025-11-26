@@ -423,9 +423,7 @@ class TeamBuilder:
 ## 评价说明
 本评价报告基于AI自动识别和评价生成，建议结合党组织人工评审最终确定。
 """
-
             return report_content
-
         except Exception as e:
             logger.error(f"生成评价报告失败: {str(e)}")
             return f"# 评价报告生成失败\n\n错误信息: {str(e)}\n\n请检查图片质量或联系技术支持。"
@@ -701,9 +699,6 @@ def start_thought_evaluation(uid: int, task_id: int, review_type: str, review_to
     except Exception as e:
         logger.error(f"思想汇报评价生成失败: {str(e)}")
         return f"思想汇报评价生成失败: {str(e)}"
-
-
-
 
 def generate_party_member_suggestion(uid: int, task_id: int, review_type: str, review_topic: str,
                                      criteria_markdown_data: str, employee_data: str, sys_cfg: dict) -> str:
