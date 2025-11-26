@@ -80,7 +80,7 @@ rd@rd-t14:~/workspace$
 ````
 
 
-# 3. 获取源代码
+# 3. 源代码
 
 ```sh
 cd workspace
@@ -100,6 +100,44 @@ cd llm_agent
 # 安装 requirements.txt 下的所有依赖
 pip install -r ./apps/chat2db/requirements.txt
 ```
+
+源代码结构如下所示
+
+```text
+.
+├── apps
+│   ├── chat
+│   ├── chat2db
+│   ├── csm
+│   ├── docx
+│   ├── embedding
+│   ├── gateway
+│   ├── llm
+│   ├── mcp_client
+│   ├── mcp_server
+│   ├── mt_report
+│   ├── ord_gen
+│   ├── paper_review
+│   ├── portal
+│   ├── pptx
+│   └── team_building
+├── common
+│   ├── build
+│   ├── cert
+│   ├── cfg_db_schema
+│   ├── output_doc
+│   ├── __pycache__
+│   ├── sh
+│   ├── static
+│   └── templates
+├── tests
+│   ├── apps
+│   ├── __pycache__
+│   └── shared
+└── upload_doc
+```
+
+apps 下的每个文件夹都是一个独立的 python 应用。
 
 # 4. 运行
 
