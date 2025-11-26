@@ -13,7 +13,7 @@ from PIL import Image
 import io
 
 from common.const import get_const
-from common.docx_md_util import save_content_to_md_file, convert_md_to_docx
+from common.docx_md_util import save_content_to_md_file, convert_md_to_docx, get_md_file_content
 from common.docx_meta_util import update_process_info, get_doc_info
 from common.my_enums import FileType, AppType
 from common.sys_init import init_yml_cfg
@@ -30,14 +30,14 @@ urllib3.disable_warnings(category=InsecureRequestWarning)
 
 class TeamBuilder:
     def __init__(self, uid: int, task_id: int, review_type: str, review_topic: str,
-                 criteria_markdown_data: str, review_file_path: str, criteria_file_type, sys_cfg: dict):
+                 criteria_file_path: str, review_file_path: str, criteria_file_type, sys_cfg: dict):
         """
         思想汇报手写体评审系统
         :param uid: 用户ID，标记哪个用户提交的任务
         :param task_id: 任务ID，标记是哪个任务
         :param review_type: 评审类型, 例如 思想汇报评审
         :param review_topic: 评审主题，例如 xxx同志思想汇报评审
-        :param criteria_markdown_data: 评审标准 markdown 文本
+        :param criteria_file_path: 评审标准 markdown 文本文件的绝对路径
         :param review_file_path: 评审文件路径（图片或文档）
         :param criteria_file_type: 评审标准的文件类型
         :param sys_cfg: 系统配置
@@ -46,7 +46,7 @@ class TeamBuilder:
         self.task_id = task_id
         self.review_type = review_type
         self.review_topic = review_topic
-        self.criteria_markdown_data = criteria_markdown_data
+        self.criteria_file_path = criteria_file_path
         self.criteria_file_type = criteria_file_type
         self.review_file_path = review_file_path
         self.sys_cfg = sys_cfg
@@ -198,13 +198,14 @@ class TeamBuilder:
         try:
             template = self.sys_cfg['prompts']['thought_report_evaluation_msg']
             if not template:
-                raise RuntimeError("未找到思想汇报评价提示词模板")
-
+                raise RuntimeError("未找到文本评价的提示词模板 thought_report_evaluation_msg")
+            criteria = get_md_file_content(self.criteria_file_path)
+            logger.debug(f"文本评审标准如下:\n{criteria}")
             prompt = template.format(
                 review_type=self.review_type,
                 review_topic=self.review_topic,
                 report_content=self.ocr_text,
-                criteria=self.criteria_markdown_data
+                criteria=criteria
             )
 
             result = self.call_llm_api(prompt)
@@ -214,7 +215,7 @@ class TeamBuilder:
             return result
 
         except Exception as e:
-            logger.error(f"思想汇报评价失败: {str(e)}")
+            logger.error(f"文本质量评价失败: {str(e)}")
             return self._get_fallback_evaluation_result(str(e))
 
     @staticmethod
@@ -257,7 +258,7 @@ class TeamBuilder:
                 review_type=self.review_type,
                 review_topic=self.review_topic,
                 employee_data=employee_data,
-                criteria=self.criteria_markdown_data
+                criteria=self.criteria_file_path
             )
 
             result = self.call_llm_api_for_development_suggestion(prompt)
@@ -659,7 +660,7 @@ class TeamBuilder:
 
 
 def start_thought_evaluation(uid: int, task_id: int, review_type: str, review_topic: str,
-                             criteria_markdown_data: str, review_file_path: str, criteria_file_type: int,
+                             criteria_file_path: str, review_file_path: str, criteria_file_type: int,
                              sys_cfg: dict) -> str:
     """
     开始思想汇报评价流程
@@ -667,14 +668,14 @@ def start_thought_evaluation(uid: int, task_id: int, review_type: str, review_to
     :param task_id: 任务ID
     :param review_type: 评审类型
     :param review_topic: 评审主题
-    :param criteria_markdown_data: 评审标准markdown文本
+    :param criteria_file_path: 评审标准markdown文本文件的绝对路径
     :param review_file_path: 思想汇报文件路径（图片）
     :param criteria_file_type: 评审标准文件类型
     :param sys_cfg: 系统配置
     """
     logger.info(f"{uid}, {task_id}, start_thought_evaluation")
     try:
-        evaluator = TeamBuilder(uid, task_id, review_type, review_topic, criteria_markdown_data,
+        evaluator = TeamBuilder(uid, task_id, review_type, review_topic, criteria_file_path,
                                 review_file_path, criteria_file_type, sys_cfg)
         evaluation_report = evaluator.execute_evaluation()
         output_report_title = get_const('output_report_title', AppType.TEAM_BUILDING.name.lower())
@@ -682,7 +683,7 @@ def start_thought_evaluation(uid: int, task_id: int, review_type: str, review_to
             raise RuntimeError("pls config cfg.db for const key output_report_title")
         logger.debug(f"output_report_title = {output_report_title}")
         review_result = evaluator.fill_markdown_table(evaluation_report,
-            output_report_title, criteria_markdown_data)
+                                                      output_report_title, criteria_file_path)
         doc_info=get_doc_info(task_id)
         output_file_path = doc_info[0]['output_file_path']
         logger.debug(f"output_file_path = {output_file_path}")
