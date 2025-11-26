@@ -135,7 +135,7 @@ python -m apps.docx.app
 pip install virtualenv
 ```
 
-具体试用方法，详见  https://gitee.com/liuyngchng/gitee_rd.lab/blob/master/python.md。
+具体使用方法，详见  https://gitee.com/liuyngchng/gitee_rd.lab/blob/master/python.md。
 
 
 
