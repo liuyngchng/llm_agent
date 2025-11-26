@@ -7,7 +7,7 @@ async function fetchTasks() {
         const token = localStorage.getItem('token') || '';
         const uid = getUidFromUrl();
 
-        const response = await fetch('/paper_review/my/task', {
+        const response = await fetch('/team_building/my/task', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -85,10 +85,10 @@ function renderTasksTable(tasks) {
         if (task.percent === 100) {
             downloadCell.innerHTML = `
                 <div class="download-actions">
-                    <a href="/paper_review/preview/task/${task.task_id}?uid=${uid}" class="download-link" target="_blank">
+                    <a href="/team_building/preview/task/${task.task_id}?uid=${uid}" class="download-link" target="_blank">
                         <i class="fas fa-eye"></i> 预览
                     </a>
-                    <a href="/paper_review/download/task/${task.task_id}?uid=${uid}" class="download-link">
+                    <a href="/team_building/download/task/${task.task_id}?uid=${uid}" class="download-link">
                         <i class="fas fa-download"></i> 下载
                     </a>
                 </div>
@@ -255,7 +255,7 @@ async function deleteTask(taskId, docTitle) {
     try {
         const token = localStorage.getItem('token') || '';
 
-        const response = await fetch(`/paper_review/del/task/${taskId}`, {
+        const response = await fetch(`/team_building/del/task/${taskId}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`

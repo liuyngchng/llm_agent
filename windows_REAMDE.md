@@ -58,7 +58,7 @@ pip install -r requirements.txt
 
 ## 2.5 SQLite browser
 
-``SQLite browser` 是文件数据库 `SQLite` 的图形化管理工具。本系统使用了 `SQLite` 数据库进行相关的配置，为了通过GUI界面对 `SQLite` 数据库进行操作，需要下载`SQLite browser`。
+`SQLite browser` 是文件数据库 `SQLite` 的图形化管理工具。本系统使用了 `SQLite` 数据库进行相关的配置，为了通过GUI界面对 `SQLite` 数据库进行操作，需要下载`SQLite browser`。
 
  `Window` 系统下的安装说明详见链接  https://sqlitebrowser.org/dl/，下载 “DB Browser for SQLite - Standard installer for 64-bit Windows”。
 
@@ -92,7 +92,7 @@ cfg.yml 是系统运行的配置文件，用于配置各种模型（大语言模
 
 （2）输出什么等级的日志，错误、信息、调试(ERROR| INFO|DEBUG)；
 
-（3）输出那些模块（可以简单理解为哪些python文件、文件夹）的日志。
+（3）输出哪些模块（可以简单理解为哪些python文件、文件夹）的日志。
 
  拷贝各个应用根目录（apps/chat/）下的 `cfg.yml.template` 文件至项目根目录，重命名为 `cfg.yml`， 配置相应信息。
 

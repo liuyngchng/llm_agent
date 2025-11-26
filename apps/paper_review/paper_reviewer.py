@@ -512,6 +512,8 @@ class PaperReviewer:
                 time.sleep(2)
 
         return ""
+
+
     @staticmethod
     def _is_valid_filled_report(report: str) -> bool:
         """
@@ -521,7 +523,7 @@ class PaperReviewer:
             return False
 
         # 检查是否包含表格特征
-        table_indicators = ['|', '---', '评分', '评审意见']
+        table_indicators = ['|', '---', '评分', '得分', '评审意见']
         indicators_found = sum(1 for indicator in table_indicators if indicator in report)
 
         # 如果找到至少2个表格特征，认为报告有效
@@ -582,9 +584,7 @@ def generate_review_report(uid: int, task_id: int, doc_type: str, review_topic: 
             info = f"no_doc_info_found_for_task_id ,{task_id}"
             raise RuntimeError(info)
         output_file_path = doc_info[0]['output_file_path']
-
         output_md_file = save_content_to_md_file(review_result, output_file_path, output_abs_path=True)
-
         if FileType.XLSX.value ==  criteria_file_type:
             output_file = convert_md_to_xlsx(output_md_file, True)
         else:

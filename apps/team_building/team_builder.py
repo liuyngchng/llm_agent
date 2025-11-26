@@ -12,10 +12,20 @@ import requests
 from PIL import Image
 import io
 
-from common.docx_meta_util import update_process_info
+from common.const import get_const
+from common.docx_md_util import save_content_to_md_file, convert_md_to_docx
+from common.docx_meta_util import update_process_info, get_doc_info
+from common.my_enums import FileType, AppType
+from common.sys_init import init_yml_cfg
+from common.xlsx_util import convert_md_to_xlsx
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
+
+# 关闭request请求产生的警告信息 (客户端没有进行服务端 SSL 的证书验证，正常会产生警告信息)， 只要清楚自己在做什么
+import urllib3
+from urllib3.exceptions import InsecureRequestWarning
+urllib3.disable_warnings(category=InsecureRequestWarning)
 
 
 class TeamBuilder:
@@ -43,18 +53,27 @@ class TeamBuilder:
         self.ocr_text = ""
         self.review_results = {}
 
-    def call_llm_api_for_ocr(self, image_path: str, prompt: str = "请识别图片中的手写文字，准确输出所有文本内容") -> str:
+    def call_llm_api_for_ocr(self, image_path: str) -> str:
         """
         调用大语言模型进行OCR文本识别
+        :param image_path: image file full path
+        return
+            识别的文本内容
         """
+        prompt = """请准确识别这张手写图片中的所有文字内容。要求：
+1. 保持原文的段落结构
+2. 准确识别手写字体，包括可能的连笔字
+3. 保留标点符号
+4. 如有个别字无法识别，用[?]标记
+5. 输出纯文本格式"""
         try:
             # 读取并编码图片
             with open(image_path, "rb") as image_file:
                 base64_image = base64.b64encode(image_file.read()).decode('utf-8')
 
-            key = self.sys_cfg['api']['llm_api_key']
-            model = self.sys_cfg['api']['llm_model_name']
-            uri = f"{self.sys_cfg['api']['llm_api_uri']}/chat/completions"
+            key = self.sys_cfg['api']['vlm_api_key']
+            model = self.sys_cfg['api']['vlm_model_name']
+            uri = f"{self.sys_cfg['api']['vlm_api_uri']}/chat/completions"
 
             headers = {
                 'Content-Type': 'application/json',
@@ -126,8 +145,9 @@ class TeamBuilder:
                 # 保存处理后的图片
                 processed_path = image_path.replace('.', '_processed.')
                 img.save(processed_path, 'JPEG', quality=85)
-                logger.info(f"图片预处理完成: {processed_path}")
-                return processed_path
+                abs_path = os.path.abspath(processed_path)
+                logger.info(f"图片预处理完成: {abs_path}")
+                return abs_path
 
         except Exception as e:
             logger.error(f"图片预处理失败: {str(e)}")
@@ -150,14 +170,7 @@ class TeamBuilder:
                 processed_path = self.preprocess_image(self.review_file_path)
 
                 # OCR识别
-                ocr_prompt = """请准确识别这张思想汇报手写图片中的所有文字内容。要求：
-                1. 保持原文的段落结构
-                2. 准确识别手写字体，包括可能的连笔字
-                3. 保留标点符号
-                4. 如有个别字无法识别，用[?]标记
-                5. 输出纯文本格式"""
-
-                ocr_text = self.call_llm_api_for_ocr(processed_path, ocr_prompt)
+                ocr_text = self.call_llm_api_for_ocr(processed_path)
 
                 if ocr_text and len(ocr_text.strip()) > 10:  # 确保有有效内容
                     self.ocr_text = ocr_text
@@ -195,7 +208,9 @@ class TeamBuilder:
             )
 
             result = self.call_llm_api(prompt)
+            logger.debug(f"{self.uid}, {self.task_id}, _validate_evaluation_result")
             self._validate_evaluation_result(result)
+            logger.debug(f"{self.uid}, {self.task_id}, _validate_evaluation_result_finish")
             return result
 
         except Exception as e:
@@ -379,9 +394,7 @@ class TeamBuilder:
         """
         try:
             evaluation = self.evaluate_thought_report()
-
             report_content = f"""# 【{self.review_topic}】思想汇报评价报告
-
 ## 基本信息
 - 评价时间: {time.strftime('%Y-%m-%d %H:%M:%S')}
 - 整体评分: {evaluation['overall_score']}/100
@@ -425,14 +438,14 @@ class TeamBuilder:
             logger.info("开始执行思想汇报评价流程")
 
             # 1. OCR文本识别
-            update_process_info(self.uid, self.task_id, "开始识别手写文字...")
+            update_process_info(self.uid, self.task_id, "开始识别手写文字...", 1)
             ocr_result = self.extract_text_from_image()
 
             if not ocr_result:
                 raise ValueError("无法从图片中识别出有效文本，请检查图片质量")
 
             # 2. 文本质量评价
-            update_process_info(self.uid, self.task_id, "正在分析思想汇报内容...")
+            update_process_info(self.uid, self.task_id, "正在分析思想汇报内容...", 30)
             evaluation_report = self.generate_evaluation_report()
 
             logger.info("思想汇报评价流程完成")
@@ -504,9 +517,146 @@ class TeamBuilder:
             logger.error(error_msg)
             return self._get_fallback_evaluation_result(f"API调用异常: {str(e)}")
 
-def start_extract_text_from_image(uid: int, task_id: int, image_file_path: str, image_file_type: str, sys_cfg: dict) -> str:
-    # TODO 需要实现这个函数, 抽取完的文本放入一个 markdown 文件中，返回 markdown 文件的绝对路径
-    return ""
+    def fill_markdown_table(self, conclusion: str, criteria_title: str, single_criteria: str) -> str:
+        """
+        使用大语言模型将最终评审结果自动填写到标准格式的评审表格中
+
+        Args:
+            conclusion: 生成的最终评审结论
+            criteria_title: 评审标准中的一个表格的标题
+            single_criteria: 评审标准中的一个表格
+
+        Returns:
+            填充后的格式化评审报告文本
+        """
+        template = self.sys_cfg['prompts']['fill_md_table_msg']
+        if not template:
+            raise RuntimeError("prompts_fill_md_table_msg_err")
+        prompt = template.format(
+            review_type = self.review_type,
+            review_topic = self.review_topic,
+            criteria=single_criteria,
+            conclusion=conclusion,
+        )
+        try:
+            logger.info(f"开始使用LLM将评审结果填充到标准格式表格中, title={criteria_title}")
+            # 调用大语言模型API
+            start_time = time.time()
+            filled_report = self.call_llm_api_for_formatting(prompt)
+            end_time = time.time()
+            execution_time = end_time - start_time
+            # 验证返回结果
+            if filled_report and self._is_valid_filled_report(filled_report):
+                logger.info(f"成功生成格式化评审报告, 耗时: {execution_time:.2f} 秒, title={criteria_title}")
+                return filled_report
+            else:
+                logger.warning("LLM返回的格式化报告不完整，返回原始报告")
+                return conclusion
+
+        except Exception as e:
+            logger.error(f"使用LLM填充格式化报告失败: {str(e)}")
+        # 如果填充失败，返回原始报告
+        return conclusion
+
+    def call_llm_api_for_formatting(self, prompt: str, max_retries: int = 2) -> str:
+        """专门用于格式化报告的大语言模型调用，增加重试机制"""
+        key = self.sys_cfg['api']['llm_api_key']
+        model = self.sys_cfg['api']['llm_model_name']
+        uri = f"{self.sys_cfg['api']['llm_api_uri']}/chat/completions"
+
+        for attempt in range(max_retries):
+            try:
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {key}'
+                }
+
+                # 构建消息
+                messages = [
+                    {"role": "system",
+                     "content": f"你是一个专业的 {self.review_topic} 文档评审专家，擅长将评审结果按照标准表格格式进行整理和填写。请严格按照给定的表格格式要求进行操作。"},
+                    {"role": "user", "content": prompt}
+                ]
+
+                # 构建请求体 - 优化参数
+                payload = {
+                    'model': model,
+                    'messages': messages,
+                    'temperature': 0.1,
+                    'max_tokens': 8192,
+                    'stream': False  # 确保非流式响应
+                }
+
+                logger.info(f"开始调用LLM进行报告格式化 (第{attempt + 1}次尝试)")
+
+                # 动态调整超时时间
+                timeout = 300 if attempt == 0 else 600  # 第一次180秒，重试时300秒
+
+                response = requests.post(
+                    url=uri,
+                    headers=headers,
+                    json=payload,
+                    timeout=timeout,
+                    verify=False,
+                )
+
+                logger.info(f"LLM格式化响应状态: {response.status_code}")
+
+                if response.status_code == 200:
+                    result = response.json()
+                    content = result['choices'][0]['message']['content']
+
+                    # 清理返回内容
+                    if content.strip().startswith('```'):
+                        lines = content.strip().split('\n')
+                        if lines[0].startswith('```'):
+                            lines = lines[1:]
+                        if lines and lines[-1].startswith('```'):
+                            lines = lines[:-1]
+                        content = '\n'.join(lines).strip()
+
+                    logger.info(f"成功获取LLM格式化的报告，长度: {len(content)}")
+                    return content
+
+                else:
+                    error_msg = f"LLM格式化API调用失败: {response.status_code} - {response.text}"
+                    logger.error(error_msg)
+                    if attempt == max_retries - 1:
+                        return ""
+                    time.sleep(2)  # 重试前等待
+
+            except requests.exceptions.Timeout:
+                logger.warning(f"第{attempt + 1}次调用LLM API超时")
+                if attempt == max_retries - 1:
+                    logger.error("所有重试尝试均超时")
+                    return ""
+                time.sleep(3)  # 超时后等待更长时间
+
+            except Exception as e:
+                error_msg = f"LLM格式化API调用异常 (第{attempt + 1}次): {str(e)}"
+                logger.error(error_msg)
+                if attempt == max_retries - 1:
+                    return ""
+                time.sleep(2)
+
+        return ""
+
+    @staticmethod
+    def _is_valid_filled_report(report: str) -> bool:
+        """
+        验证填充后的报告是否有效
+        """
+        if not report or len(report.strip()) < 100:
+            return False
+
+        # 检查是否包含表格特征
+        table_indicators = ['|', '---', '评分', '得分', '评审意见']
+        indicators_found = sum(1 for indicator in table_indicators if indicator in report)
+
+        # 如果找到至少1个表格特征，认为报告有效
+        return indicators_found >= 1
+
+
 
 
 
@@ -529,11 +679,30 @@ def start_thought_evaluation(uid: int, task_id: int, review_type: str, review_to
         evaluator = TeamBuilder(uid, task_id, review_type, review_topic, criteria_markdown_data,
                                 review_file_path, criteria_file_type, sys_cfg)
         evaluation_report = evaluator.execute_evaluation()
+        output_report_title = get_const('output_report_title', AppType.TEAM_BUILDING.name.lower())
+        if not output_report_title:
+            raise RuntimeError("pls config cfg.db for const key output_report_title")
+        logger.debug(f"output_report_title = {output_report_title}")
+        review_result = evaluator.fill_markdown_table(evaluation_report,
+            output_report_title, criteria_markdown_data)
+        doc_info=get_doc_info(task_id)
+        output_file_path = doc_info[0]['output_file_path']
+        logger.debug(f"output_file_path = {output_file_path}")
+        output_md_file = save_content_to_md_file(review_result, output_file_path, output_abs_path=True)
+        logger.debug(f"output_md_file = {output_md_file}")
+        if FileType.XLSX.value == criteria_file_type:
+            output_file = convert_md_to_xlsx(output_md_file, True)
+        else:
+            output_file = convert_md_to_docx(output_md_file, True)
+        logger.info(f"{uid}, {task_id}, 评审报告生成成功, {output_file}")
+        update_process_info(uid, task_id, "评审报告生成完毕", 100)
         return evaluation_report
 
     except Exception as e:
         logger.error(f"思想汇报评价生成失败: {str(e)}")
         return f"思想汇报评价生成失败: {str(e)}"
+
+
 
 
 def generate_party_member_suggestion(uid: int, task_id: int, review_type: str, review_topic: str,
@@ -565,3 +734,15 @@ def generate_party_member_suggestion(uid: int, task_id: int, review_type: str, r
         logger.error(f"党员发展建议生成失败: {str(e)}")
         update_process_info(uid, task_id, f"党员发展建议生成失败: {str(e)}")
         return f"党员发展建议生成失败: {str(e)}"
+
+
+if __name__ == "__main__":
+
+    file = "/home/rd/Downloads/manuscript.jpeg"
+    file1 = TeamBuilder.preprocess_image(file)
+    logger.info(f"file1 = {file1}")
+    my_cfg = init_yml_cfg()
+    tb = TeamBuilder(123, 123, "test", "test", "test",
+"test", "test", my_cfg)
+    ocr_txt = tb.call_llm_api_for_ocr(file1)
+    logger.info(f"ocr_txt={ocr_txt}")

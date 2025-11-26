@@ -16,7 +16,7 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
-from apps.team_building.team_builder import start_thought_evaluation, start_extract_text_from_image, \
+from apps.team_building.team_builder import start_thought_evaluation, \
     generate_party_member_suggestion
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
