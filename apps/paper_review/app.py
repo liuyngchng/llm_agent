@@ -14,12 +14,13 @@ import threading
 import time
 
 from flask import (Flask, request, jsonify, send_from_directory,
-                   abort, redirect, url_for, render_template)
+                   abort, redirect, url_for, render_template, Response)
 
-from apps.paper_review.paper_reviewer import generate_review_report
+from apps.paper_review.paper_reviewer import generate_review_report, \
+    convert_markdown_to_html
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
-from common.docx_md_util import convert_docx_to_md
+from common.docx_md_util import convert_docx_to_md, get_md_file_content
 from common import my_enums, statistic_util
 from common.docx_meta_util import get_doc_info
 from common.html_util import get_html_ctx_from_md
@@ -368,17 +369,20 @@ def register_routes(app):
             logger.error(f"文件不存在: {md_absolute_path}")
             abort(404)
         logger.info(f"文件找到，准备发送: {md_absolute_path}")
-        html_content, toc_content = get_html_ctx_from_md(md_absolute_path)
-        ctx = {
-            "sys_name": AppType.PAPER_REVIEW.value,
-            "warning_info": "",
-            "app_source": app_source,
-            "html_content": html_content,
-            "toc_content": toc_content,
-        }
-        dt_idx = "md.html"
-        logger.debug(f"return_page {dt_idx}")
-        return render_template(dt_idx, **ctx)
+        # html_content, toc_content = get_html_ctx_from_md(md_absolute_path)
+        # ctx = {
+        #     "sys_name": AppType.PAPER_REVIEW.value,
+        #     "warning_info": "",
+        #     "app_source": app_source,
+        #     "html_content": html_content,
+        #     "toc_content": toc_content,
+        # }
+        # dt_idx = "md.html"
+        # logger.debug(f"return_page {dt_idx}")
+        # return render_template(dt_idx, **ctx)
+        html_content = convert_markdown_to_html(get_md_file_content(md_absolute_path), my_cfg)
+        return Response(html_content, mimetype='text/html')
+
 
     @app.route('/paper_review/del/task/<task_id>', methods=['GET'])
     def delete_file_info_by_task_id(task_id):
