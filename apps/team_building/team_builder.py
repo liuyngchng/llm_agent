@@ -38,7 +38,7 @@ class TeamBuilder:
         :param review_type: 评审类型, 例如 思想汇报评审
         :param review_topic: 评审主题，例如 xxx同志思想汇报评审
         :param criteria_file_path: 评审标准 markdown 文本文件的绝对路径
-        :param review_file_path: 评审文件路径（图片或文档）
+        :param review_file_path: 评审文件路径（图片或文档），可能会是多个路径，
         :param criteria_file_type: 评审标准的文件类型
         :param sys_cfg: 系统配置
         """
@@ -153,37 +153,45 @@ class TeamBuilder:
             logger.error(f"图片预处理失败: {str(e)}")
             return image_path  # 返回原路径
 
-    def extract_text_from_image(self, max_retries: int = 2) -> str:
+    def extract_text_from_images(self, max_retries: int = 2) -> str:
         """
         从图片中提取文本（支持多种图片格式）
         """
         supported_formats = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.heic', '.heif']
-        file_ext = os.path.splitext(self.review_file_path.lower())[1]
+        files = self.review_file_path.split(',')
+        all_txt = ""
+        for img_file in files:
+            file_ext = os.path.splitext(img_file)[1]
+            if file_ext not in supported_formats:
+                logger.error(f"不支持的图片格式: {file_ext}, {img_file}")
+                continue
+            img_ocr_txt = self.extract_text_from_image(img_file, max_retries)
+            all_txt = all_txt + img_ocr_txt
+        return all_txt
 
-        if file_ext not in supported_formats:
-            logger.error(f"不支持的图片格式: {file_ext}")
-            return ""
+
+    def extract_text_from_image(self, file_path: str, max_retries: int = 2) -> str:
+        """
+        从单个图片中提取文本（支持多种图片格式）
+        :param file_path: 图片文件的绝对路径
+        :param max_retries: 最大尝试次数
+        """
 
         for attempt in range(max_retries):
             try:
                 # 预处理图片
-                processed_path = self.preprocess_image(self.review_file_path)
-
+                processed_path = self.preprocess_image(file_path)
                 # OCR识别
                 ocr_text = self.call_llm_api_for_ocr(processed_path)
-
                 if ocr_text and len(ocr_text.strip()) > 10:  # 确保有有效内容
                     self.ocr_text = ocr_text
                     logger.info(f"成功提取文本，长度: {len(ocr_text)}")
-
                     # 清理临时处理的图片
                     if processed_path != self.review_file_path and os.path.exists(processed_path):
                         os.remove(processed_path)
-
                     return ocr_text
                 else:
                     logger.warning(f"第{attempt + 1}次OCR识别返回空文本或文本过短")
-
             except Exception as e:
                 logger.error(f"第{attempt + 1}次文本提取失败: {str(e)}")
                 if attempt == max_retries - 1:
@@ -438,7 +446,7 @@ class TeamBuilder:
 
             # 1. OCR文本识别
             update_process_info(self.uid, self.task_id, "开始识别手写文字...", 1)
-            ocr_result = self.extract_text_from_image()
+            ocr_result = self.extract_text_from_images()
 
             if not ocr_result:
                 raise ValueError("无法从图片中识别出有效文本，请检查图片质量")

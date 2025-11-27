@@ -117,29 +117,33 @@ async function uploadImageFiles(files) {
     const uploadedFileNames = [];
 
     try {
-        // 逐个上传图片文件
-        for (let file of files) {
+        // 创建所有上传任务的数组
+        const uploadPromises = Array.from(files).map(file => {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('uid', uid);
             formData.append('file_type', 'image');
 
-            const response = await fetch('/img/upload', {
+            return fetch('/img/upload', {
                 method: 'POST',
                 body: formData
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error(`图片文件 ${file.name} 上传失败`);
+                }
+                return response.json();
+            }).then(data => {
+                document.getElementById('taskId').value = data.task_id;
+                return data.file_name; // 返回文件名用于后续处理
             });
+        });
 
-            if (!response.ok) {
-                throw new Error(`图片文件 ${file.name} 上传失败`);
-            }
+        // 等待所有上传任务完成
+        const fileNames = await Promise.all(uploadPromises);
+        uploadedFileNames.push(...fileNames);
 
-            const data = await response.json();
-            document.getElementById('taskId').value = data.task_id;
-            uploadedFileNames.push(data.file_name);
-        }
-
-        // 保存所有上传的图片文件名称（JSON格式）
-        document.getElementById('review_image_file_names').value = JSON.stringify(uploadedFileNames);
+        // 保存所有上传的图片文件名称（逗号分隔的字符串）
+        document.getElementById('review_image_file_names').value = uploadedFileNames.join(',');
 
     } catch (error) {
         console.error('上传错误:', error);
@@ -287,6 +291,10 @@ async function gen_review_report() {
     generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
 
     const apiUrl = '/review_report/gen';
+
+    // 将逗号分隔的字符串转换为数组
+    const imageFileNamesArray = review_image_file_names ? review_image_file_names.split(',') : [];
+
     const postData = {
         uid: uid,
         review_topic: review_topic,
@@ -294,7 +302,7 @@ async function gen_review_report() {
         task_id: task_id,
         review_criteria_file_name: review_criteria_file_name,
         review_paper_file_name: review_paper_file_name,
-        review_image_file_names: review_image_file_names ? JSON.parse(review_image_file_names) : []
+        review_image_file_names: imageFileNamesArray
     };
 
     try {
