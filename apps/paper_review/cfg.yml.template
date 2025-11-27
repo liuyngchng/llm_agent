@@ -136,4 +136,4 @@ prompts:
         只输出完整的HTML代码，不要包含任何解释性文字。HTML代码应该包含内联CSS样式，确保可以直接使用。
         
         ## 输入内容：
-        [这里粘贴你的Markdown表格内容]  
+        {markdown_content}
