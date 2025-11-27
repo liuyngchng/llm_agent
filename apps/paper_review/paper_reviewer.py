@@ -193,7 +193,7 @@ class PaperReviewer:
 
     def review_whole_report(self, section_results: List[Dict]) -> Dict:
         """
-        整体报告评审
+        根据各个章节的评审结果，进行整体评审
         """
         try:
             # 生成各章节概要
@@ -216,12 +216,10 @@ class PaperReviewer:
                 criteria = self.criteria_markdown_data,
             )
             overall_result = self.call_llm_api(prompt)
-
             # 添加结果验证和降级处理
             if not overall_result or 'overall_score' not in overall_result:
                 logger.warning("整体评审返回结果格式异常，使用降级结果")
                 return self._get_fallback_overall_result(section_results)
-
             return overall_result
 
         except Exception as e:
@@ -370,7 +368,6 @@ class PaperReviewer:
 
             # 4. 合并同一章节的多个部分结果
             merged_results = self._merge_section_results(self.review_results)
-
             # 5. 整体评审
             logger.info("开始进行评审意见总结")
             update_process_info(self.uid, self.task_id, "开始进行评审意见总结")
