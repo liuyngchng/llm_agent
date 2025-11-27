@@ -159,12 +159,18 @@ class TeamBuilder:
         """
         supported_formats = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.heic', '.heif']
         files = self.review_file_path.split(',')
+        img_file_count = len(files)
+
         all_txt = ""
+        i = 0
         for img_file in files:
             file_ext = os.path.splitext(img_file)[1]
             if file_ext not in supported_formats:
                 logger.error(f"不支持的图片格式: {file_ext}, {img_file}")
+                i += 1
                 continue
+            i += 1
+            update_process_info(self.uid, self.task_id, f"开始识别第{i}/{img_file_count}个图片...", i * 5)
             img_ocr_txt = self.extract_text_from_image(img_file, max_retries)
             all_txt = all_txt + img_ocr_txt
         return all_txt

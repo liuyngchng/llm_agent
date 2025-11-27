@@ -309,7 +309,7 @@ class PaperReviewer:
 
     def execute_review(self) -> str:
         """
-        执行完整的评审流程， 返回生成的报告文本
+        执行完整的评审流程，返回生成的报告文本
         """
         try:
             logger.info("开始执行文档评审流程")
@@ -321,42 +321,66 @@ class PaperReviewer:
                 raise ValueError(info)
             logger.info(f"文档目录，{catalogue}")
             update_process_info(self.uid, self.task_id, "开始解析章节内容...")
+
             # 2. 提取章节内容
-            self.sections_data = extract_sections_content(self.review_file_path, catalogue)
+            # extract_sections_content 返回的数据格式： [{"heading1->header2" : ["content_part1 under heading2", "content_part2 under heading2"]}]
+            self.sections_data = extract_sections_content(self.review_file_path, catalogue,
+                                                          max_content_length=MAX_SECTION_LENGTH)
             if not self.sections_data:
                 raise ValueError("无法提取章节内容")
             logger.debug(f"章节内容，{self.sections_data}")
-            section_count = len(self.sections_data)
-            logger.info(f"开始逐章节评审，共{section_count}个章节")
+
+            # 计算总章节数（包括分割后的部分）
+            total_sections = 0
+            for section in self.sections_data:
+                for title, content_parts in section.items():
+                    total_sections += len(content_parts)
+
+            logger.info(f"开始逐章节评审，共 {len(self.sections_data)} 个原始章节，{total_sections} 个内容部分")
 
             # 3. 逐章节评审
+            processed_parts = 0
             for i, section in enumerate(self.sections_data):
-                logger.info(f"评审章节 {i + 1}/{len(self.sections_data)}: {section['title']}")
-                current_percent = min(95.0, round((i + 1) / len(self.sections_data) * 100, 1))
-                update_process_info(self.uid, self.task_id, f"正在处理第{i + 1}/{section_count}个章节", current_percent)
-                # 控制章节内容长度，避免过长
-                content_preview = section['content'][:MAX_SECTION_LENGTH] + "..." if len(section['content']) > MAX_SECTION_LENGTH else section[
-                    'content']
+                # 每个section是一个字典：{"heading1->header2": ["content_part1", "content_part2", ...]}
+                for section_title, content_parts in section.items():
+                    logger.info(
+                        f"评审章节 {i + 1}/{len(self.sections_data)}: {section_title} (包含{len(content_parts)}个部分)")
 
-                section_result = self.review_single_section(
-                    section['title'],
-                    content_preview
-                )
-                section_result['section_title'] = section['title']
-                self.review_results.append(section_result)
+                    # 对每个内容部分进行评审
+                    for part_index, content_part in enumerate(content_parts):
+                        processed_parts += 1
+                        current_percent = min(95.0, round(processed_parts / total_sections * 100, 1))
 
-                logger.info(f"章节[{section['title']}]评审完成，评分: {section_result['score']}")
+                        part_description = f"第{part_index + 1}部分" if len(content_parts) > 1 else "完整内容"
+                        process_info = f"正在处理章节 {section_title} 的{part_description} ({processed_parts}/{total_sections})"
+                        update_process_info(self.uid, self.task_id, process_info, current_percent)
 
-            # 4. 整体评审
+                        # 构建完整的部分标题（包含部分信息）
+                        full_section_title = f"{section_title} [第{part_index + 1}部分]" if len(
+                            content_parts) > 1 else section_title
+
+                        logger.debug(f"评审内容部分: {full_section_title}, 长度: {len(content_part)}")
+
+                        section_result = self.review_single_section(full_section_title, content_part)
+                        section_result['section_title'] = section_title  # 保存原始标题
+                        section_result['part_index'] = part_index
+                        section_result['total_parts'] = len(content_parts)
+                        self.review_results.append(section_result)
+                        logger.info(f"章节[{full_section_title}]评审完成，评分: {section_result['score']}")
+
+            # 4. 合并同一章节的多个部分结果
+            merged_results = self._merge_section_results(self.review_results)
+
+            # 5. 整体评审
             logger.info("开始进行评审意见总结")
-            update_process_info(self.uid, self.task_id, f"开始进行评审意见总结")
-            overall_result = self.review_whole_report(self.review_results)
+            update_process_info(self.uid, self.task_id, "开始进行评审意见总结")
+            overall_result = self.review_whole_report(merged_results)
 
-            # 5. 生成最终报告
+            # 6. 生成最终报告
             logger.info("生成最终评审报告")
-            final_report = self.generate_final_report(self.review_results, overall_result)
+            final_report = self.generate_final_report(merged_results, overall_result)
             if FileType.XLSX.value == self.criteria_file_type:
-                update_process_info(self.uid, self.task_id, f"准备输出格式化的评审意见报告")
+                update_process_info(self.uid, self.task_id, "准备输出格式化的评审意见报告")
                 logger.debug(f"fill_all_formatted_markdown_report_with_final_report\n{final_report}")
                 formatted_report = self.fill_all_formatted_markdown_report_with_final_report(final_report)
             else:
@@ -367,6 +391,74 @@ class PaperReviewer:
         except Exception as e:
             logger.exception(f"评审流程执行失败")
             return f"# 评审过程出现错误\n\n错误信息: {str(e)}\n\n请检查文档格式或联系技术支持。"
+
+    def _merge_section_results(self, all_results: List[Dict]) -> List[Dict]:
+        """
+        合并同一章节的多个部分评审结果
+
+        Args:
+            all_results: 所有部分的评审结果
+
+        Returns:
+            合并后的章节评审结果
+        """
+        merged_results = {}
+
+        for result in all_results:
+            section_title = result['section_title']
+            part_index = result.get('part_index', 0)
+            total_parts = result.get('total_parts', 1)
+
+            if section_title not in merged_results:
+                # 初始化章节结果
+                merged_results[section_title] = {
+                    'section_title': section_title,
+                    'scores': [],
+                    'strengths': [],
+                    'issues': [],
+                    'suggestions': [],
+                    'risk_levels': [],
+                    'part_count': total_parts
+                }
+
+            # 收集各部分结果
+            merged_results[section_title]['scores'].append(result['score'])
+            merged_results[section_title]['strengths'].extend(result['strengths'])
+            merged_results[section_title]['issues'].extend(result['issues'])
+            merged_results[section_title]['suggestions'].extend(result['suggestions'])
+            merged_results[section_title]['risk_levels'].append(result.get('risk_level', '未知'))
+
+        # 生成最终合并结果
+        final_results = []
+        for section_title, data in merged_results.items():
+            # 计算平均分
+            avg_score = sum(data['scores']) // len(data['scores'])
+
+            # 去重并保留重要信息
+            unique_strengths = list(dict.fromkeys(data['strengths']))  # 保持顺序去重
+            unique_issues = list(dict.fromkeys(data['issues']))
+            unique_suggestions = list(dict.fromkeys(data['suggestions']))
+
+            # 确定主要风险等级（取最严重的）
+            risk_levels = data['risk_levels']
+            risk_priority = {'高': 3, '中': 2, '低': 1, '未知': 0}
+            main_risk_level = max(risk_levels, key=lambda x: risk_priority.get(x, 0))
+
+            final_result = {
+                'section_title': section_title,
+                'score': avg_score,
+                'strengths': unique_strengths[:5],  # 限制数量，取前5个
+                'issues': unique_issues[:10],  # 限制数量，取前10个
+                'suggestions': unique_suggestions[:5],  # 限制数量，取前5个
+                'risk_level': main_risk_level,
+                'original_parts_count': data['part_count']
+            }
+
+            final_results.append(final_result)
+
+            logger.info(f"合并章节[{section_title}]结果: 平均分{avg_score}, 原始部分数{data['part_count']}")
+
+        return final_results
 
     def fill_all_formatted_markdown_report_with_final_report(self, final_report_txt: str) -> str:
         """

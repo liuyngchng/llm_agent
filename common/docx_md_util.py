@@ -7,7 +7,7 @@ import os
 import re
 from pathlib import Path
 
-from common.const import OUTPUT_DIR
+from common.const import OUTPUT_DIR, MAX_SECTION_LENGTH
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -366,16 +366,18 @@ def get_md_para_by_heading(md_file_path: str, heading1: str, heading2: str = Non
         logger.error(f"提取内容失败: {md_file_path}, 错误: {str(e)}")
         return ""
 
-def extract_sections_content(markdown_file_path: str, catalogue: dict, extract_heading_level: int = 2) -> list[dict]:
+def extract_sections_content(markdown_file_path: str, catalogue: dict, extract_heading_level: int = 2,
+        max_content_length: int = MAX_SECTION_LENGTH) -> list[dict]:
     """
-    按指定标题层级提取 Markdown 文件的章节内容
+    按指定标题层级提取 Markdown 文件的章节内容，并将内容按最大长度分割
 
     Args:
         markdown_file_path: Markdown 文件的绝对路径
         catalogue: 目录结构
         extract_heading_level: 提取的标题层级，默认提取2级标题的内容
+        max_content_length: 每个内容部分的最大长度
     Return:
-        返回[{"heading1-> header2" : "content under heading2"}]
+        返回[{"heading1->header2" : ["content_part1 under heading2", "content_part2 under heading2"]}]
     """
 
     try:
@@ -411,14 +413,74 @@ def extract_sections_content(markdown_file_path: str, catalogue: dict, extract_h
 
             return total_lines + 1
 
+        def split_content_by_length(content: str, max_length: int) -> list[str]:
+            """
+            将内容按最大长度分割，尽量在段落边界处分割
+
+            Args:
+                content: 要分割的内容
+                max_length: 每个部分的最大长度
+
+            Returns:
+                分割后的内容列表
+            """
+            if len(content) <= max_length:
+                return [content]
+
+            parts = []
+            current_part = ""
+            paragraphs = content.split('\n\n')
+
+            for paragraph in paragraphs:
+                # 如果当前段落加上分隔符的长度超过限制，且当前部分不为空，则保存当前部分
+                if current_part and len(current_part) + len(paragraph) + 2 > max_length:
+                    parts.append(current_part.strip())
+                    current_part = ""
+
+                # 如果单个段落就超过最大长度，需要按字符分割
+                if len(paragraph) > max_length:
+                    if current_part:
+                        parts.append(current_part.strip())
+                        current_part = ""
+
+                    # 按字符分割长段落
+                    start = 0
+                    while start < len(paragraph):
+                        end = start + max_length
+                        if end < len(paragraph):
+                            # 尽量在句子结束处分割
+                            last_period = paragraph.rfind('.', start, end)
+                            last_newline = paragraph.rfind('\n', start, end)
+                            if last_period > start and (last_period - start) > max_length * 0.5:
+                                end = last_period + 1
+                            elif last_newline > start:
+                                end = last_newline + 1
+
+                        part = paragraph[start:end].strip()
+                        if part:
+                            parts.append(part)
+                        start = end
+                else:
+                    # 添加段落到当前部分
+                    if current_part:
+                        current_part += '\n\n' + paragraph
+                    else:
+                        current_part = paragraph
+
+            # 添加最后的部分
+            if current_part:
+                parts.append(current_part.strip())
+
+            return parts
+
         def extract_content_at_level(node, parent_title="", current_level=1):
-            """按指定层级提取章节内容"""
+            """按指定层级提取章节内容并分割"""
             if isinstance(node, dict):
                 current_title = node.get('title', '')
                 level = node.get('level', 1)
                 line_num = node.get('line', 1)
 
-                full_title = f"{parent_title} > {current_title}" if parent_title else current_title
+                full_title = f"{parent_title}->{current_title}" if parent_title else current_title
 
                 # 如果当前节点层级等于或小于目标层级，提取内容
                 if level == extract_heading_level:
@@ -430,16 +492,22 @@ def extract_sections_content(markdown_file_path: str, catalogue: dict, extract_h
 
                     content = ''.join(lines[start_line - 1:end_line]).strip()
 
+                    # 按最大长度分割内容
+                    content_parts = split_content_by_length(content, max_content_length)
+
                     sections.append({
                         'title': full_title,
                         'level': level,
-                        'content': content,
+                        'content_parts': content_parts,
                         'start_line': start_line,
-                        'end_line': end_line - 1 if end_line <= len(lines) else len(lines)
+                        'end_line': end_line - 1 if end_line <= len(lines) else len(lines),
+                        'total_length': len(content),
+                        'parts_count': len(content_parts)
                     })
 
                     logger.debug(
-                        f"提取章节 '{full_title}': 层级 {level}, 行 {start_line}-{end_line - 1}, 长度 {len(content)} 个字符")
+                        f"提取章节 '{full_title}': 层级 {level}, 行 {start_line}-{end_line - 1}, "
+                        f"总长度 {len(content)} 个字符, 分割为 {len(content_parts)} 部分")
 
                 # 递归处理子节点
                 children = node.get('children', {})
@@ -452,14 +520,23 @@ def extract_sections_content(markdown_file_path: str, catalogue: dict, extract_h
         # 按行号排序
         sections.sort(key=lambda x: x['start_line'])
 
-        logger.info(f"按{extract_heading_level}级标题提取了 {len(sections)} 个章节内容")
+        logger.info(
+            f"按{extract_heading_level}级标题提取了 {len(sections)} 个章节内容，最大内容长度限制: {max_content_length}")
 
         # 输出提取的章节信息
         for i, section in enumerate(sections[:5]):  # 只显示前5个作为样例
             logger.info(
-                f"样例章节{i + 1}: '{section['title']}' (层级{section['level']}), 内容长度: {len(section['content'])}")
+                f"样例章节{i + 1}: '{section['title']}' (层级{section['level']}), "
+                f"总长度: {section['total_length']}, 分割为: {section['parts_count']} 部分")
 
-        return sections
+        # 转换为要求的格式: [{"heading1->header2": ["content_part1", "content_part2"]}]
+        result = []
+        for section in sections:
+            result.append({
+                section['title']: section['content_parts']
+            })
+
+        return result
 
     except Exception as e:
         logger.error(f"提取章节内容失败: {str(e)}")
