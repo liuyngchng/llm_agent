@@ -696,11 +696,13 @@ def generate_review_report(uid: int, task_id: int, doc_type: str, review_topic: 
         logger.exception("评审报告生成异常", e)
 
 
-def generate_html_report(markdown_report: str, sys_cfg:dict) -> str:
+def generate_html_report(uid: int, task_id:int, markdown_report: str, sys_cfg:dict) -> str:
     """
     生成HTML格式的评审报告
 
     Args:
+        uid: user id
+        task_id: task id
         markdown_report: Markdown格式的评审报告
         sys_cfg: 系统配置
 
@@ -708,11 +710,11 @@ def generate_html_report(markdown_report: str, sys_cfg:dict) -> str:
         HTML格式的评审报告
     """
     try:
-        logger.info("开始生成HTML格式的评审报告")
+        logger.info(f"{uid}, {task_id}, 开始生成HTML格式的评审报告")
         # 如果报告包含表格，转换为HTML格式
         if '|' in markdown_report and '---' in markdown_report:
             logger.info("检测到 Markdown 表格，开始转换为HTML格式")
-            html_report = convert_markdown_to_html(markdown_report, sys_cfg)
+            html_report = convert_markdown_to_html(uid, task_id, markdown_report, sys_cfg)
             if html_report and html_report != markdown_report:
                 logger.info("成功生成HTML格式报告")
                 return html_report
@@ -720,18 +722,20 @@ def generate_html_report(markdown_report: str, sys_cfg:dict) -> str:
                 logger.warning("HTML转换失败或未改变内容，返回原始Markdown")
                 return markdown_report
         else:
-            logger.info("未检测到表格内容，返回原始Markdown")
+            logger.info(f"{uid}, {task_id}, 未检测到表格内容，返回原始Markdown")
             return markdown_report
 
     except Exception as e:
         logger.error(f"生成HTML报告失败: {str(e)}")
         return markdown_report
 
-def convert_markdown_to_html(markdown_content: str, sys_cfg:dict, max_retries: int = 2) -> str:
+def convert_markdown_to_html(uid:int, task_id: int, markdown_content: str, sys_cfg:dict, max_retries: int = 2) -> str:
     """
     将Markdown表格内容转换为美观的HTML表格格式
 
     Args:
+        uid: user id
+        task_id: 任务 ID
         markdown_content: Markdown格式的表格内容
         sys_cfg: 系统配置
         max_retries: 最大重试次数
@@ -744,12 +748,12 @@ def convert_markdown_to_html(markdown_content: str, sys_cfg:dict, max_retries: i
             if not template:
                 raise RuntimeError("prompts_convert_markdown_to_html_msg_err")
             prompt = template.format(markdown_content=markdown_content)
-            logger.info(f"开始将Markdown转换为HTML (第{attempt + 1}次尝试)")
+            logger.info(f"{uid}, {task_id}, 开始将Markdown转换为HTML (第{attempt + 1}次尝试)")
             # 调用大语言模型API
             html_result = call_llm_api_for_html_conversion(prompt, sys_cfg)
 
             if html_result and _is_valid_html_table(html_result):
-                logger.info(f"成功将Markdown转换为HTML，长度: {len(html_result)}")
+                logger.info(f"{uid}, {task_id}, 成功将Markdown转换为HTML，长度: {len(html_result)}")
                 return html_result
             else:
                 logger.warning(f"第{attempt + 1}次转换结果无效，准备重试")
@@ -810,7 +814,7 @@ def call_llm_api_for_html_conversion(prompt: str, sys_cfg: dict) -> str:
             url=uri,
             headers=headers,
             json=payload,
-            timeout=120,  # HTML转换可能需要较长时间
+            timeout=300,  # HTML转换可能需要较长时间
             verify=False,
         )
 
