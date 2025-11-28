@@ -380,7 +380,7 @@ def register_routes(app):
         # dt_idx = "md.html"
         # logger.debug(f"return_page {dt_idx}")
         # return render_template(dt_idx, **ctx)
-        html_content = convert_markdown_to_html(get_md_file_content(md_absolute_path), my_cfg)
+        html_content = convert_markdown_to_html(int(uid), task_id, get_md_file_content(md_absolute_path), my_cfg)
         return Response(html_content, mimetype='text/html')
 
 
