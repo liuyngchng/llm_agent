@@ -59,7 +59,7 @@ pip install -r requirements.txt
 （1）方法1。通过以下命令在Windows 上安装 pandoc
 
 ```sh
-# 需要事先在 Windows 上安装 Chocolatey
+# 需在Windows上安装Chocolatey，详见 https://docs.chocolatey.org/en-us/choco/setup
 choco install pandoc
 ```
 
