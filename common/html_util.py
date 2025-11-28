@@ -300,15 +300,18 @@ header p {
 /* 表格样式优化 */
 table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse; /* 改回 collapse 以获得更好的自动列宽 */
     margin: 25px 0;
     background: white;
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     border: 1px solid #e1e5e9;
-    table-layout: auto;
+    table-layout: auto; /* 确保这是 auto */
+}
+
+col[style*="width"] {
+    width: auto !important; /* 覆盖 pandoc 设置的固定宽度 */
 }
 
 th {
@@ -323,6 +326,7 @@ th {
     letter-spacing: 0.5px;
     position: relative;
     text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    white-space: nowrap; /* 防止表头文字换行 */
 }
 
 th:after {
@@ -342,6 +346,8 @@ td {
     font-size: 14px;
     color: #555;
     transition: all 0.2s ease;
+    word-wrap: break-word; /* 允许长单词换行 */
+    word-break: break-word; /* 中文换行 */
 }
 
 tr:last-child td {
@@ -352,6 +358,10 @@ tr:hover td {
     background-color: #f8fafd;
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(75, 108, 183, 0.1);
+}
+th:first-child,
+td:first-child {
+    min-width: 150px; /* 第一列最小宽度 */
 }
 
 /* 斑马纹效果 */
@@ -371,9 +381,11 @@ tr:nth-child(even):hover td {
     border-radius: 6px;
     padding: 12px 8px;
     margin: 2px;
-    min-width: 60px;
+    min-width: 80px; /* 评分列固定宽度 */
+    max-width: 100px;
     background: transparent !important;
     box-shadow: none !important;
+    white-space: nowrap; /* 防止评分数字换行 */
 }
 
 .score-high {
