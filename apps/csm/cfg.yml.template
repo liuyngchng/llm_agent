@@ -22,8 +22,6 @@ db:
     # 限制使用的表的数量，最佳实践是1表， 随着表的数量的增加，大模型输出的SQL质量会有一定程度的下降
     restrict_table_number: 1
     strict_search: false
-    # 用于数据库部分内容的加解密
-    cypher_key: your_cypher_key
 
 sys:
     #  系统名称(title) 配置
@@ -35,7 +33,7 @@ sys:
     # 配置可访问的域， 防止跨域攻击
     allowed_origin: http://192,168.1.122
     # 对配置信息进行加密的密钥，长度必须为16/32
-    cypher_key: abaababa
+    cypher_key: abaababaabaababa
 api:
     # 大语言模型 API 基地址
     llm_api_uri: https://api.deepseek.com/v1

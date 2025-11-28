@@ -1,8 +1,4 @@
 # config.yaml，文件格式必须严格遵循 yaml配置文件格式
-db:
-
-    cypher_key: your_cypher_key
-
 sys:
     #  系统名称(title) 配置
     name: 文档生成
@@ -13,7 +9,7 @@ sys:
     # 配置可访问的域， 防止跨域攻击
     allowed_origin: http://192,168.1.122
     # 对配置信息进行加密的密钥，长度必须为16/32
-    cypher_key: abaababa
+    cypher_key: abaababaabaababa
     # 在 debug 模式下定时任务将关闭，在生产环境下， debug_mode 必须设置为 false
     debug_mode: true
 api:
@@ -84,7 +80,7 @@ prompts:
         (7) 不包含目录标题；
         (8) 文本与图表自然衔接，技术概念解释清晰；
         (9) 确保内容准确且符合技术文档标准。
-		
+        
         【Mermaid图表特别要求】：
         (10) 使用Mermaid官方标准语法，避免实验性功能；
         (11) 图表类型限于：flowchart流程图、sequenceDiagram时序图、classDiagram类图、stateDiagram状态图；

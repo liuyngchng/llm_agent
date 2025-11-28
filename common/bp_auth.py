@@ -190,7 +190,7 @@ def reg_user():
             ctx["sys_name"] = sys_name
             ctx["warning_info"] = f"用户 {usr} 已成功创建，欢迎使用本系统"
             dt_idx = "login.html"
-            logger.error(f"reg_user_success, {usr}")
+            logger.info(f"reg_user_success, {usr}")
             return render_template(dt_idx, **ctx)
         else:
             ctx["warning_info"] = f"用户 {usr} 创建失败"

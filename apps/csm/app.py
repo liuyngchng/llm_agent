@@ -25,9 +25,13 @@ from common.cm_utils import get_console_arg1
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+my_cfg = init_yml_cfg()
 app = Flask(__name__, static_folder=None)
 app.register_blueprint(auth_bp)
-my_cfg = init_yml_cfg()
+app.config['JSON_AS_ASCII'] = False
+app.config['CFG'] = my_cfg
+app.config['APP_SOURCE'] = AppType.CSM.name.lower()
+
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )

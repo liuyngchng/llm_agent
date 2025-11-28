@@ -1,8 +1,4 @@
 # config.yaml，文件格式必须严格遵循 yaml配置文件格式
-db:
-
-    cypher_key: your_cypher_key
-
 sys:
     #  系统名称(title) 配置
     name: AI 数字评委
@@ -13,7 +9,7 @@ sys:
     # 配置可访问的域， 防止跨域攻击
     allowed_origin: http://192,168.1.122
     # 对配置信息进行加密的密钥，长度必须为16/32
-    cypher_key: abaababa
+    cypher_key: abaababaabaababa
     # 在 debug 模式下定时任务将关闭，在生产环境下， debug_mode 必须设置为 false
     debug_mode: true
 api:
