@@ -41,6 +41,51 @@ pip 24.3.1 from
 ## 2.3 pip package
 
 下载完了代码后，进入代码的根目录，保持计算机连接公共互联网，下载安装包，大约耗费流量10GB。执行以下的命令。
+首先创建虚拟环境，在 Windows CMD 窗口中执行以下命令：
+
+```cmd
+# 安装创建虚拟环境的命令
+pip install virtualenv
+C:\workspace>pip install virtualenv
+Requirement already satisfied: virtualenv in c:\program files\python312\lib\site-packages (20.35.4)
+#可以看到自己的python 安装在目录 c:\program files\python312 下， 
+# 打开文件夹 c:\program files\python312\Scripts 会看到有一个  virtualenv.exe， 说明 virtualenv 命令安装成功
+# 将 c:\program files\python312\Scripts 添加到环境变量中， 操作：我的电脑-> 右键属性 -> （右上角）高级系统设置 -> (右下角)环境变量 -> 系统环境变量 -> 找到 Path ->编辑 -> 新建， 粘贴 将 c:\program files\python312\Scripts -> 保存
+# 关闭已经打开的 CMD 窗口，重新打开 CMD，这样新配置的 Path 环境变量才能生效
+# 假定需要在D:\workspace 下创建虚拟环境
+#切换盘符到D:
+D:
+# 进入 D 盘根目录
+cd /
+# 创建文件夹  workspace
+mkdir workspace
+# 查看是否创建成功, 此时能看到有一个 workspace 的目录
+dir
+# 进入 D:\workspace 目录下
+cd workspace
+# 创建虚拟环境目录  llm_py_env
+virtualenv llm_py_env
+# 激活虚拟环境
+cd llm_py_env
+cd Scripts
+activate
+# 此时会看到下面的界面， 盘符前面有 (llm_py_env)， 说明虚拟环境创建成功
+(llm_py_env) D:\workspace\llm_py_env\Scripts>
+
+```
+接下来安装 python 应用程序的依赖包，继续在 Windows CMD 窗口中执行命令
+
+```cmd
+# 进入你在网络上下载的  gitee_llm_agent 包的文件夹，假定在 目录 D:\workspace\gitee_llm_agent-master 下
+# 进入D: 盘符
+D:
+# 进入根目录
+cd /
+cd workspace\gitee_llm_agent-master
+dir
+
+```
+此时已经在 python 源代码根目录下了，而且虚拟环境是生效的（在盘符前面会有 (llm_py_env)）, 开始安装依赖
 
 ```cmd
 pip install -r requirements.txt
@@ -54,7 +99,9 @@ pip install -r requirements.txt
 
 ## 2.4 安装 `pandoc`
 
-涉及到文档的转换操作，需要依赖这个组件，`pandoc` 是开源社区中较为流行的文档格式转换工具包。
+涉及到文档的转换操作需要依赖这个组件，`pandoc` 是开源社区中较为流行的文档格式转换工具包。 
+
+可以先不安装，如果报错信息中出现 pandoc 的字样再进行安装。
 
 （1）方法1。通过以下命令在Windows 上安装 pandoc
 
@@ -63,7 +110,7 @@ pip install -r requirements.txt
 choco install pandoc
 ```
 
-（2）方法2。 通过msi 引导文件安装， 详见  https://www.pandoc.org/installing.html#windows。
+（2）方法2。 通过Windows msi 引导文件安装， 详见  https://www.pandoc.org/installing.html#windows。
 
 ## 2.5 SQLite browser
 
@@ -134,7 +181,7 @@ python -m apps.chat.app
 ```
 
 说明程序启动了监听端口 19000，启动正常。接下来，在浏览器中输入 http://127.0.0.1:19000，即可看到相应的页面。
-
+如果运行中看到  `ModuleNotFoundError: No module named 'xxxx`， 则执行 pip install xxxx。
 
 ## 4.2 IDE 运行
 
