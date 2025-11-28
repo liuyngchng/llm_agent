@@ -17,6 +17,7 @@ import common.cfg_util as cfg_utl
 from flask import Flask, render_template, Response, request, jsonify, redirect, url_for, send_from_directory, abort
 
 from apps.chat2db.audio import transcribe_webm_audio_bytes
+from common import my_enums
 from common.bp_auth import auth_bp, auth_info, get_client_ip
 from common.const import SESSION_TIMEOUT
 from common.my_enums import DataType, DBType, AppType
@@ -27,10 +28,13 @@ from common.cm_utils import get_console_arg1, check_contain_spaces_in_every_line
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
+my_cfg = init_yml_cfg()
 app = Flask(__name__, static_folder=None)
 app.register_blueprint(auth_bp)
 app.config['JSON_AS_ASCII'] = False
-my_cfg = init_yml_cfg()
+app.config['CFG'] = my_cfg
+app.config['APP_SOURCE'] = AppType.CHAT2DB.name.lower()
+
 
 # user's last sql, {"my_uid": {"sql":"my_sql", "curr_page":1, "total_page":1}}
 # last search sql, current page and total page for the SQL
