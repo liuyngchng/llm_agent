@@ -54,7 +54,16 @@ pip install -r requirements.txt
 
 ## 2.4 安装 `pandoc`
 
-涉及到文档的转换操作，需要依赖这个组件，`pandoc` 是开源社区中较为流行的文档格式转换工具包， `Window` 下安装说明详见  https://www.pandoc.org/installing.html#windows。
+涉及到文档的转换操作，需要依赖这个组件，`pandoc` 是开源社区中较为流行的文档格式转换工具包。
+
+（1）方法1。通过以下命令在Windows 上安装 pandoc
+
+```sh
+# 需要事先在 Windows 上安装 Chocolatey
+choco install pandoc
+```
+
+（2）方法2。 通过msi 引导文件安装， 详见  https://www.pandoc.org/installing.html#windows。
 
 ## 2.5 SQLite browser
 

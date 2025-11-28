@@ -16,14 +16,13 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template, Response)
 
-from apps.paper_review.paper_reviewer import generate_review_report, \
-    convert_markdown_to_html
+from apps.paper_review.paper_reviewer import generate_review_report
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
-from common.docx_md_util import convert_docx_to_md, get_md_file_content
+from common.docx_md_util import convert_docx_to_md
 from common import my_enums, statistic_util
 from common.docx_meta_util import get_doc_info
-from common.html_util import get_html_ctx_from_md
+from common.html_util import convert_md_to_html_with_css
 from common.my_enums import AppType, FileType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info
@@ -364,6 +363,7 @@ def register_routes(app):
         logger.debug(f"absolute_path, {absolute_path}")
         from pathlib import Path
         md_absolute_path = str(Path(absolute_path).with_suffix('.md'))
+        html_absolute_path = str(Path(absolute_path).with_suffix('.html'))
         logger.info(f"文件检查 - 绝对路径: {md_absolute_path}")
         if not os.path.exists(md_absolute_path):
             logger.error(f"文件不存在: {md_absolute_path}")
@@ -380,7 +380,9 @@ def register_routes(app):
         # dt_idx = "md.html"
         # logger.debug(f"return_page {dt_idx}")
         # return render_template(dt_idx, **ctx)
-        html_content = convert_markdown_to_html(int(uid), task_id, get_md_file_content(md_absolute_path), my_cfg)
+        # html_content = convert_markdown_to_html(int(uid), task_id, get_md_file_content(md_absolute_path), my_cfg)
+        html_content = convert_md_to_html_with_css(md_absolute_path, "评审意见")
+        logger.debug(f"return page\n{html_content}")
         return Response(html_content, mimetype='text/html')
 
 
