@@ -1,6 +1,6 @@
 sys:
     #  系统名称(title) 配置
-    name: 巴拉巴拉小魔仙
+    name: 智能问答
     #  是否启用认证， true， 登录后才能使用系统;false 无需登录
     auth: true
     #  自定义数据库配置时的权限认证 token
@@ -8,7 +8,7 @@ sys:
     # 配置可访问的域， 防止跨域攻击
     allowed_origin: http://192,168.1.122
     # 对配置信息进行加密的密钥，长度必须为16/32
-    cypher_key: abaababa
+    cypher_key: abaababaabaababa
 api:
     # 大语言模型 API 基地址
     llm_api_uri: https://api.deepseek.com/v1
@@ -17,12 +17,6 @@ api:
     #  大语言模型 模型名称
     llm_model_name: deepseek-chat
 
-    # 语音识别 API 基地址，需要部署为兼容 OpenAI-API-Compatible
-    asr_api_uri: https://api.your_audio_service_provider.com/v1/
-    # 语音识别 API key
-    asr_api_key: sk-xxxx
-    # 语音识别 API 模型名称
-    asr_model_name: asr
 
     # embedding API 基地址
     embedding_api_uri: https://api.your_audio_service_provider.com/v1/

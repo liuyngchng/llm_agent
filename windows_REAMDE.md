@@ -205,7 +205,7 @@ choco install pandoc
 
 `SQLite browser` 是文件数据库 `SQLite` 的图形化管理工具。本系统使用了 `SQLite` 文件数据库进行相关数据的存储，为了通过GUI界面对 `SQLite` 数据库进行操作，需要下载`SQLite browser`。
 
- `Window` 系统下的安装说明详见链接  https://sqlitebrowser.org/dl/，下载 “DB Browser for SQLite - Standard installer for 64-bit Windows”。
+ `Window` 系统下的安装说明详见链接  https://sqlitebrowser.org/dl/，下载 “`DB Browser for SQLite - Standard installer for 64-bit Windows`”。
 
 当然，如果对 `SQLite`的相关命令很熟悉，可以忽略此部分。
 
@@ -285,6 +285,8 @@ python -m apps.chat.app
 
 说明程序启动了监听端口 19000，启动正常。接下来，在浏览器中输入 http://127.0.0.1:19000，即可看到相应的页面。
 如果运行中看到  `ModuleNotFoundError: No module named 'xxxx`， 则执行 pip install xxxx。
+
+在Windows CMD 的控制台界面中按键 Ctrl + C，即可终止当前运行的服务。
 
 ## 4.2 IDE 运行
 
