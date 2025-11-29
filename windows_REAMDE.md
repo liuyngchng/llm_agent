@@ -322,6 +322,8 @@ choco install pandoc
 
 # 4. 运行程序
 
+## 4.1 运行
+
 完成了3. 小节中的各项配置后，可以开始应用了， 以运行`应用` `apps/chat` 为例，打开 Windows `CMD 控制台` 窗口（**`Win + R`** → 输入 `cmd` → 回车 )，执行以下命令：
 
 ```cmd
@@ -360,7 +362,9 @@ C:\workspace\llm_py_env\Scripts>activate
 说明程序启动了监听端口 19000，启动正常。接下来，在浏览器（强烈建议使用Chrome 浏览器，其他浏览器未进行验证）中输入 http://127.0.0.1:19000 ，即可看到相应的页面。
 如果运行中看到  `ModuleNotFoundError: No module named 'xxxx`， 则在激活虚拟环境（必选项，非常重要）的条件下执行 `pip install xxxx`。
 
-在Windows `CMD` 的控制台界面中按键 `Ctrl + C`，即可终止当前运行的服务（有时候可能按键后没有反应，等待一段时间即可）。
+## 4.2 停止
+
+进入 Windows 的进程管理器，按照名称进行排序，杀死名称为 Python 的进程即可。
 
 
 
