@@ -17,13 +17,13 @@
 
 ## 2.1 python
 
- `Python`语言的工程（代码文件为*.py），需要语言解释器将其翻译为操作系统能理解的可执行文件。
+ `Python`语言的工程（代码文件为`*.py`），需要语言解释器将其翻译为操作系统能理解的可执行文件。类似打开 `*.docx` 文件需要安装 `Office Word` 一样。 
 
-首先下载 `Python`， 版本为 3.12.3
+首先下载 `Python`， 版本为 3.12.3（类似下载 Office Word， 版本为2017）
 
 https://www.python.org/downloads/release/python-3123/
 
-下载 `exe` 文件，进行安装。
+下载 `Windows installer (64-bit)` 文件，进行安装。
 
 *** 注意：在安装过程中务必勾选 “Add Python to PATH” 选项。若没有勾选，后续需要手动进行环境变量配置。这个操作是在 Windows` CMD` 下输入 python 命令能够正确被操作系统理解的基础。***
 
@@ -70,7 +70,7 @@ C:\>cd workspace
 C:\workspace>
 ```
 
-目前你的 `CMD`  窗口中显示的路径应该为 C:\workspace。
+目前你的 `CMD`  窗口中显示的路径应该为 `C:\workspace`。
 
 ## 2.4 下载 python 工程源代码
 
@@ -113,7 +113,7 @@ C:\workspace\gitee_llm_agent-master 的目录
 
 接下来将在目录 `C:\workspace\llm_py_env` 下创建虚拟环境，这个目录将作为 `python.exe` 的新家，以及下载的所有关联文件的目录，后续不需要的时候只要删除这个目录就可以把自己的电脑清理干净了。
 
-**（1）安装创建虚拟环境命令 ``virtualenv`。**
+**（1）安装创建虚拟环境命令 `virtualenv`。**
 
 打开 Windows `CMD 控制台` 窗口（**`Win + R`** → 输入 `cmd` → 回车 )，执行以下命令：
 
