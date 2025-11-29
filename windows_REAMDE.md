@@ -72,7 +72,7 @@ C:\workspace>
 
 ## 2.4 下载 python 工程源代码
 
- 打开页面 https://gitee.com/liuyngchng/gitee_llm_agent， 点击 ”`克隆/下载`“ 按钮， 选择右上角的 ”`下载ZIP`“， 浏览器会下载一个文件 `gitee_llm_agent-master.zip`。 将这个zip包拷贝至文件夹 `C:\workspace` 下，鼠标选中这个 zip 文件， 右键-> 解压到当前目录， 会看到生成新的目录 `C:\workspace\gitee_llm_agent-master`， 该文件夹下的 文件清单如下所示。
+ 打开页面 https://gitee.com/liuyngchng/gitee_llm_agent  ， 点击 ”`克隆/下载`“ 按钮， 选择右上角的 ”`下载ZIP`“， 浏览器会下载一个文件 `gitee_llm_agent-master.zip`。 将这个zip包拷贝至文件夹 `C:\workspace` 下，鼠标选中这个 zip 文件， 右键-> 解压到当前目录， 会看到生成新的目录 `C:\workspace\gitee_llm_agent-master`， 该文件夹下的 文件清单如下所示。
 
 ```
 C:\workspace\gitee_llm_agent-master 的目录
@@ -116,7 +116,7 @@ C:\workspace\gitee_llm_agent-master 的目录
 打开 Windows `CMD 控制台` 窗口（**`Win + R`** → 输入 `cmd` → 回车 )，执行以下命令：
 
 ```cmd
-# （1）输入 cd /workspac, 回车，进入工作目录
+# （1）输入 cd /workspace, 回车，进入工作目录
 C:\Users\your_name>cd /workspace
 
 C:\workspace>
@@ -130,7 +130,7 @@ Requirement already satisfied: virtualenv in c:\program files\python312\lib\site
 打开 Windows `CMD 控制台` 窗口（**`Win + R`** → 输入 `cmd` → 回车 )，执行以下命令：
 
 ```cmd
-# （1）输入 cd /workspac, 回车，进入工作目录
+# （1）输入 cd /workspace, 回车，进入工作目录
 C:\Users\your_name>cd /workspace
 
 C:\workspace>
@@ -167,7 +167,7 @@ C:\Program Files\Python312\Scripts\pip.exe
 完成之后，打开 Windows `CMD 控制台` 窗口（**`Win + R`** → 输入 `cmd` → 回车 )，执行以下命令：
 
 ```cmd
-# （1）输入 cd /workspac, 回车，进入工作目录
+# （1）输入 cd /workspace, 回车，进入工作目录
 C:\Users\your_name>cd /workspace
 
 C:\workspace>
@@ -251,12 +251,12 @@ dir
 
 可以先不安装，如果报错信息中出现 `pandoc` 的字样再进行安装。
 
-（1）方法1（推荐新手使用）。通过Windows msi 引导文件安装， 详见  https://www.pandoc.org/installing.html#windows。
+（1）方法1（推荐新手使用）。通过Windows msi 引导文件安装， 详见  https://www.pandoc.org/installing.html#windows 。
 
 （2）方法2（高级用法，新手勿碰）。通过以下命令在Windows 上安装 pandoc
 
 ```sh
-# 需在Windows上安装Chocolatey，详见 https://docs.chocolatey.org/en-us/choco/setup
+# 需在Windows上安装 Chocolatey，详见 https://docs.chocolatey.org/en-us/choco/setup
 choco install pandoc
 ```
 
@@ -266,7 +266,7 @@ choco install pandoc
 
 `SQLite browser` 是文件数据库 `SQLite` 的图形化管理工具。本系统使用了 `SQLite` 文件数据库进行相关数据的存储，为了通过GUI界面对 `SQLite` 数据库进行操作，需要下载`SQLite browser`。
 
- `Window` 系统下的安装说明详见链接  https://sqlitebrowser.org/dl/，下载 “`DB Browser for SQLite - Standard installer for 64-bit Windows`”。
+ `Window` 系统下的安装说明详见链接  https://sqlitebrowser.org/dl/ ，下载 “`DB Browser for SQLite - Standard installer for 64-bit Windows`”。
 
 当然，如果对 `SQLite`的相关命令很熟悉，可以忽略此部分。
 
@@ -341,23 +341,23 @@ C:\workspace\llm_py_env\Scripts>activate
 
 (llm_py_env) C:\workspace\gitee_llm_agent-master>
 
-# (5) 输入 python -m apps.chat.app， 回车，执行启动指令，
-(llm_py_env) C:\workspace\gitee_llm_agent-master> python -m apps.chat.app
+# (5) 输入 pythonw -m apps.chat.app， 回车，执行启动指令，
+(llm_py_env) C:\workspace\gitee_llm_agent-master> pythonw -m apps.chat.app
 
 ```
 
 此时，运行时的当前目录 "./" 为项目文件根目录`C:\workspace\gitee_llm_agent-maste`， 启动时会读取当前目录下的的 `cfg.db`, `cfg.yml`, `logging.conf` 这3个文件。
 
-启动后，会看到日志中显示:
+启动后，会看到控制台或者根目录下的文本文件 apps.xxxx.log  中看到:
 
 ```sh
-2025-11-26 10:50:26,981 - 126491346956608 - __main__ - INFO -<module> - [251]- listening_port 19000
+2025-11-01 10:50:26,981 - 126491346956608 - __main__ - INFO -<module> - [251]- listening_port 19000
  * Serving Flask app 'app'
  * Debug mode: off
 
 ```
 
-说明程序启动了监听端口 19000，启动正常。接下来，在浏览器（强烈建议使用Chrome 浏览器，其他浏览器未进行验证）中输入 http://127.0.0.1:19000，即可看到相应的页面。
+说明程序启动了监听端口 19000，启动正常。接下来，在浏览器（强烈建议使用Chrome 浏览器，其他浏览器未进行验证）中输入 http://127.0.0.1:19000 ，即可看到相应的页面。
 如果运行中看到  `ModuleNotFoundError: No module named 'xxxx`， 则在激活虚拟环境（必选项，非常重要）的条件下执行 `pip install xxxx`。
 
 在Windows `CMD` 的控制台界面中按键 `Ctrl + C`，即可终止当前运行的服务（有时候可能按键后没有反应，等待一段时间即可）。
