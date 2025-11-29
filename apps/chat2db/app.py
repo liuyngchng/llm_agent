@@ -17,7 +17,6 @@ import common.cfg_util as cfg_utl
 from flask import Flask, render_template, Response, request, jsonify, redirect, url_for, send_from_directory, abort
 
 from apps.chat2db.audio import transcribe_webm_audio_bytes
-from common import my_enums
 from common.bp_auth import auth_bp, auth_info, get_client_ip
 from common.const import SESSION_TIMEOUT
 from common.my_enums import DataType, DBType, AppType
