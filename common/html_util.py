@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+import functools
 import os
 import time
 
@@ -210,7 +211,9 @@ def _is_valid_html_table(html_content: str) -> bool:
     return indicators_found >= 3
 
 
-def convert_md_to_html_with_css(md_path: str, html_title: str, css_link: str = '<link rel="stylesheet" href="/static/paper_review_result.css">') -> str:
+@functools.lru_cache(maxsize=128)
+def convert_md_to_html_with_css(md_path: str, html_title: str,
+    css_link: str = '<link rel="stylesheet" href="/static/paper_review_result.css">') -> str:
     """
     转换Markdown为HTML，采用与任务列表页面一致的风格
     """

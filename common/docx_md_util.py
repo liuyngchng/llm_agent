@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+import functools
 import hashlib
 import logging.config
 import os
@@ -37,6 +38,7 @@ def save_content_to_md_file(md_txt: str, file_path: str, output_abs_path: bool =
         return error_msg
 
 
+@functools.lru_cache(maxsize=128)
 def convert_docx_to_md(docx_path: str, output_abs_path: bool = False) -> str:
     """
     # 使用前需要安装 pandoc: https://pandoc.org/installing.html
