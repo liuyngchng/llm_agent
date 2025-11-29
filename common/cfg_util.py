@@ -16,6 +16,7 @@ from decimal import Decimal
 from typing import Any
 import base64
 import functools
+import platform
 
 from common.cm_utils import get_time_str
 from common.const import CFG_DB_FILE, USER_SAMPLE_DATA_DB, CFG_DB_URI
@@ -294,7 +295,9 @@ def del_db_cache(key: str) -> bool:
     :param key: cache key
     """
     del_result = False
-    exec_sql = f"delete from cache_info where key='{key}' limit 1;"
+    exec_sql = f"delete from cache_info where key='{key}'"
+    if platform.system() == "Linux":
+        exec_sql += " limit 1"
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             exec_sql = exec_sql.replace('\n', ' ')
@@ -483,7 +486,9 @@ def save_usr_prompt_template(uid: int, template_name: str, template_value: str):
             prompt = prompt_info['data']
             if prompt:
                 logger.info(f"user_prompt_template_for_key_{template_name}_exist_to_update")
-                exec_sql = f"""update prompt_template set value = '{template_value}' where uid = {uid} and name = '{template_name}' limit 1"""
+                exec_sql = f"""update prompt_template set value = '{template_value}' where uid = {uid} and name = '{template_name}'"""
+                if platform.system() == "Linux":
+                    exec_sql += " limit 1"
             else:
                 exec_sql = f"""insert into prompt_template (uid, name, value) values ({uid}, '{template_name}', '{template_value}')"""
             result = insert_del_sqlite(my_conn, exec_sql)

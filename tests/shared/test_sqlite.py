@@ -3,6 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 import json
+import platform
 import sqlite3
 
 def test_update():
@@ -32,7 +33,10 @@ def test_update():
 
     # 测试UPDATE with LIMIT
     try:
-        cursor.execute("UPDATE test_table SET value = 999 WHERE name = 'test1' LIMIT 1")
+        sql ="UPDATE test_table SET value = 999 WHERE name = 'test1"
+        if platform.system() == "Linux":
+            sql += " limit 1"
+        cursor.execute(sql)
         conn.commit()
         print("✅ UPDATE with LIMIT 执行成功!")
     except sqlite3.OperationalError as e:

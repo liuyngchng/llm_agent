@@ -4,6 +4,7 @@
 """
 向量库元数据管理
 """
+import platform
 import sqlite3
 import time
 
@@ -82,7 +83,9 @@ class VdbMeta:
     def active_vdb_file_info(file_id: int, file_path: str):
         if not file_id or not file_path:
             raise RuntimeError(f"param_null_err, {file_id}, {file_path}")
-        sql = f"update vdb_file_info set file_path = '{file_path}' where id = {file_id} limit 1"
+        sql = f"update vdb_file_info set file_path = '{file_path}' where id = {file_id}"
+        if platform.system() == "Linux":
+            sql += " limit 1"
         logger.info(f"update_file_info_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         logger.info(f"update_file_info_dt {my_dt}")
@@ -142,7 +145,9 @@ class VdbMeta:
     def set_user_default_vdb(uid: int, vdb_id: int):
         if not uid or not vdb_id:
             raise RuntimeError(f"set_default_vdb_param_null_err, {uid}, {vdb_id}")
-        sql = f"update vdb_info set is_default = 1 where uid = {uid} and id = {vdb_id} limit 1"
+        sql = f"update vdb_info set is_default = 1 where uid = {uid} and id = {vdb_id}"
+        if platform.system() == "Linux":
+            sql += " limit 1"
         logger.debug(f"set_default_vdb_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         logger.debug(f"set_default_vdb_dt {my_dt}")
@@ -194,7 +199,9 @@ class VdbMeta:
 
     @staticmethod
     def delete_vdb_file_by_uid_vbd_id_file_name(file_name: str, uid: int, vdb_id: int):
-        sql = f"delete from vdb_file_info where name ='{file_name}' and uid={uid} and vdb_id={vdb_id} limit 1 "
+        sql = f"delete from vdb_file_info where name ='{file_name}' and uid={uid} and vdb_id={vdb_id}"
+        if platform.system() == "Linux":
+            sql += " limit 1"
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_by_uid_vbd_id_file_name_sql, {sql}")
             my_dt = insert_del_sqlite(my_conn, sql)
@@ -203,7 +210,9 @@ class VdbMeta:
 
     @staticmethod
     def delete_vdb_file_by_task_id(task_id: int):
-        sql = f"delete from vdb_file_info where task_id={task_id} limit 1"
+        sql = f"delete from vdb_file_info where task_id={task_id}"
+        if platform.system() == "Linux":
+            sql += " limit 1"
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_by_vbd_task_id_sql, {sql}")
             my_dt = insert_del_sqlite(my_conn, sql)
@@ -215,7 +224,9 @@ class VdbMeta:
         if not file_id:
             logger.error(f"file_id_null_err, {file_id}")
             return
-        sql = f"delete from vdb_file_info where id={file_id} limit 1 "
+        sql = f"delete from vdb_file_info where id={file_id}"
+        if platform.system() == "Linux":
+            sql += " limit 1"
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_sql, {sql}")
             my_dt = insert_del_sqlite(my_conn, sql)
@@ -224,7 +235,9 @@ class VdbMeta:
 
     @staticmethod
     def delete_vdb_file_by_uid_vbd_id_file_id(file_id: int, uid: int, vdb_id: int):
-        sql = f"delete from vdb_file_info where id ={file_id} and uid={uid} and vdb_id={vdb_id} limit 1 "
+        sql = f"delete from vdb_file_info where id ={file_id} and uid={uid} and vdb_id={vdb_id}"
+        if platform.system() == "Linux":
+            sql += " limit 1"
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_by_uid_vbd_id_file_id_sql, {sql}")
             my_dt = insert_del_sqlite(my_conn, sql)
@@ -258,7 +271,9 @@ class VdbMeta:
     def update_vdb_file_path(file_id: int, file_path: str):
         if not file_id or not file_path:
             raise RuntimeError(f"param_null_err, {file_id}, {file_path}")
-        sql = f"update vdb_file_info set file_path = '{file_path}' where id = {file_id} limit 1"
+        sql = f"update vdb_file_info set file_path = '{file_path}' where id = {file_id}"
+        if platform.system() == "Linux":
+            sql += " limit 1"
         logger.info(f"update_file_info_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         logger.info(f"update_file_info_dt {my_dt}")
@@ -269,9 +284,11 @@ class VdbMeta:
         if not file_id or not process_info:
             raise RuntimeError(f"param_null_err, {file_id}, {process_info}")
         if percent == -1:
-            sql = f"update vdb_file_info set process_info = '{process_info}' where id = {file_id} limit 1"
+            sql = f"update vdb_file_info set process_info = '{process_info}' where id = {file_id}"
         else:
-            sql = f"update vdb_file_info set process_info = '{process_info}', percent={percent} where id = {file_id} limit 1"
+            sql = f"update vdb_file_info set process_info = '{process_info}', percent={percent} where id = {file_id}"
+        if platform.system() == "Linux":
+            sql += " limit 1"
         logger.info(f"update_file_info_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         logger.info(f"update_file_info_dt {my_dt}")

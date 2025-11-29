@@ -6,6 +6,7 @@
 """
 import json
 import logging.config
+import platform
 import sqlite3
 
 from common.cfg_util import insert_del_sqlite, sqlite_output
@@ -101,7 +102,9 @@ def delete_task(task_id: int):
     :param task_id: process task id
     :return:
     """
-    sql = f"delete from doc_file_info where task_id ={task_id} limit 1 "
+    sql = f"delete from doc_file_info where task_id ={task_id}"
+    if platform.system() == "Linux":
+        sql += " limit 1"
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         logger.info(f"delete_docx_info_by_task_id_sql, {sql}")
         my_dt = insert_del_sqlite(my_conn, sql)
@@ -121,9 +124,11 @@ def update_process_info(uid: int, task_id: int, process_info: str, percent = -1)
     if not task_id or not process_info:
         raise RuntimeError(f"{uid}, param_null_err, {task_id}, {process_info}")
     if percent == -1:
-        sql = f"update doc_file_info set process_info = '{process_info}' where uid = {uid} and task_id = {task_id} limit 1"
+        sql = f"update doc_file_info set process_info = '{process_info}' where uid = {uid} and task_id = {task_id}"
     else:
-        sql = f"update doc_file_info set process_info = '{process_info}', percent= {percent} where uid = {uid} and task_id = {task_id} limit 1"
+        sql = f"update doc_file_info set process_info = '{process_info}', percent= {percent} where uid = {uid} and task_id = {task_id}"
+    if platform.system() == "Linux":
+        sql += " limit 1"
     logger.debug(f"{uid}, {task_id}, update_doc_file_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.debug(f"{uid}, {task_id}, update_doc_file_info_dt, {my_dt}")
@@ -138,7 +143,9 @@ def set_doc_info_para_task_created_flag(uid: int, task_id: int):
     """
     if not task_id:
         raise RuntimeError(f"{uid}, param_null_err, {task_id}")
-    sql = f"update doc_file_info set is_para_task_created = 1 where task_id = {task_id} limit 1"
+    sql = f"update doc_file_info set is_para_task_created = 1 where task_id = {task_id}"
+    if platform.system() == "Linux":
+        sql += " limit 1"
     logger.info(f"{uid}, update_doc_file_info_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"{uid}, update_doc_file_info_dt, {my_dt}")
@@ -202,7 +209,9 @@ def save_gen_para_txt(task_id: int, para_id: int, gen_txt: str, word_count: int,
     escaped_gen_txt = gen_txt.replace("'", "''")
     update_time = get_time_str()
     sql = (f"update doc_para_info set gen_txt='{escaped_gen_txt}',word_count={word_count},contains_mermaid={contains_mermaid},"
-       f"update_time='{update_time}',status=1 where task_id={task_id} and para_id = {para_id} limit 1")
+       f"update_time='{update_time}',status=1 where task_id={task_id} and para_id = {para_id}")
+    if platform.system() == "Linux":
+        sql += " limit 1"
     logger.info(f"save_gen_para_txt_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"save_gen_para_txt_dt, {my_dt}")
@@ -283,7 +292,9 @@ def update_gen_txt_count_by_task_id(task_id: int, word_count: int):
     """
     if not task_id or not word_count:
         raise RuntimeError(f"param_null_err, {task_id}, {word_count}")
-    sql = f"update doc_file_info set word_count = {word_count} where task_id = {task_id} limit 1"
+    sql = f"update doc_file_info set word_count = {word_count} where task_id = {task_id}"
+    if platform.system() == "Linux":
+        sql += " limit 1"
     logger.info(f"update_docx_gen_txt_count_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"update_docx_gen_txt_count_dt {my_dt}")
@@ -294,7 +305,9 @@ def save_outline_by_task_id(task_id: int, outline: str):
     """
     if not task_id or not outline:
         raise RuntimeError(f"param_null_err, {task_id}, {outline}")
-    sql = f"update doc_file_info set outline = '{outline}' where task_id = {task_id} limit 1"
+    sql = f"update doc_file_info set outline = '{outline}' where task_id = {task_id}"
+    if platform.system() == "Linux":
+        sql += " limit 1"
     logger.info(f"update_docx_outline_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"update_docx_outline_dt {my_dt}")
@@ -306,7 +319,9 @@ def update_img_count_by_task_id(task_id: int, img_count: int):
     """
     if not task_id or not img_count:
         raise RuntimeError(f"param_null_err, {task_id}, {img_count}")
-    sql = f"update doc_file_info set img_count = {img_count} where task_id = {task_id} limit 1"
+    sql = f"update doc_file_info set img_count = {img_count} where task_id = {task_id}"
+    if platform.system() == "Linux":
+        sql += " limit 1"
     logger.info(f"update_img_count_sql, {sql}")
     my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
     logger.info(f"update_img_count_dt {my_dt}")
