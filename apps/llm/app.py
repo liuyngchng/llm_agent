@@ -525,5 +525,5 @@ load_model()
 if __name__ == '__main__':
     # port = get_console_arg1()
     port = 16000
-    logger.info(f"Starting {model_name} API server, listening on port {port}, mock_mode: {is_mock}")
+    logger.info(f"Starting {model_name} API server, listening_port {port}, mock_mode: {is_mock}")
     app.run(host='0.0.0.0', port=port, threaded=True)

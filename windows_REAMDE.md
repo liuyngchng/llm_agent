@@ -344,7 +344,7 @@ C:\workspace\llm_py_env\Scripts>activate
 (llm_py_env) C:\workspace\gitee_llm_agent-master>
 
 # (5) 输入 pythonw -m apps.chat.app， 回车，执行启动指令，
-(llm_py_env) C:\workspace\gitee_llm_agent-master> pythonw -m apps.chat.app
+(llm_py_env) C:\workspace\gitee_llm_agent-master> python -m apps.chat.app
 
 ```
 
@@ -364,7 +364,7 @@ C:\workspace\llm_py_env\Scripts>activate
 
 ## 4.2 停止
 
-进入 Windows 的进程管理器，按照名称进行排序，杀死名称为 Python 的进程即可。
+按`Ctrl + C`键，等待程序从控制台窗口退出（需要等待一会儿）。或者，进入 Windows 的进程管理器，按照名称进行排序，杀死名称为 Python 的进程即可。
 
 
 
