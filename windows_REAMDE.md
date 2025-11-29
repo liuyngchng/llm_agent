@@ -272,7 +272,17 @@ choco install pandoc
 
 # 3. 软件配置
 
-下面以启动单个应用`apps\chat`程序为例，进行系统配置说明。如果启动别的应用，例如 `apps\chat2db`， 则将下面所有路径中的 `apps\chat`替换为 `apps\chat2db`。
+下面以启动单个应用`apps\chat`程序为例，进行系统配置说明。每次选定将要启动的应用(例如 `apps/chat`)后, 需要将 `apps/chat`目录下的 `cfg.db.template`, `cfg.yml.template`, `logging.conf` 这三个文件拷贝至项目根目录，并重新命名为 `cfg.db`, `cfg.yml`, `logging.conf` ，以 `apps/chat` 为例，如表 3-1 所示。
+
+<center> <b>表 3-1 配置文件操作清单</b> </center>
+
+| No.  | 原来的目录                                                   | 新目录                                             | 操作                                       |
+| ---- | ------------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------ |
+| 1    | `C:\workspace\gitee_llm_agent-master\apps\chat\cfg.db.template` | `C:\workspace\gitee_llm_agent-master\cfg.db`       | 拷贝、粘贴、重命名即可                     |
+| 2    | `C:\workspace\gitee_llm_agent-master\apps\chat\cfg.yml.template` | `C:\workspace\gitee_llm_agent-master\cfg.yml`      | 拷贝、粘贴、重命名后，还需配置大模型 `API` |
+| 3    | `C:\workspace\gitee_llm_agent-master\apps\chat\logging.conf` | `C:\workspace\gitee_llm_agent-master\logging.conf` | 拷贝、粘贴即可                             |
+
+如果启动别的应用，例如 `apps\chat2db`， 则将文档中所有路径中的 `apps\chat`替换为 `apps\chat2db`。
 
 ## 3.1 `cfg.db`
 
@@ -347,7 +357,7 @@ C:\workspace\llm_py_env\Scripts>activate
 
 ```
 
-说明程序启动了监听端口 19000，启动正常。接下来，在浏览器中输入 http://127.0.0.1:19000，即可看到相应的页面。
+说明程序启动了监听端口 19000，启动正常。接下来，在浏览器（强烈建议使用Chrome 浏览器，其他浏览器未进行验证）中输入 http://127.0.0.1:19000，即可看到相应的页面。
 如果运行中看到  `ModuleNotFoundError: No module named 'xxxx`， 则在激活虚拟环境（必选项，非常重要）的条件下执行 `pip install xxxx`。
 
 在Windows `CMD` 的控制台界面中按键 `Ctrl + C`，即可终止当前运行的服务（有时候可能按键后没有反应，等待一段时间即可）。
