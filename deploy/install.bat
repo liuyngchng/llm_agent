@@ -1,133 +1,450 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: ÉèÖÃ¹¤×÷Ä¿Â¼ºÍÈÕÖ¾ÎÄ¼þ
+set WORKSPACE=C:\workspace
+set LOG_FILE=%WORKSPACE%\install_log_%DATE:~0,4%_%DATE:~5,2%_%DATE:~8,2%.txt
+set PIP_LOG=%WORKSPACE%\pip_install_log.txt
+
+:: ´´½¨¹¤×÷Ä¿Â¼
+if not exist "%WORKSPACE%" (
+    mkdir "%WORKSPACE%"
+)
+
+echo ======================================== > "%LOG_FILE%"
+echo   LLM Agent ×Ô¶¯»¯°²×°½Å±¾ÈÕÖ¾ >> "%LOG_FILE%"
+echo   ¿ªÊ¼Ê±¼ä: %DATE% %TIME% >> "%LOG_FILE%"
+echo   Ö÷ÈÕÖ¾ÎÄ¼þ: %LOG_FILE% >> "%LOG_FILE%"
+echo   PIP°²×°ÈÕÖ¾: %PIP_LOG% >> "%LOG_FILE%"
+echo ======================================== >> "%LOG_FILE%"
+echo. >> "%LOG_FILE%"
+
+:: ÏÔÊ¾ÈÕÖ¾ÎÄ¼þÎ»ÖÃ
 echo ========================================
-echo   LLM Agent è‡ªåŠ¨åŒ–å®‰è£…è„šæœ¬
+echo  LLM Agent ×Ô¶¯»¯°²×°½Å±¾
 echo ========================================
 echo.
+echo °²×°½ø¶ÈÈÕÖ¾ÎÄ¼þ:
+echo   %LOG_FILE%
+echo.
+echo PIP°²×°ÏêÏ¸ÈÕÖ¾:
+echo   %PIP_LOG%
+echo.
+echo Çë±£³Ö´°¿Ú´ò¿ª£¬°²×°¹ý³ÌÖÐ¿É²é¿´ÈÕÖ¾ÎÄ¼þÁË½â½ø¶È
+echo.
+echo °´ÈÎÒâ¼ü¿ªÊ¼°²×°...
+pause >nul
+echo.
 
-:: æ£€æŸ¥æ˜¯å¦ä»¥ç®¡ç†å‘˜èº«ä»½è¿è¡Œ
+:: Í¬Ê±Êä³öµ½ÆÁÄ»ºÍÈÕÖ¾
+call :LOG "========================================"
+call :LOG "  LLM Agent ×Ô¶¯»¯°²×°½Å±¾"
+call :LOG "========================================"
+call :LOG "Ö÷ÈÕÖ¾ÎÄ¼þ: %LOG_FILE%"
+call :LOG "PIP°²×°ÈÕÖ¾: %PIP_LOG%"
+call :LOG ""
+
+:: ¼ì²éÊÇ·ñÒÔ¹ÜÀíÔ±Éí·ÝÔËÐÐ
+call :LOG "¼ì²é¹ÜÀíÔ±È¨ÏÞ..."
 net session >nul 2>&1
-if %errorLevel% neq 0 (
-    echo è¯·ä»¥ç®¡ç†å‘˜èº«ä»½è¿è¡Œæ­¤è„šæœ¬ï¼
+if !errorlevel! neq 0 (
+    call :LOG "´íÎó: ÇëÒÔ¹ÜÀíÔ±Éí·ÝÔËÐÐ´Ë½Å±¾£¡"
+    echo ´íÎó: ÇëÒÔ¹ÜÀíÔ±Éí·ÝÔËÐÐ´Ë½Å±¾£¡
     pause
     exit /b 1
 )
+call :LOG "¹ÜÀíÔ±È¨ÏÞÈ·ÈÏ"
 
-:: è®¾ç½®å·¥ä½œç›®å½•
-set WORKSPACE=C:\workspace
+:: ÉèÖÃÆäËûÄ¿Â¼
 set PROJECT_DIR=%WORKSPACE%\gitee_llm_agent-master
 set VENV_DIR=%WORKSPACE%\llm_py_env
 set DOWNLOAD_URL=https://gitee.com/liuyngchng/gitee_llm_agent/repository/archive/master.zip
+set ZIP_FILE=%WORKSPACE%\gitee_llm_agent-master.zip
 
-:: åˆ›å»ºå·¥ä½œç›®å½•
-echo [1/8] åˆ›å»ºå·¥ä½œç›®å½•...
+call :LOG "¹¤×÷Ä¿Â¼ÉèÖÃ: %WORKSPACE%"
+call :LOG "ÏîÄ¿Ä¿Â¼: %PROJECT_DIR%"
+call :LOG "ÐéÄâ»·¾³Ä¿Â¼: %VENV_DIR%"
+
+:: ´´½¨¹¤×÷Ä¿Â¼
+call :LOG "[1/8] ´´½¨¹¤×÷Ä¿Â¼..."
 if not exist "%WORKSPACE%" (
     mkdir "%WORKSPACE%"
-    echo   å·²åˆ›å»ºå·¥ä½œç›®å½•: %WORKSPACE%
-) else (
-    echo   å·¥ä½œç›®å½•å·²å­˜åœ¨: %WORKSPACE%
-)
-
-:: æ£€æŸ¥Pythonå®‰è£…
-echo [2/8] æ£€æŸ¥PythonçŽ¯å¢ƒ...
-python -V >nul 2>&1
-if %errorLevel% neq 0 (
-    echo   æœªæ£€æµ‹åˆ°Pythonï¼Œè¯·å…ˆå®‰è£…Python 3.12.3
-    echo   ä¸‹è½½åœ°å€: https://www.python.org/downloads/release/python-3123/
-    pause
-    exit /b 1
-)
-
-python -c "import sys; print('   Pythonç‰ˆæœ¬:' + sys.version)" 2>nul
-pip -V >nul 2>&1
-if %errorLevel% eq 0 (
-    echo   pipå·²å®‰è£…
-) else (
-    echo   pipæœªæ­£ç¡®å®‰è£…
-    pause
-    exit /b 1
-)
-
-:: ä¸‹è½½é¡¹ç›®ä»£ç 
-echo [3/8] ä¸‹è½½é¡¹ç›®æºä»£ç ...
-cd /d "%WORKSPACE%"
-if exist "%PROJECT_DIR%" (
-    echo   é¡¹ç›®ç›®å½•å·²å­˜åœ¨ï¼Œè·³è¿‡ä¸‹è½½
-) else (
-    powershell -Command "Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile 'gitee_llm_agent-master.zip'"
-    if exist "gitee_llm_agent-master.zip" (
-        powershell -Command "Expand-Archive -Path 'gitee_llm_agent-master.zip' -DestinationPath '.' -Force"
-        del gitee_llm_agent-master.zip
-        echo   æºä»£ç ä¸‹è½½è§£åŽ‹å®Œæˆ
+    if !errorlevel! == 0 (
+        call :LOG "   ÒÑ´´½¨¹¤×÷Ä¿Â¼: %WORKSPACE%"
     ) else (
-        echo   ä¸‹è½½å¤±è´¥ï¼Œè¯·æ£€æŸ¥ç½‘ç»œè¿žæŽ¥
+        call :LOG "   ´íÎó: ´´½¨Ä¿Â¼Ê§°Ü: %WORKSPACE%"
+        echo ´íÎó: ´´½¨Ä¿Â¼Ê§°Ü: %WORKSPACE%
+        pause
+        exit /b 1
+    )
+) else (
+    call :LOG "   ¹¤×÷Ä¿Â¼ÒÑ´æÔÚ: %WORKSPACE%"
+)
+
+:: ¼ì²éPython°²×°
+call :LOG "[2/8] ¼ì²éPython»·¾³..."
+python --version >nul 2>&1
+if !errorlevel! neq 0 (
+    call :LOG "   ´íÎó: Î´¼ì²âµ½Python£¬ÇëÏÈ°²×°Python 3.12.3"
+    echo ´íÎó: Î´¼ì²âµ½Python£¬ÇëÏÈ°²×°Python 3.12.3
+    echo ÏÂÔØµØÖ·: https://www.python.org/downloads/release/python-3123/
+    pause
+    exit /b 1
+)
+
+for /f "tokens=*" %%i in ('python --version 2^>^&1') do set PYTHON_VERSION=%%i
+call :LOG "   %PYTHON_VERSION%"
+echo   ¼ì²âµ½: %PYTHON_VERSION%
+
+pip --version >nul 2>&1
+if !errorlevel! == 0 (
+    call :LOG "   pipÒÑ°²×°"
+    echo   pipÒÑ°²×°
+) else (
+    call :LOG "   ´íÎó: pipÎ´ÕýÈ·°²×°"
+    echo ´íÎó: pipÎ´ÕýÈ·°²×°
+    pause
+    exit /b 1
+)
+
+:: ÊÖ¶¯ÏÂÔØ²½Öè
+call :LOG "[3/8] ×¼±¸ÏÂÔØÏîÄ¿Ô´´úÂë..."
+echo [3/8] ×¼±¸ÏÂÔØÏîÄ¿Ô´´úÂë...
+if not exist "%PROJECT_DIR%" (
+    call :LOG "   ÐèÒªÊÖ¶¯ÏÂÔØÏîÄ¿Ô´´úÂë"
+    
+    :: ÏÔÊ¾ÊÖ¶¯ÏÂÔØÖ¸Òý
+    echo.
+    echo ========================================
+    echo  ÊÖ¶¯ÏÂÔØÖ¸Òý
+    echo ========================================
+    echo.
+    echo ÓÉÓÚÍøÕ¾ÏÂÔØÑéÖ¤£¬ÐèÒªÄúÊÖ¶¯ÏÂÔØÏîÄ¿ÎÄ¼þ£º
+    echo.
+    echo ²½Öè1: ´ò¿ªä¯ÀÀÆ÷
+    echo ²½Öè2: ·ÃÎÊ: %DOWNLOAD_URL%
+    echo ²½Öè3: Èç¹ûÓÐÑéÖ¤£¬ÇëÍê³ÉÑéÖ¤ºóÏÂÔØZIPÎÄ¼þ
+    echo ²½Öè4: ½«ÏÂÔØµÄÎÄ¼þ±£´æÎª: %ZIP_FILE%
+    echo.
+    echo ÏÂÔØÍê³Éºó£¬ÇëÈ·±£ÎÄ¼þ´æÔÚÓÚ´ËÎ»ÖÃ£º
+    echo   %ZIP_FILE%
+    echo.
+    echo °´ÈÎÒâ¼ü¼ÌÐø£¨È·±£ÎÄ¼þÒÑÏÂÔØÍê³É£©...
+    pause
+    
+    :: ¼ì²éÎÄ¼þÊÇ·ñ´æÔÚ
+    call :LOG "   ¼ì²éÊÖ¶¯ÏÂÔØµÄÎÄ¼þ..."
+    if not exist "%ZIP_FILE%" (
+        call :LOG "   ´íÎó: ÎÄ¼þ²»´æÔÚ£¬ÇëÈ·±£ÒÑÏÂÔØ²¢±£´æµ½ÕýÈ·Î»ÖÃ"
+        echo.
+        echo ´íÎó: Î´ÕÒµ½ÎÄ¼þ %ZIP_FILE%
+        echo ÇëÈ·±£ÒÑÍê³ÉÊÖ¶¯ÏÂÔØ²¢½«ÎÄ¼þ±£´æµ½ÉÏÊöÎ»ÖÃ
+        echo.
+        pause
+        exit /b 1
+    )
+    
+    :: ¼ì²éÎÄ¼þ´óÐ¡
+    for %%F in ("%ZIP_FILE%") do set FILE_SIZE=%%~zF
+    call :LOG "   ÏÂÔØÎÄ¼þ´óÐ¡: !FILE_SIZE! ×Ö½Ú"
+    echo   ÏÂÔØÎÄ¼þ´óÐ¡: !FILE_SIZE! ×Ö½Ú
+    
+    if !FILE_SIZE! LSS 10000 (
+        call :LOG "   ¾¯¸æ: ÎÄ¼þ´óÐ¡Òì³£Ð¡£¬¿ÉÄÜÏÂÔØ²»ÍêÕû"
+        echo.
+        echo ¾¯¸æ: ÎÄ¼þ´óÐ¡Ö»ÓÐ !FILE_SIZE! ×Ö½Ú£¬¿ÉÄÜÏÂÔØ²»ÍêÕû
+        choice /C YN /M "ÊÇ·ñ¼ÌÐø½âÑ¹£¿(Y-¼ÌÐø/N-ÖØÐÂÏÂÔØ)"
+        if !errorlevel! == 2 (
+            call :LOG "   ÓÃ»§Ñ¡ÔñÖØÐÂÏÂÔØ"
+            echo ÇëÖØÐÂÏÂÔØÎÄ¼þ£¬È»ºóÔÙ´ÎÔËÐÐ°²×°½Å±¾
+            pause
+            exit /b 1
+        )
+    )
+    
+    call :LOG "   ¿ªÊ¼½âÑ¹ÎÄ¼þ..."
+    echo   ¿ªÊ¼½âÑ¹ÎÄ¼þ...
+    
+    :: ½âÑ¹ÎÄ¼þ
+    powershell -Command "try { Expand-Archive -Path '%ZIP_FILE%' -DestinationPath '%WORKSPACE%' -Force; exit 0 } catch { exit 1 }"
+    
+    if !errorlevel! == 0 (
+        del "%ZIP_FILE%"
+        call :LOG "   Ô´´úÂë½âÑ¹Íê³É"
+        call :LOG "   ÏîÄ¿Ä¿Â¼: %PROJECT_DIR%"
+        echo   ½âÑ¹³É¹¦£¡
+    ) else (
+        call :LOG "   ´íÎó: ½âÑ¹Ê§°Ü£¬ZIPÎÄ¼þ¿ÉÄÜÒÑËð»µ"
+        echo.
+        echo ´íÎó: ½âÑ¹Ê§°Ü£¡
+        echo ¿ÉÄÜµÄÔ­Òò£º
+        echo   - ÎÄ¼þÏÂÔØ²»ÍêÕû
+        echo   - ÎÄ¼þÒÑËð»µ
+        echo   - ÍøÂçÎÊÌâµ¼ÖÂÎÄ¼þ´íÎó
+        echo.
+        echo ÇëÖØÐÂÏÂÔØÎÄ¼þ£¬È»ºóÔÙ´ÎÔËÐÐ°²×°½Å±¾
+        pause
+        exit /b 1
+    )
+) else (
+    call :LOG "   ÏîÄ¿Ä¿Â¼ÒÑ´æÔÚ£¬Ìø¹ýÏÂÔØ"
+    echo   ÏîÄ¿Ä¿Â¼ÒÑ´æÔÚ£¬Ìø¹ýÏÂÔØ
+)
+
+:: ´´½¨ÐéÄâ»·¾³
+call :LOG "[4/8] ´´½¨PythonÐéÄâ»·¾³..."
+echo [4/8] ´´½¨PythonÐéÄâ»·¾³...
+if exist "%VENV_DIR%" (
+    call :LOG "   ÐéÄâ»·¾³ÒÑ´æÔÚ£¬Ìø¹ý´´½¨"
+    echo   ÐéÄâ»·¾³ÒÑ´æÔÚ£¬Ìø¹ý´´½¨
+) else (
+    call :LOG "   °²×° virtualenv..."
+    echo   °²×° virtualenv...
+    pip install virtualenv --quiet
+    if !errorlevel! neq 0 (
+        call :LOG "   ´íÎó: virtualenv °²×°Ê§°Ü"
+        echo ´íÎó: virtualenv °²×°Ê§°Ü
+        pause
+        exit /b 1
+    )
+    
+    call :LOG "   ´´½¨ÐéÄâ»·¾³µ½: %VENV_DIR%"
+    echo   ´´½¨ÐéÄâ»·¾³µ½: %VENV_DIR%
+    virtualenv "%VENV_DIR%"
+    if !errorlevel! == 0 (
+        call :LOG "   ÐéÄâ»·¾³´´½¨Íê³É: %VENV_DIR%"
+        echo   ÐéÄâ»·¾³´´½¨Íê³É
+    ) else (
+        call :LOG "   ´íÎó: ÐéÄâ»·¾³´´½¨Ê§°Ü"
+        echo ´íÎó: ÐéÄâ»·¾³´´½¨Ê§°Ü
         pause
         exit /b 1
     )
 )
 
-:: åˆ›å»ºè™šæ‹ŸçŽ¯å¢ƒ
-echo [4/8] åˆ›å»ºPythonè™šæ‹ŸçŽ¯å¢ƒ...
-if exist "%VENV_DIR%" (
-    echo   è™šæ‹ŸçŽ¯å¢ƒå·²å­˜åœ¨ï¼Œè·³è¿‡åˆ›å»º
-) else (
-    pip install virtualenv --quiet
-    virtualenv "%VENV_DIR%"
-    echo   è™šæ‹ŸçŽ¯å¢ƒåˆ›å»ºå®Œæˆ: %VENV_DIR%
-)
-
-:: æ¿€æ´»è™šæ‹ŸçŽ¯å¢ƒå¹¶å®‰è£…ä¾èµ–
-echo [5/8] å®‰è£…é¡¹ç›®ä¾èµ–åŒ…...
+:: ¼¤»îÐéÄâ»·¾³²¢°²×°ÒÀÀµ
+call :LOG "[5/8] °²×°ÏîÄ¿ÒÀÀµ°ü..."
+echo [5/8] °²×°ÏîÄ¿ÒÀÀµ°ü...
 call "%VENV_DIR%\Scripts\activate.bat"
 cd /d "%PROJECT_DIR%"
-pip install -r requirements.txt --quiet
-echo   ä¾èµ–åŒ…å®‰è£…å®Œæˆ
+if exist "requirements.txt" (
+    call :LOG "   ¿ªÊ¼°²×°ÒÀÀµ°ü£¬Õâ¿ÉÄÜÐèÒª½Ï³¤Ê±¼ä..."
+    echo.
+    echo ========================================
+    echo  ÕýÔÚ°²×°PythonÒÀÀµ°ü
+    echo ========================================
+    echo.
+    echo Õâ¿ÉÄÜÐèÒª10-30·ÖÖÓ£¬¾ßÌåÈ¡¾öÓÚÍøÂçËÙ¶È...
+    echo.
+    echo ÏêÏ¸°²×°½ø¶ÈÇë²é¿´ÈÕÖ¾ÎÄ¼þ:
+    echo   %PIP_LOG%
+    echo.
+    echo ÇëÄÍÐÄµÈ´ý£¬²»Òª¹Ø±Õ´Ë´°¿Ú...
+    echo.
+    
+    call :LOG "   PIP°²×°ÏêÏ¸ÈÕÖ¾: %PIP_LOG%"
+    
+    :: É¾³ý¿ÉÄÜ´æÔÚµÄ¾ÉÈÕÖ¾ÎÄ¼þ£¬±ÜÃâÈ¨ÏÞ³åÍ»
+    if exist "%PIP_LOG%" (
+        del "%PIP_LOG%"
+    )
+    
+    :: °²×°ÒÀÀµ°ü²¢¼ÇÂ¼ÏêÏ¸ÈÕÖ¾£¨Ê¹ÓÃ×·¼ÓÄ£Ê½±ÜÃâÈ¨ÏÞ³åÍ»£©
+    echo ¿ªÊ¼°²×°ÒÀÀµ°ü£¬Ê±¼ä: %TIME% >> "%PIP_LOG%"
+    echo ======================================== >> "%PIP_LOG%"
+    
+    :: Ê¹ÓÃteeÃüÁîÄ£ÄâÍ¬Ê±Êä³öµ½ÆÁÄ»ºÍÎÄ¼þ£¨Èç¹û¿ÉÓÃ£©£¬·ñÔòÖ»¼ÇÂ¼µ½ÎÄ¼þ
+    where tee >nul 2>&1
+    if !errorlevel! == 0 (
+        echo Ê¹ÓÃteeÃüÁî¼ÇÂ¼ÈÕÖ¾...
+        pip install -r requirements.txt 2>&1 | tee -a "%PIP_LOG%"
+    ) else (
+        echo Ê¹ÓÃ±ê×¼Êä³ö¼ÇÂ¼ÈÕÖ¾...
+        pip install -r requirements.txt >> "%PIP_LOG%" 2>&1
+    )
+    
+    :: ¼ì²é°²×°½á¹û
+    if !errorlevel! == 0 (
+        call :LOG "   ÒÀÀµ°ü°²×°Íê³É"
+        echo   ÒÀÀµ°ü°²×°Íê³É£¡
+        echo   ÏêÏ¸ÈÕÖ¾ÒÑ±£´æµ½: %PIP_LOG%
+    ) else (
+        call :LOG "   ´íÎó: ÒÀÀµ°ü°²×°Ê§°Ü"
+        call :LOG "   Çë²é¿´PIP°²×°ÈÕÖ¾: %PIP_LOG%"
+        echo.
+        echo ´íÎó: ÒÀÀµ°ü°²×°Ê§°Ü£¡
+        echo Çë²é¿´ÏêÏ¸´íÎóÈÕÖ¾: %PIP_LOG%
+        echo.
+        echo »òÊÖ¶¯ÔËÐÐÒÔÏÂÃüÁî²é¿´´íÎó£º
+        echo   call "%VENV_DIR%\Scripts\activate.bat"
+        echo   cd /d "%PROJECT_DIR%"
+        echo   pip install -r requirements.txt
+        echo.
+        pause
+        exit /b 1
+    )
+) else (
+    call :LOG "   ´íÎó: requirements.txt ÎÄ¼þ²»´æÔÚ"
+    call :LOG "   Çë¼ì²éÏîÄ¿Ä¿Â¼ÊÇ·ñÕýÈ·: %PROJECT_DIR%"
+    echo.
+    echo ´íÎó: Î´ÕÒµ½ requirements.txt ÎÄ¼þ
+    echo ÏîÄ¿Ä¿Â¼ÄÚÈÝ£º
+    dir "%PROJECT_DIR%" /B
+    echo.
+    pause
+    exit /b 1
+)
 
-:: é…ç½®åº”ç”¨ï¼ˆä»¥chatåº”ç”¨ä¸ºä¾‹ï¼‰
-echo [6/8] é…ç½®åº”ç”¨ç¨‹åº...
-set APP_NAME=chat
+:: ÅäÖÃÓ¦ÓÃ - ÈÃÓÃ»§Ñ¡Ôñ
+call :LOG "[6/8] ÅäÖÃÓ¦ÓÃ³ÌÐò..."
+echo [6/8] ÅäÖÃÓ¦ÓÃ³ÌÐò...
+echo.
+echo ========================================
+echo  Ñ¡ÔñÒªÆô¶¯µÄÓ¦ÓÃ
+echo ========================================
+echo  1. chat - ÖªÊ¶¿âÎÊ´ð
+echo  2. chat2db - Êý¾Ý²éÑ¯
+echo  3. docx - ÎÄµµ´´×÷
+echo  4. paper_review - AIÆÀÎ¯
+echo.
+
+:SELECT_APP
+set /p APP_CHOICE=ÇëÑ¡ÔñÓ¦ÓÃ±àºÅ (1-4): 
+if "%APP_CHOICE%"=="1" (
+    set APP_NAME=chat
+    set APP_DESC=ÖªÊ¶¿âÎÊ´ð
+) else if "%APP_CHOICE%"=="2" (
+    set APP_NAME=chat2db
+    set APP_DESC=Êý¾Ý²éÑ¯
+) else if "%APP_CHOICE%"=="3" (
+    set APP_NAME=docx
+    set APP_DESC=ÎÄµµ´´×÷
+) else if "%APP_CHOICE%"=="4" (
+    set APP_NAME=paper_review
+    set APP_DESC=AIÆÀÎ¯
+) else (
+    echo ÎÞÐ§Ñ¡Ôñ£¬ÇëÖØÐÂÊäÈë£¡
+    goto SELECT_APP
+)
+
+call :LOG "   ÓÃ»§Ñ¡ÔñÓ¦ÓÃ: %APP_NAME% - %APP_DESC%"
+echo ÒÑÑ¡Ôñ: %APP_NAME% - %APP_DESC%
+echo.
+
 set APP_DIR=%PROJECT_DIR%\apps\%APP_NAME%
 
-if exist "!APP_DIR!\cfg.db.template" (
-    copy "!APP_DIR!\cfg.db.template" "cfg.db" >nul
-    echo   å·²åˆ›å»º cfg.db
+if not exist "%APP_DIR%" (
+    call :LOG "   ´íÎó: Ó¦ÓÃÄ¿Â¼²»´æÔÚ: %APP_DIR%"
+    call :LOG "   ¿ÉÓÃµÄÓ¦ÓÃÄ¿Â¼:"
+    dir "%PROJECT_DIR%\apps" /B
+    echo.
+    echo ´íÎó: Ó¦ÓÃÄ¿Â¼²»´æÔÚ: %APP_DIR%
+    echo ¿ÉÓÃµÄÓ¦ÓÃÄ¿Â¼£º
+    dir "%PROJECT_DIR%\apps" /B
+    echo.
+    pause
+    exit /b 1
 )
 
-if exist "!APP_DIR!\cfg.yml.template" (
-    copy "!APP_DIR!\cfg.yml.template" "cfg.yml" >nul
-    echo   å·²åˆ›å»º cfg.yml
+call :LOG "   ÅäÖÃÓ¦ÓÃ: %APP_NAME%"
+
+if exist "%APP_DIR%\cfg.db.template" (
+    copy "%APP_DIR%\cfg.db.template" "%PROJECT_DIR%\cfg.db" >nul
+    call :LOG "   ÒÑ´´½¨ cfg.db"
+) else (
+    call :LOG "   ¾¯¸æ: cfg.db.template ²»´æÔÚ"
 )
 
-if exist "!APP_DIR!\logging.conf" (
-    copy "!APP_DIR!\logging.conf" "logging.conf" >nul
-    echo   å·²åˆ›å»º logging.conf
+if exist "%APP_DIR%\cfg.yml.template" (
+    copy "%APP_DIR%\cfg.yml.template" "%PROJECT_DIR%\cfg.yml" >nul
+    call :LOG "   ÒÑ´´½¨ cfg.yml"
+) else (
+    call :LOG "   ¾¯¸æ: cfg.yml.template ²»´æÔÚ"
 )
 
-:: åˆ›å»ºå¯åŠ¨è„šæœ¬
-echo [7/8] åˆ›å»ºå¯åŠ¨è„šæœ¬...
-echo @echo off > "%WORKSPACE%\start_agent.bat"
-echo call "%VENV_DIR%\Scripts\activate.bat" >> "%WORKSPACE%\start_agent.bat"
-echo cd /d "%PROJECT_DIR%" >> "%WORKSPACE%\start_agent.bat"
-echo python -m apps.%APP_NAME%.app >> "%WORKSPACE%\start_agent.bat"
-echo pause >> "%WORKSPACE%\start_agent.bat"
+if exist "%APP_DIR%\logging.conf" (
+    copy "%APP_DIR%\logging.conf" "%PROJECT_DIR%\logging.conf" >nul
+    call :LOG "   ÒÑ´´½¨ logging.conf"
+) else (
+    call :LOG "   ¾¯¸æ: logging.conf ²»´æÔÚ"
+)
 
-:: å®Œæˆæç¤º
-echo [8/8] å®‰è£…å®Œæˆï¼
+:: ´´½¨Æô¶¯½Å±¾
+call :LOG "[7/8] ´´½¨Æô¶¯½Å±¾..."
+echo [7/8] ´´½¨Æô¶¯½Å±¾...
+(
+echo @echo off
+echo echo ========================================
+echo echo   LLM Agent Æô¶¯½Å±¾ - %APP_DESC%
+echo echo ========================================
+echo echo.
+echo call "%VENV_DIR%\Scripts\activate.bat"
+echo cd /d "%PROJECT_DIR%"
+echo echo Æô¶¯Ó¦ÓÃ: %APP_NAME% - %APP_DESC%
+echo echo ·ÃÎÊµØÖ·: http://127.0.0.1:19000
+echo echo °´ Ctrl+C Í£Ö¹Ó¦ÓÃ
+echo echo.
+echo python -m apps.%APP_NAME%.app
+echo pause
+) > "%WORKSPACE%\start_agent.bat"
+
+if exist "%WORKSPACE%\start_agent.bat" (
+    call :LOG "   Æô¶¯½Å±¾ÒÑ´´½¨: %WORKSPACE%\start_agent.bat"
+    echo   Æô¶¯½Å±¾ÒÑ´´½¨: %WORKSPACE%\start_agent.bat
+) else (
+    call :LOG "   ´íÎó: Æô¶¯½Å±¾´´½¨Ê§°Ü"
+    echo ´íÎó: Æô¶¯½Å±¾´´½¨Ê§°Ü
+)
+
+:: Íê³ÉÌáÊ¾
+call :LOG "[8/8] °²×°Íê³É£¡"
+echo [8/8] °²×°Íê³É£¡
+call :LOG ""
+call :LOG "========================================"
+call :LOG "°²×°×Ü½á:"
+call :LOG "  ¹¤×÷Ä¿Â¼: %WORKSPACE%"
+call :LOG "  ÏîÄ¿Ä¿Â¼: %PROJECT_DIR%"
+call :LOG "  ÐéÄâ»·¾³: %VENV_DIR%"
+call :LOG "  Æô¶¯Ó¦ÓÃ: %APP_NAME% - %APP_DESC%"
+call :LOG "  Æô¶¯½Å±¾: %WORKSPACE%\start_agent.bat"
+call :LOG "  Ö÷ÈÕÖ¾ÎÄ¼þ: %LOG_FILE%"
+call :LOG "  PIP°²×°ÈÕÖ¾: %PIP_LOG%"
+call :LOG ""
+call :LOG "ÏÂÒ»²½²Ù×÷:"
+call :LOG "  1. ±à¼­ÅäÖÃÎÄ¼þ: %PROJECT_DIR%\cfg.yml"
+call :LOG "  2. ÅäÖÃ´óÄ£ÐÍAPIÃÜÔ¿"
+call :LOG "  3. ÔËÐÐ start_agent.bat Æô¶¯Ó¦ÓÃ"
+call :LOG "  4. ä¯ÀÀÆ÷·ÃÎÊ: http://127.0.0.1:19000"
+call :LOG "========================================"
+call :LOG ""
+
 echo.
 echo ========================================
-echo å®‰è£…æ€»ç»“:
-echo   å·¥ä½œç›®å½•: %WORKSPACE%
-echo   é¡¹ç›®ç›®å½•: %PROJECT_DIR%
-echo   è™šæ‹ŸçŽ¯å¢ƒ: %VENV_DIR%
-echo   å¯åŠ¨è„šæœ¬: %WORKSPACE%\start_agent.bat
-echo.
-echo ä¸‹ä¸€æ­¥æ“ä½œ:
-echo   1. ç¼–è¾‘é…ç½®æ–‡ä»¶: %PROJECT_DIR%\cfg.yml
-echo   2. é…ç½®å¤§æ¨¡åž‹APIå¯†é’¥
-echo   3. è¿è¡Œ start_agent.bat å¯åŠ¨åº”ç”¨
-echo   4. æµè§ˆå™¨è®¿é—®: http://127.0.0.1:19000
+echo  °²×°Íê³É£¡
 echo ========================================
 echo.
+echo ¹¤×÷Ä¿Â¼: %WORKSPACE%
+echo ÏîÄ¿Ä¿Â¼: %PROJECT_DIR%
+echo ÐéÄâ»·¾³: %VENV_DIR%
+echo Æô¶¯Ó¦ÓÃ: %APP_NAME% - %APP_DESC%
+echo Æô¶¯½Å±¾: %WORKSPACE%\start_agent.bat
+echo.
+echo °²×°ÈÕÖ¾ÎÄ¼þ:
+echo   Ö÷ÈÕÖ¾: %LOG_FILE%
+echo   PIP°²×°ÈÕÖ¾: %PIP_LOG%
+echo.
+echo ÏÂÒ»²½²Ù×÷:
+echo 1. ±à¼­ÅäÖÃÎÄ¼þ: %PROJECT_DIR%\cfg.yml
+echo 2. ÅäÖÃ´óÄ£ÐÍAPIÃÜÔ¿
+echo 3. ÔËÐÐ start_agent.bat Æô¶¯Ó¦ÓÃ
+echo 4. ä¯ÀÀÆ÷·ÃÎÊ: http://127.0.0.1:19000
+echo.
+echo °´ÈÎÒâ¼ü¹Ø±Õ´Ë´°¿Ú...
+pause >nul
 
-pause
+goto :EOF
+
+:LOG
+echo %* >> "%LOG_FILE%"
+echo %*
+goto :EOF
