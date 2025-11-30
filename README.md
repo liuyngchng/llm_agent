@@ -342,6 +342,6 @@ curl -s http://127.0.0.1:8000/v1/models | jq
 
 在服务器上部署本工程，详见 
 
-[服务部署说明文件]: ./deploy_README.md
+[服务部署说明文件]: deploy/deploy_README.md
 
 ./deploy_README.md 。
