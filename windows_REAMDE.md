@@ -2,7 +2,19 @@
 
 本文档面向没有编程经验的用户，0 基础在自己的 Windows 10 系统日常办公计算机上部署一个大语言模型智能体，文档提供详细的部署安装步骤，请按照文档的说明逐步执行。
 
-文档中的所有操作已在环境 Windows 10 旗舰版操作系统中进行了验证。
+文档中的所有操作已在环境 Windows 10 旗舰版操作系统中进行了验证，各个组件版本如表1-1 所示。
+
+<div align="center"><b>表 1-1</b></div>
+
+| No.  | 组件              | 版本                                  |
+| ---- | ----------------- | ------------------------------------- |
+| 1    | 操作系统          | Windows 10 旗舰版                     |
+| 2    | python            | python-3.12.3-amd64                   |
+| 3    | pandoc            | pandoc-3.8.2.1-windows-x86_64         |
+| 4    | `SQLite`          | 3.45.1                                |
+| 5    | `SQLite`  Browser | `DB Browser for SQLite-v3.13.1-win64` |
+
+
 
 * 如果你是一位经验丰富的开发者，则可以跳过 ”`2. 运行环境配置`“ 章节直接查看后面的文档。
 * "./" 表示当前的工作目录（Windows 中的某个文件夹下）
@@ -231,7 +243,6 @@ dir
 
 ```cmd
 (llm_py_env) C:\workspace\gitee_llm_agent-master>
-
 ```
 
 ### 2.7.2 安装pip 依赖包
@@ -255,7 +266,7 @@ dir
 
 （2）方法2（高级用法，新手勿碰）。通过以下命令在Windows 上安装 pandoc
 
-```sh
+```cmd
 # 需在Windows上安装 Chocolatey，详见 https://docs.chocolatey.org/en-us/choco/setup
 choco install pandoc
 ```
@@ -274,7 +285,7 @@ choco install pandoc
 
 下面以启动单个应用`apps\chat`程序为例，进行系统配置说明。每次选定将要启动的应用(例如 `apps/chat`)后, 需要将 `apps/chat`目录下的 `cfg.db.template`, `cfg.yml.template`, `logging.conf` 这三个文件拷贝至项目根目录，并重新命名为 `cfg.db`, `cfg.yml`, `logging.conf` ，以 `apps/chat` 为例，如表 3-1 所示。
 
-<center> <b>表 3-1 配置文件操作清单</b> </center>
+<div align='center'> <b>表 3-1 配置文件操作清单</b> </div>
 
 | No.  | 原来的目录                                                   | 新目录                                             | 操作                                       |
 | ---- | ------------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------ |
@@ -300,7 +311,7 @@ choco install pandoc
 
  拷贝各个应用根目录（`C:\workspace\gitee_llm_agent-master\apps\chat\`）下的 `cfg.yml.template` 文件至项目根目录`C:\workspace\gitee_llm_agent-master`，重命名为 `cfg.yml`， 配置相应信息。`cfg.yml` 中每个配置项目都有明确的注释说明，请仔细阅读，根据自己的实际需要进行相应的配置。
 
-*** 其中的大语言模型 `API` 相关配置是必须配置的，否则软件无法正常运行。***算力资源可以使用企业内部部署的算力资源，或公共互联网【 Deepseek官网 (https://platform.deepseek.com/) 或其他大厂 】`API`， 充值10块能用1年。
+*** 其中的大语言模型 `API` 相关配置是必须配置的，否则软件无法正常运行。***算力资源可以使用企业内部部署的算力资源，或公共互联网【 Deepseek官网 (https://platform.deepseek.com/) 或其他大厂 】`API`。
 
 ## 3.3 logging.conf
 
@@ -352,11 +363,10 @@ C:\workspace\llm_py_env\Scripts>activate
 
 启动后，会看到控制台或者根目录下的文本文件 apps.xxxx.log  中看到:
 
-```sh
+```powershell
 2025-11-01 10:50:26,981 - 126491346956608 - __main__ - INFO -<module> - [251]- listening_port 19000
  * Serving Flask app 'app'
  * Debug mode: off
-
 ```
 
 说明程序启动了监听端口 19000，启动正常。接下来，在浏览器（强烈建议使用Chrome 浏览器，其他浏览器未进行验证）中输入 http://127.0.0.1:19000 ，即可看到相应的页面。
