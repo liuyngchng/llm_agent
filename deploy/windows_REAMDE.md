@@ -37,11 +37,7 @@ https://www.python.org/downloads/release/python-3123/
 
 *** 注意：在安装过程中务必勾选 “Add Python to PATH” 选项。若没有勾选，后续需要手动进行环境变量配置。这个操作是在 Windows` CMD` 下输入 python 命令能够正确被操作系统理解的基础。***
 
-## 2.2 pip 命令
-
-pip 是 `Python` 程序的依赖包管理工具。当工程中的某个 `Python` 文件引用了（import ***）其他工程（不在本工程中）的 `Python` 文件时，就需要由 pip 来负责自动完成安装这个组件。
-
-Windows 系统中安装了 python 后，`pip` 命令也自动安装了。 接下来在windows 的 `CMD 控制台`（**`Win + R`** → 输入 `cmd` → 回车 ) 里执行以下命令，并可以看到相应的结果，说明安装成功。
+接下来在windows 的 `CMD 控制台`（**`Win + R`** → 输入 `cmd` → 回车 ) 里执行以下命令，并可以看到相应的结果，说明安装成功。
 
 ```sh
 # 执行下面的命令
@@ -57,7 +53,7 @@ pip 24.3.1 from ****
 
 如果无法执行，可能是安装的时候没有进行环境变量的配置，点击“我的电脑” -> 右键选择“属性” -> 在右侧找到并点击“高级系统设置”，进入环境变量设置，点击右下角的 **“环境变量”** 按钮。
 
-## 2.3 工作目录创建
+## 2.2 工作目录创建
 
 创建自己的工作目录。注意，工作目录路径仅使用英文半角字符，不要使用中文、空格等特殊字符，以免引起不必要的麻烦。假定需要在目录`C:\workspace` 下进行后续工作，请在C 盘根目录下手动创建文件夹 workspace，或在`Windows CMD` 控制台中执行以下命令
 
@@ -82,7 +78,7 @@ C:\workspace>
 
 目前你的 `CMD`  窗口中显示的路径应该为 `C:\workspace`。
 
-## 2.4 下载 python 工程源代码
+## 2.3 下载源代码
 
  打开页面 https://gitee.com/liuyngchng/gitee_llm_agent  ， 点击 ”`克隆/下载`“ 按钮， 选择右上角的 ”`下载ZIP`“， 浏览器会下载一个文件 `gitee_llm_agent-master.zip`。 将这个zip包拷贝至文件夹 `C:\workspace` 下，鼠标选中这个 zip 文件， 右键-> 解压到当前目录， 会看到生成新的目录 `C:\workspace\gitee_llm_agent-master`， 该文件夹下的 文件清单如下所示。
 
@@ -107,19 +103,9 @@ C:\workspace\gitee_llm_agent-master 的目录
 
 
 
-## 2.5 虚拟环境创建
+## 2.4 虚拟环境
 
-### 2.5.1 为什么要创建虚拟环境? 
-
-使用 python 虚拟环境，类似在 Windows 中安装的是”绿色软件“ 一样，用完直接删除而不会影响操作系统，同时不同的工程使用各自独立的虚拟环境，能够减少互相之间的影响，为软件的运行、维护等都带来极大的好处。
-
-不使用 python 虚拟环境，类似在 Windows 中安装的是 `exe` 或`msi` 的安装文件，用完之后卸载可能会卸载不干净，导致需要重装操作系统才能修复某些问题。
-
-那么，截至目前，python 虚拟环境带来的好处应该很明确了吧？
-
-配置虚拟环境，有利于管理下载的 python 依赖包，将下载的文件放置在用户指定的目录下，同时 `Python` 对操作系统的所有操作都在某个`沙箱`内进行，将其对操作系统的影响降到最低。
-
-### 2.5.2 创建虚拟环境
+### 2.4.1 创建
 
 接下来将在目录 `C:\workspace\llm_py_env` 下创建虚拟环境，这个目录将作为 `python.exe` 的新家，以及下载的所有关联文件的目录，后续不需要的时候只要删除这个目录就可以把自己的电脑清理干净了。
 
@@ -189,7 +175,7 @@ C:\workspace> virtualenv llm_py_env
 
 此时，打开 `C:\workspace` 文件夹 ，会看到有一个新文件夹 `llm_py_env`，说明虚拟环境创建成功。
 
-## 2.6 虚拟环境激活
+### 2.4.2 激活
 
 创建好虚拟环境后，在使用前需要激活。打开 Windows `CMD 控制台` 窗口（**`Win + R`** → 输入 `cmd` → 回车 )，执行以下命令：
 
@@ -206,13 +192,11 @@ C:\workspace\llm_py_env\Scripts>activate
 (llm_py_env) C:\workspace\llm_py_env\Scripts>
 ```
 
-
-
-## 2.7 安装 pip 依赖包
+## 2.5 安装依赖组件
 
 接下来安装 `Python` 应用程序的依赖包，在安装依赖包前，必须先激活虚拟环境。
 
-### 2.7.1 激活虚拟环境并进入工作目录
+### 2.5.1 激活虚拟环境
 
 打开 Windows `CMD 控制台` 窗口（**`Win + R`** → 输入 `cmd` → 回车 )，执行以下命令：
 
@@ -245,7 +229,7 @@ dir
 (llm_py_env) C:\workspace\gitee_llm_agent-master>
 ```
 
-### 2.7.2 安装pip 依赖包
+### 2.5.2 安装依赖
 
  接下来开始安装依赖， 保持网络畅通，这个过程消耗时间1~2小时，具体取决于你的网络环境，请耐心等待。
 
@@ -256,30 +240,9 @@ dir
 
 执行成功后， `C:\workspace\llm_py_env` 这个文件夹（虚拟环境文件夹）大约为 `4GB`，包含了软件运行的所有依赖。
 
-## 2.8 安装 `pandoc`
+### 2.5.3 安装 `pandoc`
 
-工程下的 `apps/docx`, `apps/papre_review`, `apps/team_building` 需要依赖此组件进行文件的格式转换，`pandoc` 是开源社区中较为流行的文档格式转换工具包。 
-
-可以先不安装，如果报错信息中出现 `pandoc` 的字样再进行安装。
-
-（1）方法1（推荐新手使用）。通过Windows msi 引导文件安装， 详见  https://www.pandoc.org/installing.html#windows 。
-
-（2）方法2（高级用法，新手勿碰）。通过以下命令在Windows 上安装 pandoc
-
-```cmd
-# 需在Windows上安装 Chocolatey，详见 https://docs.chocolatey.org/en-us/choco/setup
-choco install pandoc
-```
-
-## 2.9 安装`SQLite browser`
-
-此组件非必须，除非您想查看系统的运行数据， 可暂时跳过。
-
-`SQLite browser` 是文件数据库 `SQLite` 的图形化管理工具。本系统使用了 `SQLite` 文件数据库进行相关数据的存储，为了通过GUI界面对 `SQLite` 数据库进行操作，需要下载`SQLite browser`。
-
- `Window` 系统下的安装说明详见链接  https://sqlitebrowser.org/dl/ ，下载 “`DB Browser for SQLite - Standard installer for 64-bit Windows`”。
-
-当然，如果对 `SQLite`的相关命令很熟悉，可以忽略此部分。
+通过Windows msi 引导文件安装， 详见  https://www.pandoc.org/installing.html#windows 。
 
 # 3. 软件配置
 
@@ -297,39 +260,15 @@ choco install pandoc
 
 ## 3.1 `cfg.db`
 
-文件 `cfg.db` 是项目中很多关系型数据的 `SQLite` 配置文件，不可或缺，一般存在于项目各个应用根目录(例如 `C:\workspace\gitee_llm_agent-master\apps\chat\`)
-
-源代码各个应用根目录（`apps\chat\`）下的 `cfg.db.template` 是当前应用(chat)的 `SQLite` 配置数据库模板。
-
-拷贝准备启动的应用（`C:\workspace\gitee_llm_agent-master\apps\chat\`）目录下的 `cfg.db.template` 至项目根目录 `C:\workspace\gitee_llm_agent-master`，并命名为 `cfg.db`，若想查看数据，需要使用 `SQLite browser` 打开。
-
-`cfg.db` 中的数据库表结构详见项目根目录下的 `C:\workspace\gitee_llm_agent-master\common\cfg_db_schema` 目录下的各个 `SQL` 文件。
+拷贝需要启动的应用目录下的 cfg.db （例如， `apps/chat`下的 `cfg.db`）至项目根目录即可， 如表 3-1所示。
 
 ## 3.2 `cfg.yml`
 
-`cfg.yml` 是系统运行的配置文件，用于配置各种模型（大语言模型、文本嵌入模型、语音识别模型、图像识别模型）的 `API`、`Key`（即人工智能（AI）的算力、显卡、`GPU` 等类似的说法），以及提示词（即引导AI按照自己的意图输出内容）、数据加密密钥等信息。
-
- 拷贝各个应用根目录（`C:\workspace\gitee_llm_agent-master\apps\chat\`）下的 `cfg.yml.template` 文件至项目根目录`C:\workspace\gitee_llm_agent-master`，重命名为 `cfg.yml`， 配置相应信息。`cfg.yml` 中每个配置项目都有明确的注释说明，请仔细阅读，根据自己的实际需要进行相应的配置。
-
-*** 其中的大语言模型 `API` 相关配置是必须配置的，否则软件无法正常运行。***算力资源可以使用企业内部部署的算力资源，或公共互联网【 Deepseek官网 (https://platform.deepseek.com/) 或其他大厂 】`API`。
+ 拷贝各个应用根目录（`C:\workspace\gitee_llm_agent-master\apps\chat\`）下的 `cfg.yml.template` 文件至项目根目录`C:\workspace\gitee_llm_agent-master`，重命名为 `cfg.yml`， 配置相应信息。`cfg.yml` 中的*** 大语言模型 `API` 相关配置是必须配置的，否则软件无法正常运行。***算力资源可以使用企业内部部署的算力资源，或公共互联网【 Deepseek官网 (https://platform.deepseek.com/) 或其他大厂 】`API`。
 
 ## 3.3 logging.conf
 
-`logging.conf` 为项目的日志配置文件，用于控制以下信息。
-
-（1）日志信息写入到哪里， 例如控制台（`Windows CMD` 的界面）、文件、数据库、系统日志等；
-
-（2）输出什么等级的日志，错误、信息、调试(ERROR| INFO|DEBUG)；
-
-（3）输出哪些模块（可以简单理解为哪些python文件、文件夹）的日志。
-
- 拷贝各个应用根目录（`C:\workspace\gitee_llm_agent-master\apps\chat\`）下的 `logging.conf` 文件至项目根目录`C:\workspace\gitee_llm_agent-master`即可，默认无须修改。
-
-## 3.4 `NLTK`
-
-使用知识库功能请阅读此部分内容，否则跳过。
-
-**`NLTK`**（Natural Language Toolkit）是针对自然语言处理设计的Python开源工具集，集成了处理常见`NLP`任务的模块和标准化语料库。如果使用到本项目中的知识库（文档向量化）功能（即使调用远程的文本嵌入 `API` 也需要），则本地还需要安装 `NLTK` 的中英文分词数据包， 详见 `NLTK` 官网（https://www.nltk.org/data.html）。
+`logging.conf` 为项目的日志配置文件，用于记录日志， 拷贝需要启动的应用目录下的 cfg.db （例如， `apps/chat`下的 `logging.conf`）至项目根目录即可， 如表 3-1所示。
 
 # 4. 运行程序
 
