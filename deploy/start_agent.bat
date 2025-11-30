@@ -12,14 +12,14 @@ echo.
 
 :: 检查虚拟环境
 if not exist "%VENV_DIR%" (
-    echo ? 虚拟环境不存在，请先运行 install.bat
+    echo 错误：虚拟环境不存在，请先运行 install.bat
     pause
     exit /b 1
 )
 
 :: 检查配置文件
 if not exist "%PROJECT_DIR%\cfg.yml" (
-    echo ??  配置文件不存在，运行配置助手...
+    echo 警告：配置文件不存在，运行配置助手...
     call "%VENV_DIR%\Scripts\activate.bat"
     cd /d "%PROJECT_DIR%"
     "%VENV_DIR%\Scripts\python.exe" config_helper.py
@@ -71,9 +71,9 @@ echo.
 echo ========================================
 echo  启动 %APP_DESC%
 echo ========================================
-echo ?? 启动中...
-echo ?? 访问地址: http://127.0.0.1:%APP_PORT%
-echo ??  停止方法: 按 Ctrl+C
+echo 启动中...
+echo 访问地址: http://127.0.0.1:%APP_PORT%
+echo 停止方法: 按 Ctrl+C
 echo ========================================
 echo.
 
