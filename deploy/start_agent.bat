@@ -6,37 +6,79 @@ set VENV_DIR=%WORKSPACE%\llm_py_env
 set PROJECT_DIR=%WORKSPACE%\gitee_llm_agent-master
 
 echo ========================================
-echo   å¯åŠ¨ LLM Agent
+echo   Æô¶¯ LLM Agent
 echo ========================================
 echo.
 
-:: æ£€æŸ¥è™šæ‹ŸçŽ¯å¢ƒ
+:: ¼ì²éÐéÄâ»·¾³
 if not exist "%VENV_DIR%" (
-    echo âŒ è™šæ‹ŸçŽ¯å¢ƒä¸å­˜åœ¨ï¼Œè¯·å…ˆè¿è¡Œ install.bat
+    echo ? ÐéÄâ»·¾³²»´æÔÚ£¬ÇëÏÈÔËÐÐ install.bat
     pause
     exit /b 1
 )
 
-:: æ£€æŸ¥é…ç½®æ–‡ä»¶
+:: ¼ì²éÅäÖÃÎÄ¼þ
 if not exist "%PROJECT_DIR%\cfg.yml" (
-    echo âš ï¸  é…ç½®æ–‡ä»¶ä¸å­˜åœ¨ï¼Œè¿è¡Œé…ç½®åŠ©æ‰‹...
+    echo ??  ÅäÖÃÎÄ¼þ²»´æÔÚ£¬ÔËÐÐÅäÖÃÖúÊÖ...
     call "%VENV_DIR%\Scripts\activate.bat"
     cd /d "%PROJECT_DIR%"
-    python config_helper.py
+    "%VENV_DIR%\Scripts\python.exe" config_helper.py
     echo.
-    echo è¯·æŒ‰ä»»æ„é”®ç»§ç»­å¯åŠ¨...
+    echo Çë°´ÈÎÒâ¼ü¼ÌÐøÆô¶¯...
     pause >nul
 )
 
-:: æ¿€æ´»çŽ¯å¢ƒå¹¶å¯åŠ¨
-call "%VENV_DIR%\Scripts\activate.bat"
+:: Ö±½ÓÊ¹ÓÃÐéÄâ»·¾³µÄPython£¬²»¼¤»î»·¾³
 cd /d "%PROJECT_DIR%"
 
-echo ðŸš€ å¯åŠ¨åº”ç”¨ä¸­...
-echo ðŸ“ å¯åŠ¨åŽè®¿é—®: http://127.0.0.1:19000
-echo â¹ï¸  æŒ‰ Ctrl+C åœæ­¢åº”ç”¨
+:: Ó¦ÓÃÑ¡Ôñ²Ëµ¥
+echo ========================================
+echo  Ñ¡ÔñÒªÆô¶¯µÄÓ¦ÓÃ
+echo ========================================
+echo  1. chat - ÖªÊ¶¿âÎÊ´ð
+echo  2. chat2db - Êý¾Ý²éÑ¯
+echo  3. docx - ÎÄµµ´´×÷
+echo  4. paper_review - AIÆÀÎ¯
 echo.
 
-python -m apps.chat.app
+:SELECT_APP
+set /p APP_CHOICE=ÇëÑ¡ÔñÓ¦ÓÃ±àºÅ (1-4): 
+if "%APP_CHOICE%"=="1" (
+    set APP_NAME=chat
+    set APP_DESC=ÖªÊ¶¿âÎÊ´ð
+    set APP_PORT=19000
+) else if "%APP_CHOICE%"=="2" (
+    set APP_NAME=chat2db
+    set APP_DESC=Êý¾Ý²éÑ¯
+    set APP_PORT=19001
+) else if "%APP_CHOICE%"=="3" (
+    set APP_NAME=docx
+    set APP_DESC=ÎÄµµ´´×÷
+    set APP_PORT=19002
+) else if "%APP_CHOICE%"=="4" (
+    set APP_NAME=paper_review
+    set APP_DESC=AIÆÀÎ¯
+    set APP_PORT=19003
+) else (
+    echo ÎÞÐ§Ñ¡Ôñ£¬ÇëÖØÐÂÊäÈë£¡
+    goto SELECT_APP
+)
 
+echo ÒÑÑ¡Ôñ: %APP_NAME% - %APP_DESC%
+echo.
+
+:: Æô¶¯Ñ¡ÖÐµÄÓ¦ÓÃ
+echo ========================================
+echo  Æô¶¯ %APP_DESC%
+echo ========================================
+echo ?? Æô¶¯ÖÐ...
+echo ?? ·ÃÎÊµØÖ·: http://127.0.0.1:%APP_PORT%
+echo ??  Í£Ö¹·½·¨: °´ Ctrl+C
+echo ========================================
+echo.
+
+"%VENV_DIR%\Scripts\python.exe" -m apps.%APP_NAME%.app
+
+echo.
+echo Ó¦ÓÃÒÑÍË³ö
 pause
