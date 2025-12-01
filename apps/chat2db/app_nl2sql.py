@@ -16,6 +16,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, redirect, jsonify, render_template, Response, url_for
 
 import common.cfg_util as cfg_utl
+from common.const import SESSION_TIMEOUT
 from common.my_enums import DataType, DBType, AppType
 from sql_agent import SqlAgent
 from common.sys_init import init_yml_cfg
@@ -40,8 +41,6 @@ os.system(
 usr_page_dt = {}
 
 # {"uid1":17234657891, "uid2":176543980}
-
-SESSION_TIMEOUT = 72000     # session timeout second , default 2 hours
 
 @app.before_request
 def before_request():

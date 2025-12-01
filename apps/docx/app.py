@@ -163,59 +163,9 @@ def register_routes(app):
         task_list = docx_meta_util.get_user_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
 
-    @app.route('/docx/statistic/index', methods=['GET'])
-    def get_statistic_report_index():
-        """
-        获取系统运营的页面
-        """
-        logger.info(f"get_statistic_report_index, {request.args}")
-        uid = request.args.get('uid')
-        session_key = f"{uid}_{get_client_ip()}"
-        if (not auth_info.get(session_key, None)
-                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
-            logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
-                warning_info=warning_info
 
-            ))
-        statistic_util.add_access_count_by_uid(int(uid), 1)
-        app_source = request.args.get('app_source')
-        warning_info = request.args.get('warning_info', "")
-        sys_name = my_enums.AppType.get_app_type(app_source)
-        ctx = {
-            "uid": uid,
-            "sys_name": sys_name,
-            "app_source": app_source,
-            "warning_info": warning_info,
-        }
-        dt_idx = "statistics.html"
-        logger.info(f"{uid}, return_page_with_no_auth {dt_idx}")
-        return render_template(dt_idx, **ctx)
 
-    @app.route('/docx/statistic/report', methods=['POST'])
-    def get_statistic_report():
-        """
-        统计用户的系统使用数据
-        """
-        data = request.json
-        uid = int(data.get('uid'))
-        logger.info(f"{uid}, get_statistic_report, {data}")
-        session_key = f"{uid}_{get_client_ip()}"
-        if (not auth_info.get(session_key, None)
-                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
-            logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
-                warning_info=warning_info
 
-            ))
-        statistics_list = statistic_util.get_statistics_list()
-        return json.dumps(statistics_list, ensure_ascii=False), 200
 
     @app.route('/docx/generate/outline', methods=['POST'])
     def generate_outline():

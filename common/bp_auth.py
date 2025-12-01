@@ -4,6 +4,7 @@
 """
 用户权限认证 HTTP 服务
 """
+import json
 import os
 import time
 import logging.config
@@ -11,7 +12,7 @@ from flask import Blueprint, jsonify, redirect, url_for, current_app
 from flask import (request, render_template)
 from common import cfg_util as cfg_utl, statistic_util
 from common import my_enums
-from common.const import get_const
+from common.const import get_const, SESSION_TIMEOUT
 from common.html_util import get_html_ctx_from_md
 
 
@@ -201,6 +202,62 @@ def reg_user():
         logger.error(f"reg_user_exception, {ctx['warning_info']}, url: {request.url}", exc_info=True)
         logger.info(f"return_page {dt_idx}, ctx {ctx}")
         return render_template(dt_idx, **ctx)
+
+@auth_bp.route('/usr/statistic/index', methods=['GET'])
+def get_statistic_report_index():
+    """
+    获取系统运营的页面
+    """
+    logger.info(f"get_statistic_report_index, {request.args}")
+    uid = request.args.get('uid')
+    app_source = request.args.get('app_source')
+    session_key = f"{uid}_{get_client_ip()}"
+    if (not auth_info.get(session_key, None)
+            or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+        warning_info = "用户会话信息已失效，请重新登录"
+        logger.warning(f"{uid}, {warning_info}")
+        return redirect(url_for(
+            'auth.login_index',
+            app_source=app_source,
+            warning_info=warning_info
+
+        ))
+    statistic_util.add_access_count_by_uid(int(uid), 1)
+    app_source = request.args.get('app_source')
+    warning_info = request.args.get('warning_info', "")
+    sys_name = my_enums.AppType.get_app_type(app_source)
+    ctx = {
+        "uid": uid,
+        "sys_name": sys_name,
+        "app_source": app_source,
+        "warning_info": warning_info,
+    }
+    dt_idx = "statistics.html"
+    logger.info(f"{uid}, return_page_with_no_auth {dt_idx}")
+    return render_template(dt_idx, **ctx)
+
+@auth_bp.route('/usr/statistic/report', methods=['POST'])
+def get_statistic_report():
+    """
+    统计用户的系统使用数据
+    """
+    data = request.json
+    uid = int(data.get('uid'))
+    app_source = data.get('app_source')
+    logger.info(f"{uid}, get_statistic_report, {data}")
+    session_key = f"{uid}_{get_client_ip()}"
+    if (not auth_info.get(session_key, None)
+            or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
+        warning_info = "用户会话信息已失效，请重新登录"
+        logger.warning(f"{uid}, {warning_info}")
+        return redirect(url_for(
+            'auth.login_index',
+            app_source=app_source,
+            warning_info=warning_info
+
+        ))
+    statistics_list = statistic_util.get_statistics_list()
+    return json.dumps(statistics_list, ensure_ascii=False), 200
 
 @auth_bp.route('/health', methods=['GET'])
 def get_data():

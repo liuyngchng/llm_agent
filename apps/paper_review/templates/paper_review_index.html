@@ -22,6 +22,11 @@
                 <a href="/paper_review/task?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="my-btn" target="_blank">
                     <i class="fas fa-user"></i> 我的任务
                 </a>
+                {% if hack_admin =='1' %}
+                <a href="/usr/statistic/index?uid={{uid}}&app_source={{app_source}}" class="my-btn" target="_blank">
+                    <i class="fas fa-cog"></i>运营管理
+                </a>
+                {% endif %}
                 <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i> 退出
                 </a>

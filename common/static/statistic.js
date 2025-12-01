@@ -5,7 +5,7 @@ async function fetchTasks() {
         const token = localStorage.getItem('token') || '';
         const uid = getUidFromUrl();
 
-        const response = await fetch('/docx/statistic/report', {
+        const response = await fetch('/usr/statistic/report', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
