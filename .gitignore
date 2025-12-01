@@ -57,5 +57,5 @@ sqlite_vss
 **/output_doc
 **/*.xls
 **/*.xlsx
-
+apps/chat2db/db_schema/*.sql
 tests/**/*.md
