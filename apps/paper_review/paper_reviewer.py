@@ -7,12 +7,14 @@ from typing import List, Dict
 
 import requests
 
+from common.cm_utils import estimate_tokens
 from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_content_to_md_file, get_md_file_catalogue, \
     convert_docx_to_md, extract_sections_content, split_md_file_with_catalogue, split_md_content_with_catalogue
 import logging.config
 
 from common.docx_meta_util import update_process_info, get_doc_info
 from common.my_enums import FileType
+from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
 from common.sys_init import init_yml_cfg
 from common.xlsx_md_util import convert_xlsx_to_md
 from common.xlsx_util import convert_md_to_xlsx
@@ -69,9 +71,15 @@ class PaperReviewer:
                     section_content=section_content,
                     criteria=self.criteria_markdown_data
                 )
+                input_tokens = estimate_tokens(prompt)
+                logger.info(f"{self.uid}, input_tokens, {input_tokens}")
+                add_input_token_by_uid(self.uid, input_tokens)
                 result = self.call_llm_api(prompt)
+                output_tokens = estimate_tokens(json.dumps(result))
+                logger.info(f"{self.uid}, output_tokens, {output_tokens}")
+                add_output_token_by_uid(self.uid, output_tokens)
                 # 验证结果格式
-                self._validate_review_result(result)
+                PaperReviewer._validate_review_result(result)
                 return result
 
             except Exception as e:
@@ -215,16 +223,22 @@ class PaperReviewer:
                 section_summary = json.dumps(section_summaries, ensure_ascii=False, indent=2),
                 criteria = self.criteria_markdown_data,
             )
+            input_tokens = estimate_tokens(prompt)
+            logger.info(f"{self.uid}, input_tokens, {input_tokens}")
+            add_input_token_by_uid(self.uid, input_tokens)
             overall_result = self.call_llm_api(prompt)
+            output_tokens = estimate_tokens(json.dumps(overall_result))
+            logger.info(f"{self.uid}, output_tokens, {output_tokens}")
+            add_output_token_by_uid(self.uid, output_tokens)
             # 添加结果验证和降级处理
             if not overall_result or 'overall_score' not in overall_result:
                 logger.warning("整体评审返回结果格式异常，使用降级结果")
-                return self._get_fallback_overall_result(section_results)
+                return PaperReviewer._get_fallback_overall_result(section_results)
             return overall_result
 
         except Exception as e:
             logger.error(f"整体评审失败: {str(e)}")
-            return self._get_fallback_overall_result(section_results)
+            return PaperReviewer._get_fallback_overall_result(section_results)
 
     @staticmethod
     def _get_fallback_overall_result(section_results: List[Dict]) -> Dict:
@@ -367,7 +381,7 @@ class PaperReviewer:
                         logger.info(f"章节[{full_section_title}]评审完成，评分: {section_result['score']}")
 
             # 4. 合并同一章节的多个部分结果
-            merged_results = self._merge_section_results(self.review_results)
+            merged_results = PaperReviewer._merge_section_results(self.review_results)
             # 5. 整体评审
             logger.info("总结评审意见")
             update_process_info(self.uid, self.task_id, "总结评审意见")
@@ -389,7 +403,8 @@ class PaperReviewer:
             logger.exception(f"评审流程执行失败")
             return f"# 评审过程出现错误\n\n错误信息: {str(e)}\n\n请检查文档格式或联系技术支持。"
 
-    def _merge_section_results(self, all_results: List[Dict]) -> List[Dict]:
+    @staticmethod
+    def _merge_section_results(all_results: List[Dict]) -> List[Dict]:
         """
         合并同一章节的多个部分评审结果
 
@@ -617,17 +632,6 @@ class PaperReviewer:
 
         # 如果找到至少2个表格特征，认为报告有效
         return indicators_found >= 2
-
-
-
-
-
-
-
-
-
-
-
 
 def start_ai_review(uid:int, task_id: int, review_type: str, review_topic:str,
         criteria_markdown_data: str, review_file_path: str, criteria_file_type: int , sys_cfg: dict) -> str:
