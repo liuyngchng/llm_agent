@@ -1,8 +1,8 @@
 # 1. 简介
 
 本文档面向没有编程经验的用户，0 基础在自己的 Windows 10 系统日常办公计算机上部署一个大语言模型智能体。  
-项目根目录下的[./deploy/install.bat](./install.bat) 脚本提供一键安装启动功能，请下载文件 install.bat 后，点击右键 -> 以管理员身份运行，即可。  
-   
+项目根目录下的[./deploy/install.bat](./install.bat) 脚本提供一键安装启动功能，请下载文件 `install.bat` 至Windows 的任意文件夹后，选中文件点击右键 -> 以管理员身份运行，即可。  
+
 若进行手动安装，请按照下面的文档说明逐步执行。  
 
 文档中的所有操作已在环境 Windows 10 旗舰版操作系统中进行了验证，各个组件版本如表1-1 所示。
@@ -11,10 +11,10 @@
 
 | No.  | 组件              | 版本                                  |
 | ---- | ----------------- | ------------------------------------- |
-| 1    | 操作系统          | Windows 10 旗舰版                     |
-| 2    | python            | python-3.12.3-amd64                   |
-| 3    | pandoc            | pandoc-3.8.2.1-windows-x86_64         |
-| 4    | `SQLite`          | 3.45.1                                |
+| 1    | 操作系统          | `Windows 10 旗舰版`                   |
+| 2    | Python            | `python-3.12.3-amd64`                 |
+| 3    | pandoc            | `pandoc-3.8.2.1-windows-x86_64`       |
+| 4    | `SQLite`          | `3.45.1`                              |
 | 5    | `SQLite`  Browser | `DB Browser for SQLite-v3.13.1-win64` |
 
 

@@ -350,7 +350,7 @@ class PaperReviewer:
                         current_percent = min(95.0, round(processed_parts / total_sections * 100, 1))
 
                         part_description = f"第{part_index + 1}部分" if len(content_parts) > 1 else "完整内容"
-                        process_info = f"正在处理章节 {section_title} 的{part_description} ({processed_parts}/{total_sections})"
+                        process_info = f"正在评审章节 {section_title} 的{part_description} ({processed_parts}/{total_sections})"
                         update_process_info(self.uid, self.task_id, process_info, current_percent)
 
                         # 构建完整的部分标题（包含部分信息）
@@ -369,15 +369,15 @@ class PaperReviewer:
             # 4. 合并同一章节的多个部分结果
             merged_results = self._merge_section_results(self.review_results)
             # 5. 整体评审
-            logger.info("开始进行评审意见总结")
-            update_process_info(self.uid, self.task_id, "开始进行评审意见总结")
+            logger.info("总结评审意见")
+            update_process_info(self.uid, self.task_id, "总结评审意见")
             overall_result = self.review_whole_report(merged_results)
 
             # 6. 生成最终报告
             logger.info("生成最终评审报告")
             final_report = self.generate_final_report(merged_results, overall_result)
             if FileType.XLSX.value == self.criteria_file_type:
-                update_process_info(self.uid, self.task_id, "准备输出格式化的评审意见报告")
+                update_process_info(self.uid, self.task_id, "生成格式化的评审报告")
                 logger.debug(f"fill_all_formatted_markdown_report_with_final_report\n{final_report}")
                 formatted_report = self.fill_all_formatted_markdown_report_with_final_report(final_report)
             else:

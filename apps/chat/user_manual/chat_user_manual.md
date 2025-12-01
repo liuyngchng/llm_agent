@@ -4,6 +4,8 @@
 
 知识库问答系统是一个基于大语言模型（LLM）的智能问答服务，支持用户上传文档构建知识库，并通过自然语言提问获取相关知识库中的答案。系统提供简单易用的界面，适用于个人和企业用户。
 
+系统所有代码开源，详见<a href="https://github.com/liuyngchng/llm_agent" target="_blank">github.com</a>或者 <a href="https://gitee.com/liuyngchng/gitee_llm_agent" target="_blank">gitee.com</a>。
+
 ## 2. 快速开始
 
 ### 2.1 登录系统

@@ -1,9 +1,11 @@
-<center><h1>文档生成系统用户使用手册</h1></center>
+<div align='center'><h1>文档生成系统用户使用手册</h1></div>
 
 
 # 1. 系统简介
 
 文档生成系统是一个基于人工智能的自动化文档生成平台，能够根据用户提供的文档结构和内容要求，自动生成各类文档。系统支持多种输入方式，包括自动生成目录结构、上传Word模板以及基于批注的文档修改等功能。
+
+系统所有代码开源，详见 <a href="https://github.com/liuyngchng/llm_agent" target="_blank">github.com</a> 或者 <a href="https://gitee.com/liuyngchng/gitee_llm_agent" target="_blank">gitee.com</a>。
 
 # 2. 功能特性
 

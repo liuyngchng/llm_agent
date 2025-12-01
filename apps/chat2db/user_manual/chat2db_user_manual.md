@@ -1,8 +1,10 @@
-<center><h1>智能问数系统用户使用手册</h1></center>
+<div align='center'><h1>自然语言数据查询系统用户使用手册</h1></div>
 
 ## 1. 系统简介
 
 智能问数系统是一款基于大语言模型的自然语言转SQL查询工具。用户可以通过自然语言描述查询需求，系统会自动将其转换为SQL语句并执行查询，最终以表格形式展示查询结果。
+
+系统所有代码开源，详见 <a href="https://github.com/liuyngchng/llm_agent" target="_blank">github.com</a> 或者 <a href="https://gitee.com/liuyngchng/gitee_llm_agent" target="_blank">gitee.com</a>。
 
 ## 2. 系统界面概览
 
