@@ -2,7 +2,7 @@
 
 本工程的 apps 目录下各个应用的功能如下所示，各个工程下的程序入口为 app.py。 
 
-系统所有代码开源，详见<a href="https://github.com/liuyngchng/llm_agent" target="_blank">github.com</a> 或者 <a href="https://gitee.com/liuyngchng/gitee_llm_agent" target="_blank">gitee.com</a>。 
+系统所有代码开源，详见 <a href="https://github.com/liuyngchng/llm_agent" target="_blank">github.com</a> 或者 <a href="https://gitee.com/liuyngchng/gitee_llm_agent" target="_blank">gitee.com</a>。 
 
 通过 `IDE`（`Pycharm`, `VsCode` 等）直接启动 `debug`，为 `HTTP` 服务，通过脚本部署的 `docker` 应用为`HTTPS` 服务。
 
