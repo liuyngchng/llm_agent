@@ -655,10 +655,10 @@ def process_doc(uid: int, task_id: int):
 
 
 # 创建应用实例
-my_app = create_app()
+app = create_app()
 
 # 当直接运行脚本时，启动开发服务器
 if __name__ == '__main__':
     port = get_console_arg1()
     logger.info(f"listening_port {port}")
-    my_app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port)
