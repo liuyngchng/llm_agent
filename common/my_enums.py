@@ -68,7 +68,7 @@ class AppType(Enum):
     PPTX = "PPT 校对"
     CSM = "智能客服"
     ORD_GEN = "订单生成"
-    CHAT2DB = "智能问数"
+    CHAT2DB = "自然语言数据查询"
     OPEN = "开放平台"
     MT_REPORT = "会议纪要整理"
     EVAL_EXPERT = "AI 评审数字专家"
