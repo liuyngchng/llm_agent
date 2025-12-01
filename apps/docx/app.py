@@ -624,7 +624,7 @@ def process_doc(uid: int, task_id: int):
     logger.info(f"uid: {uid}, task_id: {task_id}")
     file_info = docx_meta_util.get_doc_info(task_id)
     if not file_info or not file_info[0]:
-        raise FileNotFoundError(f"docx_file_info_not_found_for_task_id, {task_id}")
+        raise FileNotFoundError(f"doc_file_info_not_found_for_task_id, {task_id}")
     doc_info = file_info[0]
     doc_info['start_time'] = time.time() * 1000
     doc_writer = None
