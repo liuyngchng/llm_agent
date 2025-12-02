@@ -439,62 +439,65 @@ class TeamBuilder:
             detailed_scores = evaluation['score_summary']['detailed_scores']
 
             report_content = f"""# 【{self.review_topic}】{report_title}
-    ## 基本信息
-    - 评审时间: {time.strftime('%Y-%m-%d %H:%M:%S')}
-    - 整体评分: {evaluation['score_summary']['overall_score']}/100
-    - 质量等级: {evaluation['final_assessment']['quality_rating']}
-    - 使用建议: {evaluation['final_assessment']['usage_recommendation']}
+            
+## 1. 基本信息
+- 评审时间: {time.strftime('%Y-%m-%d %H:%M:%S')}
+- 整体评分: {evaluation['score_summary']['overall_score']}/100
+- 质量等级: {evaluation['final_assessment']['quality_rating']}
+- 使用建议: {evaluation['final_assessment']['usage_recommendation']}
 
-    ## 详细评分结果
+## 2. 详细评分结果
 
-    ### 一、内容质量 (30分)
-    **得分: {detailed_scores['content_quality']['score']}分**
+### 2.1 内容质量 (30分)
+**得分: {detailed_scores['content_quality']['score']}分**
 
-    分析要点:
-    {evaluation['content_evaluation']['main_arguments']}
+分析要点:
+{evaluation['content_evaluation']['main_arguments']}
 
-    ### 二、政治思想 (25分)
-    **得分: {detailed_scores['political_ideology']['score']}分**
+### 2.2 政治思想 (25分)
+**得分: {detailed_scores['political_ideology']['score']}分**
 
-    政治立场评估:
-    {detailed_scores['political_ideology'].get('assessment', '待评估')}
+政治立场评估:
+{detailed_scores['political_ideology'].get('assessment', '待评估')}
 
-    ### 三、原创性 (20分)
-    **得分: {detailed_scores['originality']['score']}分**
+### 2.3 原创性 (20分)
+**得分: {detailed_scores['originality']['score']}分**
 
-    原创性等级: {detailed_scores['originality'].get('plagiarism_level', '待评估')}
+原创性等级: {detailed_scores['originality'].get('plagiarism_level', '待评估')}
 
-    ### 四、格式规范 (15分)
-    **得分: {detailed_scores['format_standard']['score']}分**
+### 2.4 格式规范 (15分)
+**得分: {detailed_scores['format_standard']['score']}分**
 
-    格式合规性: {detailed_scores['format_standard'].get('compliance_level', '待评估')}
+格式合规性: {detailed_scores['format_standard'].get('compliance_level', '待评估')}
 
-    ### 五、时效性 (10分)
-    **得分: {detailed_scores['timeliness']['score']}分**
+### 2.5 时效性 (10分)
+**得分: {detailed_scores['timeliness']['score']}分**
 
-    时效性评估: {detailed_scores['timeliness'].get('timeliness_assessment', '待评估')}
+时效性评估: {detailed_scores['timeliness'].get('timeliness_assessment', '待评估')}
 
-    ## 综合评价
+## 3. 综合评价
 
-    ### 主要优点
-    {chr(10).join(f"- {strength}" for strength in evaluation['strengths'])}
+### 3.1 主要优点
+{chr(10).join(f"- {strength}" for strength in evaluation['strengths'])}
 
-    ### 改进建议
-    {chr(10).join(f"- {suggestion}" for suggestion in evaluation['improvement_suggestions'])}
+### 3.2 改进建议
+{chr(10).join(f"- {suggestion}" for suggestion in evaluation['improvement_suggestions'])}
 
-    ### 关键改进点
-    {evaluation['final_assessment']['key_improvements_needed']}
+### 3.3 关键改进点
+{evaluation['final_assessment']['key_improvements_needed']}
 
-    ## 材料内容预览
-    {self.ocr_text[:500]}...
-    （完整材料共{len(self.ocr_text)}字）
+## 4. 材料内容预览
+{self.ocr_text[:500]}...
+（完整材料共{len(self.ocr_text)}字）
 
-    ## 评审说明
-    本评价报告基于AI自动评审生成，建议结合专家评审最终确定。
-    ---
-    评审专家: AI智能评审系统
-    评审时间: {time.strftime('%Y-%m-%d')}
-    """
+## 5. 评审说明
+
+*** 本评价报告基于AI自动评审生成，建议结合专家评审最终确定。
+
+评审专家: {AppType.TEAM_BUILDING.value}评委
+
+评审时间: {time.strftime('%Y-%m-%d')}
+"""
             return report_content
 
         except Exception as e:
