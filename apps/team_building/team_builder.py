@@ -6,11 +6,10 @@ import os
 import logging.config
 import base64
 import time
-from typing import List, Dict
+from typing import Dict
 
 import requests
 from PIL import Image
-import io
 
 from common.cfg_util import get_usr_prompt_template
 from common.const import get_const
@@ -201,18 +200,20 @@ class TeamBuilder:
 
         return ""
 
-    def evaluate_thought_report(self) -> Dict:
+    def evaluate_material_quality(self) -> Dict:
         """
-        评价思想汇报写作质量
+        评价材料质量
         """
         try:
-            template_name = "thought_report_evaluation_msg"
+            template_name = "material_quality_evaluation_msg"
             template = get_usr_prompt_template(template_name, self.sys_cfg)
             if not template:
-                err_info = f"未找到文本评价的提示词模板 {template_name}"
+                err_info = f"未找到材料质量评价的提示词模板 {template_name}"
                 raise RuntimeError(err_info)
+
             criteria = get_md_file_content(self.criteria_file_path)
-            logger.debug(f"文本评审标准如下:\n{criteria}")
+            logger.debug(f"材料质量评审标准如下:\n{criteria}")
+
             prompt = template.format(
                 review_type=self.review_type,
                 review_topic=self.review_topic,
@@ -221,37 +222,60 @@ class TeamBuilder:
             )
 
             result = self.call_llm_api(prompt)
-            logger.debug(f"{self.uid}, {self.task_id}, _validate_evaluation_result")
-            self._validate_evaluation_result(result)
-            logger.debug(f"{self.uid}, {self.task_id}, _validate_evaluation_result_finish")
+            logger.debug(f"{self.uid}, {self.task_id}, _validate_material_evaluation_result")
+            self._validate_material_evaluation_result(result)
+            logger.debug(f"{self.uid}, {self.task_id}, _validate_material_evaluation_result_finish")
             return result
 
         except Exception as e:
-            logger.error(f"文本质量评价失败: {str(e)}")
-            return self._get_fallback_evaluation_result(str(e))
+            logger.error(f"材料质量评价失败: {str(e)}")
+            return self._get_fallback_material_evaluation_result(str(e))
 
     @staticmethod
-    def _validate_evaluation_result(result: Dict):
-        """验证评价结果格式"""
-        required_fields = ['overall_score', 'content_quality', 'ideological_depth',
-                           'writing_standard', 'strengths', 'improvement_suggestions']
+    def _validate_material_evaluation_result(result: Dict):
+        """验证材料质量评价结果格式"""
+        required_fields = ['score_summary', 'content_evaluation', 'strengths',
+                           'improvement_suggestions', 'final_assessment']
         for field in required_fields:
             if field not in result:
-                raise ValueError(f"评价结果缺少必要字段: {field}")
+                raise ValueError(f"材料质量评价结果缺少必要字段: {field}")
 
-        if not isinstance(result['overall_score'], int) or not (0 <= result['overall_score'] <= 100):
-            raise ValueError("整体评分必须在0-100之间")
+        # 验证详细分数结构
+        if 'detailed_scores' not in result['score_summary']:
+            raise ValueError("缺少详细分数结构")
+
+        score_components = ['content_quality', 'political_ideology', 'originality',
+                            'format_standard', 'timeliness']
+        for component in score_components:
+            if component not in result['score_summary']['detailed_scores']:
+                raise ValueError(f"缺少评分项: {component}")
 
     @staticmethod
-    def _get_fallback_evaluation_result(error_msg: str) -> Dict:
-        """获取降级评价结果"""
+    def _get_fallback_material_evaluation_result(error_msg: str) -> Dict:
+        """获取材料质量评价的降级结果"""
         return {
-            "overall_score": 60,
-            "content_quality": "内容完整但需要进一步深化",
-            "ideological_depth": "思想表达基本清晰",
-            "writing_standard": "格式基本规范",
-            "strengths": ["态度端正", "内容完整"],
-            "improvement_suggestions": [f"技术问题: {error_msg}", "建议人工复核"],
+            "score_summary": {
+                "overall_score": 65,
+                "detailed_scores": {
+                    "content_quality": {"score": 20, "breakdown": [7, 7, 6]},
+                    "political_ideology": {"score": 15},
+                    "originality": {"score": 12},
+                    "format_standard": {"score": 10},
+                    "timeliness": {"score": 8}
+                }
+            },
+            "content_evaluation": {
+                "main_arguments": "内容基本完整，但需要进一步深化",
+                "evidence_support": "论据基本充分，建议补充更多实例",
+                "logic_structure": "逻辑结构基本清晰"
+            },
+            "strengths": ["主题基本明确", "格式基本规范"],
+            "improvement_suggestions": [f"技术问题: {error_msg}", "建议补充具体案例", "需要加强论证深度"],
+            "final_assessment": {
+                "quality_rating": "合格",
+                "usage_recommendation": "修改后采用",
+                "key_improvements_needed": "需要改进内容和论证方式"
+            },
             "evaluation_failed": True
         }
 
@@ -402,47 +426,79 @@ class TeamBuilder:
 请检查员工信息数据的完整性和格式，或联系技术支持。
 """
 
-    def generate_evaluation_report(self) -> str:
+    def generate_material_quality_report(self) -> str:
         """
-        生成思想汇报评价报告
+        生成材料质量评价报告
         """
         try:
-            evaluation = self.evaluate_thought_report()
-            report_tile = get_const('output_report_title', AppType.TEAM_BUILDING.name.lower())
-            logger.debug(f"report_title, {report_tile}")
-            report_content = f"""# 【{self.review_topic}】{report_tile}
-## 基本信息
-- 评价时间: {time.strftime('%Y-%m-%d %H:%M:%S')}
-- 整体评分: {evaluation['overall_score']}/100
-- 评价结论: {'优秀' if evaluation['overall_score'] >= 85 else '良好' if evaluation['overall_score'] >= 70 else '合格' if evaluation['overall_score'] >= 60 else '需要改进'}
+            evaluation = self.evaluate_material_quality()
+            report_title = get_const('output_report_title', AppType.TEAM_BUILDING.name.lower())
 
-## 详细评价
+            # 计算各项得分
+            detailed_scores = evaluation['score_summary']['detailed_scores']
 
-### 内容质量
-{evaluation['content_quality']}
+            report_content = f"""# 【{self.review_topic}】{report_title}
+    ## 基本信息
+    - 评审时间: {time.strftime('%Y-%m-%d %H:%M:%S')}
+    - 整体评分: {evaluation['score_summary']['overall_score']}/100
+    - 质量等级: {evaluation['final_assessment']['quality_rating']}
+    - 使用建议: {evaluation['final_assessment']['usage_recommendation']}
 
-### 思想深度  
-{evaluation['ideological_depth']}
+    ## 详细评分结果
 
-### 写作规范
-{evaluation['writing_standard']}
+    ### 一、内容质量 (30分)
+    **得分: {detailed_scores['content_quality']['score']}分**
 
-### 主要优点
-{chr(10).join(f"- {strength}" for strength in evaluation['strengths'])}
+    分析要点:
+    {evaluation['content_evaluation']['main_arguments']}
 
-### 改进建议
-{chr(10).join(f"- {suggestion}" for suggestion in evaluation['improvement_suggestions'])}
+    ### 二、政治思想 (25分)
+    **得分: {detailed_scores['political_ideology']['score']}分**
 
-## 识别文本预览
-{self.ocr_text[:500]}...
-（完整文本共{len(self.ocr_text)}字）
-## 评价说明
-本评价报告基于AI自动识别和评价生成，建议结合人工评审最终确定。
-"""
+    政治立场评估:
+    {detailed_scores['political_ideology'].get('assessment', '待评估')}
+
+    ### 三、原创性 (20分)
+    **得分: {detailed_scores['originality']['score']}分**
+
+    原创性等级: {detailed_scores['originality'].get('plagiarism_level', '待评估')}
+
+    ### 四、格式规范 (15分)
+    **得分: {detailed_scores['format_standard']['score']}分**
+
+    格式合规性: {detailed_scores['format_standard'].get('compliance_level', '待评估')}
+
+    ### 五、时效性 (10分)
+    **得分: {detailed_scores['timeliness']['score']}分**
+
+    时效性评估: {detailed_scores['timeliness'].get('timeliness_assessment', '待评估')}
+
+    ## 综合评价
+
+    ### 主要优点
+    {chr(10).join(f"- {strength}" for strength in evaluation['strengths'])}
+
+    ### 改进建议
+    {chr(10).join(f"- {suggestion}" for suggestion in evaluation['improvement_suggestions'])}
+
+    ### 关键改进点
+    {evaluation['final_assessment']['key_improvements_needed']}
+
+    ## 材料内容预览
+    {self.ocr_text[:500]}...
+    （完整材料共{len(self.ocr_text)}字）
+
+    ## 评审说明
+    本评价报告基于AI自动评审生成，建议结合专家评审最终确定。
+    ---
+    评审专家: AI智能评审系统
+    评审时间: {time.strftime('%Y-%m-%d')}
+    """
             return report_content
+
         except Exception as e:
-            logger.error(f"生成评价报告失败: {str(e)}")
-            return f"# 评价报告生成失败\n\n错误信息: {str(e)}\n\n请检查图片质量或联系技术支持。"
+            logger.error(f"生成材料质量评价报告失败: {str(e)}")
+            return f"# 材料质量评价报告生成失败\n\n错误信息: {str(e)}\n\n请检查材料内容或联系技术支持。"
 
     def execute_evaluation(self) -> str:
         """
@@ -460,7 +516,7 @@ class TeamBuilder:
             logger.debug(f"ocr_result_txt=\n{ocr_result}")
             # 2. 文本质量评价
             update_process_info(self.uid, self.task_id, f"提取到 {len(ocr_result)} 个字符，开始质量评估...", 30)
-            evaluation_report = self.generate_evaluation_report()
+            evaluation_report = self.generate_material_quality_report()
             logger.debug(f"evaluation_report, {evaluation_report}")
             logger.info("已对文本质量作出评估")
             return evaluation_report
@@ -519,60 +575,19 @@ class TeamBuilder:
                 except json.JSONDecodeError as e:
                     logger.error(f"解析LLM返回的JSON失败: {str(e)}")
                     logger.error(f"原始内容: {content}")
-                    return self._get_fallback_evaluation_result(f"JSON解析失败: {str(e)}")
+                    return self._get_fallback_material_evaluation_result(f"JSON解析失败: {str(e)}")
 
             else:
                 error_msg = f"LLM API调用失败: {response.status_code} - {response.text}"
                 logger.error(error_msg)
-                return self._get_fallback_evaluation_result(f"API调用失败: {response.status_code}")
+                return self._get_fallback_material_evaluation_result(f"API调用失败: {response.status_code}")
 
         except Exception as e:
             error_msg = f"LLM API调用异常: {str(e)}"
             logger.error(error_msg)
-            return self._get_fallback_evaluation_result(f"API调用异常: {str(e)}")
+            return self._get_fallback_material_evaluation_result(f"API调用异常: {str(e)}")
 
-    def fill_markdown_table(self, conclusion: str, criteria_title: str, single_criteria: str) -> str:
-        """
-        使用大语言模型将最终评审结果自动填写到标准格式的评审表格中
 
-        Args:
-            conclusion: 生成的最终评审结论
-            criteria_title: 评审标准中的一个表格的标题
-            single_criteria: 评审标准中的一个表格
-
-        Returns:
-            填充后的格式化评审报告文本
-        """
-        template_name = 'fill_md_table_msg'
-        template = get_usr_prompt_template(template_name, self.sys_cfg)
-        if not template:
-            err_info = f"prompts_config_err, {template_name}"
-            raise RuntimeError(err_info)
-        prompt = template.format(
-            review_type = self.review_type,
-            review_topic = self.review_topic,
-            criteria=single_criteria,
-            conclusion=conclusion,
-        )
-        try:
-            logger.info(f"开始使用LLM将评审结果填充到标准格式表格中, title={criteria_title}")
-            # 调用大语言模型API
-            start_time = time.time()
-            filled_report = self.call_llm_api_for_formatting(prompt)
-            end_time = time.time()
-            execution_time = end_time - start_time
-            # 验证返回结果
-            if filled_report and self._is_valid_filled_report(filled_report):
-                logger.info(f"成功生成格式化评审报告, 耗时: {execution_time:.2f} 秒, title={criteria_title}")
-                return filled_report
-            else:
-                logger.warning("LLM返回的格式化报告不完整，返回原始报告")
-                return conclusion
-
-        except Exception as e:
-            logger.error(f"使用LLM填充格式化报告失败: {str(e)}")
-        # 如果填充失败，返回原始报告
-        return conclusion
 
     def call_llm_api_for_formatting(self, prompt: str, max_retries: int = 2) -> str:
         """专门用于格式化报告的大语言模型调用，增加重试机制"""
@@ -672,47 +687,84 @@ class TeamBuilder:
         # 如果找到至少1个表格特征，认为报告有效
         return indicators_found >= 1
 
-def start_thought_evaluation(uid: int, task_id: int, review_type: str, review_topic: str,
-                             criteria_file_path: str, review_file_path: str, criteria_file_type: int,
-                             sys_cfg: dict) -> str:
+    def execute_material_quality_evaluation(self) -> str:
+        """
+        执行完整的材料质量评价流程
+        """
+        try:
+            logger.info("开始执行材料质量评估流程")
+
+            # 1. OCR文本识别（如果是图片材料）
+            update_process_info(self.uid, self.task_id, "开始材料文本识别...", 1)
+
+            if self.review_file_path:
+                # 如果是图片文件，进行OCR识别
+                ocr_result = self.extract_text_from_images()
+                if not ocr_result:
+                    raise ValueError("无法从材料中识别出有效文本，请检查材料质量")
+                self.ocr_text = ocr_result
+            else:
+                # 如果是文本文件，直接读取
+                self.ocr_text = get_md_file_content(self.review_file_path)
+
+            logger.debug(f"材料文本内容长度: {len(self.ocr_text)}")
+
+            # 2. 材料质量评价
+            update_process_info(self.uid, self.task_id, f"已提取材料内容，开始质量评估...", 30)
+            evaluation_report = self.generate_material_quality_report()
+
+            logger.info("材料质量评估完成")
+            return evaluation_report
+
+        except Exception as e:
+            logger.exception("材料质量评估执行失败")
+            return f"# 材料质量评估过程出现错误\n\n错误信息: {str(e)}\n\n请检查材料格式或联系技术支持。"
+
+
+def start_material_quality_evaluation(uid: int, task_id: int, review_type: str, review_topic: str,
+                                      criteria_file_path: str, review_file_path: str, criteria_file_type: int,
+                                      sys_cfg: dict) -> str:
     """
-    开始思想汇报评价流程
+    开始材料质量评价流程
     :param uid: 用户ID
     :param task_id: 任务ID
     :param review_type: 评审类型
     :param review_topic: 评审主题
     :param criteria_file_path: 评审标准markdown文本文件的绝对路径
-    :param review_file_path: 思想汇报文件路径（图片）
+    :param review_file_path: 材料文件路径（图片或文档）
     :param criteria_file_type: 评审标准文件类型
     :param sys_cfg: 系统配置
     """
-    logger.info(f"{uid}, {task_id}, start_thought_evaluation")
+    logger.info(f"{uid}, {task_id}, start_material_quality_evaluation")
     try:
         evaluator = TeamBuilder(uid, task_id, review_type, review_topic, criteria_file_path,
                                 review_file_path, criteria_file_type, sys_cfg)
-        evaluation_report = evaluator.execute_evaluation()
-        output_report_title = get_const('output_report_title', AppType.TEAM_BUILDING.name.lower())
-        if not output_report_title:
-            raise RuntimeError("pls config cfg.db for const key output_report_title")
-        logger.debug(f"output_report_title = {output_report_title}, evaluation_report={evaluation_report}")
-        review_result = evaluator.fill_markdown_table(evaluation_report, output_report_title, criteria_file_path)
-        logger.debug(f"review_result={review_result}")
-        doc_info=get_doc_info(task_id)
+
+        # 执行材料质量评估
+        evaluation_report = evaluator.execute_material_quality_evaluation()
+        output_report_title = get_const('output_report_title',
+            AppType.TEAM_BUILDING.name.lower()) or "材料质量评审报告"
+        logger.debug(f"output_report_title = {output_report_title}")
+
+        doc_info = get_doc_info(task_id)
         output_file_path = doc_info[0]['output_file_path']
         logger.debug(f"output_file_path = {output_file_path}")
-        output_md_file = save_content_to_md_file(review_result, output_file_path, output_abs_path=True)
-        logger.debug(f"output_md_file = {output_md_file}")
+
+        # 保存结果
+        output_md_file = save_content_to_md_file(evaluation_report, output_file_path, output_abs_path=True)
+
         if FileType.XLSX.value == criteria_file_type:
             output_file = convert_md_to_xlsx(output_md_file, True)
         else:
             output_file = convert_md_to_docx(output_md_file, True)
-        logger.info(f"{uid}, {task_id}, 评审报告生成成功, {output_file}")
-        update_process_info(uid, task_id, "评审报告生成完毕", 100)
+
+        logger.info(f"{uid}, {task_id}, 材料质量评审报告生成成功, {output_file}")
+        update_process_info(uid, task_id, "材料质量评审报告生成完毕", 100)
         return evaluation_report
 
     except Exception as e:
-        logger.error(f"思想汇报评价生成失败: {str(e)}")
-        return f"思想汇报评价生成失败: {str(e)}"
+        logger.error(f"材料质量评价生成失败: {str(e)}")
+        return f"材料质量评价生成失败: {str(e)}"
 
 def generate_party_member_suggestion(uid: int, task_id: int, review_type: str, review_topic: str,
                                      criteria_markdown_data: str, employee_data: str, sys_cfg: dict) -> str:

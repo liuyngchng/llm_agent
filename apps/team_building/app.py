@@ -16,8 +16,8 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
-from apps.team_building.team_builder import start_thought_evaluation, \
-    generate_party_member_suggestion
+from apps.team_building.team_builder import generate_party_member_suggestion, \
+    start_material_quality_evaluation
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
@@ -30,7 +30,7 @@ from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.cm_utils import get_console_arg1
 from common.xlsx_md_util import convert_xlsx_to_md
 from common.const import (SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR,
-                          TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE, get_const)
+                          TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE)
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
@@ -276,7 +276,7 @@ def register_routes(app):
 
             # 启动后台任务
             threading.Thread(
-                target=start_thought_evaluation,
+                target=start_material_quality_evaluation,
                 args=(uid, task_id, review_type, review_topic,  criteria_file, paper_file, criteria_file_type, my_cfg)
             ).start()
         else:
