@@ -12,6 +12,7 @@ import requests
 from PIL import Image
 import io
 
+from common.cfg_util import get_usr_prompt_template
 from common.const import get_const
 from common.docx_md_util import save_content_to_md_file, convert_md_to_docx, get_md_file_content
 from common.docx_meta_util import update_process_info, get_doc_info
@@ -60,12 +61,7 @@ class TeamBuilder:
         return
             识别的文本内容
         """
-        prompt = """请准确识别这张手写图片中的所有文字内容。要求：
-1. 保持原文的段落结构
-2. 准确识别手写字体，包括可能的连笔字
-3. 保留标点符号
-4. 如有个别字无法识别，用[?]标记
-5. 输出纯文本格式"""
+        prompt = get_usr_prompt_template("manuscript_ocr_msg", self.sys_cfg)
         try:
             # 读取并编码图片
             with open(image_path, "rb") as image_file:
@@ -210,9 +206,11 @@ class TeamBuilder:
         评价思想汇报写作质量
         """
         try:
-            template = self.sys_cfg['prompts']['thought_report_evaluation_msg']
+            template_name = "thought_report_evaluation_msg"
+            template = get_usr_prompt_template(template_name, self.sys_cfg)
             if not template:
-                raise RuntimeError("未找到文本评价的提示词模板 thought_report_evaluation_msg")
+                err_info = f"未找到文本评价的提示词模板 {template_name}"
+                raise RuntimeError(err_info)
             criteria = get_md_file_content(self.criteria_file_path)
             logger.debug(f"文本评审标准如下:\n{criteria}")
             prompt = template.format(
@@ -264,7 +262,8 @@ class TeamBuilder:
         :return: 党员发展建议报告
         """
         try:
-            template = self.sys_cfg['prompts']['party_member_development_msg']
+            template_name = "party_member_development_msg"
+            template = get_usr_prompt_template(template_name, self.sys_cfg)
             if not template:
                 raise RuntimeError("未找到党员发展建议提示词模板")
 
@@ -453,14 +452,14 @@ class TeamBuilder:
             logger.info("开始执行文本质量评估流程")
 
             # 1. OCR文本识别
-            update_process_info(self.uid, self.task_id, "开始识别手写文字...", 1)
+            update_process_info(self.uid, self.task_id, "开始文本识别...", 1)
             ocr_result = self.extract_text_from_images()
 
             if not ocr_result:
                 raise ValueError("无法从图片中识别出有效文本，请检查图片质量")
             logger.debug(f"ocr_result_txt=\n{ocr_result}")
             # 2. 文本质量评价
-            update_process_info(self.uid, self.task_id, "文本已提取，开始分析内容质量...", 30)
+            update_process_info(self.uid, self.task_id, f"提取到 {len(ocr_result)} 个字符，开始质量评估...", 30)
             evaluation_report = self.generate_evaluation_report()
             logger.debug(f"evaluation_report, {evaluation_report}")
             logger.info("已对文本质量作出评估")
@@ -544,9 +543,11 @@ class TeamBuilder:
         Returns:
             填充后的格式化评审报告文本
         """
-        template = self.sys_cfg['prompts']['fill_md_table_msg']
+        template_name = 'fill_md_table_msg'
+        template = get_usr_prompt_template(template_name, self.sys_cfg)
         if not template:
-            raise RuntimeError("prompts_fill_md_table_msg_err")
+            err_info = f"prompts_config_err, {template_name}"
+            raise RuntimeError(err_info)
         prompt = template.format(
             review_type = self.review_type,
             review_topic = self.review_topic,
@@ -601,7 +602,7 @@ class TeamBuilder:
                     'max_tokens': 8192,
                     'stream': False  # 确保非流式响应
                 }
-
+                logger.debug(f"formatting_msg, {messages}")
                 logger.info(f"开始调用LLM进行报告格式化 (第{attempt + 1}次尝试)")
 
                 # 动态调整超时时间
@@ -671,10 +672,6 @@ class TeamBuilder:
         # 如果找到至少1个表格特征，认为报告有效
         return indicators_found >= 1
 
-
-
-
-
 def start_thought_evaluation(uid: int, task_id: int, review_type: str, review_topic: str,
                              criteria_file_path: str, review_file_path: str, criteria_file_type: int,
                              sys_cfg: dict) -> str:
@@ -697,9 +694,9 @@ def start_thought_evaluation(uid: int, task_id: int, review_type: str, review_to
         output_report_title = get_const('output_report_title', AppType.TEAM_BUILDING.name.lower())
         if not output_report_title:
             raise RuntimeError("pls config cfg.db for const key output_report_title")
-        logger.debug(f"output_report_title = {output_report_title}")
-        review_result = evaluator.fill_markdown_table(evaluation_report,
-                                                      output_report_title, criteria_file_path)
+        logger.debug(f"output_report_title = {output_report_title}, evaluation_report={evaluation_report}")
+        review_result = evaluator.fill_markdown_table(evaluation_report, output_report_title, criteria_file_path)
+        logger.debug(f"review_result={review_result}")
         doc_info=get_doc_info(task_id)
         output_file_path = doc_info[0]['output_file_path']
         logger.debug(f"output_file_path = {output_file_path}")
