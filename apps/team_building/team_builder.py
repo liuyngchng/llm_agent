@@ -409,7 +409,9 @@ class TeamBuilder:
         """
         try:
             evaluation = self.evaluate_thought_report()
-            report_content = f"""# 【{self.review_topic}】思想汇报评价报告
+            report_tile = get_const('output_report_title', AppType.TEAM_BUILDING.name.lower())
+            logger.debug(f"report_title, {report_tile}")
+            report_content = f"""# 【{self.review_topic}】{report_tile}
 ## 基本信息
 - 评价时间: {time.strftime('%Y-%m-%d %H:%M:%S')}
 - 整体评分: {evaluation['overall_score']}/100
@@ -460,7 +462,7 @@ class TeamBuilder:
             # 2. 文本质量评价
             update_process_info(self.uid, self.task_id, "文本已提取，开始分析内容质量...", 30)
             evaluation_report = self.generate_evaluation_report()
-
+            logger.debug(f"evaluation_report, {evaluation_report}")
             logger.info("已对文本质量作出评估")
             return evaluation_report
 
