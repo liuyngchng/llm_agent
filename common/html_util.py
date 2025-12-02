@@ -10,6 +10,8 @@ import logging.config
 
 import requests
 
+from common.cfg_util import get_usr_prompt_template
+
 logging.config.fileConfig('logging.conf', encoding="utf-8")
 logger = logging.getLogger(__name__)
 
@@ -63,9 +65,11 @@ def convert_markdown_to_html(uid:int, task_id: int, markdown_content: str, sys_c
     """
     for attempt in range(max_retries):
         try:
-            template = sys_cfg['prompts']['convert_markdown_to_html_msg']
+            template_name = "convert_markdown_to_html_msg"
+            template = get_usr_prompt_template(template_name, sys_cfg)
             if not template:
-                raise RuntimeError("prompts_convert_markdown_to_html_msg_err")
+                err_info = f"prompt_template_config_err, {template_name}"
+                raise RuntimeError(err_info)
             prompt = template.format(markdown_content=markdown_content)
             logger.info(f"{uid}, {task_id}, 开始将Markdown转换为HTML (第{attempt + 1}次尝试)")
             # 调用大语言模型API

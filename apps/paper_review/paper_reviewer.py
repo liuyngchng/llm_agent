@@ -7,6 +7,7 @@ from typing import List, Dict
 
 import requests
 
+from common.cfg_util import get_usr_prompt_template
 from common.cm_utils import estimate_tokens
 from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_content_to_md_file, get_md_file_catalogue, \
     convert_docx_to_md, extract_sections_content, split_md_file_with_catalogue, split_md_content_with_catalogue
@@ -61,9 +62,11 @@ class PaperReviewer:
         """
         for attempt in range(max_retries):
             try:
-                template = self.sys_cfg['prompts']['section_review_msg']
+                template_name = "section_review_msg"
+                template = get_usr_prompt_template(template_name, self.sys_cfg)
                 if not template:
-                    raise RuntimeError("prompts_section_review_msg_err")
+                    err_info = f"prompt_template_config_err, {template_name}"
+                    raise RuntimeError(err_info)
                 prompt = template.format(
                     review_type = self.review_type,
                     review_topic=self.review_topic,
@@ -214,9 +217,11 @@ class PaperReviewer:
                     'risk_level': result.get('risk_level', '未知')
                 }
                 section_summaries.append(summary)
-            template = self.sys_cfg['prompts']['paper_review_msg']
+            template_name = "paper_review_msg"
+            template = get_usr_prompt_template(template_name, self.sys_cfg)
             if not template:
-                raise RuntimeError("prompts_paper_review_msg_err")
+                err_info = f"prompt_template_config_err, {template_name}"
+                raise RuntimeError(err_info)
             prompt = template.format(
                 review_type = self.review_type,
                 review_topic = self.review_topic,
@@ -505,9 +510,11 @@ class PaperReviewer:
         Returns:
             填充后的格式化评审报告文本
         """
-        template = self.sys_cfg['prompts']['fill_md_table_msg']
+        template_name = "fill_md_table_msg"
+        template = get_usr_prompt_template(template_name, self.sys_cfg)
         if not template:
-            raise RuntimeError("prompts_fill_md_table_msg_err")
+            err_info = f"prompt_template_config_err, {template_name}"
+            raise RuntimeError(err_info)
         prompt = template.format(
             review_type = self.review_type,
             review_topic = self.review_topic,
