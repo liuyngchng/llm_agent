@@ -35,7 +35,7 @@ prompts:
     pic_ocr_msg: |
         输出图片中的文字
 
-    thought_report_evaluation_msg:
+    material_quality_evaluation_msg:
 
     fill_md_table_msg:
 

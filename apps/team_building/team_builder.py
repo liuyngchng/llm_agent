@@ -210,7 +210,7 @@ class TeamBuilder:
             if not template:
                 err_info = f"未找到材料质量评价的提示词模板 {template_name}"
                 raise RuntimeError(err_info)
-
+            logger.debug(f"template_content_for_name {template_name}, {template}")
             criteria = get_md_file_content(self.criteria_file_path)
             logger.debug(f"材料质量评审标准如下:\n{criteria}")
 
@@ -220,8 +220,9 @@ class TeamBuilder:
                 report_content=self.ocr_text,
                 criteria=criteria
             )
-
+            logger.debug(f"{self.uid}, {self.task_id}, start_call_llm_api")
             result = self.call_llm_api(prompt)
+            logger.debug(f"{self.uid}, {self.task_id}, call_llm_api_result, {result}")
             logger.debug(f"{self.uid}, {self.task_id}, _validate_material_evaluation_result")
             self._validate_material_evaluation_result(result)
             logger.debug(f"{self.uid}, {self.task_id}, _validate_material_evaluation_result_finish")
