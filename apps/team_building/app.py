@@ -16,7 +16,7 @@ import time
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
-from apps.team_building.team_builder import generate_party_member_suggestion, \
+from apps.team_building.team_builder import generate_team_member_suggestion, \
     start_material_quality_evaluation
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
@@ -289,7 +289,7 @@ def register_routes(app):
 
             # 启动后台任务
             threading.Thread(
-                target=generate_party_member_suggestion,
+                target=generate_team_member_suggestion,
                 args=(uid, task_id, review_type, review_topic, criteria_file, paper_file, criteria_file_type, my_cfg)
             ).start()
 

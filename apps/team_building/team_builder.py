@@ -32,7 +32,7 @@ class TeamBuilder:
     def __init__(self, uid: int, task_id: int, review_type: str, review_topic: str,
                  criteria_file_path: str, review_file_path: str, criteria_file_type, sys_cfg: dict):
         """
-        思想汇报手写体评审系统
+        团队建设材料评审系统
         :param uid: 用户ID，标记哪个用户提交的任务
         :param task_id: 任务ID，标记是哪个任务
         :param review_type: 评审类型, 例如 思想汇报评审
@@ -280,17 +280,18 @@ class TeamBuilder:
             "evaluation_failed": True
         }
 
-    def generate_party_member_development_suggestion(self, employee_data: str) -> str:
+    def generate_team_member_development_suggestion(self, employee_data: str) -> str:
         """
-        根据部门员工信息生成党员发展建议
+        根据部门员工信息生成成员发展建议
         :param employee_data: 员工信息的markdown文本
-        :return: 党员发展建议报告
+        :return: 成员发展建议报告
         """
         try:
-            template_name = "party_member_development_msg"
+            template_name = "team_member_development_msg"
             template = get_usr_prompt_template(template_name, self.sys_cfg)
             if not template:
-                raise RuntimeError("未找到党员发展建议提示词模板")
+                err_info = f"未找到成员发展建议提示词模板，{template_name}"
+                raise RuntimeError("err_info")
 
             prompt = template.format(
                 review_type=self.review_type,
@@ -303,12 +304,12 @@ class TeamBuilder:
             return self._format_development_suggestion(result)
 
         except Exception as e:
-            logger.error(f"生成党员发展建议失败: {str(e)}")
+            logger.error(f"生成成员发展建议失败: {str(e)}")
             return self._get_fallback_development_suggestion(str(e))
 
     def call_llm_api_for_development_suggestion(self, prompt: str) -> Dict:
         """
-        专门用于党员发展建议的LLM调用
+        专门用于成员发展建议的LLM调用
         """
         try:
             key = self.sys_cfg['api']['llm_api_key']
@@ -323,7 +324,7 @@ class TeamBuilder:
             messages = [
                 {
                     "role": "system",
-                    "content": "你是一名党组织负责人，擅长分析员工信息并提出党员发展建议。请基于员工的政治表现、工作能力、思想状况等方面进行分析。"
+                    "content": get_const('role_content', AppType.TEAM_BUILDING.name.lower())
                 },
                 {"role": "user", "content": prompt}
             ]
@@ -335,7 +336,7 @@ class TeamBuilder:
                 'max_tokens': 3000
             }
 
-            logger.info("开始生成党员发展建议")
+            logger.info("开始生成成员发展建议")
             response = requests.post(
                 url=uri,
                 headers=headers,
@@ -359,23 +360,23 @@ class TeamBuilder:
                     # 如果不是JSON，返回原始文本
                     return {"suggestion_text": content}
             else:
-                error_msg = f"党员发展建议API调用失败: {response.status_code}"
+                error_msg = f"成员发展建议API调用失败: {response.status_code}"
                 logger.error(error_msg)
                 return {"error": error_msg}
 
         except Exception as e:
-            logger.error(f"党员发展建议API调用异常: {str(e)}")
+            logger.error(f"成员发展建议API调用异常: {str(e)}")
             return {"error": str(e)}
 
     def _format_development_suggestion(self, result: Dict) -> str:
-        """格式化党员发展建议报告"""
+        """格式化成员发展建议报告"""
         try:
             if "error" in result:
-                return f"生成党员发展建议时出现错误: {result['error']}"
+                return f"生成成员发展建议时出现错误: {result['error']}"
 
             # 如果有结构化的数据，按格式输出
             if "suggestions" in result:
-                report = f"""# 【{self.review_topic}】党员发展建议报告
+                report = f"""# 【{self.review_topic}】成员发展建议报告
 
 ## 生成时间
 {time.strftime('%Y-%m-%d %H:%M:%S')}
@@ -400,25 +401,25 @@ class TeamBuilder:
 {result.get('training_plan', '具体的培养计划和建议')}
 
 ## 注意事项
-{result.get('precautions', '发展党员过程中需要注意的事项')}
+{result.get('precautions', '发展成员过程中需要注意的事项')}
 
 ---
 *本建议基于AI分析生成，请党组织结合实际情况进行决策*
 """
             else:
                 # 如果是文本格式的结果
-                report = result.get('suggestion_text', '未能生成有效的党员发展建议')
+                report = result.get('suggestion_text', '未能生成有效的成员发展建议')
 
             return report
 
         except Exception as e:
-            logger.error(f"格式化党员发展建议失败: {str(e)}")
-            return "党员发展建议格式化失败，请查看原始数据。"
+            logger.error(f"格式化成员发展建议失败: {str(e)}")
+            return "成员发展建议格式化失败，请查看原始数据。"
 
     @staticmethod
     def _get_fallback_development_suggestion(error_msg: str) -> str:
-        """获取降级的党员发展建议"""
-        return f"""# 党员发展建议生成失败
+        """获取降级的成员发展建议"""
+        return f"""# 成员发展建议生成失败
 
 ## 错误信息
 {error_msg}
@@ -770,10 +771,10 @@ def start_material_quality_evaluation(uid: int, task_id: int, review_type: str, 
         logger.error(f"材料质量评价生成失败: {str(e)}")
         return f"材料质量评价生成失败: {str(e)}"
 
-def generate_party_member_suggestion(uid: int, task_id: int, review_type: str, review_topic: str,
-                                     criteria_markdown_data: str, employee_data: str, sys_cfg: dict) -> str:
+def generate_team_member_suggestion(uid: int, task_id: int, review_type: str, review_topic: str,
+                                    criteria_markdown_data: str, employee_data: str, sys_cfg: dict) -> str:
     """
-    生成党员发展建议
+    生成团队成员发展建议
     :param uid: 用户ID
     :param task_id: 任务ID
     :param review_type: 评审类型
@@ -781,24 +782,24 @@ def generate_party_member_suggestion(uid: int, task_id: int, review_type: str, r
     :param criteria_markdown_data: 评审标准markdown文本
     :param employee_data: 员工信息markdown文本
     :param sys_cfg: 系统配置
-    :return: 党员发展建议报告
+    :return: 团队成员发展建议报告
     """
-    logger.info(f"{uid}, {task_id}, generate_party_member_suggestion")
+    logger.info(f"{uid}, {task_id}, generate_team_member_suggestion")
     try:
         # 使用空的review_file_path和默认的criteria_file_type
         builder = TeamBuilder(uid, task_id, review_type, review_topic,
                               criteria_markdown_data, "", 0, sys_cfg)
 
-        update_process_info(uid, task_id, "正在分析员工信息并生成党员发展建议...")
-        suggestion_report = builder.generate_party_member_development_suggestion(employee_data)
+        update_process_info(uid, task_id, "正在分析员工信息并生成成员发展建议...")
+        suggestion_report = builder.generate_team_member_development_suggestion(employee_data)
 
-        logger.info("党员发展建议生成成功")
+        logger.info("成员发展建议生成成功")
         return suggestion_report
 
     except Exception as e:
-        logger.error(f"党员发展建议生成失败: {str(e)}")
-        update_process_info(uid, task_id, f"党员发展建议生成失败: {str(e)}")
-        return f"党员发展建议生成失败: {str(e)}"
+        logger.error(f"成员发展建议生成失败: {str(e)}")
+        update_process_info(uid, task_id, f"成员发展建议生成失败: {str(e)}")
+        return f"成员发展建议生成失败: {str(e)}"
 
 
 if __name__ == "__main__":
