@@ -11,11 +11,11 @@ sys:
     cypher_key: abaababa
 api:
 
-
     # embedding API 基地址
     embedding_api_uri: https://api.your_embedding_provider.com/v1/
     # embedding API Key
     embedding_api_key: sk-xxxx
-    # embedding model name
+    # embedding model name， 假定当前工程的目录为 llm_agent ,与 llm_agent 目录并列的模型目录为 bce-base
+    # 则此处配置 bce-base
     embedding_model_name: bce-base
 
