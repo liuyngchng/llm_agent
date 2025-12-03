@@ -117,7 +117,6 @@ pip install -r ./apps/chat2db/requirements.txt
 │   ├── ord_gen
 │   ├── paper_review
 │   ├── portal
-│   ├── pptx
 │   └── team_building
 ├── common
 │   ├── build
@@ -195,7 +194,7 @@ cd ~/workspace/llm_agent
 ./common/sh/init_sqlite_cfg_db.sh
 ```
 
-### 4.3 应用启动
+### 4.3 启动应用
 
 （1）chat2db
 
@@ -229,7 +228,7 @@ cd llm_agent
 PYTHONPATH=./:${PYTHONPATH}  ./apps/docx/app.py
 ```
 
-应用 docx 和 chat 中涉及到知识库，文本的向量化过程中会涉及到 nltk 本地数据的配置，详见
+应用 docx 和 chat 中涉及到知识库，文本的向量化过程中会涉及到 `NLTK` 本地数据的配置，详见
 
 https://github.com/liuyngchng/rd.lab/blob/master/llm_in_action.md 章节 `5.1.1.2 nltk`。 
 
