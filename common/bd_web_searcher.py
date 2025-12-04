@@ -370,7 +370,8 @@ class BaiduWebSearcher:
                 params=params,
                 headers=self.headers,
                 timeout=self.timeout,
-                verify=False
+                verify=False,
+                proxies=None
             )
 
             if response.status_code != 200:
@@ -379,7 +380,7 @@ class BaiduWebSearcher:
 
             response.encoding = 'utf-8'
             html = response.text
-
+            logger.debug(f"get_html_result, {html}")
             # 解析搜索结果
             soup = BeautifulSoup(html, 'lxml')
 
