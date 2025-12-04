@@ -60,7 +60,7 @@ FILE_TASK_INIT_PERCENT=0.01         # 处理进度大于此值，说明基本材
 MAX_HISTORY_SIZE = 19
 
 # 单次提交给大语言模型的最大字数
-MAX_SECTION_LENGTH = 3000  # 3000 字符
+MAX_SECTION_LENGTH = 5000  # 字符数量
 
 import json
 

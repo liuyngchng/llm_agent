@@ -253,16 +253,31 @@ class TeamBuilder:
 
     @staticmethod
     def _get_fallback_material_evaluation_result(error_msg: str) -> Dict:
-        """获取材料质量评价的降级结果"""
+        """获取材料质量评价的降级结果（修复格式）"""
         return {
             "score_summary": {
                 "overall_score": 65,
                 "detailed_scores": {
-                    "content_quality": {"score": 20, "breakdown": [7, 7, 6]},
-                    "political_ideology": {"score": 15},
-                    "originality": {"score": 12},
-                    "format_standard": {"score": 10},
-                    "timeliness": {"score": 8}
+                    "content_quality": {
+                        "score": 20,
+                        "comments": "因评估失败，采用默认评分"
+                    },
+                    "political_ideology": {
+                        "score": 15,
+                        "assessment": "因评估失败，采用默认评估"
+                    },
+                    "originality": {
+                        "score": 12,
+                        "plagiarism_level": "因评估失败，无法确定"
+                    },
+                    "format_standard": {
+                        "score": 10,
+                        "compliance_level": "因评估失败，无法确定"
+                    },
+                    "timeliness": {
+                        "score": 8,
+                        "timeliness_assessment": "因评估失败，无法确定"
+                    }
                 }
             },
             "content_evaluation": {
@@ -279,6 +294,7 @@ class TeamBuilder:
             },
             "evaluation_failed": True
         }
+
 
     def generate_team_member_development_suggestion(self, employee_data: str) -> str:
         """
