@@ -344,7 +344,9 @@ def load_vdb(vector_db: str, llm_cfg: dict) -> Optional[chromadb.Collection]:
 
 
 def search(query: str, score_threshold: float, vector_db: str,llm_cfg: dict, top_k=3) -> list[dict]:
-    """相似度搜索并返回格式化结果"""
+    """
+    相似度搜索并返回格式化结果
+    """
     collection = load_vdb(vector_db, llm_cfg)
     if not collection:
         logger.info(f"vdb_collection_null_return_empty_list_for_q, {query}")
@@ -383,9 +385,49 @@ def search(query: str, score_threshold: float, vector_db: str,llm_cfg: dict, top
     # 按分数降序排序
     return sorted(formatted_results, key=lambda x: x["score"], reverse=True)
 
+
+def search1(query: str, score_threshold: float, vector_db: str,llm_cfg: dict, top_k=3) -> list[dict]:
+    """
+    相似度搜索并返回格式化结果，这个本地提交的是用户输入的文本，
+    而不是将文本转换为向量，再向远端发送,
+    todo: 这个方法需要经过实践检验
+    """
+    collection = load_vdb(vector_db, llm_cfg)
+    if not collection:
+        logger.info(f"vdb_collection_null_return_empty_list_for_q, {query}")
+        return []
+    # 执行查询
+    results: QueryResult = collection.query(
+        query_texts=[query],
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"]
+    )
+
+    # 处理结果并计算相似度分数
+    formatted_results = []
+    for i in range(len(results['ids'][0])):
+        doc_id = results['ids'][0][i]
+        content = results['documents'][0][i]
+        metadata = results['metadatas'][0][i]
+        distance = results['distances'][0][i]
+
+        # 将距离转换为相似度分数 (1-距离)
+        similarity_score = max(0.0, min(1.0, 1.0 - distance))
+
+        if similarity_score >= score_threshold:
+            formatted_results.append({
+                "id": doc_id,
+                "content": content,
+                "metadata": metadata,
+                "score": similarity_score
+            })
+    # 按分数降序排序
+    return sorted(formatted_results, key=lambda x: x["score"], reverse=True)
+
 def search_txt(txt: str, vector_db_dir: str, score_threshold: float,
         llm_cfg: dict, txt_num: int) -> str:
     """
+    调用入口
     :param txt: the query text
     :param vector_db_dir: the directory to save the vector db
     :param score_threshold: the score threshold
