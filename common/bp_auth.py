@@ -323,4 +323,6 @@ def get_cfg():
         cfg = current_app.config.get('CFG')
         return cfg
     except RuntimeError:
-        raise
+        pass
+    from common.sys_init import init_yml_cfg
+    return init_yml_cfg()

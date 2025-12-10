@@ -379,13 +379,18 @@ def is_task_cancelled(file_id: int) -> bool:
         return (file_id in active_tasks and
                 active_tasks[file_id].get('cancelled', False))
 
+
 def get_cfg():
     """获取配置，优先从应用上下文获取，如果没有则直接初始化"""
     try:
         from flask import current_app
-        return current_app.config.get('CFG')
+        cfg = current_app.config.get('CFG')
+        if cfg:
+            return cfg
     except RuntimeError:
-        raise
+        pass
+    from common.sys_init import init_yml_cfg
+    return init_yml_cfg()
 
 def process_doc():
     file_list = VdbMeta.get_vdb_file_processing_list()
