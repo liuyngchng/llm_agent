@@ -39,13 +39,13 @@ class VdbMeta:
         sql = f"select * from vdb_info where uid = {uid}"
         if kdb_name and kdb_name.strip() != '':
             sql += f" and name = '{kdb_name}'"
-        logger.info(f"get_my_vdb_info_by_uid_sql, {sql}")
+        logger.debug(f"get_my_vdb_info_by_uid_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         if not include_others_public:
             for item in my_dt:
                 if item.get('is_default', -1) == 1:  # 自己的知识库
                     item['name'] = '(默认)' + item.get('name', '')
-            logger.info(f"get_my_vdb_info_by_uid_dt {my_dt}")
+            logger.debug(f"get_my_vdb_info_by_uid_dt {my_dt}")
             return my_dt
         sql = f"select * from vdb_info where uid != {uid} and is_public = '1'"
         logger.info(f"get_vdb_info_by_not_uid_and_is_public_sql, {sql}")
@@ -64,7 +64,7 @@ class VdbMeta:
                 except Exception as e:
                     logger.error(f"get_user_name_by_uid_err, {str(e)}")
                 item['name'] = f'用户[{user_name}]的_' + item.get('name', None)
-        logger.info(f"get_vdb_info_by_uid_dt {merged_dt}")
+        logger.debug(f"get_vdb_info_by_uid_dt {merged_dt}")
         return merged_dt
 
     @staticmethod
