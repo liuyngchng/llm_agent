@@ -68,6 +68,14 @@ class RemoteChromaEmbedder(EmbeddingFunction):
     def get_config(self) -> dict[str, Any]:
         return {"client": self.client, "model_name": self.model_name}
 
+def get_chroma_client(vector_db_abs_path: str):
+    """
+    设置禁用 ChromaDB 遥测
+    """
+    return chromadb.PersistentClient(
+        path=vector_db_abs_path,
+        settings=chromadb.Settings(anonymized_telemetry=False)
+    )
 
 def process_doc(file_id: int, documents: list[Document], vector_db: str,
                 llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10, separators=None, max_workers=4) -> None:
@@ -95,12 +103,9 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
             keep_separator=False
         )
         doc_list = text_splitter.split_documents(documents)
-        # 创建Chroma客户端
-        chroma_client = chromadb.PersistentClient(path=vector_db)
         openai_client = build_client(llm_cfg)
         embed_model = RemoteChromaEmbedder(openai_client, llm_cfg['embedding_model_name'])
-
-        collection = chroma_client.get_or_create_collection(
+        collection = get_chroma_client(vector_db).get_or_create_collection(
             name="knowledge_base",
             embedding_function=embed_model,
             metadata={"hnsw:space": "cosine"}  # 使用余弦相似度
@@ -257,7 +262,7 @@ def vector_file(file_id: int, file_name: str, vector_db: str, llm_cfg: dict, chu
             VdbMeta.update_vdb_file_process_info(file_id, "该文档的文件类型暂不支持")
             return
         loader = loader_mapping[file_type](abs_path)
-        logger.info(f"load_doc_with {type(logger)}")
+        logger.info(f"load_doc_with {type(loader)}")
         documents: list[Document] = loader.load()
         if not documents:
             logger.warning(f"no_txt_content_found_in_file: {abs_path}")
@@ -296,8 +301,7 @@ def del_doc(file_path: str, vector_db: str) -> bool:
     # 获取绝对路径用于匹配
     abs_path = os.path.abspath(file_path)
     try:
-        chroma_client = chromadb.PersistentClient(path=vector_db)
-        collection = chroma_client.get_collection("knowledge_base")
+        collection = get_chroma_client(vector_db).get_collection("knowledge_base")
         # 先查询匹配文档
         results = collection.get(where={"source": abs_path})
 
@@ -332,11 +336,10 @@ def load_vdb(vector_db: str, llm_cfg: dict) -> Optional[chromadb.Collection]:
         return None
 
     try:
-        chroma_client = chromadb.PersistentClient(path=vector_db)
         openai_client = build_client(llm_cfg)
         embed_model = RemoteChromaEmbedder(openai_client, llm_cfg['embedding_model_name'])
 
-        return chroma_client.get_collection(
+        return get_chroma_client(vector_db).get_collection(
             name="knowledge_base",
             embedding_function=embed_model
         )

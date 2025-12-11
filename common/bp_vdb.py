@@ -334,7 +334,7 @@ def clean_expired_vdb_file_task():
     周期性地清理在2小时内未完成的任务，系统存储时间戳create_time为毫秒
     """
     while True:
-        logger.info(f"task_triggered")
+        logger.debug(f"task_triggered")
         file_list = VdbMeta.get_vdb_file_processing_list()
         now = int(time.time()*1000)  # 当前时间毫秒数
         vdb_task_id_list = []
