@@ -296,23 +296,6 @@ def upload_file():
         logger.error(info)
         return json.dumps(info, ensure_ascii=False), 500
 
-@vdb_bp.route("/vdb/index/doc", methods=['POST'])
-def index_doc():
-    data = request.json
-    logger.info(f"vdb_index_doc, {data}")
-    task_id = data.get("task_id")
-    file_name = data.get("file_name")
-    uid = data.get("uid")
-    kb_id = data.get("kb_id")
-
-    if not task_id or not file_name or not kb_id:
-        return jsonify({"error": "缺少参数"}), 400
-    threading.Thread(
-        target=process_doc,
-        args=(task_id, file_name, uid, kb_id)
-    ).start()
-    return json.dumps({"status": "started", "task_id": task_id}, ensure_ascii=False), 200
-
 @vdb_bp.route('/vdb/process/info', methods=['POST'])
 def get_doc_process_info():
     task_id = request.json.get("task_id")
@@ -389,6 +372,7 @@ def get_cfg():
             return cfg
     except RuntimeError:
         pass
+    logger.warning("no_cfg_info_in_app_context")
     from common.sys_init import init_yml_cfg
     return init_yml_cfg()
 
