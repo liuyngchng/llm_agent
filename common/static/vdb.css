@@ -627,6 +627,100 @@ footer {
     color: #666;
 }
 
+i.fas, i.fa-solid {
+    display: inline-block !important;
+    vertical-align: middle !important;
+    line-height: 1 !important;
+    text-align: center !important;
+    position: relative;
+}
+
+h1 i.fas {
+    font-size: 0.9em !important;
+    vertical-align: -0.1em !important; /* 微调垂直位置 */
+    margin-right: 12px;
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-radius: 50% !important;
+    padding: 12px !important;
+    width: 40px !important;
+    height: 40px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+h2 i.fas {
+    vertical-align: -0.2em !important; /* 进一步调整 */
+    margin-right: 10px;
+    background: #4b6cb7 !important;
+    border-radius: 50% !important;
+    padding: 10px !important;
+    width: 40px !important;
+    height: 40px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: white !important;
+    font-size: 1.2rem !important;
+}
+
+.btn i.fas {
+    vertical-align: -0.125em !important; /* 精确调整 */
+    margin-right: 8px;
+    font-size: 1.05em !important;
+    line-height: 0 !important;
+    display: inline-block !important;
+    position: relative;
+    top: 0.05em; /* 微调位置 */
+}
+
+.result-table i.fas {
+    vertical-align: -0.1em !important;
+    margin-right: 5px;
+    font-size: 0.9em !important;
+}
+
+#setDefaultBtn i.fas,
+#deleteBtn i.fas {
+    vertical-align: -0.15em !important;
+    font-size: 0.95em !important;
+}
+
+.status-container i.fas {
+    vertical-align: -0.15em !important;
+    font-size: 1.1em !important;
+    margin-right: 10px;
+}
+
+#fileListContainer h3 i.fas {
+    vertical-align: -0.1em !important;
+    margin-right: 10px;
+    font-size: 1.05em !important;
+}
+
+.progress-text i.fas {
+    vertical-align: -0.1em !important;
+    margin-right: 10px;
+    font-size: 1.05em !important;
+}
+
+.icon-text-wrapper {
+    display: inline-grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    gap: 8px;
+}
+
+.fas.icon-fix {
+    transform: translateY(0.08em); /* 精确像素级调整 */
+}
+
+
+
+
+
+
+
 
 
 @keyframes spin {
@@ -738,6 +832,28 @@ footer {
 
     .file-size {
         margin: 5px 0;
+    }
+
+    h1 i.fas {
+        vertical-align: -0.15em !important;
+        padding: 10px !important;
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 0.85em !important;
+    }
+
+    h2 i.fas {
+        vertical-align: -0.2em !important;
+        padding: 8px !important;
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1rem !important;
+    }
+
+    .btn i.fas {
+        vertical-align: -0.1em !important;
+        font-size: 0.95em !important;
+        margin-right: 6px;
     }
 
 }
