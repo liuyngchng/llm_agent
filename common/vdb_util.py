@@ -257,11 +257,13 @@ def vector_file(file_id: int, file_name: str, vector_db: str, llm_cfg: dict, chu
             VdbMeta.update_vdb_file_process_info(file_id, "该文档的文件类型暂不支持")
             return
         loader = loader_mapping[file_type](abs_path)
+        logger.info(f"load_doc_with {type(logger)}")
         documents: list[Document] = loader.load()
         if not documents:
             logger.warning(f"no_txt_content_found_in_file: {abs_path}")
             VdbMeta.update_vdb_file_process_info(file_id, "该文档中未发现有效的文本内容")
             return
+        logger.info(f"add_source_in_doc {len(documents)}")
         # 确保有source元数据
         for doc in documents:
             if 'source' not in doc.metadata:
