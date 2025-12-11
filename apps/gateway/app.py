@@ -3,8 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 """
-作为数据库连接的代理，用于获取配置数据库相关的信息
-其他所有服务如果需要操作DB，则通过这个代理进行，屏蔽一切DB操作细节，方便其他服务进行横向扩展
+提供接口级的服务
 """
 import os
 import logging.config
@@ -12,7 +11,7 @@ from functools import wraps
 
 from flask import Flask, request, jsonify
 
-from common import cfg_util
+from common import cfg_util, const
 from common.sys_init import init_yml_cfg
 from common.cm_utils import get_console_arg1
 
@@ -49,22 +48,7 @@ def token_required(f):
     return decorated
 
 
-@app.route('/dt/auth', methods=['POST'])
-def auth_user():
-    """ 用户认证 """
-    try:
-        data = request.get_json()
-        user = data.get('user')
-        t = data.get('t')
 
-        if not user or not t:
-            return jsonify({'error': 'Missing user or token'}), 400
-
-        result = cfg_util.auth_user(user, t, my_cfg)
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"Auth API error: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
 
 
 
@@ -107,7 +91,7 @@ def get_ds_cfg(uid):
 def get_const_by_app_and_key(app_name: str, key: str):
     """ 获取常量 """
     try:
-        value = cfg_util.get_const(key, app_name)
+        value = const.get_const(key, app_name)
         return jsonify({'value': value})
     except Exception as e:
         logger.error(f"Get const API error: {str(e)}")

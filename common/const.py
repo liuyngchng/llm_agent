@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 USER_SAMPLE_DATA_DB = "user_info.db"
 AI_GEN_TAG="[_AI生成_]"
 
+ # 这里可以根据实际部署情况进行数据库文件绝对路径的配置
 CFG_DB_FILE = "cfg.db"
 CFG_DB_URI=f"sqlite:///{CFG_DB_FILE}"
 
