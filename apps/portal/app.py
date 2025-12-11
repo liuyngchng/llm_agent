@@ -37,7 +37,7 @@ def app_home():
         "host": my_cfg['sys']['host']
     }
     ip = get_client_ip()
-    logger.info(f"ctx, {ctx}, from_ip, {ip}")
+    logger.info(f"from_ip, {ip}")
 
     return render_template("portal_index.html", **ctx)
 
