@@ -10,7 +10,6 @@
 log/*
 cfg.db.template
 cfg.yml.template
-logging.conf
 **/*.iml
 **/_*
 native-image/*
