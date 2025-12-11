@@ -249,15 +249,14 @@ dir
 
 # 3. 软件配置
 
-下面以启动单个应用`apps\chat`程序为例，进行系统配置说明。每次选定将要启动的应用(例如 `apps/chat`)后, 需要将 `apps/chat`目录下的 `cfg.db.template`, `cfg.yml.template`, `logging.conf` 这三个文件拷贝至项目根目录，并重新命名为 `cfg.db`, `cfg.yml`, `logging.conf` ，以 `apps/chat` 为例，如表 3-1 所示。
+下面以启动单个应用`apps\chat`程序为例，进行系统配置说明。每次选定将要启动的应用(例如 `apps/chat`)后, 需要将 `apps/chat`目录下的 `cfg.db.template`, `cfg.yml.template` 这2个文件拷贝至项目根目录，并重新命名为 `cfg.db`, `cfg.yml` ，以 `apps/chat` 为例，如表 3-1 所示。
 
 <div align='center'> <b>表 3-1 配置文件操作清单</b> </div>
 
-| No.  | 原来的目录                                                   | 新目录                                             | 操作                                       |
-| ---- | ------------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------ |
-| 1    | `C:\workspace\gitee_llm_agent-master\apps\chat\cfg.db.template` | `C:\workspace\gitee_llm_agent-master\cfg.db`       | 拷贝、粘贴、重命名即可                     |
-| 2    | `C:\workspace\gitee_llm_agent-master\apps\chat\cfg.yml.template` | `C:\workspace\gitee_llm_agent-master\cfg.yml`      | 拷贝、粘贴、重命名后，还需配置大模型 `API` |
-| 3    | `C:\workspace\gitee_llm_agent-master\apps\chat\logging.conf` | `C:\workspace\gitee_llm_agent-master\logging.conf` | 拷贝、粘贴即可                             |
+| No.  | 原来的目录                                                   | 新目录                                        | 操作                                       |
+| ---- | ------------------------------------------------------------ | --------------------------------------------- | ------------------------------------------ |
+| 1    | `C:\workspace\gitee_llm_agent-master\apps\chat\cfg.db.template` | `C:\workspace\gitee_llm_agent-master\cfg.db`  | 拷贝、粘贴、重命名即可                     |
+| 2    | `C:\workspace\gitee_llm_agent-master\apps\chat\cfg.yml.template` | `C:\workspace\gitee_llm_agent-master\cfg.yml` | 拷贝、粘贴、重命名后，还需配置大模型 `API` |
 
 如果启动别的应用，例如 `apps\chat2db`， 则将文档中所有路径中的 `apps\chat`替换为 `apps\chat2db`。
 
@@ -267,11 +266,7 @@ dir
 
 ## 3.2 `cfg.yml`
 
- 拷贝各个应用根目录（`C:\workspace\gitee_llm_agent-master\apps\chat\`）下的 `cfg.yml.template` 文件至项目根目录`C:\workspace\gitee_llm_agent-master`，重命名为 `cfg.yml`， 配置相应信息。`cfg.yml` 中的*** 大语言模型 `API` 相关配置是必须配置的，否则软件无法正常运行。***算力资源可以使用企业内部部署的算力资源，或公共互联网【 Deepseek官网 (https://platform.deepseek.com/) 或其他大厂 】`API`。
-
-## 3.3 logging.conf
-
-`logging.conf` 为项目的日志配置文件，用于记录日志， 拷贝需要启动的应用目录下的 cfg.db （例如， `apps/chat`下的 `logging.conf`）至项目根目录即可， 如表 3-1所示。
+ 拷贝各个应用根目录（`C:\workspace\gitee_llm_agent-master\apps\chat\`）下的 `cfg.yml.template` 文件至项目根目录`C:\workspace\gitee_llm_agent-master`，重命名为 `cfg.yml`， 配置相应信息。`cfg.yml` 中的*** 大语言模型 `API` 相关配置是必须配置的，否则软件无法正常运行。***算力资源可以使用企业内部部署的算力资源，或公共互联网【 Deepseek官网 (https://platform.deepseek.com/) 或其他大厂 】兼容 `OpenAI` 的`API`。
 
 # 4. 运行程序
 
@@ -303,7 +298,7 @@ C:\workspace\llm_py_env\Scripts>activate
 
 此时，运行时的当前目录 "./" 为项目文件根目录`C:\workspace\gitee_llm_agent-maste`， 启动时会读取当前目录下的的 `cfg.db`, `cfg.yml`, `logging.conf` 这3个文件。
 
-启动后，会看到控制台或者根目录下的文本文件 apps.xxxx.log  中看到:
+启动后，会看到控制台或者根目录下的文本文件 app.log  中看到:
 
 ```powershell
 2025-11-01 10:50:26,981 - 126491346956608 - __main__ - INFO -<module> - [251]- listening_port 19000
