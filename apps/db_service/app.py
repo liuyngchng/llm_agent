@@ -11,9 +11,8 @@ import json
 import logging.config
 import os
 
-import requests
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, render_template, send_from_directory, abort, request
+from flask import Flask, request
 
 from common import cfg_util
 from common.bp_auth import get_client_ip
@@ -41,16 +40,16 @@ def app_home():
 
     return json.dumps({"status":200, "msg":"hello, db service"}), 200
 
-@app.route('/usr/<usr_name>', methods ='GET')
+@app.route('/usr/<usr_name>', methods =['GET'])
 def get_uid_by_user(usr_name):
     """根据用户名称获取uid"""
     return cfg_util.get_uid_by_user(usr_name)
 
-@app.route('/usr/<uid>', methods ='GET')
+@app.route('/usr/<uid>', methods =['GET'])
 def get_user_info_by_uid(uid):
     return cfg_util.get_user_info_by_uid(uid)
 
-@app.route('/usr/auth', methods='POST')
+@app.route('/usr/auth', methods=['POST'])
 def auth_usr():
     """
     用户登录认证
