@@ -12,11 +12,12 @@ import logging.config
 import os
 
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, request
+from flask import Flask, request, Response
 
 from common import cfg_util
 from common.bp_auth import get_client_ip
 from common.cm_utils import get_console_arg1
+from common.const import JSON_MIME_TYPE
 from common.sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -37,17 +38,22 @@ my_cfg = init_yml_cfg()
 def app_home():
     ip = get_client_ip()
     logger.info(f"from_ip, {ip}")
-
-    return json.dumps({"status":200, "msg":"hello, db service"}), 200
+    result = json.dumps({"status":200, "msg":"hello, db service"})
+    return Response(result, content_type=JSON_MIME_TYPE, status=200)
 
 @app.route('/usr/<usr_name>', methods =['GET'])
 def get_uid_by_user(usr_name):
     """根据用户名称获取uid"""
-    return cfg_util.get_uid_by_user(usr_name)
+    msg = {"status":200}
+    data = cfg_util.get_uid_by_user(usr_name)
+    msg['dt'] = data
+    dt = json.dumps(msg)
+    return Response(dt, content_type=JSON_MIME_TYPE, status=200)
 
 @app.route('/usr/<uid>', methods =['GET'])
 def get_user_info_by_uid(uid):
-    return cfg_util.get_user_info_by_uid(uid)
+    dt = cfg_util.get_user_info_by_uid(uid)
+    return Response(dt, content_type=JSON_MIME_TYPE, status=200)
 
 @app.route('/usr/auth', methods=['POST'])
 def auth_usr():
