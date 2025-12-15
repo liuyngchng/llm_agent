@@ -19,12 +19,8 @@ for file in "${required_files[@]}"; do
 done
 echo "正在复制 ${APP} 服务配置文件"
 # 拷贝配置文件并检查是否成功
-cp ${APP_DIR}/cfg.db ./ && \
-cp ${APP_DIR}/cfg.yml ./ && \
-cp ${APP_DIR}/logging.conf ./ || {
-    echo "错误：配置文件拷贝失败"
-    exit 1
-}
+cp ${APP_DIR}/cfg.db ./
+cp ${APP_DIR}/cfg.yml ./
 echo "正在部署 ${APP} 服务"
 docker stop ${CONTAINER}
 echo "正在删除 ${CONTAINER} 容器"
