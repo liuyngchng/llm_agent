@@ -24,7 +24,7 @@ docker run -dit --name ${CONTAINER}  \
   -v /data/nltk_data:/usr/share/nltk_data \
   -p 19002:19000 \
   -e APP_NAME=${APP} \
-  llm_docx:1.1
+  llm_db_service:1.1
 echo "容器 ${CONTAINER} 已启动"
 docker ps -a  | grep ${CONTAINER} --color=always
 echo "部署完成"
