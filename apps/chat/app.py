@@ -181,7 +181,7 @@ def register_routes(app):
         logger.info(f"rcv_msg, {msg}, uid {uid}")
         auth_info[session_key] = time.time()
 
-        vdb_info = VdbMeta.get_vdb_info_by_id(kb_id)
+        vdb_info = VdbMeta.get_vdb_info_by_id(int(kb_id))
         if not vdb_info:
             warning_info = f"所选择的知识库不存在，请您检查后再试"
             logger.error(f"{warning_info}, {kb_id}")

@@ -266,7 +266,9 @@ def register_routes(app):
         output_file_path = os.path.abspath(output_file_name)
         criteria_file = review_criteria_file_info[0]['full_path']
         criteria_file_type = review_criteria_file_info[0]['file_suffix']
-        if review_image_file_names:
+        logger.info(f"review_type={review_type}")
+        tag1 = '汇报质量评估'
+        if tag1 in review_type:
             paper_file = ",".join(review_paper_file_list)
             docx_meta_util.save_doc_info(
                 uid, task_id, review_type, review_topic, criteria_file, "",paper_file ,
@@ -286,7 +288,6 @@ def register_routes(app):
                 0, False, docx_ctx, output_file_path, "",
                 output_file_type=criteria_file_type
             )
-
             # 启动后台任务
             threading.Thread(
                 target=generate_team_member_suggestion,

@@ -24,6 +24,7 @@ class YieldType(Enum):
 class DataType(Enum):
     HTML = "html"
     MARKDOWN = "markdown"
+    MD = "md"
     JSON = "json"
 
 class MsgType(Enum):

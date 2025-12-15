@@ -15,7 +15,7 @@ from common.cfg_util import get_usr_prompt_template
 from common.const import get_const
 from common.docx_md_util import save_content_to_md_file, convert_md_to_docx, get_md_file_content
 from common.docx_meta_util import update_process_info, get_doc_info
-from common.my_enums import FileType, AppType
+from common.my_enums import FileType, AppType, DataType
 from common.sys_init import init_yml_cfg
 from common.xlsx_util import convert_md_to_xlsx
 
@@ -229,7 +229,7 @@ class TeamBuilder:
             return result
 
         except Exception as e:
-            logger.error(f"材料质量评价失败: {str(e)}")
+            logger.exception(f"材料质量评价失败: {str(e)}")
             return self._get_fallback_material_evaluation_result(str(e))
 
     @staticmethod
@@ -717,16 +717,18 @@ class TeamBuilder:
 
             # 1. OCR文本识别（如果是图片材料）
             update_process_info(self.uid, self.task_id, "开始材料文本识别...", 1)
-
-            if self.review_file_path:
+            extension = os.path.splitext(self.review_file_path)[1][1:]
+            if DataType.MD.value == extension:
+                logger.info(f"get_txt_from_md_file, {self.review_file_path}, extension {extension}")
+                # 是Markdown 文本文件，直接读取
+                self.ocr_text = get_md_file_content(self.review_file_path)
+            else:
                 # 如果是图片文件，进行OCR识别
+                logger.info(f"get_txt_from_img_file, {self.review_file_path}, extension {extension}")
                 ocr_result = self.extract_text_from_images()
                 if not ocr_result:
                     raise ValueError("无法从材料中识别出有效文本，请检查材料质量")
                 self.ocr_text = ocr_result
-            else:
-                # 如果是文本文件，直接读取
-                self.ocr_text = get_md_file_content(self.review_file_path)
 
             logger.debug(f"材料文本内容长度: {len(self.ocr_text)}")
 
