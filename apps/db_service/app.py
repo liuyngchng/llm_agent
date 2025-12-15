@@ -3,21 +3,22 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 """
-AI 应用市场
-pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama \
- langchain_core langchain_community pandas tabulate pymysql cx_Oracle pycryptodome
+数据服务，提供操作底层数据存储的入口
+pip install gunicorn flask concurrent-log-handler pymysql
 """
+import datetime
 import json
 import logging.config
 import os
 
+import pymysql
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, Response
 
-from common import cfg_util
 from common.bp_auth import get_client_ip
 from common.cm_utils import get_console_arg1
-from common.const import JSON_MIME_TYPE
+from common.const import JSON_MIME_TYPE, DB_CONN_TIMEOUT, DB_RW_TIMEOUT
+from common.db_util import DbUtl
 from common.sys_init import init_yml_cfg
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -41,29 +42,54 @@ def app_home():
     result = json.dumps({"status":200, "msg":"hello, db service"})
     return Response(result, content_type=JSON_MIME_TYPE, status=200)
 
-@app.route('/usr/<usr_name>', methods =['GET'])
-def get_uid_by_user(usr_name):
-    """根据用户名称获取uid"""
-    msg = {"status":200}
-    data = cfg_util.get_uid_by_user(usr_name)
-    msg['dt'] = data
-    dt = json.dumps(msg)
-    return Response(dt, content_type=JSON_MIME_TYPE, status=200)
-
-@app.route('/usr/<uid>', methods =['GET'])
-def get_user_info_by_uid(uid):
-    dt = cfg_util.get_user_info_by_uid(uid)
-    return Response(dt, content_type=JSON_MIME_TYPE, status=200)
-
-@app.route('/usr/auth', methods=['POST'])
-def auth_usr():
-    """
-    用户登录认证
-    """
+@app.route('/dml/dt', methods =['POST'])
+def dml_dt():
+    """执行相应的 DML 语句"""
     data = request.json
-    user = data['user']
+    sql = data['sql']
     t = data['t']
-    return cfg_util.auth_user(user, t, my_cfg)
+    output_dt = mysql_output(my_cfg, sql)
+    dt = json.dumps(output_dt)
+    return Response(dt, content_type=JSON_MIME_TYPE, status=200)
+
+
+def mysql_output(cfg: dict, sql:str) -> dict:
+    """
+    db_uri = mysql+pymysql://user:pswd@host/db
+    """
+    db_config = cfg.get('db', {})
+
+    cif = DbUtl.build_mysql_con_dict_from_cfg(db_config)
+    with pymysql.connect(
+        host=cif['host'], port=cif['port'],
+        user=cif['user'], password=cif['password'],
+        database=cif['database'], charset=cif['charset'],
+        connect_timeout=DB_CONN_TIMEOUT,
+        read_timeout=DB_RW_TIMEOUT,
+        write_timeout=DB_RW_TIMEOUT
+    ) as my_conn:
+        sql1 = sql.replace("\n", " ")
+        logger.info(f"mysql_output_data, {sql1})")
+        return mysql_query_tool(my_conn, sql1)
+
+
+def mysql_query_tool(db_con, query: str) -> dict:
+    try:
+        with db_con.cursor() as cursor:
+            cursor.execute(query)
+            columns = [desc[0] for desc in cursor.description] if cursor.description else []
+            # data = cursor.fetchall()
+            data = [
+                tuple(
+                    item.isoformat() if isinstance(item, (datetime.date, datetime.datetime)) else item
+                    for item in row
+                )
+                for row in cursor.fetchall()
+            ]
+            return {"columns": columns, "data": data}
+    except Exception as e:
+        logger.error(f"mysql_query_err: {e}")
+        raise e
 
 
 
