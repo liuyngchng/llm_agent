@@ -50,15 +50,17 @@ class TeamBuilder:
         self.criteria_file_type = criteria_file_type
         self.review_file_path = review_file_path
         self.sys_cfg = sys_cfg
-        self.ocr_text = ""
+        self.review_txt = ""
+        self.review_txt_err_msg = None
         self.review_results = {}
 
-    def call_llm_api_for_ocr(self, image_path: str) -> str:
+    def call_llm_api_for_ocr(self, image_path: str) -> dict:
         """
         调用大语言模型进行OCR文本识别
         :param image_path: image file full path
         return
-            识别的文本内容
+            识别的文本内容及错误信息
+            {"dt":"识别的文本信息", "err_msg":"识别出错的信息"}
         """
         prompt = get_usr_prompt_template("manuscript_ocr_msg", self.sys_cfg)
         try:
@@ -111,15 +113,15 @@ class TeamBuilder:
                 result = response.json()
                 ocr_text = result['choices'][0]['message']['content']
                 logger.info(f"OCR识别成功，识别文本长度: {len(ocr_text)}")
-                return ocr_text
+                return {"dt": ocr_text, "err_msg": ""}
             else:
                 error_msg = f"OCR API调用失败: {response.status_code} - {response.text}"
                 logger.error(error_msg)
-                return ""
+                return {"dt": "", "err_msg": error_msg}
 
         except Exception as e:
             logger.error(f"OCR识别异常: {str(e)}")
-            return ""
+            return {"dt": "", "err_msg": str(e)}
 
     @staticmethod
     def preprocess_image(image_path: str) -> str:
@@ -148,15 +150,18 @@ class TeamBuilder:
             logger.error(f"图片预处理失败: {str(e)}")
             return image_path  # 返回原路径
 
-    def extract_text_from_images(self, max_retries: int = 2) -> str:
+    def extract_text_from_images(self, max_retries: int = 2) -> list[dict]:
         """
         从图片中提取文本（支持多种图片格式）
+        :param max_retries， 最大尝试次数
+        return
+            [{"dt": "识别的文本", "err_msg": 识别文本时的出错信息}]
         """
         supported_formats = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.heic', '.heif']
         files = self.review_file_path.split(',')
         img_file_count = len(files)
 
-        all_txt = ""
+        all_txt = []
         i = 0
         for img_file in files:
             file_ext = os.path.splitext(img_file)[1]
@@ -166,12 +171,12 @@ class TeamBuilder:
                 continue
             i += 1
             update_process_info(self.uid, self.task_id, f"开始识别第{i}/{img_file_count}个图片...", i * 5)
-            img_ocr_txt = self.extract_text_from_image(img_file, max_retries)
-            all_txt = all_txt + img_ocr_txt
+            img_ocr_result = self.extract_text_from_image(img_file, max_retries)
+            all_txt.append(img_ocr_result)
         return all_txt
 
 
-    def extract_text_from_image(self, file_path: str, max_retries: int = 2) -> str:
+    def extract_text_from_image(self, file_path: str, max_retries: int = 2) -> dict:
         """
         从单个图片中提取文本（支持多种图片格式）
         :param file_path: 图片文件的绝对路径
@@ -183,33 +188,38 @@ class TeamBuilder:
                 # 预处理图片
                 processed_path = self.preprocess_image(file_path)
                 # OCR识别
-                ocr_text = self.call_llm_api_for_ocr(processed_path)
-                if ocr_text and len(ocr_text.strip()) > 10:  # 确保有有效内容
-                    self.ocr_text = ocr_text
-                    logger.info(f"成功提取文本，长度: {len(ocr_text)}")
+                ocr_result = self.call_llm_api_for_ocr(processed_path)
+                if ocr_result:  # 确保有有效内容
+                    logger.info(f"{self.uid}, {self.task_id}, 提取文本结果，长度: {len(ocr_result['dt'])}，错误信息 {ocr_result['err_msg']}, file {processed_path}")
                     # 清理临时处理的图片
                     if processed_path != self.review_file_path and os.path.exists(processed_path):
                         os.remove(processed_path)
-                    return ocr_text
+                    return ocr_result
                 else:
-                    logger.warning(f"第{attempt + 1}次OCR识别返回空文本或文本过短")
+                    err_msg = f"第 {attempt + 1} 次尝试 OCR 识别返回空文本"
+                    logger.warning(f"{self.uid}, {self.task_id},{err_msg}")
+                    return {"dt": "", "err_msg": err_msg}
             except Exception as e:
-                logger.error(f"第{attempt + 1}次文本提取失败: {str(e)}")
+                err_msg = f"第{attempt + 1}次文本提取失败: {str(e)}"
+                logger.error(err_msg)
                 if attempt == max_retries - 1:
-                    return ""
+                    return {"dt": "", "err_msg": err_msg}
 
-        return ""
+        return  {"dt": "", "err_msg": "多次尝试提取文本出现错误"}
+
 
     def evaluate_material_quality(self) -> Dict:
         """
         评价材料质量
         """
+        if self.review_txt_err_msg:
+            return self._get_fallback_material_evaluation_result(self.review_txt_err_msg)
         try:
             template_name = "material_quality_evaluation_msg"
             template = get_usr_prompt_template(template_name, self.sys_cfg)
             if not template:
                 err_info = f"未找到材料质量评价的提示词模板 {template_name}"
-                raise RuntimeError(err_info)
+                return self._get_fallback_material_evaluation_result(err_info)
             logger.debug(f"template_content_for_name {template_name}, {template}")
             criteria = get_md_file_content(self.criteria_file_path)
             logger.debug(f"材料质量评审标准如下:\n{criteria}")
@@ -217,7 +227,7 @@ class TeamBuilder:
             prompt = template.format(
                 review_type=self.review_type,
                 review_topic=self.review_topic,
-                report_content=self.ocr_text,
+                report_content=self.review_txt,
                 criteria=criteria
             )
             logger.debug(f"{self.uid}, {self.task_id}, start_call_llm_api")
@@ -259,23 +269,23 @@ class TeamBuilder:
                 "overall_score": 65,
                 "detailed_scores": {
                     "content_quality": {
-                        "score": 20,
+                        "score": 0,
                         "comments": "因评估失败，采用默认评分"
                     },
                     "political_ideology": {
-                        "score": 15,
+                        "score": 0,
                         "assessment": "因评估失败，采用默认评估"
                     },
                     "originality": {
-                        "score": 12,
+                        "score": 0,
                         "plagiarism_level": "因评估失败，无法确定"
                     },
                     "format_standard": {
-                        "score": 10,
+                        "score": 0,
                         "compliance_level": "因评估失败，无法确定"
                     },
                     "timeliness": {
-                        "score": 8,
+                        "score": 0,
                         "timeliness_assessment": "因评估失败，无法确定"
                     }
                 }
@@ -288,7 +298,7 @@ class TeamBuilder:
             "strengths": ["主题基本明确", "格式基本规范"],
             "improvement_suggestions": [f"技术问题: {error_msg}", "建议补充具体案例", "需要加强论证深度"],
             "final_assessment": {
-                "quality_rating": "合格",
+                "quality_rating": "未知",
                 "usage_recommendation": "修改后采用",
                 "key_improvements_needed": "需要改进内容和论证方式"
             },
@@ -504,8 +514,8 @@ class TeamBuilder:
 {evaluation['final_assessment']['key_improvements_needed']}
 
 ## 4. 材料内容预览
-{self.ocr_text[:500]}...
-（完整材料共{len(self.ocr_text)}字）
+{self.review_txt[:500]}...
+（完整材料共{len(self.review_txt)}字）
 
 ## 5. 评审说明
 
@@ -520,31 +530,6 @@ class TeamBuilder:
         except Exception as e:
             logger.error(f"生成材料质量评价报告失败: {str(e)}")
             return f"# 材料质量评价报告生成失败\n\n错误信息: {str(e)}\n\n请检查材料内容或联系技术支持。"
-
-    def execute_evaluation(self) -> str:
-        """
-        执行完整的思想汇报评价流程
-        """
-        try:
-            logger.info("开始执行文本质量评估流程")
-
-            # 1. OCR文本识别
-            update_process_info(self.uid, self.task_id, "开始文本识别...", 1)
-            ocr_result = self.extract_text_from_images()
-
-            if not ocr_result:
-                raise ValueError("无法从图片中识别出有效文本，请检查图片质量")
-            logger.debug(f"ocr_result_txt=\n{ocr_result}")
-            # 2. 文本质量评价
-            update_process_info(self.uid, self.task_id, f"提取到 {len(ocr_result)} 个字符，开始质量评估...", 30)
-            evaluation_report = self.generate_material_quality_report()
-            logger.debug(f"evaluation_report, {evaluation_report}")
-            logger.info("已对文本质量作出评估")
-            return evaluation_report
-
-        except Exception as e:
-            logger.exception("已对文本质量作出评估执行失败")
-            return f"# 评价过程出现错误\n\n错误信息: {str(e)}\n\n请检查文件格式或联系技术支持。"
 
     def call_llm_api(self, prompt: str) -> dict:
         """直接调用LLM API"""
@@ -601,7 +586,7 @@ class TeamBuilder:
             else:
                 error_msg = f"LLM API调用失败: {response.status_code} - {response.text}"
                 logger.error(error_msg)
-                return self._get_fallback_material_evaluation_result(f"API调用失败: {response.status_code}")
+                return self._get_fallback_material_evaluation_result(error_msg)
 
         except Exception as e:
             error_msg = f"LLM API调用异常: {str(e)}"
@@ -721,16 +706,23 @@ class TeamBuilder:
             if DataType.MD.value == extension:
                 logger.info(f"get_txt_from_md_file, {self.review_file_path}, extension {extension}")
                 # 是Markdown 文本文件，直接读取
-                self.ocr_text = get_md_file_content(self.review_file_path)
+                self.review_txt = get_md_file_content(self.review_file_path)
             else:
                 # 如果是图片文件，进行OCR识别
                 logger.info(f"get_txt_from_img_file, {self.review_file_path}, extension {extension}")
                 ocr_result = self.extract_text_from_images()
-                if not ocr_result:
-                    raise ValueError("无法从材料中识别出有效文本，请检查材料质量")
-                self.ocr_text = ocr_result
+                tmp_ocr_txt = ""
+                tmp_ocr_err = ""
+                for index, item in enumerate(ocr_result, start=1):  # 从1开始计数
+                    if item['dt']:
+                        tmp_ocr_txt += item['dt']
+                        tmp_ocr_txt += ', '
+                    if item['err_msg']:
+                        tmp_ocr_err += f"第 {index} 个图片识别时出错: {item['err_msg']}, "
+                self.review_txt_err_msg = tmp_ocr_err
+                self.review_txt = tmp_ocr_txt
 
-            logger.debug(f"材料文本内容长度: {len(self.ocr_text)}")
+            logger.debug(f"材料文本内容长度: {len(self.review_txt)}")
 
             # 2. 材料质量评价
             update_process_info(self.uid, self.task_id, f"已提取材料内容，开始质量评估...", 30)
