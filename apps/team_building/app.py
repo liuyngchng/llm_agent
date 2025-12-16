@@ -17,7 +17,7 @@ from flask import (Flask, request, jsonify, send_from_directory,
                    abort, redirect, url_for, render_template)
 
 from apps.team_building.team_builder import generate_tb_suggestion, \
-    start_material_quality_evaluation
+    evaluation_material_quality
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md
@@ -278,7 +278,7 @@ def register_routes(app):
 
             # 启动后台任务
             threading.Thread(
-                target=start_material_quality_evaluation,
+                target=evaluation_material_quality,
                 args=(uid, task_id, review_type, review_topic,  criteria_file, paper_file, criteria_file_type, my_cfg)
             ).start()
         else:

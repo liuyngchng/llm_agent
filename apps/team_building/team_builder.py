@@ -733,11 +733,11 @@ class TeamBuilder:
             return f"# 材料质量评估过程出现错误\n\n错误信息: {str(e)}\n\n请检查材料格式或联系技术支持。"
 
 
-def start_material_quality_evaluation(uid: int, task_id: int, review_type: str, review_topic: str,
-                                      criteria_file_path: str, review_file_path: str, criteria_file_type: str,
-                                      sys_cfg: dict) -> str:
+def evaluation_material_quality(uid: int, task_id: int, review_type: str, review_topic: str,
+                                criteria_file_path: str, review_file_path: str, criteria_file_type: str,
+                                sys_cfg: dict) -> str:
     """
-    开始材料质量评价流程
+    材料质量评价流程
     :param uid: 用户ID
     :param task_id: 任务ID
     :param review_type: 评审类型
@@ -747,7 +747,7 @@ def start_material_quality_evaluation(uid: int, task_id: int, review_type: str, 
     :param criteria_file_type: 评审标准文件类型
     :param sys_cfg: 系统配置
     """
-    logger.info(f"{uid}, {task_id}, start_material_quality_evaluation, "
+    logger.info(f"{uid}, {task_id}, evaluation_material_quality, "
         f"{review_type}, {review_topic}, {criteria_file_path}, "
         f"{review_file_path}, {criteria_file_type}, {sys_cfg}")
     try:
@@ -756,7 +756,7 @@ def start_material_quality_evaluation(uid: int, task_id: int, review_type: str, 
 
         # 执行材料质量评估
         evaluation_report = evaluator.execute_material_quality_evaluation()
-        output_report_title = get_const('output_report_title',
+        output_report_title = get_const('output_material_quality_title',
             AppType.TEAM_BUILDING.name.lower()) or "材料质量评审报告"
         logger.debug(f"output_report_title = {output_report_title}")
 
@@ -799,16 +799,30 @@ def generate_tb_suggestion(uid: int, task_id: int, review_type: str, review_topi
         builder = TeamBuilder(uid, task_id, review_type, review_topic,
             criteria_markdown_file, review_files_path, DataType.MD.value, sys_cfg)
 
-        update_process_info(uid, task_id, "开始分析团队成员信息...", 1)
+        update_process_info(uid, task_id, "开始分析团队成员信息...", 10)
         suggestion_report = builder.generate_tb_suggestion(review_files_path)
-        logger.info("成员发展建议生成成功")
-        update_process_info(uid, task_id, "成员发展建议已形成...", 100)
+        logger.info(f"{uid}, {task_id}, 团队建设建议已生成")
+        update_process_info(uid, task_id, "团队建设建议已生成...", 70)
+        output_report_title = get_const('output_tb_suggestion_title',
+                                        AppType.TEAM_BUILDING.name.lower()) or "团队建设建议报告"
+        logger.debug(f"output_report_title = {output_report_title}")
+
+        doc_info = get_doc_info(task_id)
+        output_file_path = doc_info[0]['output_file_path']
+        logger.debug(f"output_file_path = {output_file_path}")
+
+        # 保存结果
+        output_md_file = save_content_to_md_file(suggestion_report, output_file_path, output_abs_path=True)
+        output_file = convert_md_to_docx(output_md_file, True)
+
+        logger.info(f"{uid}, {task_id}, 团队建设建议报告生成成功, {output_file}")
+        update_process_info(uid, task_id, "团队建设建议报告生成完毕", 100)
         return suggestion_report
 
     except Exception as e:
-        logger.error(f"成员发展建议生成失败: {str(e)}")
-        update_process_info(uid, task_id, f"成员发展建议生成失败: {str(e)}", 100)
-        return f"成员发展建议生成失败: {str(e)}"
+        logger.error(f"团队建设建议报告生成失败: {str(e)}")
+        update_process_info(uid, task_id, f"团队建设建议报告生成失败: {str(e)}", 100)
+        return f"团队建设建议报告生成失败: {str(e)}"
 
 
 if __name__ == "__main__":
