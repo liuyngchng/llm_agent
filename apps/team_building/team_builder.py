@@ -327,16 +327,16 @@ class TeamBuilder:
                 criteria=criteria_data
             )
 
-            logger.info("start_call_llm_api_for_development_suggestion")
-            result = self.call_llm_api_for_development_suggestion(prompt)
-            logger.info("start__format_development_suggestion")
-            return self._format_development_suggestion(result)
+            logger.info("start_call_llm_api_for_tb_suggestion")
+            result = self.call_llm_api_for_tb_suggestion(prompt)
+            logger.info("start_format_tb_suggestion")
+            return self._format_tb_suggestion(result)
 
         except Exception as e:
             logger.error(f"生成成员发展建议失败: {str(e)}")
             return self._get_fallback_development_suggestion(str(e))
 
-    def call_llm_api_for_development_suggestion(self, prompt: str) -> dict:
+    def call_llm_api_for_tb_suggestion(self, prompt: str) -> dict:
         """
         专门用于成员发展建议的LLM调用
         """
@@ -397,7 +397,7 @@ class TeamBuilder:
             logger.error(f"成员发展建议API调用异常: {str(e)}")
             return {"error": str(e)}
 
-    def _format_development_suggestion(self, result: Dict) -> str:
+    def _format_tb_suggestion(self, result: Dict) -> str:
         """格式化成员发展建议报告"""
         try:
             if "error" in result:
@@ -799,14 +799,15 @@ def generate_tb_suggestion(uid: int, task_id: int, review_type: str, review_topi
         builder = TeamBuilder(uid, task_id, review_type, review_topic,
             criteria_markdown_file, review_files_path, DataType.MD.value, sys_cfg)
 
-        update_process_info(uid, task_id, "开始分析团队成员信息...")
+        update_process_info(uid, task_id, "开始分析团队成员信息...", 1)
         suggestion_report = builder.generate_tb_suggestion(review_files_path)
         logger.info("成员发展建议生成成功")
+        update_process_info(uid, task_id, "成员发展建议已形成...", 100)
         return suggestion_report
 
     except Exception as e:
         logger.error(f"成员发展建议生成失败: {str(e)}")
-        update_process_info(uid, task_id, f"成员发展建议生成失败: {str(e)}")
+        update_process_info(uid, task_id, f"成员发展建议生成失败: {str(e)}", 100)
         return f"成员发展建议生成失败: {str(e)}"
 
 
