@@ -30,7 +30,7 @@ urllib3.disable_warnings(category=InsecureRequestWarning)
 
 class TeamBuilder:
     def __init__(self, uid: int, task_id: int, review_type: str, review_topic: str,
-                 criteria_file_path: str, review_file_path: str, criteria_file_type, sys_cfg: dict):
+                 criteria_file_path: str, review_file_path: str, criteria_file_type: str, sys_cfg: dict):
         """
         团队建设材料评审系统
         :param uid: 用户ID，标记哪个用户提交的任务
@@ -208,7 +208,7 @@ class TeamBuilder:
         return  {"dt": "", "err_msg": "多次尝试提取文本出现错误"}
 
 
-    def evaluate_material_quality(self) -> Dict:
+    def evaluate_material_quality(self) -> dict:
         """
         评价材料质量
         """
@@ -231,7 +231,7 @@ class TeamBuilder:
                 criteria=criteria
             )
             logger.debug(f"{self.uid}, {self.task_id}, start_call_llm_api")
-            result = self.call_llm_api(prompt)
+            result = self.call_llm_api_to_evaluate_material_quality(prompt)
             logger.debug(f"{self.uid}, {self.task_id}, call_llm_api_result, {result}")
             logger.debug(f"{self.uid}, {self.task_id}, _validate_material_evaluation_result")
             self._validate_material_evaluation_result(result)
@@ -306,10 +306,10 @@ class TeamBuilder:
         }
 
 
-    def generate_team_member_development_suggestion(self, employee_data: str) -> str:
+    def generate_tb_suggestion(self, review_files_path: str) -> str:
         """
         根据部门员工信息生成成员发展建议
-        :param employee_data: 员工信息的markdown文本
+        :param review_files_path: 员工信息的markdown文件的绝对路径
         :return: 成员发展建议报告
         """
         try:
@@ -317,23 +317,26 @@ class TeamBuilder:
             template = get_usr_prompt_template(template_name, self.sys_cfg)
             if not template:
                 err_info = f"未找到成员发展建议提示词模板，{template_name}"
-                raise RuntimeError("err_info")
-
+                return self._get_fallback_development_suggestion(err_info)
+            employee_data = get_md_file_content(review_files_path)
+            criteria_data = get_md_file_content(self.criteria_file_path)
             prompt = template.format(
                 review_type=self.review_type,
                 review_topic=self.review_topic,
                 employee_data=employee_data,
-                criteria=self.criteria_file_path
+                criteria=criteria_data
             )
 
+            logger.info("start_call_llm_api_for_development_suggestion")
             result = self.call_llm_api_for_development_suggestion(prompt)
+            logger.info("start__format_development_suggestion")
             return self._format_development_suggestion(result)
 
         except Exception as e:
             logger.error(f"生成成员发展建议失败: {str(e)}")
             return self._get_fallback_development_suggestion(str(e))
 
-    def call_llm_api_for_development_suggestion(self, prompt: str) -> Dict:
+    def call_llm_api_for_development_suggestion(self, prompt: str) -> dict:
         """
         专门用于成员发展建议的LLM调用
         """
@@ -531,20 +534,14 @@ class TeamBuilder:
             logger.error(f"生成材料质量评价报告失败: {str(e)}")
             return f"# 材料质量评价报告生成失败\n\n错误信息: {str(e)}\n\n请检查材料内容或联系技术支持。"
 
-    def call_llm_api(self, prompt: str) -> dict:
+    def call_llm_api_to_evaluate_material_quality(self, prompt: str) -> dict:
         """直接调用LLM API"""
         key = self.sys_cfg['api']['llm_api_key']
         model = self.sys_cfg['api']['llm_model_name']
         uri = f"{self.sys_cfg['api']['llm_api_uri']}/chat/completions"
         try:
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {key}'
-            }
-
-            messages = [
-                {"role": "user", "content": prompt}
-            ]
+            headers = {'Content-Type': 'application/json','Authorization': f'Bearer {key}'}
+            messages = [{"role": "user", "content": prompt}]
 
             payload = {
                 'model': model,
@@ -737,7 +734,7 @@ class TeamBuilder:
 
 
 def start_material_quality_evaluation(uid: int, task_id: int, review_type: str, review_topic: str,
-                                      criteria_file_path: str, review_file_path: str, criteria_file_type: int,
+                                      criteria_file_path: str, review_file_path: str, criteria_file_type: str,
                                       sys_cfg: dict) -> str:
     """
     开始材料质量评价流程
@@ -750,7 +747,9 @@ def start_material_quality_evaluation(uid: int, task_id: int, review_type: str, 
     :param criteria_file_type: 评审标准文件类型
     :param sys_cfg: 系统配置
     """
-    logger.info(f"{uid}, {task_id}, start_material_quality_evaluation")
+    logger.info(f"{uid}, {task_id}, start_material_quality_evaluation, "
+        f"{review_type}, {review_topic}, {criteria_file_path}, "
+        f"{review_file_path}, {criteria_file_type}, {sys_cfg}")
     try:
         evaluator = TeamBuilder(uid, task_id, review_type, review_topic, criteria_file_path,
                                 review_file_path, criteria_file_type, sys_cfg)
@@ -781,28 +780,27 @@ def start_material_quality_evaluation(uid: int, task_id: int, review_type: str, 
         logger.error(f"材料质量评价生成失败: {str(e)}")
         return f"材料质量评价生成失败: {str(e)}"
 
-def generate_team_member_suggestion(uid: int, task_id: int, review_type: str, review_topic: str,
-                                    criteria_markdown_data: str, employee_data: str, sys_cfg: dict) -> str:
+def generate_tb_suggestion(uid: int, task_id: int, review_type: str, review_topic: str,
+                           criteria_markdown_file: str, review_files_path: str, sys_cfg: dict) -> str:
     """
     生成团队成员发展建议
     :param uid: 用户ID
     :param task_id: 任务ID
     :param review_type: 评审类型
     :param review_topic: 评审主题
-    :param criteria_markdown_data: 评审标准markdown文本
-    :param employee_data: 员工信息markdown文本
+    :param criteria_markdown_file: 评审标准 markdown 文件的全文路径
+    :param review_files_path: 员工信息markdown文件的全文路径，可能包含多个文件绝对路径
     :param sys_cfg: 系统配置
     :return: 团队成员发展建议报告
     """
-    logger.info(f"{uid}, {task_id}, generate_team_member_suggestion")
+    logger.info(f"{uid}, {task_id}, generate_tb_suggestion, {review_type}, {review_topic}, "
+        f"{criteria_markdown_file}, {review_files_path}, {sys_cfg}")
     try:
-        # 使用空的review_file_path和默认的criteria_file_type
         builder = TeamBuilder(uid, task_id, review_type, review_topic,
-                              criteria_markdown_data, "", 0, sys_cfg)
+            criteria_markdown_file, review_files_path, DataType.MD.value, sys_cfg)
 
-        update_process_info(uid, task_id, "正在分析员工信息并生成成员发展建议...")
-        suggestion_report = builder.generate_team_member_development_suggestion(employee_data)
-
+        update_process_info(uid, task_id, "开始分析团队成员信息...")
+        suggestion_report = builder.generate_tb_suggestion(review_files_path)
         logger.info("成员发展建议生成成功")
         return suggestion_report
 
