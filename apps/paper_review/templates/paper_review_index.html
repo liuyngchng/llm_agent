@@ -72,12 +72,20 @@
                         <input type="file" class="file-input" id="reviewCriteria" accept=".xlsx,.docx" onchange="handleCriteriaUpload(this)">
                     </div>
 
-                    <div class="file-info" id="criteriaFileInfo" style="display: none;">
-                        <div class="file-name">
-                            <i class="fas fa-file-alt" id="criteriaFileIcon"></i>
-                            <span id="criteriaFileName">未选择文件</span>
+                   <div class="file-info" id="criteriaFileInfo" style="display: none;">
+                        <div class="file-name-container">
+                            <div class="file-name">
+                                <i class="fas fa-file-alt" id="criteriaFileIcon"></i>
+                                <span id="criteriaFileName">未选择文件</span>
+                            </div>
+                            <div class="file-size" id="criteriaFileSize">-</div>
                         </div>
-                        <div class="file-size" id="criteriaFileSize">-</div>
+                        <!-- 新增：评审标准预览按钮 -->
+                        <div class="preview-action" id="criteriaPreviewAction" style="display: none;">
+                            <a href="#" id="criteriaPreviewLink" class="preview-link" target="_blank">
+                                <i class="fas fa-eye"></i> 预览
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -98,11 +106,19 @@
                     </div>
 
                     <div class="file-info" id="docxFileInfo" style="display: none;">
-                        <div class="file-name">
-                            <i class="fas fa-file-word"></i>
-                            <span id="docxFileName">未选择文件</span>
+                        <div class="file-name-container">
+                            <div class="file-name">
+                                <i class="fas fa-file-word"></i>
+                                <span id="docxFileName">未选择文件</span>
+                            </div>
+                            <div class="file-size" id="docxFileSize">-</div>
                         </div>
-                        <div class="file-size" id="docxFileSize">-</div>
+                        <!-- 新增：评审材料预览按钮 -->
+                        <div class="preview-action" id="docxPreviewAction" style="display: none;">
+                            <a href="#" id="docxPreviewLink" class="preview-link" target="_blank">
+                                <i class="fas fa-eye"></i> 预览
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

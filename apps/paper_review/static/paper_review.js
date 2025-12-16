@@ -105,12 +105,25 @@ async function uploadCriteriaFile(file) {
         // 记录上传的评审标准文件名称
         document.getElementById('review_criteria_file_name').value = data.file_name;
 
+        // 设置预览链接
+        const criteriaPreviewLink = document.getElementById('criteriaPreviewLink');
+        const criteriaPreviewAction = document.getElementById('criteriaPreviewAction');
+
+        // 如果有 task_id，则设置预览链接
+        if (data.task_id) {
+            criteriaPreviewLink.href = `/paper_review/preview/task/${data.task_id}?uid=${uid}`;
+            criteriaPreviewAction.style.display = 'block';
+        } else {
+            // 如果没有 task_id，可以隐藏预览按钮或使用其他预览方式
+            criteriaPreviewAction.style.display = 'none';
+        }
     } catch (error) {
         console.error('上传错误:', error);
         alert('评审标准文件上传失败: ' + error.message);
         // 重置文件选择
         document.getElementById('reviewCriteria').value = '';
         document.getElementById('criteriaFileInfo').style.display = 'none';
+        document.getElementById('criteriaPreviewAction').style.display = 'none';
     }
 }
 
@@ -138,12 +151,25 @@ async function uploadDocxFile(file) {
         document.getElementById('review_paper_file_name').value = data.file_name;
         // 保存任务ID
         document.getElementById('taskId').value = data.task_id;
+
+        // 设置预览链接
+        const docxPreviewLink = document.getElementById('docxPreviewLink');
+        const docxPreviewAction = document.getElementById('docxPreviewAction');
+
+        // 设置预览链接
+        if (data.task_id) {
+            docxPreviewLink.href = `/paper_review/preview/task/${data.task_id}?uid=${uid}`;
+            docxPreviewAction.style.display = 'block';
+        } else {
+            docxPreviewAction.style.display = 'none';
+        }
     } catch (error) {
         console.error('上传错误:', error);
         alert('评审材料文件上传失败: ' + error.message);
         // 重置文件选择
         document.getElementById('reviewPaperFile').value = '';
         document.getElementById('docxFileInfo').style.display = 'none';
+        document.getElementById('docxPreviewAction').style.display = 'none';
     }
 }
 
@@ -223,6 +249,10 @@ function resetForm() {
     document.getElementById('reviewPaperFile').value = '';
     document.getElementById('criteriaFileInfo').style.display = 'none';
     document.getElementById('docxFileInfo').style.display = 'none';
+
+    document.getElementById('criteriaPreviewAction').style.display = 'none';
+    document.getElementById('docxPreviewAction').style.display = 'none';
+
     document.getElementById('taskId').value = '';
     document.getElementById('review_criteria_file_name').value = '';
     document.getElementById('review_paper_file_name').value = '';

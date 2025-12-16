@@ -108,6 +108,51 @@ h1 {
     transition: width 0.4s ease;
 }
 
+/* 预览按钮样式 */
+.preview-action {
+    margin-top: 8px;
+    display: flex;
+    justify-content: center;
+}
+
+.preview-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 20px;
+    background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    height: 48px;
+    min-width: 120px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.preview-link:hover {
+    background: linear-gradient(to right, #3a5a9e, #2c487e);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(75, 108, 183, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.preview-link i {
+    font-size: 0.3em;
+    line-height: 1;
+    vertical-align: middle;
+    margin: 0;
+    padding: 0;
+    height: 0.3em;
+    width: 1em;
+}
+
 .step {
     width: 40px;
     height: 40px;
@@ -276,10 +321,17 @@ textarea {
 
 .file-info {
     margin-top: 15px;
-    padding: 10px;
-    background: #f0f4ff;
-    border-radius: 8px;
     display: none;
+}
+
+.file-name-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    background: #f0f4ff;
+    padding: 8px 12px;
+    border-radius: 6px;
 }
 
 .file-name {
@@ -288,14 +340,16 @@ textarea {
     display: flex;
     align-items: center;
     gap: 8px;
-    justify-content: center;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 70%;
 }
 
 .file-size {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #777;
-    margin-top: 5px;
-    text-align: center;
 }
 
 .btn {
