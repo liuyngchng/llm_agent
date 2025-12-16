@@ -208,7 +208,7 @@ def convert_xlsx_to_md_advanced(excel_path: str, include_sheet_names: bool = Tru
                 if df.shape[1] <= 3:  # 列数较少时使用更好的格式
                     markdown_parts.extend(dataframe_to_readable_list(df, sheet_name))
                 else:
-                    markdown_parts.append("> ⚠️ **表格预览** (复杂表格建议查看原文件)")
+                    # markdown_parts.append("> ⚠️ **表格预览** (复杂表格建议查看原文件)")
                     markdown_parts.append("")
                     markdown_table = df.to_markdown(index=False)
                     markdown_parts.append(markdown_table)
@@ -243,7 +243,7 @@ def dataframe_to_readable_list(df, sheet_name):
 
 # 使用示例
 if __name__ == "__main__":
-    my_excel_file = "/home/rd/Downloads/1.xlsx"  # 替换为你的 Excel 文件路径
+    my_excel_file = "/home/rd/Downloads/2.xlsx"  # 替换为你的 Excel 文件路径
     md_file_path = convert_xlsx_to_md_advanced(my_excel_file, True)
     if md_file_path:
         logger.info(f"Markdown文件已保存到: {md_file_path}")

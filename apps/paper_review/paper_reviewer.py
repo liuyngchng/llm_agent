@@ -17,7 +17,7 @@ from common.docx_meta_util import update_process_info, get_doc_info
 from common.my_enums import FileType
 from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
 from common.sys_init import init_yml_cfg
-from common.xlsx_md_util import convert_xlsx_to_md
+from common.xlsx_md_util import convert_xlsx_to_md, convert_xlsx_to_md_advanced
 from common.xlsx_util import convert_md_to_xlsx
 from common.const import MAX_SECTION_LENGTH
 
@@ -713,7 +713,7 @@ if __name__ == '__main__':
     my_paper_docx_file = "/home/rd/Downloads/3.docx"
     my_paper_file = convert_docx_to_md(my_paper_docx_file, True)
     logger.info(f"my_paper_file {my_paper_file}")
-    my_criteria_file = convert_xlsx_to_md(my_criteria_xlsx_file, True, True)
+    my_criteria_file = convert_xlsx_to_md_advanced(my_criteria_xlsx_file, True, True)
     logger.info(f"my_criteria_file {my_criteria_file}")
     my_criteria_data = get_md_file_content(my_criteria_file)
     split_md = split_md_file_with_catalogue(my_criteria_file)
