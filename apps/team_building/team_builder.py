@@ -734,8 +734,7 @@ class TeamBuilder:
 
 
 def evaluation_material_quality(uid: int, task_id: int, review_type: str, review_topic: str,
-                                criteria_file_path: str, review_file_path: str, criteria_file_type: str,
-                                sys_cfg: dict) -> str:
+        criteria_file_path: str, review_file_path: str, criteria_file_type: str, sys_cfg: dict) -> None:
     """
     材料质量评价流程
     :param uid: 用户ID
@@ -752,7 +751,7 @@ def evaluation_material_quality(uid: int, task_id: int, review_type: str, review
         f"{review_file_path}, {criteria_file_type}, {sys_cfg}")
     try:
         evaluator = TeamBuilder(uid, task_id, review_type, review_topic, criteria_file_path,
-                                review_file_path, criteria_file_type, sys_cfg)
+            review_file_path, criteria_file_type, sys_cfg)
 
         # 执行材料质量评估
         evaluation_report = evaluator.execute_material_quality_evaluation()
@@ -763,25 +762,19 @@ def evaluation_material_quality(uid: int, task_id: int, review_type: str, review
         doc_info = get_doc_info(task_id)
         output_file_path = doc_info[0]['output_file_path']
         logger.debug(f"output_file_path = {output_file_path}")
-
         # 保存结果
         output_md_file = save_content_to_md_file(evaluation_report, output_file_path, output_abs_path=True)
-
         if FileType.XLSX.value == criteria_file_type:
             output_file = convert_md_to_xlsx(output_md_file, True)
         else:
             output_file = convert_md_to_docx(output_md_file, True)
-
         logger.info(f"{uid}, {task_id}, 材料质量评审报告生成成功, {output_file}")
         update_process_info(uid, task_id, "材料质量评审报告生成完毕", 100)
-        return evaluation_report
-
     except Exception as e:
         logger.error(f"材料质量评价生成失败: {str(e)}")
-        return f"材料质量评价生成失败: {str(e)}"
 
 def generate_tb_suggestion(uid: int, task_id: int, review_type: str, review_topic: str,
-                           criteria_markdown_file: str, review_files_path: str, sys_cfg: dict) -> str:
+                           criteria_markdown_file: str, review_files_path: str, sys_cfg: dict) -> None:
     """
     生成团队成员发展建议
     :param uid: 用户ID
@@ -801,12 +794,11 @@ def generate_tb_suggestion(uid: int, task_id: int, review_type: str, review_topi
 
         update_process_info(uid, task_id, "开始分析团队成员信息...", 10)
         suggestion_report = builder.generate_tb_suggestion(review_files_path)
-        logger.info(f"{uid}, {task_id}, 团队建设建议已生成")
+        logger.info(f"{uid}, {task_id}, tb_suggestion_txt_generated")
         update_process_info(uid, task_id, "团队建设建议已生成...", 70)
         output_report_title = get_const('output_tb_suggestion_title',
                                         AppType.TEAM_BUILDING.name.lower()) or "团队建设建议报告"
-        logger.debug(f"output_report_title = {output_report_title}")
-
+        logger.info(f"output_report_title = {output_report_title}")
         doc_info = get_doc_info(task_id)
         output_file_path = doc_info[0]['output_file_path']
         logger.debug(f"output_file_path = {output_file_path}")
@@ -815,9 +807,8 @@ def generate_tb_suggestion(uid: int, task_id: int, review_type: str, review_topi
         output_md_file = save_content_to_md_file(suggestion_report, output_file_path, output_abs_path=True)
         output_file = convert_md_to_docx(output_md_file, True)
 
-        logger.info(f"{uid}, {task_id}, 团队建设建议报告生成成功, {output_file}")
+        logger.info(f"{uid}, {task_id}, tb_suggestion_txt_saved_to_output_file, {output_file}")
         update_process_info(uid, task_id, "团队建设建议报告生成完毕", 100)
-        return suggestion_report
 
     except Exception as e:
         logger.error(f"团队建设建议报告生成失败: {str(e)}")
