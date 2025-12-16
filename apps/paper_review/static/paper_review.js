@@ -111,7 +111,7 @@ async function uploadCriteriaFile(file) {
 
         // 如果有 task_id，则设置预览链接
         if (data.task_id) {
-            criteriaPreviewLink.href = `/paper_review/preview/task/${data.task_id}?uid=${uid}`;
+            criteriaPreviewLink.href = `/paper_review/preview/file/${data.file_name}?uid=${uid}`;
             criteriaPreviewAction.style.display = 'block';
         } else {
             // 如果没有 task_id，可以隐藏预览按钮或使用其他预览方式
@@ -158,7 +158,7 @@ async function uploadDocxFile(file) {
 
         // 设置预览链接
         if (data.task_id) {
-            docxPreviewLink.href = `/paper_review/preview/task/${data.task_id}?uid=${uid}`;
+            docxPreviewLink.href = `/paper_review/preview/file/${data.file_name}?uid=${uid}`;
             docxPreviewAction.style.display = 'block';
         } else {
             docxPreviewAction.style.display = 'none';
