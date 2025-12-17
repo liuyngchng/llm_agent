@@ -389,7 +389,7 @@ class PaperReviewer:
             merged_results = PaperReviewer._merge_section_results(self.review_results)
             # 5. 整体评审
             logger.info("总结评审意见")
-            update_process_info(self.uid, self.task_id, "总结评审意见")
+            update_process_info(self.uid, self.task_id, "开始总结评审意见")
             overall_result = self.review_whole_report(merged_results)
 
             # 6. 生成最终报告
