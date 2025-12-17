@@ -164,7 +164,7 @@ class PaperReviewer:
                 return {
                     "score": 0,
                     "strengths": ["章节结构完整"],
-                    "issues": [f"API调用失败: {response.status_code}- {response.text}"],
+                    "issues": [f"LLM API调用失败: {response.status_code}- {response.text}"],
                     "suggestions": ["请专家人工评审该章节"],
                     "risk_level": "未知"
                 }

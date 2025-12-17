@@ -115,7 +115,7 @@ class TeamBuilder:
                 logger.info(f"OCR识别成功，识别文本长度: {len(ocr_text)}")
                 return {"dt": ocr_text, "err_msg": ""}
             else:
-                error_msg = f"OCR API调用失败: {response.status_code} - {response.text}"
+                error_msg = f"LLM API调用失败: {response.status_code} - {response.text}"
                 logger.error(error_msg)
                 return {"dt": "", "err_msg": error_msg}
 

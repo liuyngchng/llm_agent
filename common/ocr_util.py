@@ -155,7 +155,7 @@ class ImageOCR:
                 }
 
             else:
-                error_msg = f"API调用失败: {response.status_code} - {response.text}"
+                error_msg = f"LLM API调用失败: {response.status_code} - {response.text}"
                 logger.error(error_msg)
 
                 return {

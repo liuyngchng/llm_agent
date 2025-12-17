@@ -109,7 +109,7 @@ class LLMMeetingProcessor:
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
         else:
-            raise Exception(f"API调用失败: {response.status_code} - {response.text}")
+            raise Exception(f"LLM API调用失败: {response.status_code} - {response.text}")
 
     def _fallback_parsing(self, text_content: str) -> Dict[str, Any]:
         """
