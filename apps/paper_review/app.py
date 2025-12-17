@@ -27,7 +27,7 @@ from common.my_enums import AppType, FileType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.cm_utils import get_console_arg1
-from common.xlsx_md_util import convert_xlsx_to_md, convert_xlsx_to_md_advanced
+from common.xlsx_md_util import convert_xlsx_to_md
 from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR, TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE
 
 logging.config.fileConfig('logging.conf', encoding="utf-8")
@@ -111,7 +111,7 @@ def register_routes(app):
         filename = f"{task_id}_{file.filename}"
         save_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(save_path)
-        md_file = convert_xlsx_to_md_advanced(save_path, True, True)
+        md_file = convert_xlsx_to_md(save_path, True, True)
         file_md5 = hashlib.md5(md_file.encode('utf-8')).hexdigest()
         save_file_info(uid, file_md5, md_file, FileType.XLSX.value)
         logger.info(f"xlsx_file {file.filename} saved_as {file_md5}, {task_id}")
