@@ -107,19 +107,28 @@ h1 {
     z-index: 2;
     transition: width 0.4s ease;
 }
+.upload-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px; /* 按钮之间的间距 */
+    margin-top: 15px;
+    flex-wrap: wrap; /* 在小屏幕上换行 */
+}
+
+
 
 /* 预览按钮样式 */
 .preview-action {
-    margin-top: 8px;
-    display: flex;
-    justify-content: center;
+    margin-top: 0; /* 移除原来的上边距 */
+    display: inline-block; /* 改为行内显示 */
 }
 
 .preview-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px; /* 稍微增加间距 */
     padding: 12px 20px;
     background: linear-gradient(to right, #4b6cb7, #3a5a9e);
     color: white;
@@ -135,6 +144,18 @@ h1 {
     box-sizing: border-box;
 }
 
+.preview-link i.fa-eye {
+    font-size: 1.5rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    width: 2em;
+    height: 2em;
+}
+
+
 .preview-link:hover {
     background: linear-gradient(to right, #3a5a9e, #2c487e);
     transform: translateY(-2px);
@@ -144,14 +165,14 @@ h1 {
 }
 
 .preview-link i {
-    font-size: 0.3em;
+    font-size: 1.5rem;
     line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     vertical-align: middle;
-    margin: 0;
-    padding: 0;
-    height: 0.3em;
-    width: 1em;
 }
+
 
 .step {
     width: 40px;
@@ -276,7 +297,7 @@ textarea {
 .upload-btn {
     position: relative;
     display: inline-block;
-    margin-top: 15px;
+    margin-top: 0;
 }
 
 .upload-btn .btn {
@@ -500,6 +521,20 @@ textarea {
     }
 
     .btn {
+        width: 100%;
+    }
+    .upload-section {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .upload-btn,
+    .preview-action {
+        width: 100%;
+    }
+
+    .upload-btn .btn,
+    .preview-link {
         width: 100%;
     }
 }

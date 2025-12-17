@@ -72,8 +72,7 @@ class AppType(Enum):
     CHAT2DB = "自然语言数据查询"
     OPEN = "开放平台"
     MT_REPORT = "会议纪要整理"
-    EVAL_EXPERT = "AI 评审数字专家"
-    PAPER_REVIEW = "AI 数字评委"
+    PAPER_REVIEW = "数字评委"
     TEAM_BUILDING = "AI 党建"
 
     @staticmethod
