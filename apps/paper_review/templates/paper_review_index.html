@@ -63,14 +63,14 @@
                 <div class="upload-container">
                     <i class="fas fa-file-alt"></i>
                     <h3>上传评审标准</h3>
-                    <p>支持上传 Excel (.xlsx) 或 Word (.docx) 格式的评审标准文件</p>
+                    <p>支持上传 Excel (.xlsx) 、Word (.docx) 或 Markdown（.md）格式的评审标准文件</p>
 
                     <div class="upload-section">
                         <div class="upload-btn">
                             <button class="btn btn-primary">
                                 <i class="fas fa-file-alt"></i> 选择评审标准
                             </button>
-                            <input type="file" class="file-input" id="reviewCriteria" accept=".xlsx,.docx" onchange="handleCriteriaUpload(this)">
+                            <input type="file" class="file-input" id="reviewCriteria" accept=".xlsx,.docx, .md" onchange="handleCriteriaUpload(this)">
                         </div>
                         <!-- 移动预览按钮到这里 -->
                         <div class="preview-action" id="criteriaPreviewAction" style="display: none;">

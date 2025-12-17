@@ -23,11 +23,11 @@ function handleCriteriaUpload(input) {
     if (!file) return;
 
     // 验证文件类型
-    const allowedExtensions = ['.xlsx', '.docx'];
+    const allowedExtensions = ['.xlsx', '.docx', '.md'];
     const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
 
     if (!allowedExtensions.includes(fileExtension)) {
-        alert('请上传 .xlsx 或 .docx 格式的文件');
+        alert('请上传 .xlsx、.docx 或 .md 格式的文件');
         return;
     }
 
@@ -42,6 +42,8 @@ function handleCriteriaUpload(input) {
         fileIcon.className = 'fas fa-file-excel';
     } else if (fileExtension === '.docx') {
         fileIcon.className = 'fas fa-file-word';
+    } else if (fileExtension === '.md') {
+        fileIcon.className = 'fas fa-file-code';
     }
 
     // 上传文件到后端
@@ -89,7 +91,17 @@ async function uploadCriteriaFile(file) {
     try {
         // 根据文件类型选择上传接口
         const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
-        const uploadUrl = fileExtension === '.xlsx' ? '/xlsx/upload' : '/docx/upload';
+        let uploadUrl;
+        if (fileExtension === '.xlsx' || fileExtension === '.xls') {
+            uploadUrl = '/xlsx/upload';
+        } else if (fileExtension === '.docx' || fileExtension === '.doc') {
+            uploadUrl = '/docx/upload';
+        } else if (fileExtension === '.md') {
+            uploadUrl = '/md/upload';
+        } else {
+            alert('不支持的文件格式');
+            return;
+        }
 
         const response = await fetch(uploadUrl, {
             method: 'POST',
