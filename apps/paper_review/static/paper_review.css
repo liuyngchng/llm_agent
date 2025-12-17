@@ -137,7 +137,7 @@ h1 {
     font-size: 1rem;
     font-weight: 600;
     height: 48px;
-    min-width: 120px;
+    min-width: 80px;
     border: none;
     cursor: pointer;
     transition: all 0.3s ease;

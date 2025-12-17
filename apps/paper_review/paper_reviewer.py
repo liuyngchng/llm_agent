@@ -17,7 +17,7 @@ from common.docx_meta_util import update_process_info, get_doc_info
 from common.my_enums import FileType
 from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
 from common.sys_init import init_yml_cfg
-from common.xlsx_md_util import convert_xlsx_to_md, convert_xlsx_to_md_advanced
+from common.xlsx_md_util import convert_xlsx_to_md_advanced
 from common.xlsx_util import convert_md_to_xlsx
 from common.const import MAX_SECTION_LENGTH
 
@@ -152,7 +152,7 @@ class PaperReviewer:
                     logger.error(f"原始内容: {content}")
                     # 返回降级结果
                     return {
-                        "score": 60,
+                        "score": 0,
                         "strengths": ["内容结构完整"],
                         "issues": [f"AI评审解析失败: {str(e)}", "建议人工复核"],
                         "suggestions": ["请专家人工评审该章节"],
@@ -162,9 +162,9 @@ class PaperReviewer:
                 error_msg = f"LLM API调用失败:{uri}, {response.status_code} - {response.text}"
                 logger.error(error_msg)
                 return {
-                    "score": 60,
+                    "score": 0,
                     "strengths": ["章节结构完整"],
-                    "issues": [f"API调用失败: {response.status_code}"],
+                    "issues": [f"API调用失败: {response.status_code}- {response.text}"],
                     "suggestions": ["请专家人工评审该章节"],
                     "risk_level": "未知"
                 }
@@ -172,7 +172,7 @@ class PaperReviewer:
             error_msg = f"LLM API调用异常: {uri}, {str(e)}"
             logger.error(error_msg)
             return {
-                "score": 60,
+                "score": 0,
                 "strengths": ["章节结构完整"],
                 "issues": [f"API调用异常: {str(e)}"],
                 "suggestions": ["请专家人工评审该章节"],
