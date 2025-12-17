@@ -4,6 +4,8 @@
 
 系统所有代码开源，详见 <a href="https://github.com/liuyngchng/llm_agent" target="_blank">github.com</a> 或者 <a href="https://gitee.com/liuyngchng/gitee_llm_agent" target="_blank">gitee.com</a>。 
 
+如果屏幕前的你是一位 0 基础的非专业开发人员，并且希望开发自己的 AI 聊天机器人，请阅读 <a href="https://github.com/liuyngchng/rd.lab/blob/master/python.tutorial.md" target="_blank">github Python AI 编程入门</a> 或者 <a href="https://gitee.com/liuyngchng/gitee_rd.lab/blob/master/python.tutorial.md" target="_blank">gitee Python AI 编程入门</a> 。
+
 通过 `IDE`（`Pycharm`, `VsCode` 等）直接启动 `debug`，为 `HTTP` 服务，通过脚本部署的 `docker` 应用为`HTTPS` 服务。
 
 | No. | 名称      | 服务类型 | 端口 | 描述         |
