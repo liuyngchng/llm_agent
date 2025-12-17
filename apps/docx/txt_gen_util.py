@@ -30,7 +30,7 @@ def gen_docx_outline_stream(uid:int, doc_type: str, doc_title: str, keywords: st
     template = cfg_util.get_usr_prompt_template('gen_docx_outline_msg', cfg)
     prompt = ChatPromptTemplate.from_template(cm_utils.replace_spaces(template))
     logger.info(f"prompt {prompt}")
-    model = agt_util.get_model(cfg, temperature=1.5)
+    model = agt_util.get_model(cfg, temperature=0.7)
     # 计算输入 token 数量
     input_text = prompt.format(doc_type=doc_type, doc_title=doc_title, keywords=keywords)
     # logger.info(f"{uid}, start_calc_txt_token, {input_text}")
