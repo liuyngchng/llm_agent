@@ -116,9 +116,9 @@ class VdbMeta:
     @staticmethod
     def get_vdb_file_processing_list():
         sql = f"select * from vdb_file_info where percent != 100 limit 100"
-        logger.debug(f"get_vdb_processing_file_list_sql, {sql}")
+        # logger.debug(f"get_vdb_processing_file_list_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
-        logger.debug(f"get_vdb_processing_file_list_dt {my_dt}")
+        # logger.debug(f"get_vdb_processing_file_list_dt {my_dt}")
         return my_dt
 
     @staticmethod

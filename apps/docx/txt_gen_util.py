@@ -51,7 +51,8 @@ def gen_docx_outline_stream(uid:int, doc_type: str, doc_title: str, keywords: st
                 output_txt += chunk.text()
                 yield output_text
         output_tokens = estimate_tokens(output_txt[:-1])
-        logger.info(f"{uid}, output_tokens, {output_tokens}")
+        # logger.info(f"{uid}, output_tokens, {output_tokens}")
+        logger.info(f"{uid}, gen_doc_outline, {output_txt}")
         statistic_util.add_output_token_by_uid(uid, output_tokens)
     finally:
         # 清理资源
