@@ -463,10 +463,10 @@ def register_routes(app):
     @app.route('/docx/del/task/<task_id>', methods=['GET'])
     def delete_file_info_by_task_id(task_id):
         """
-        根据任务ID下载文件
-        ：param task_id: 任务ID，其对应的文件名格式如下 f"output_{task_id}.docx"
+        根据任务ID刪除文件
+        ：param task_id: 任务ID
         """
-        logger.info(f"download_file_task_id, {task_id}")
+        logger.info(f"delete_file_by_task_id, {task_id}")
         filename = f"output_{task_id}.docx"
         disk_file = os.path.join(UPLOAD_FOLDER, filename)
         if os.path.exists(disk_file):
@@ -474,7 +474,7 @@ def register_routes(app):
         else:
             logger.warning(f"文件 {filename} 不存在， 无需删除物理文件, 只需删除数据库记录")
         docx_meta_util.delete_task(task_id)
-
+        docx_meta_util.delete_doc_para_task(task_id)
         return json.dumps({"msg": "删除成功", "task_id": task_id}, ensure_ascii=False), 200
 
     @app.route('/docx/process/info', methods=['POST'])
@@ -568,6 +568,7 @@ def clean_docx_task():
                 if now - task_id > TASK_EXPIRE_TIME_MS:  # 2小时过期
                     logger.info(f"Cleaning expired task: {task_id}")
                     docx_meta_util.delete_task(task_id)
+                    docx_meta_util.delete_doc_para_task(task_id)
 
             time.sleep(1000)  # 每1000秒检查一次
         except Exception as e:

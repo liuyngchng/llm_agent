@@ -120,6 +120,19 @@ def delete_task(task_id: int):
     logger.info(f"delete_docx_info_by_task_id_dt {my_dt}")
     return my_dt
 
+def delete_doc_para_task(task_id: int):
+    """
+    根据任务id删除docx文件处理任务的相关元数据信息
+    :param task_id: process task id
+    :return:
+    """
+    sql = f"delete from doc_para_info where task_id ={task_id}"
+    with sqlite3.connect(CFG_DB_FILE) as my_conn:
+        logger.info(f"delete_doc_para_info_by_task_id_sql, {sql}")
+        my_dt = insert_del_sqlite(my_conn, sql)
+    logger.info(f"delete_doc_para_info_by_task_id_dt {my_dt}")
+    return my_dt
+
 
 def update_process_info(uid: int, task_id: int, process_info: str, percent = -1):
     """
