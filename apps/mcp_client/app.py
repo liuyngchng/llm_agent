@@ -15,7 +15,15 @@ from common.mcp_util import auto_call_mcp, auto_call_mcp_yield
 from common.sys_init import init_yml_cfg
 
 # 配置日志
-logging.config.fileConfig('logging.conf', encoding="utf-8")
+log_config_path = 'logging.conf'
+if os.path.exists(log_config_path):
+    logging.config.fileConfig(log_config_path, encoding="utf-8")
+else:
+    # 设置默认的日志配置
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 logger = logging.getLogger(__name__)
 
 # 创建 Flask 应用

@@ -30,7 +30,15 @@ from common.cm_utils import get_console_arg1
 from common.xlsx_md_util import convert_xlsx_to_md
 from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR, TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE
 
-logging.config.fileConfig('logging.conf', encoding="utf-8")
+log_config_path = 'logging.conf'
+if os.path.exists(log_config_path):
+    logging.config.fileConfig(log_config_path, encoding="utf-8")
+else:
+    # 设置默认的日志配置
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 logger = logging.getLogger(__name__)
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)

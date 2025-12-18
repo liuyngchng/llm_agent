@@ -6,6 +6,7 @@ a customer service module to process AI and human talk msg
 """
 import json
 import logging.config
+import os
 
 from flask import render_template
 
@@ -17,7 +18,15 @@ from common.my_enums import AiServiceStatus, DataType
 # from sql_agent import SqlAgent
 from common.cm_utils import convert_list_to_html_table
 
-logging.config.fileConfig('logging.conf', encoding="utf-8")
+log_config_path = 'logging.conf'
+if os.path.exists(log_config_path):
+    logging.config.fileConfig(log_config_path, encoding="utf-8")
+else:
+    # 设置默认的日志配置
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 logger = logging.getLogger(__name__)
 
 MAX_HISTORY_SIZE = 19

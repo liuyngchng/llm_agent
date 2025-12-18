@@ -25,7 +25,15 @@ from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.cm_utils import get_console_arg1
 from common.const import  SESSION_TIMEOUT, UPLOAD_FOLDER, TASK_EXPIRE_TIME_MS,DOCX_MIME_TYPE
 
-logging.config.fileConfig('logging.conf', encoding="utf-8")
+log_config_path = 'logging.conf'
+if os.path.exists(log_config_path):
+    logging.config.fileConfig(log_config_path, encoding="utf-8")
+else:
+    # 设置默认的日志配置
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 logger = logging.getLogger(__name__)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 my_cfg = init_yml_cfg()

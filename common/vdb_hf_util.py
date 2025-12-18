@@ -9,6 +9,7 @@
     进行分词
     for HuggingFaceEmbeddings
 """
+import os
 
 from langchain_community.document_loaders import TextLoader, UnstructuredPDFLoader
 from langchain_core.embeddings import Embeddings
@@ -26,7 +27,15 @@ from sys_init import init_yml_cfg
 embedding_model = "../bge-large-zh-v1.5"
 vector_db_dir = "./faiss_index"
 
-logging.config.fileConfig('logging.conf', encoding="utf-8")
+log_config_path = 'logging.conf'
+if os.path.exists(log_config_path):
+    logging.config.fileConfig(log_config_path, encoding="utf-8")
+else:
+    # 设置默认的日志配置
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 logger = logging.getLogger(__name__)
 
 

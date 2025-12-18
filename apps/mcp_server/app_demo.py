@@ -16,7 +16,15 @@ from starlette.responses import JSONResponse
 
 app = FastMCP(port=19001, stateless_http=True, json_response=True, host='0.0.0.0')
 
-logging.config.fileConfig('logging.conf', encoding="utf-8")
+log_config_path = 'logging.conf'
+if os.path.exists(log_config_path):
+    logging.config.fileConfig(log_config_path, encoding="utf-8")
+else:
+    # 设置默认的日志配置
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 logger = logging.getLogger(__name__)
 
 @app.custom_route("/health", methods=["GET"])

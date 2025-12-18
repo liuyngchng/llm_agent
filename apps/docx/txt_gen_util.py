@@ -6,6 +6,7 @@
 文本生成工具类
 """
 import logging.config
+import os
 import time
 
 
@@ -14,7 +15,15 @@ from langchain_core.prompts import ChatPromptTemplate
 from common import cfg_util, agt_util, cm_utils, statistic_util
 from common.cm_utils import rmv_think_block, estimate_tokens
 
-logging.config.fileConfig('logging.conf', encoding="utf-8")
+log_config_path = 'logging.conf'
+if os.path.exists(log_config_path):
+    logging.config.fileConfig(log_config_path, encoding="utf-8")
+else:
+    # 设置默认的日志配置
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 logger = logging.getLogger(__name__)
 
 def gen_docx_outline_stream(uid:int, doc_type: str, doc_title: str, keywords: str, cfg: dict):

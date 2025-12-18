@@ -3,6 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 import logging.config
+import os
 import sqlite3
 from datetime import datetime
 
@@ -13,7 +14,15 @@ from common.my_enums import DataType
 STS_DB_FILE = "cfg.db"
 STS_DB_URI = f"sqlite:///{STS_DB_FILE}"
 
-logging.config.fileConfig('logging.conf', encoding="utf-8")
+log_config_path = 'logging.conf'
+if os.path.exists(log_config_path):
+    logging.config.fileConfig(log_config_path, encoding="utf-8")
+else:
+    # 设置默认的日志配置
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 logger = logging.getLogger(__name__)
 
 def get_statistics_list()-> list[dict]:
