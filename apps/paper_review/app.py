@@ -19,10 +19,10 @@ from flask import (Flask, request, jsonify, send_from_directory,
 from apps.paper_review.paper_reviewer import generate_review_report
 from common import docx_meta_util
 from common.cfg_util import save_file_info, get_file_info
-from common.docx_md_util import convert_docx_to_md
+from common.docx_md_util import convert_docx_to_md, get_md_file_content
 from common import my_enums, statistic_util
 from common.docx_meta_util import get_doc_info
-from common.html_util import convert_md_to_html_with_css, get_html_ctx_from_md
+from common.html_util import convert_md_to_html_with_css, get_html_ctx_from_md, convert_markdown_to_html
 from common.my_enums import AppType, FileType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info
