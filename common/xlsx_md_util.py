@@ -20,7 +20,6 @@ else:
 logger = logging.getLogger(__name__)
 
 
-
 def convert_xlsx_to_md(excel_path: str, include_sheet_names: bool = True,
                        output_abs_path: bool = False) -> str:
     """
