@@ -45,6 +45,10 @@ def convert_xlsx_to_md(excel_path: str, include_sheet_names: bool = True,
 
             if not df.empty:
                 df = df.fillna('')
+                df = df.replace(r'^Unnamed.*$', '', regex=True)
+                df.columns = ['' if 'Unnamed' in str(col) else col
+                              for i, col in enumerate(df.columns)]
+                df = df.replace(r'\n', '<br>', regex=True)
 
                 # 检查数据维度
                 if df.shape[1] <= 3:  # 列数较少时使用更好的格式
@@ -52,12 +56,12 @@ def convert_xlsx_to_md(excel_path: str, include_sheet_names: bool = True,
                 else:
                     # markdown_parts.append("> ⚠️ **表格预览** (复杂表格建议查看原文件)")
                     markdown_parts.append("")
-                    markdown_table = df.to_markdown(index=False)
+                    markdown_table = df.to_markdown(index=False, tablefmt="pipe")
                     markdown_parts.append(markdown_table)
 
                 markdown_parts.append("")  # 空行分隔
 
-        markdown_content = "\n".join(markdown_parts).replace("Unnamed:", "")
+        markdown_content = "\n".join(markdown_parts)
         with open(md_path, 'w', encoding='utf-8') as f:
             f.write(markdown_content)
         abs_path = os.path.abspath(md_path)
@@ -65,7 +69,7 @@ def convert_xlsx_to_md(excel_path: str, include_sheet_names: bool = True,
         return abs_path if output_abs_path else md_path
 
     except Exception as e:
-        logger.error(f"excel_to_md_error, file {excel_path}, {str(e)}")
+        logger.exception(f"excel_to_md_error, file {excel_path}, {str(e)}")
         return ""
 
 
