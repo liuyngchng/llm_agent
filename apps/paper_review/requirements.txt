@@ -7,3 +7,4 @@ concurrent-log-handler
 pypandoc
 pandas
 openpyxl
+xlsx2html
