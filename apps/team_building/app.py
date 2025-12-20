@@ -28,7 +28,7 @@ from common.my_enums import AppType, FileType
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.cm_utils import get_console_arg1
-from common.xlsx_md_util import convert_xlsx_to_md
+from common.xlsx_util import convert_xlsx_to_md
 from common.const import (SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR,
                           TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE)
 

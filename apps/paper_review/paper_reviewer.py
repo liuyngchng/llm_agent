@@ -17,9 +17,7 @@ import logging.config
 from common.docx_meta_util import update_process_info, get_doc_info
 from common.my_enums import FileType
 from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
-from common.sys_init import init_yml_cfg
-from common.xlsx_md_util import convert_xlsx_to_md
-from common.xlsx_util import convert_md_to_xlsx
+from common.xlsx_util import convert_md_to_xlsx, convert_xlsx_to_md
 from common.const import MAX_SECTION_LENGTH
 
 log_config_path = 'logging.conf'
