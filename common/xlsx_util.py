@@ -410,28 +410,27 @@ def convert_all_sheets_with_navigation(input_excel) -> str:
     from xlsx2html import xlsx2html
     excel_file = pd.ExcelFile(input_excel)
     sheet_names = excel_file.sheet_names
-    output_dir = os.path.join(OUTPUT_DIR, Path(input_excel).stem)
+    import hashlib
+    file_md5 = hashlib.md5(Path(input_excel).name.encode('utf-8')).hexdigest()
+    output_dir = os.path.join(OUTPUT_DIR, file_md5)
     os.makedirs(output_dir, exist_ok=True)
     # 转换每个sheet到单独的HTML
     sheet_files = {}
     for sheet_name in sheet_names:
-        safe_name = "".join(c for c in sheet_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-        if not safe_name:
-            safe_name = f"sheet_{sheet_names.index(sheet_name) + 1}"
-
+        safe_name = f"sheet_{sheet_names.index(sheet_name) + 1}"
         html_file = f"{safe_name}.html"
-        html_path = os.path.join(output_dir, html_file)
+        html_path = os.path.abspath(os.path.join(output_dir, html_file))
 
         try:
             xlsx2html(input_excel, html_path, sheet=sheet_name)
             sheet_files[sheet_name] = {
                 'file': html_file,
                 'path': html_path,
-                'display_name': sheet_name
+                'display_name': safe_name
             }
-            logger.info(f"✅ 转换: {sheet_name} -> {html_file}")
+            logger.info(f"✅ 转换: {input_excel}[{sheet_name}] -> {html_path}")
         except Exception as e:
-            logger.error(f"❌ 转换失败 {sheet_name}: {e}")
+            logger.error(f"❌ 转换失败 {input_excel}[{sheet_name}]: {e}")
 
     # 创建导航页面
     nav_html = _create_navigation_page(input_excel, sheet_files, output_dir)
@@ -664,9 +663,9 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
 
     with open(nav_file, 'w', encoding='utf-8') as f:
         f.write(nav_html)
-
-    logger.info(f"✅ 导航页面已创建: {nav_file}")
-    return nav_file
+    abs_nav_file = os.path.abspath(nav_file)
+    logger.info(f"导航页面已创建: {abs_nav_file}")
+    return abs_nav_file
 
 
 if __name__ == "__main__":
