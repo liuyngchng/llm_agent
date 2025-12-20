@@ -59,6 +59,8 @@ def save_doc_info(uid: int, task_id: int, doc_type: str, doc_title: str, doc_out
            f"({uid}, {task_id}, '{esc_doc_type}', '{esc_doc_title}', '{esc_doc_outline}',"
            f"'{esc_keywords}', '{esc_input_file_path}', {vdb_id}, {is_include_para_txt}, "
            f"'{esc_doc_ctx}', '{esc_output_file_path}', '{escaped_vdb_dir}', {output_file_type},'{create_time}')")
+    if not os.path.exists(CFG_DB_FILE):
+        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         logger.debug(f"save_doc_info_sql, {sql}")
         my_dt = insert_del_sqlite(my_conn, sql)
@@ -111,6 +113,8 @@ def delete_task(task_id: int):
     sql = f"delete from doc_file_info where task_id ={task_id}"
     if platform.system() == "Linux":
         sql += " limit 1"
+    if not os.path.exists(CFG_DB_FILE):
+        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         logger.info(f"delete_docx_info_by_task_id_sql, {sql}")
         my_dt = insert_del_sqlite(my_conn, sql)
@@ -124,6 +128,8 @@ def delete_doc_para_task(task_id: int):
     :return:
     """
     sql = f"delete from doc_para_info where task_id ={task_id}"
+    if not os.path.exists(CFG_DB_FILE):
+        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         logger.info(f"delete_doc_para_info_by_task_id_sql, {sql}")
         my_dt = insert_del_sqlite(my_conn, sql)
