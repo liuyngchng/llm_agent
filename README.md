@@ -125,16 +125,12 @@ pip install -r ./apps/chat2db/requirements.txt
 │   ├── build
 │   ├── cert
 │   ├── cfg_db_schema
-│   ├── output_doc
-│   ├── __pycache__
 │   ├── sh
 │   ├── static
 │   └── templates
 ├── tests
 │   ├── apps
-│   ├── __pycache__
 │   └── shared
-└── upload_doc
 ```
 
 apps 下的每个文件夹都是一个独立的 python 应用。
