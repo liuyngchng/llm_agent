@@ -6,16 +6,12 @@ import os
 import sqlite3
 import logging.config
 from typing import Any
-
+LOG_FORMATTER = '%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(funcName)s - [%(lineno)d] - %(message)s'
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
     logging.config.fileConfig(log_config_path, encoding="utf-8")
 else:
-    # 设置默认的日志配置
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    logging.basicConfig(level=logging.INFO,format= LOG_FORMATTER, force=True)
 logger = logging.getLogger(__name__)
 
 USER_SAMPLE_DATA_DB = "user_info.db"
@@ -59,6 +55,7 @@ XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sh
 PPTX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 # JSON MIME 类型
 JSON_MIME_TYPE = 'application/json; charset=utf-8'
+
 
 # 文件处理任务超时时间
 TASK_EXPIRE_TIME_MS = 7200 * 1000  # 任务超时时间，默认2小时

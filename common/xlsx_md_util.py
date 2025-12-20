@@ -12,11 +12,8 @@ log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
     logging.config.fileConfig(log_config_path, encoding="utf-8")
 else:
-    # 设置默认的日志配置
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    from common.const import LOG_FORMATTER
+    logging.basicConfig(level=logging.INFO,format= LOG_FORMATTER, force=True)
 logger = logging.getLogger(__name__)
 
 
@@ -36,11 +33,11 @@ def convert_xlsx_to_md(excel_path: str, include_sheet_names: bool = True,
         excel_file_obj = pd.ExcelFile(excel_path)
         markdown_parts = []
 
-        for sheet_name in excel_file_obj.sheet_names:
+        for idx, sheet_name in enumerate(excel_file_obj.sheet_names, start=1):
             df = pd.read_excel(excel_path, sheet_name=sheet_name, engine='openpyxl')
 
             if include_sheet_names:
-                markdown_parts.append(f"## 📊 工作表: {sheet_name}")
+                markdown_parts.append(f"## {idx}. 📊 : {sheet_name}工作表")
                 markdown_parts.append("")
 
             if not df.empty:
