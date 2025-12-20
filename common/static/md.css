@@ -3,6 +3,16 @@
     gap: 30px;
     align-items: flex-start;
 }
+/* 主内容区域 */
+.markdown-body {
+    flex: 1;
+    background: white;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    min-width: 1280px;
+    overflow-x: visible;
+}
 
 .markdown-body > p {
     text-indent: 2em;
@@ -32,12 +42,13 @@ body {
 
 /* 目录侧边栏样式 */
 .toc-sidebar {
-    flex: 0 0 280px;
+    flex: 0 0 250px;
     position: sticky;
     top: 20px;
     height: fit-content;
     max-height: 80vh;
     overflow-y: auto;
+    margin-left: -350px;
 }
 
 .toc-header {
@@ -98,15 +109,7 @@ body {
     padding-left: 15px;
 }
 
-/* 主内容区域 */
-.markdown-body {
-    flex: 1;
-    background: white;
-    padding: 40px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    min-width: 0; /* 防止内容溢出 */
-}
+
 
 /* 代码高亮样式 */
 .codehilite {
@@ -130,6 +133,7 @@ table {
     border-collapse: collapse;
     width: 100%;
     margin: 16px 0;
+    min-width: 100%;
 }
 
 th, td {
