@@ -439,7 +439,7 @@ def convert_all_sheets_with_navigation(input_excel) -> str:
 
 def _create_navigation_page(input_excel, sheet_files, output_dir):
     """
-    创建导航页面，使用 docx.css 风格
+    创建导航页面
     """
     import os
     from pathlib import Path
