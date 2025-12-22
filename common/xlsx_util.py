@@ -439,78 +439,186 @@ def convert_all_sheets_with_navigation(input_excel) -> str:
 
 def _create_navigation_page(input_excel, sheet_files, output_dir):
     """
-    创建导航页面
+    创建导航页面，使用 docx.css 风格
     """
+    import os
+    from pathlib import Path
+
     base_name = Path(input_excel).stem
     nav_file = os.path.join(output_dir, "index.html")
 
+    # 生成当前时间戳
+    import datetime
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     nav_html = f'''<!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{base_name} - Excel 预览</title>
     <style>
-        :root {{
-            --primary-color: #4CAF50;
-            --secondary-color: #2196F3;
-            --background-color: #f5f5f5;
+        /* docx.css 风格样式 */
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }}
-        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-        body {{ 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        body {{
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
             min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             padding: 20px;
         }}
+
         .container {{
-            max-width: 1200px;
-            margin: 0 auto;
+            width: auto;
+            min-width: 1280px;
+            max-width: 1400px;
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             overflow: hidden;
         }}
-        .header {{
-            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+
+        header {{
+            background: linear-gradient(to right, #4b6cb7, #182848);
             color: white;
-            padding: 30px 40px;
+            padding: 25px 30px;
             text-align: center;
+            position: relative;
         }}
-        .header h1 {{ font-size: 2.5em; margin-bottom: 10px; }}
-        .header p {{ opacity: 0.9; }}
-        .main-content {{ padding: 40px; }}
-        .sheet-grid {{
+
+        h1 {{
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }}
+
+        .header-subtitle {{
+            opacity: 0.9;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }}
+
+        .file-info {{
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: inline-block;
+        }}
+
+        .file-name {{
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }}
+
+        .main-content {{
+            padding: 40px;
+        }}
+
+        h2 {{
+            color: #2c3e50;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.8rem;
+            border-bottom: 2px solid #4b6cb7;
+            padding-bottom: 10px;
+        }}
+
+        h2 i {{
+            background: #4b6cb7;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }}
+
+        .stats-container {{
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }}
+
+        .stat-card {{
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }}
+
+        .stat-card:hover {{
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-color: #4b6cb7;
+        }}
+
+        .stat-value {{
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4b6cb7;
+            margin-bottom: 5px;
+        }}
+
+        .stat-label {{
+            color: #666;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }}
+
+        .sheets-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
-            margin-top: 30px;
+            margin-top: 20px;
         }}
+
         .sheet-card {{
             background: white;
             border-radius: 10px;
             padding: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
             border: 1px solid #e0e0e0;
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            border-left: 4px solid #4b6cb7;
         }}
+
         .sheet-card:hover {{
             transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-            border-color: var(--primary-color);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: #4b6cb7;
         }}
-        .sheet-card::before {{
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 5px;
-            height: 100%;
-            background: var(--primary-color);
+
+        .sheet-header {{
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
         }}
+
         .sheet-number {{
-            background: var(--primary-color);
+            background: linear-gradient(to right, #4b6cb7, #3a5a9e);
             color: white;
             width: 36px;
             height: 36px;
@@ -519,143 +627,259 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            margin-bottom: 15px;
+            font-size: 1.1rem;
         }}
+
         .sheet-title {{
             font-size: 1.3em;
             font-weight: 600;
-            margin-bottom: 10px;
-            color: #333;
+            color: #2c3e50;
+            flex: 1;
         }}
+
+        .sheet-details {{
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }}
+
         .sheet-actions {{
-            margin-top: 20px;
             display: flex;
             gap: 10px;
         }}
+
         .btn {{
-            padding: 8px 16px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }}
-        .btn-primary {{
-            background: var(--primary-color);
-            color: white;
-        }}
-        .btn-primary:hover {{
-            background: #3d8b40;
-            transform: scale(1.05);
-        }}
-        .btn-secondary {{
-            background: #f0f0f0;
-            color: #333;
-        }}
-        .btn-secondary:hover {{
-            background: #e0e0e0;
-        }}
-        .stats {{
-            background: #f8f9fa;
-            padding: 20px;
+            padding: 10px 20px;
+            border: none;
             border-radius: 8px;
-            margin-bottom: 30px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
         }}
-        .stats-item {{
-            text-align: center;
+
+        .btn-primary {{
+            background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+            color: white;
+            flex: 1;
         }}
-        .stats-value {{
-            font-size: 2em;
-            font-weight: bold;
-            color: var(--primary-color);
+
+        .btn-secondary {{
+            background: white;
+            color: #4b6cb7;
+            border: 1px solid #4b6cb7;
         }}
-        .stats-label {{
-            color: #666;
-            font-size: 0.9em;
+
+        .btn:hover:not(:disabled) {{
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(75, 108, 183, 0.3);
         }}
+
+        .btn-primary:hover:not(:disabled) {{
+            background: linear-gradient(to right, #3a5a9e, #2c487e);
+        }}
+
+        .btn-secondary:hover {{
+            background: #f0f4ff;
+        }}
+
         .footer {{
             text-align: center;
             padding: 20px;
             color: #666;
             border-top: 1px solid #eee;
+            margin-top: 30px;
+            background: #f8f9fa;
         }}
+
+        .footer-info {{
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }}
+
+        /* 空状态样式 */
+        .empty-state {{
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }}
+
+        .empty-state i {{
+            font-size: 3rem;
+            color: #4b6cb7;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }}
+
+        /* 响应式设计 */
         @media (max-width: 768px) {{
-            .sheet-grid {{ grid-template-columns: 1fr; }}
-            .stats {{ flex-direction: column; gap: 15px; }}
+            .container {{
+                min-width: auto;
+                width: 100%;
+                border-radius: 12px;
+            }}
+
+            .stats-container {{
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }}
+
+            .sheets-grid {{
+                grid-template-columns: 1fr;
+            }}
+
+            .main-content {{
+                padding: 25px;
+            }}
+
+            h1 {{
+                font-size: 1.8rem;
+            }}
+
+            h2 {{
+                font-size: 1.5rem;
+            }}
+
+            .sheet-actions {{
+                flex-direction: column;
+            }}
+
+            .btn {{
+                width: 100%;
+            }}
+
+            .footer-info {{
+                flex-direction: column;
+                gap: 10px;
+            }}
+        }}
+
+        /* 动画效果 */
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(10px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+
+        .sheet-card {{
+            animation: fadeIn 0.5s ease;
         }}
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>📊 {Path(input_excel).name}</h1>
-            <p>Excel文件预览 - {len(sheet_files)} 个工作表</p>
-        </div>
+        <header>
+            <h1><i class="fas fa-file-excel"></i> Excel 文件预览</h1>
+            <p class="header-subtitle">工作表导航 - {len(sheet_files)} 个工作表</p>
+            <div class="file-info">
+                <div class="file-name">
+                    <i class="fas fa-file-excel"></i>
+                    <span>{Path(input_excel).name}</span>
+                </div>
+            </div>
+        </header>
 
         <div class="main-content">
-            <div class="stats">
-                <div class="stats-item">
-                    <div class="stats-value">{len(sheet_files)}</div>
-                    <div class="stats-label">工作表总数</div>
+            <h2><i class="fas fa-chart-bar"></i> 统计概览</h2>
+
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-value">{len(sheet_files)}</div>
+                    <div class="stat-label">工作表总数</div>
                 </div>
-                <div class="stats-item">
-                    <div class="stats-value">{sum(1 for s in sheet_files.values() if 'error' not in s)}</div>
-                    <div class="stats-label">成功转换</div>
+                <div class="stat-card">
+                    <div class="stat-value">{sum(1 for s in sheet_files.values() if 'error' not in s)}</div>
+                    <div class="stat-label">成功转换</div>
                 </div>
-                <div class="stats-item">
-                    <div class="stats-value">{sum(1 for s in sheet_files.values() if 'error' in s)}</div>
-                    <div class="stats-label">转换失败</div>
+                <div class="stat-card">
+                    <div class="stat-value">{sum(1 for s in sheet_files.values() if 'error' in s)}</div>
+                    <div class="stat-label">转换失败</div>
                 </div>
             </div>
 
-            <h2 style="margin-bottom: 20px;">📋 工作表列表</h2>
-            <div class="sheet-grid">
-'''
+            <h2><i class="fas fa-th-list"></i> 工作表列表</h2>
 
-    for i, (sheet_name, info) in enumerate(sheet_files.items(), 1):
-        nav_html += f'''
+            {f'<div class="sheets-grid">' + ''.join([
+        f'''
                 <div class="sheet-card">
-                    <div class="sheet-number">{i}</div>
-                    <div class="sheet-title">{sheet_name}</div>
+                    <div class="sheet-header">
+                        <div class="sheet-number">{i}</div>
+                        <div class="sheet-title">{sheet_name}</div>
+                    </div>
+                    <div class="sheet-details">
+                        <p><i class="fas fa-file-alt"></i> 工作表索引: {i}</p>
+                        <p><i class="fas fa-clock"></i> 转换时间: {current_time}</p>
+                    </div>
                     <div class="sheet-actions">
                         <a href="{info['file']}" class="btn btn-primary" target="_blank">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                                <polyline points="10 9 9 9 8 9"></polyline>
-                            </svg>
-                            查看表格
+                            <i class="fas fa-external-link-alt"></i> 查看表格
                         </a>
                     </div>
                 </div>
-'''
+                '''
+        for i, (sheet_name, info) in enumerate(sheet_files.items(), 1)
+    ]) + '</div>' if sheet_files else '''
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h3>暂无工作表</h3>
+                    <p>没有找到可用的工作表数据</p>
+                </div>
+            '''}
 
-    nav_html += f'''
-            </div>
         </div>
 
         <div class="footer">
-            <p>时间: {pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
-            <p>powered by paper_review</p>
+            <p><i class="fas fa-cogs"></i> Powered by xlsx_util.py</p>
+            <div class="footer-info">
+                <span><i class="fas fa-calendar-alt"></i> 生成时间: {current_time}</span>
+                <span><i class="fas fa-file-excel"></i> 原始文件: {Path(input_excel).name}</span>
+                <span><i class="fas fa-layer-group"></i> 总工作表数: {len(sheet_files)}</span>
+            </div>
         </div>
     </div>
 
     <script>
-        // 平滑滚动
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {{
-            anchor.addEventListener('click', function (e) {{
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({{
-                    behavior: 'smooth'
-                }});
+        // 平滑滚动到顶部
+        window.addEventListener('load', function() {{
+            window.scrollTo({{ top: 0, behavior: 'smooth' }});
+        }});
+
+        // 卡片悬停效果增强
+        document.querySelectorAll('.sheet-card').forEach(card => {{
+            card.addEventListener('mouseenter', function() {{
+                this.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.15)';
             }});
+
+            card.addEventListener('mouseleave', function() {{
+                this.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.08)';
+            }});
+        }});
+
+        // 点击统计卡片动画
+        document.querySelectorAll('.stat-card').forEach(card => {{
+            card.addEventListener('click', function() {{
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {{
+                    this.style.transform = 'translateY(-3px)';
+                }}, 150);
+            }});
+        }});
+
+        // 添加打印功能
+        document.addEventListener('keydown', function(e) {{
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {{
+                e.preventDefault();
+                alert('建议使用浏览器的打印功能，可以获得最佳打印效果。');
+            }}
         }});
     </script>
 </body>
@@ -663,6 +887,7 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
 
     with open(nav_file, 'w', encoding='utf-8') as f:
         f.write(nav_html)
+
     abs_nav_file = os.path.abspath(nav_file)
     logger.info(f"导航页面已创建: {abs_nav_file}")
     return abs_nav_file
