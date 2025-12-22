@@ -393,9 +393,9 @@ def convert_xlsx_to_html(input_excel, output_html=None, sheet_name=None, output_
 
         logger.info(f"转换成功, 输入文件: {input_excel}, 输出文件: {html_path}")
         if output_abs_path:
-            return os.path.abspath(html_path)
+            return os.path.abspath(str(html_path))
         else:
-            return html_path
+            return str(html_path)
 
     except Exception as e:
         logger.exception(f"❌ 转换失败: {e}")
