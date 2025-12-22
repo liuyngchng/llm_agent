@@ -58,3 +58,4 @@ sqlite_vss
 **/*.xlsx
 apps/chat2db/db_schema/*.sql
 tests/**/*.md
+common/sh/cfg.db.backup*

@@ -10,7 +10,7 @@ set -e  # 遇到错误立即退出
 
 # 配置参数
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCHEMA_DIR="${SCRIPT_DIR}/cfg_db_schema"
+SCHEMA_DIR="${SCRIPT_DIR}/../cfg_db_schema"
 DB_FILE="${1:-${SCRIPT_DIR}/cfg.db}"
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 

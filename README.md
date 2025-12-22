@@ -188,9 +188,9 @@ sudo apt-get install sqlitebrowser
 ```shell
 # SQLite 命令行工具用于自动执行脚本
 sudo apt-get install sqlite3
-cd ~/workspace/llm_agent
+cd ~/workspace/llm_agent/common/sh
 # 执行 SQLite 初始化脚本,将在当前目录下创建一个 SQLite 的数据库文件 cfg.db
-./common/sh/init_sqlite_cfg_db.sh
+./common/sh/init_cfg_db.sh
 ```
 
 ### 4.3 启动应用
