@@ -80,7 +80,7 @@ class VdbMeta:
         iso_str = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
         sql = f"insert into vdb_info (name, uid, is_public, create_time) values ('{kdb_name}', {uid}, '{is_public}','{iso_str}')"
         if not os.path.exists(CFG_DB_FILE):
-            raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+            raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"create_vdb_info_sql, {sql}")
             my_dt = insert_del_sqlite(my_conn, sql)
@@ -106,7 +106,7 @@ class VdbMeta:
             raise RuntimeError("uid_or_kb_id_null_err")
         sql = f"delete from vdb_info where uid = {uid} and id = {kb_id}"
         if not os.path.exists(CFG_DB_FILE):
-            raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+            raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_vdb_by_uid_and_kb_id_sql, {sql}")
             my_dt = insert_del_sqlite(my_conn, sql)
@@ -213,7 +213,7 @@ class VdbMeta:
         if platform.system() == "Linux":
             sql += " limit 1"
         if not os.path.exists(CFG_DB_FILE):
-            raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+            raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_by_uid_vbd_id_file_name_sql, {sql}")
             my_dt = insert_del_sqlite(my_conn, sql)
@@ -226,7 +226,7 @@ class VdbMeta:
         if platform.system() == "Linux":
             sql += " limit 1"
         if not os.path.exists(CFG_DB_FILE):
-            raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+            raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_by_vbd_task_id_sql, {sql}")
             my_dt = insert_del_sqlite(my_conn, sql)
@@ -242,7 +242,7 @@ class VdbMeta:
         if platform.system() == "Linux":
             sql += " limit 1"
         if not os.path.exists(CFG_DB_FILE):
-            raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+            raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_sql, {sql}")
             my_dt = insert_del_sqlite(my_conn, sql)
@@ -255,7 +255,7 @@ class VdbMeta:
         if platform.system() == "Linux":
             sql += " limit 1"
         if not os.path.exists(CFG_DB_FILE):
-            raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+            raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_by_uid_vbd_id_file_id_sql, {sql}")
             my_dt = insert_del_sqlite(my_conn, sql)
@@ -266,7 +266,7 @@ class VdbMeta:
     def delete_vdb_file_by_uid_vbd_id(uid: int, vdb_id: int):
         sql = f"delete from vdb_file_info where uid={uid} and vdb_id={vdb_id}"
         if not os.path.exists(CFG_DB_FILE):
-            raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+            raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"delete_file_by_uid_vbd_id_sql, {sql}")
             my_dt = insert_del_sqlite(my_conn, sql)
@@ -282,7 +282,7 @@ class VdbMeta:
         sql = (f"insert into vdb_file_info (name, uid, vdb_id, file_path, task_id, file_md5, create_time) values"
                f" ('{original_file_name}', {uid}, {vdb_id}, '{saved_file_name}', {task_id}, '{file_md5}', '{iso_str}')")
         if not os.path.exists(CFG_DB_FILE):
-            raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+            raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
         with sqlite3.connect(CFG_DB_FILE) as my_conn:
             logger.info(f"save_file_info_sql, {sql}")
             my_dt = insert_del_sqlite(my_conn, sql)

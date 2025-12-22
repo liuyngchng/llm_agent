@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 def auth_user(user:str, t: str, cfg: dict) -> dict:
     auth_result ={"pass": False, "uid": "", "msg":""}
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         sql = f"select id, role from user where name='{user}' limit 1"
         check_info = query_sqlite(my_conn, sql)
@@ -56,7 +56,7 @@ def auth_user(user:str, t: str, cfg: dict) -> dict:
 def get_user_info_by_uid(uid: int)-> dict:
     user_info = {}
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             sql = f"select id, name, role, area from user where id={uid} limit 1"
@@ -78,7 +78,7 @@ def get_uid_by_user(usr_name:str) ->str:
     check_sql = f"select id from user where name='{usr_name}' limit 1"
     uid = ''
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         check_info = query_sqlite(my_conn, check_sql)
         logger.debug(f"check_info {check_info}")
@@ -96,7 +96,7 @@ def get_uid_by_user(usr_name:str) ->str:
 def get_user_name_by_uid(uid: int)-> str | None:
     user = None
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             sql = f"select name from user where id={uid} limit 1"
@@ -111,7 +111,7 @@ def get_user_name_by_uid(uid: int)-> str | None:
 def get_user_role_by_uid(uid:int)-> str | None:
     role = None
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             sql = f"select role from user where id={uid} limit 1"
@@ -126,7 +126,7 @@ def get_user_role_by_uid(uid:int)-> str | None:
 def get_user_hack_info(uid: int, cfg: dict)-> str | None:
     user_hack_info = None
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             sql = f"select hack_info from user where id={uid} limit 1"
@@ -155,7 +155,7 @@ def save_user_hack_info(uid: int, user_hack_info: str, cfg: dict) -> bool:
     user_hack_info1 = encrypt(user_hack_info, cfg['sys']['cypher_key'])
     exec_sql = f"update user set hack_info ='{user_hack_info1}' where id = {uid}"
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
@@ -171,7 +171,7 @@ def save_user_hack_info(uid: int, user_hack_info: str, cfg: dict) -> bool:
 def get_ds_cfg_by_uid(uid:int, cfg: dict) -> dict:
     config = {}
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         check_sql = (
             f"select uid, db_type, db_name, db_host, db_port, "
@@ -257,7 +257,7 @@ def save_ds_cfg(ds_cfg: dict, cfg: dict) -> bool:
             )
             ''')
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             exec_sql = exec_sql.replace('\n', ' ')
@@ -278,7 +278,7 @@ def save_usr(user_name: str, token: str) -> bool:
     save_result = False
     exec_sql = f"INSERT INTO user (name, t) values ('{user_name}','{token}' )"
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             exec_sql = exec_sql.replace('\n', ' ')
@@ -304,7 +304,7 @@ def set_db_cache(key: str, value: str, timestamp: str, cypher_key: str) -> bool:
     encrypt_value = encrypt(value, cypher_key)
     exec_sql = f"INSERT INTO cache_info (key, value, timestamp) values ('{key}','{encrypt_value}', '{timestamp}')"
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             exec_sql = exec_sql.replace('\n', ' ')
@@ -326,7 +326,7 @@ def del_db_cache(key: str) -> bool:
     if platform.system() == "Linux":
         exec_sql += " limit 1"
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             exec_sql = exec_sql.replace('\n', ' ')
@@ -347,7 +347,7 @@ def get_db_cache(key:str, cypher_key: str)->tuple | None:
     if not cypher_key:
         raise Exception("cypher_key_null_err")
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             sql = f"select value ,timestamp from cache_info where key='{key}' limit 1"
@@ -374,7 +374,7 @@ def delete_data_source_config(uid: int, cfg: dict) -> bool:
         logger.error(f"no_db_source_cfg_found_for_uid_{uid}")
         return False
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         try:
             result = insert_del_sqlite(my_conn, delete_sql)
@@ -428,7 +428,7 @@ def decrypt(dt: str, key: str) -> str:
 def get_consts(app: str)-> dict:
     const = {}
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         sql = f"select key, value from const where app='{app}' limit 100"
         try:
@@ -443,7 +443,7 @@ def get_consts(app: str)-> dict:
 def get_user_list():
     user_list = []
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         sql = f"select id, name from user limit 100"
         try:
@@ -457,7 +457,7 @@ def get_user_list():
 
 def get_hack_info(uid: int)-> dict:
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         sql = f"select hack_q_dict from hack_list where uid = {uid} limit 1"
         try:
@@ -481,7 +481,7 @@ def get_usr_prompt_template(template_name: str,  sys_cfg: dict, uid=0)-> str:
         logger.warning(f"template_name_is_null_direct_return, {template_name}")
         return ""
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         sql = f"select value from prompt_template where name = '{template_name}' and  uid = {uid} limit 1"
         try:
@@ -518,7 +518,7 @@ def save_usr_prompt_template(uid: int, template_name: str, template_value: str):
         logger.error("illegal_uid_to_set_template_err")
         return save_result
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         sql = f"select value from prompt_template where name = '{template_name}' and  uid = {uid} limit 1"
         try:
@@ -555,7 +555,7 @@ def del_usr_prompt_template(uid: int):
         logger.error("illegal_uid_to_del_usr_template_err")
         return save_result
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         exec_sql = f"delete from prompt_template where uid = {uid} and name in ('refine_q_msg', 'sql_gen_msg')"
         try:
@@ -739,7 +739,7 @@ def save_file_info(uid: int, fid: str, full_path: str, file_suffix:int = 0) -> d
     sql = (f"insert into file_info(uid, fid, full_path, file_suffix, timestamp) values "
            f"({uid}, '{fid}', '{full_path}', '{file_suffix}', '{timestamp}')")
     if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {CFG_DB_FILE} 不存在")
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
     with sqlite3.connect(CFG_DB_FILE) as my_conn:
         logger.debug(f"save_file_info_sql, {sql}")
         my_dt = insert_del_sqlite(my_conn, sql)
