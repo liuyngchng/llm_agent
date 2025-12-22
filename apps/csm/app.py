@@ -47,18 +47,8 @@ def app_home():
     logger.info("redirect_auth_login_index")
     return redirect(url_for('auth.login_index', app_source=AppType.CSM.name.lower()))
 
-@app.route('/static/<file_name>', methods=['GET'])
+@app.route('/static/<path:file_name>')
 def get_static_file(file_name):
-    """
-    返回静态文件
-    """
-    if not re.match(r'^[\w\-\\.]+\.(png|jpg|jpeg|css|js|woff2?|ttf|ico|svg)$', file_name):  # 限制文件名格式
-        logger.error(f"return_400_for_file_request {file_name}")
-        abort(400)
-    if not file_name or '/' in file_name:  # 防止路径遍历
-        logger.error(f"return_400_for_file_request {file_name}")
-        abort(400)
-
     static_dirs = [
         os.path.join(os.path.dirname(__file__), '../../common/static'),
         os.path.join(os.path.dirname(__file__), 'static'),
@@ -66,7 +56,7 @@ def get_static_file(file_name):
 
     for static_dir in static_dirs:
         if os.path.exists(os.path.join(static_dir, file_name)):
-            logger.debug(f"get_static_file, {static_dir}, {file_name}")
+            # logger.debug(f"get_static_file, {static_dir}, {file_name}")
             return send_from_directory(static_dir, file_name)
     logger.error(f"no_file_found_error, {file_name}")
     abort(404)
