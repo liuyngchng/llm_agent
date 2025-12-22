@@ -458,14 +458,13 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{base_name} - Excel 预览</title>
     <style>
-        /* docx.css 风格样式 */
         * {{
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }}
-
+        
         body {{
             background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
             min-height: 100vh;
@@ -474,7 +473,7 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             align-items: center;
             padding: 20px;
         }}
-
+        
         .container {{
             width: auto;
             min-width: 1280px;
@@ -484,7 +483,7 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             overflow: hidden;
         }}
-
+        
         header {{
             background: linear-gradient(to right, #4b6cb7, #182848);
             color: white;
@@ -492,7 +491,7 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             text-align: center;
             position: relative;
         }}
-
+        
         h1 {{
             font-size: 2.2rem;
             margin-bottom: 10px;
@@ -501,13 +500,13 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             justify-content: center;
             gap: 12px;
         }}
-
+        
         .header-subtitle {{
             opacity: 0.9;
             font-size: 1.1rem;
             margin-bottom: 5px;
         }}
-
+        
         .file-info {{
             background: rgba(255, 255, 255, 0.1);
             padding: 10px 15px;
@@ -515,18 +514,18 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             margin-top: 15px;
             display: inline-block;
         }}
-
+        
         .file-name {{
             display: flex;
             align-items: center;
             gap: 8px;
             font-weight: 500;
         }}
-
+        
         .main-content {{
             padding: 40px;
         }}
-
+        
         h2 {{
             color: #2c3e50;
             margin-bottom: 25px;
@@ -537,7 +536,7 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             border-bottom: 2px solid #4b6cb7;
             padding-bottom: 10px;
         }}
-
+        
         h2 i {{
             background: #4b6cb7;
             width: 40px;
@@ -549,14 +548,14 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             color: white;
             font-size: 1.2rem;
         }}
-
+        
         .stats-container {{
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 20px;
             margin-bottom: 30px;
         }}
-
+        
         .stat-card {{
             background: #f8f9fa;
             border-radius: 10px;
@@ -565,33 +564,33 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             border: 1px solid #e0e0e0;
             transition: all 0.3s ease;
         }}
-
+        
         .stat-card:hover {{
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             border-color: #4b6cb7;
         }}
-
+        
         .stat-value {{
             font-size: 2.5rem;
             font-weight: bold;
             color: #4b6cb7;
             margin-bottom: 5px;
         }}
-
+        
         .stat-label {{
             color: #666;
             font-size: 0.95rem;
             font-weight: 500;
         }}
-
+        
         .sheets-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
             margin-top: 20px;
         }}
-
+        
         .sheet-card {{
             background: white;
             border-radius: 10px;
@@ -603,20 +602,20 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             overflow: hidden;
             border-left: 4px solid #4b6cb7;
         }}
-
+        
         .sheet-card:hover {{
             transform: translateY(-5px);
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
             border-color: #4b6cb7;
         }}
-
+        
         .sheet-header {{
             display: flex;
             align-items: center;
             gap: 15px;
             margin-bottom: 15px;
         }}
-
+        
         .sheet-number {{
             background: linear-gradient(to right, #4b6cb7, #3a5a9e);
             color: white;
@@ -629,26 +628,26 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             font-weight: bold;
             font-size: 1.1rem;
         }}
-
+        
         .sheet-title {{
             font-size: 1.3em;
             font-weight: 600;
             color: #2c3e50;
             flex: 1;
         }}
-
+        
         .sheet-details {{
             color: #666;
             font-size: 0.95rem;
             line-height: 1.5;
             margin-bottom: 20px;
         }}
-
+        
         .sheet-actions {{
             display: flex;
             gap: 10px;
         }}
-
+        
         .btn {{
             padding: 10px 20px;
             border: none;
@@ -663,32 +662,32 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             gap: 8px;
             text-decoration: none;
         }}
-
+        
         .btn-primary {{
             background: linear-gradient(to right, #4b6cb7, #3a5a9e);
             color: white;
             flex: 1;
         }}
-
+        
         .btn-secondary {{
             background: white;
             color: #4b6cb7;
             border: 1px solid #4b6cb7;
         }}
-
+        
         .btn:hover:not(:disabled) {{
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(75, 108, 183, 0.3);
         }}
-
+        
         .btn-primary:hover:not(:disabled) {{
             background: linear-gradient(to right, #3a5a9e, #2c487e);
         }}
-
+        
         .btn-secondary:hover {{
             background: #f0f4ff;
         }}
-
+        
         .footer {{
             text-align: center;
             padding: 20px;
@@ -697,7 +696,7 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             margin-top: 30px;
             background: #f8f9fa;
         }}
-
+        
         .footer-info {{
             display: flex;
             justify-content: center;
@@ -705,21 +704,21 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
             margin-top: 10px;
             font-size: 0.9rem;
         }}
-
+        
         /* 空状态样式 */
         .empty-state {{
             text-align: center;
             padding: 40px;
             color: #666;
         }}
-
+        
         .empty-state i {{
             font-size: 3rem;
             color: #4b6cb7;
             margin-bottom: 20px;
             opacity: 0.5;
         }}
-
+        
         /* 响应式设计 */
         @media (max-width: 768px) {{
             .container {{
@@ -727,52 +726,51 @@ def _create_navigation_page(input_excel, sheet_files, output_dir):
                 width: 100%;
                 border-radius: 12px;
             }}
-
+        
             .stats-container {{
                 grid-template-columns: 1fr;
                 gap: 15px;
             }}
-
+        
             .sheets-grid {{
                 grid-template-columns: 1fr;
             }}
-
+        
             .main-content {{
                 padding: 25px;
             }}
-
+        
             h1 {{
                 font-size: 1.8rem;
             }}
-
+        
             h2 {{
                 font-size: 1.5rem;
             }}
-
+        
             .sheet-actions {{
                 flex-direction: column;
             }}
-
+        
             .btn {{
                 width: 100%;
             }}
-
+        
             .footer-info {{
                 flex-direction: column;
                 gap: 10px;
             }}
         }}
-
-        /* 动画效果 */
         @keyframes fadeIn {{
             from {{ opacity: 0; transform: translateY(10px); }}
             to {{ opacity: 1; transform: translateY(0); }}
         }}
-
+        
         .sheet-card {{
             animation: fadeIn 0.5s ease;
         }}
     </style>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
