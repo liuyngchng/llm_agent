@@ -597,13 +597,12 @@ def _create_single_html_page(input_excel, sheet_names, sheet_contents, current_t
 
         .sheet-list a:hover {{
             background: #e9ecef;
-            border-left-color: #4b6cb7;
             transform: translateX(5px);
         }}
 
         .sheet-list a.active {{
             background: #e3f2fd;
-            border-left-color: #4b6cb7;
+            border-left: 3px solid transparent;
             color: #1976d2;
             font-weight: 500;
         }}
