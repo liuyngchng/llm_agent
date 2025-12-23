@@ -402,21 +402,22 @@ def convert_xlsx_to_html(input_excel, output_html=None, sheet_name=None, output_
         return ""
 
 
-def convert_all_sheets_with_navigation(input_excel_file_full_path: str) -> str:
+def convert_xlsx_all_sheet_to_html_with_navi(xlsx_file_full_path: str) -> str:
     """
-    转换所有工作表到一个HTML文件，包含导航功能
+    转换 Excel 中的所有工作表到一个HTML文件，同时为多个Excel表格添加导航栏
+    :param xlsx_file_full_path
     """
     import pandas as pd
     import hashlib
     from xlsx2html import xlsx2html
     import datetime
 
-    excel_file = pd.ExcelFile(input_excel_file_full_path)
+    excel_file = pd.ExcelFile(xlsx_file_full_path)
     sheet_names = excel_file.sheet_names
 
     # 创建唯一的输出文件名
-    file_md5 = hashlib.md5(Path(input_excel_file_full_path).name.encode('utf-8')).hexdigest()[:8]
-    output_html = f"{Path(input_excel_file_full_path).stem}_{file_md5}_all_sheets.html"
+    file_md5 = hashlib.md5(Path(xlsx_file_full_path).name.encode('utf-8')).hexdigest()
+    output_html = f"{file_md5}_all_sheets.html"
     html_path = os.path.join(OUTPUT_DIR, output_html)
 
     current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -428,7 +429,7 @@ def convert_all_sheets_with_navigation(input_excel_file_full_path: str) -> str:
             # 使用xlsx2html转换每个工作表，但不保存到文件
             from io import StringIO
             html_output = StringIO()
-            xlsx2html(input_excel_file_full_path, html_output, sheet=sheet_name)
+            xlsx2html(xlsx_file_full_path, html_output, sheet=sheet_name)
             html_content = html_output.getvalue()
 
             # 提取表格主体部分
@@ -448,11 +449,11 @@ def convert_all_sheets_with_navigation(input_excel_file_full_path: str) -> str:
             logger.info(f"成功转换工作表: {sheet_name}")
 
         except Exception as e:
-            logger.error(f"转换工作表失败 {input_excel_file_full_path}[{sheet_name}]: {e}")
+            logger.error(f"转换工作表失败 {xlsx_file_full_path}[{sheet_name}]: {e}")
             sheet_contents[sheet_name] = f'<div class="error-message">工作表转换失败: {str(e)}</div>'
 
     # 创建包含所有工作表的单一HTML文件
-    nav_html = _create_single_html_page(input_excel_file_full_path, sheet_names, sheet_contents, current_time)
+    nav_html = _create_single_html_page(xlsx_file_full_path, sheet_names, sheet_contents, current_time)
 
     with open(html_path, 'w', encoding='utf-8') as f:
         f.write(nav_html)
@@ -1186,5 +1187,5 @@ if __name__ == "__main__":
 
     html_file_path = convert_xlsx_to_html(my_excel_file, output_abs_path=True)
     logger.info(f"html 文件已保存到: {html_file_path}")
-    result = convert_all_sheets_with_navigation(my_excel_file)
+    result = convert_xlsx_all_sheet_to_html_with_navi(my_excel_file)
     logger.info(f"html navi file已保存到: {result}")
