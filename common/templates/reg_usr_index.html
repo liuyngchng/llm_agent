@@ -36,11 +36,9 @@
                 <input id="psw" name="psw" type="password" placeholder="设置登录密码" value="{{password}}" autocomplete="off">
             </div>
 
-            <!-- 添加图形验证码区域 -->
-            <div class="form-group">
-                <label class="captcha-label">验证码</label>
+            <!-- 图形验证码区域 -->
+            <div class="captcha-group">
                 <div class="captcha-container">
-                    <!-- 验证码输入框 -->
                     <div class="captcha-input-group">
                         <div class="captcha-icon">
                             <i class="fas fa-shield-alt"></i>
@@ -48,15 +46,11 @@
                         <input id="captcha_code" name="captcha_code" type="text"
                                placeholder="输入4位数字" maxlength="4" autocomplete="off">
                     </div>
-
-                    <!-- 验证码图片 -->
                     <div class="captcha-image-container" id="captcha-image-container">
                         <div id="captcha-placeholder" class="captcha-placeholder">
                             <i class="fas fa-sync-alt fa-spin"></i>
                         </div>
                     </div>
-
-                    <!-- 换一张按钮 -->
                     <button type="button" class="btn-refresh" id="refresh-captcha-btn">
                         <i class="fas fa-redo-alt"></i> 换一张
                     </button>

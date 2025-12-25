@@ -159,6 +159,8 @@ input:focus {
     align-items: center;
     gap: 12px;
     margin-bottom: 0;
+    margin-left: 0;
+    padding-left: 0;
 }
 
 /* 验证码标签 - 现在与控件同行 */
@@ -178,9 +180,22 @@ input:focus {
     min-width: 120px;
 }
 
+.captcha-input-group::before {
+    content: "验证码";
+    position: absolute;
+    left: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-weight: 500;
+    color: #444;
+    font-size: 1.05rem;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1;
+}
+
 #captcha_code {
-    width: 100%;
-    padding: 12px 12px 12px 40px;
+    padding: 12px 12px 12px 90px !important;
     letter-spacing: 5px;
     font-family: monospace;
     font-size: 1.1rem;
@@ -284,6 +299,14 @@ input:focus {
         gap: 10px;
     }
 
+    .captcha-input-group::before {
+        content: none;
+    }
+
+    #captcha_code {
+        padding: 12px 12px 12px 40px !important;
+    }
+
     .captcha-label {
         flex: 1 0 100%;
         order: 1;
@@ -320,9 +343,7 @@ input:focus {
     }
 
     #captcha_code {
-        padding: 10px 10px 10px 36px;
-        height: 40px;
-        font-size: 1rem;
+        padding: 10px 10px 10px 36px !important;
     }
 
     .captcha-icon {

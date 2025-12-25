@@ -36,29 +36,21 @@
                 <input id="psw" type="password" placeholder="请输入密码" value="{{psw}}" autocomplete="off">
             </div>
 
-            <!-- 修改为：标签和控件在同一行的图形验证码验证部分 -->
             <div class="captcha-group">
                 <div class="captcha-container">
-                    <!-- 验证码标签 -->
-                    <label class="captcha-label">验证码</label>
-
-                    <!-- 验证码输入框 -->
                     <div class="captcha-input-group">
                         <div class="captcha-icon">
                             <i class="fas fa-shield-alt"></i>
                         </div>
+                        <label class="captcha-label">验证码</label>
                         <input id="captcha_code" name="captcha_code" type="text"
                                placeholder="输入4位数字" maxlength="4" autocomplete="off">
                     </div>
-
-                    <!-- 验证码图片 -->
                     <div class="captcha-image-container" id="captcha-image-container">
                         <div id="captcha-placeholder" class="captcha-placeholder">
                             <i class="fas fa-sync-alt fa-spin"></i>
                         </div>
                     </div>
-
-                    <!-- 换一张按钮 -->
                     <button type="button" class="btn-refresh" id="refresh-captcha-btn">
                         <i class="fas fa-redo-alt"></i> 换一张
                     </button>

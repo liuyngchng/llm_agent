@@ -163,16 +163,22 @@ input:focus {
     align-items: center;
     gap: 12px;
     margin-bottom: 0;
+    margin-left: 0;
+    padding-left: 0;
 }
 
-/* 验证码标签 - 现在与控件同行 */
+/* 验证码标签*/
 .captcha-label {
-    flex-shrink: 0;
+    position: absolute;
+    left: 40px;
+    top: 50%;
+    transform: translateY(-50%);
     font-weight: 500;
     color: #444;
     font-size: 1.05rem;
     white-space: nowrap;
-    width: 100px; /* 固定标签宽度，保持对齐 */
+    margin: 0;
+    pointer-events: none;
 }
 
 /* 验证码输入框样式 */
@@ -182,9 +188,22 @@ input:focus {
     min-width: 120px;
 }
 
+.captcha-input-group::before {
+    content: "验证码";
+    position: absolute;
+    left: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-weight: 500;
+    color: #444;
+    font-size: 1.05rem;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
 #captcha_code {
     width: 100%;
-    padding: 12px 12px 12px 40px;
+    padding: 12px 12px 12px 85px;
     letter-spacing: 5px;
     font-family: monospace;
     font-size: 1.1rem;
@@ -192,10 +211,8 @@ input:focus {
     height: 44px;
 }
 
-#captcha_code::placeholder {
-    letter-spacing: normal;
-    font-size: 0.95rem;
-    opacity: 0.7;
+#captcha_code {
+    padding: 12px 12px 12px 90px;
 }
 
 /* 验证码图标 */
@@ -294,11 +311,19 @@ input:focus {
     }
 
     .captcha-label {
+        position: static;
+        transform: none;
         flex: 1 0 100%;
         order: 1;
         width: auto;
         text-align: left;
         margin-bottom: 8px;
+        margin-left: 0;
+        left: auto;
+        top: auto;
+    }
+    #captcha_code {
+        padding: 12px 12px 12px 40px;
     }
 
     .captcha-input-group {
@@ -358,6 +383,7 @@ input:focus {
             width: auto;
             text-align: left;
             margin-bottom: 8px;
+            margin-left: 0;
         }
 
         .captcha-input-group {
