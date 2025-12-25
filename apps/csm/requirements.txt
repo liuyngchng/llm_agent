@@ -7,3 +7,4 @@ langchain_community
 pycryptodome
 wheel
 markdown
+svgwrite

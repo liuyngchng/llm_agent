@@ -8,3 +8,4 @@ pypandoc
 pandas
 openpyxl
 xlsx2html
+svgwrite

@@ -13,7 +13,7 @@ RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl
     langchain langchain_text_splitters langchain_unstructured unstructured \
     unstructured[pdf] langchain_core pydantic python-docx python-pptx pillow \
     concurrent_log_handler pydub pycryptodome wheel tabulate chromadb \
-    lxml websockets markdown pandas pypandoc openpyxl xlsx2html $PROXY && \
+    lxml websockets markdown pandas pypandoc openpyxl xlsx2html svgwrite $PROXY && \
     rm -rf /tmp/whl && \
     rm -rf ~/.cache/pip
 
