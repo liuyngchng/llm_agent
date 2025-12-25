@@ -26,20 +26,22 @@
                 <div class="input-icon">
                     <i class="fas fa-user"></i>
                 </div>
-                <input id="usr" name="usr" type="text" value="{{usr}}" placeholder="请输入用户名">
+                <input id="usr" name="usr" type="text" value="{{usr}}" placeholder="请输入用户名" autocomplete="off">
             </div>
 
             <div class="form-group">
                 <div class="input-icon">
                     <i class="fas fa-key"></i>
                 </div>
-                <input id="psw" type="password" placeholder="请输入密码" value="{{psw}}">
+                <input id="psw" type="password" placeholder="请输入密码" value="{{psw}}" autocomplete="off">
             </div>
 
-            <!-- 修改为：一行布局的图形验证码验证部分 -->
-            <div class="form-group">
-                <label class="captcha-label">图形验证码</label>
+            <!-- 修改为：标签和控件在同一行的图形验证码验证部分 -->
+            <div class="captcha-group">
                 <div class="captcha-container">
+                    <!-- 验证码标签 -->
+                    <label class="captcha-label">验证码</label>
+
                     <!-- 验证码输入框 -->
                     <div class="captcha-input-group">
                         <div class="captcha-icon">

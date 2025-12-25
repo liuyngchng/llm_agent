@@ -149,7 +149,11 @@ input:focus {
     background: #fef2f2;
 }
 
-/* 图形验证码样式 - 与登录页面保持一致 */
+/* 图形验证码样式 - 标签和控件在同一行 */
+.captcha-group {
+    margin-bottom: 25px;
+}
+
 .captcha-container {
     display: flex;
     align-items: center;
@@ -157,16 +161,27 @@ input:focus {
     margin-bottom: 0;
 }
 
+/* 验证码标签 - 现在与控件同行 */
+.captcha-label {
+    flex-shrink: 0;
+    font-weight: 500;
+    color: #444;
+    font-size: 1.05rem;
+    white-space: nowrap;
+    width: 100px; /* 固定标签宽度，保持对齐 */
+}
+
 /* 验证码输入框样式 */
 .captcha-input-group {
     flex: 1;
     position: relative;
+    min-width: 120px;
 }
 
 #captcha_code {
     width: 100%;
     padding: 12px 12px 12px 40px;
-    letter-spacing: 8px;
+    letter-spacing: 5px;
     font-family: monospace;
     font-size: 1.1rem;
     text-align: center;
@@ -253,14 +268,6 @@ input:focus {
     box-shadow: 0 3px 8px rgba(108, 117, 125, 0.2);
 }
 
-/* 验证码标签 */
-.captcha-label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
-    color: #444;
-    font-size: 1.05rem;
-}
 
 @media (max-width: 768px) {
     .register-container {
@@ -277,21 +284,30 @@ input:focus {
         gap: 10px;
     }
 
-    .captcha-input-group {
+    .captcha-label {
         flex: 1 0 100%;
         order: 1;
+        width: auto;
+        text-align: left;
+        margin-bottom: 8px;
+    }
+
+    .captcha-input-group {
+        flex: 2;
+        order: 2;
+        min-width: auto;
     }
 
     .captcha-image-container {
         flex: 1;
-        order: 2;
+        order: 3;
         width: auto;
         min-width: 100px;
     }
 
     .btn-refresh {
         flex: 1;
-        order: 3;
+        order: 4;
         justify-content: center;
         min-width: 100px;
     }
@@ -323,5 +339,32 @@ input:focus {
         height: 40px;
         padding: 0 12px;
         font-size: 0.8rem;
+    }
+
+    /* 在小屏幕上让标签独占一行 */
+    @media (max-width: 380px) {
+        .captcha-label {
+            flex: 1 0 100%;
+            order: 1;
+            width: auto;
+            text-align: left;
+            margin-bottom: 8px;
+        }
+
+        .captcha-input-group {
+            flex: 2;
+            order: 2;
+        }
+
+        .captcha-image-container {
+            flex: 1;
+            order: 3;
+        }
+
+        .btn-refresh {
+            flex: 1;
+            order: 4;
+            justify-content: center;
+        }
     }
 }
