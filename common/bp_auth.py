@@ -55,15 +55,15 @@ def generate_captcha():
             'expires_at': time.time() + 300,  # 5分钟有效期
             'attempts': 0  # 尝试次数
         }
-        # 生成SVG验证码图片
-        svg_content = generate_captcha_svg(captcha_text)
+
         # 清理过期的验证码
         cleanup_expired_captchas()
+
         logger.debug(f"生成图形验证码 - Token: {captcha_token}, 验证码: {captcha_text}")
+
         return jsonify({
             "success": True,
-            "captcha_token": captcha_token,
-            "svg_content": svg_content
+            "captcha_token": captcha_token
         })
 
     except Exception as e:
@@ -108,10 +108,10 @@ def login_index():
         raise RuntimeError("no_app_info_found")
     sys_name = my_enums.AppType.get_app_type(app_source)
 
-    # 生成新的验证码token
-    captcha_token = hashlib.md5(f"{time.time()}{random.random()}".encode()).hexdigest()[:16]
+    captcha_text = ''.join(random.choices(string.digits, k=4))
+    captcha_token = hashlib.md5(f"{captcha_text}{time.time()}".encode()).hexdigest()[:16]
     captcha_codes[captcha_token] = {
-        'text': '',
+        'text': captcha_text,  # 这里设置验证码文本
         'expires_at': time.time() + 300,
         'attempts': 0
     }
@@ -121,7 +121,7 @@ def login_index():
         "sys_name": sys_name,
         "app_source": app_source,
         "warning_info": warning_info,
-        "captcha_token": captcha_token,  # 添加验证码token到上下文
+        "captcha_token": captcha_token,
     }
     auth_flag = get_cfg()['sys']['auth']
     if auth_flag:
@@ -228,7 +228,6 @@ def logout():
                             app_source=app_source,
                             warning_info=f"用户 {usr_name} 已退出"))
 
-
 @auth_bp.route('/reg/usr', methods=['GET'])
 def reg_user_index():
     """
@@ -238,10 +237,10 @@ def reg_user_index():
     app_source = request.args.get('app_source')
     sys_name = my_enums.AppType.get_app_type(app_source)
 
-    # 为注册页面生成验证码token
-    captcha_token = hashlib.md5(f"{time.time()}{random.random()}".encode()).hexdigest()[:16]
+    captcha_text = ''.join(random.choices(string.digits, k=4))
+    captcha_token = hashlib.md5(f"{captcha_text}{time.time()}".encode()).hexdigest()[:16]
     captcha_codes[captcha_token] = {
-        'text': '',
+        'text': captcha_text,  # 这里设置验证码文本
         'expires_at': time.time() + 300,
         'attempts': 0
     }
