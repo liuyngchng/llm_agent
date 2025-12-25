@@ -36,24 +36,31 @@
                 <input id="psw" type="password" placeholder="请输入密码" value="{{psw}}">
             </div>
 
-            <!-- 修改为：图形验证码验证部分 -->
+            <!-- 修改为：一行布局的图形验证码验证部分 -->
             <div class="form-group">
-                <div class="input-icon">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <input id="captcha_code" name="captcha_code" type="text" placeholder="请输入图片中的4位数字" maxlength="4">
-            </div>
-
-            <div class="captcha-controls">
-                <div class="captcha-image-container" id="captcha-image-container">
-                    <!-- 验证码图片将通过JavaScript动态加载 -->
-                    <div id="captcha-placeholder" class="captcha-placeholder">
-                        <i class="fas fa-sync-alt fa-spin"></i> 加载验证码...
+                <label class="captcha-label">图形验证码</label>
+                <div class="captcha-container">
+                    <!-- 验证码输入框 -->
+                    <div class="captcha-input-group">
+                        <div class="captcha-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <input id="captcha_code" name="captcha_code" type="text"
+                               placeholder="输入4位数字" maxlength="4" autocomplete="off">
                     </div>
+
+                    <!-- 验证码图片 -->
+                    <div class="captcha-image-container" id="captcha-image-container">
+                        <div id="captcha-placeholder" class="captcha-placeholder">
+                            <i class="fas fa-sync-alt fa-spin"></i>
+                        </div>
+                    </div>
+
+                    <!-- 换一张按钮 -->
+                    <button type="button" class="btn-refresh" id="refresh-captcha-btn">
+                        <i class="fas fa-redo-alt"></i> 换一张
+                    </button>
                 </div>
-                <button type="button" class="btn btn-secondary" id="refresh-captcha-btn" onclick="refreshCaptcha()">
-                    <i class="fas fa-redo-alt"></i> 换一张
-                </button>
             </div>
 
             <input id="t" name="t" type="hidden">
@@ -87,6 +94,9 @@
             // 页面加载时加载验证码
             loadCaptcha();
 
+            // 为换一张按钮添加事件
+            document.getElementById('refresh-captcha-btn').addEventListener('click', refreshCaptcha);
+
             // 聚焦到用户名输入框
             const usernameInput = document.getElementById("usr");
             if (usernameInput && !usernameInput.value) {
@@ -107,7 +117,7 @@
             const container = document.getElementById("captcha-image-container");
 
             if (placeholder) {
-                placeholder.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> 加载验证码...';
+                placeholder.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
                 placeholder.style.display = 'flex';
             }
 
@@ -138,7 +148,7 @@
                 .catch(error => {
                     console.error('加载验证码失败:', error);
                     if (placeholder) {
-                        placeholder.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 加载失败，点击刷新';
+                        placeholder.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
                         placeholder.style.cursor = 'pointer';
                         placeholder.addEventListener('click', refreshCaptcha);
                     }
@@ -147,6 +157,16 @@
 
         // 刷新验证码
         function refreshCaptcha() {
+            // 显示加载中
+            const placeholder = document.getElementById("captcha-placeholder");
+            const container = document.getElementById("captcha-image-container");
+
+            if (placeholder) {
+                placeholder.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
+                placeholder.style.display = 'flex';
+            }
+            container.innerHTML = '';
+
             // 生成新的验证码token
             fetch('/captcha/generate')
                 .then(response => response.json())
@@ -160,13 +180,20 @@
 
                         // 清空验证码输入框
                         document.getElementById("captcha_code").value = '';
+                        document.getElementById("captcha_code").focus();
                     } else {
                         alert('刷新验证码失败: ' + data.message);
+                        if (placeholder) {
+                            placeholder.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                        }
                     }
                 })
                 .catch(error => {
                     console.error('刷新验证码失败:', error);
                     alert('刷新验证码失败，请稍后重试');
+                    if (placeholder) {
+                        placeholder.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                    }
                 });
         }
 
@@ -174,6 +201,14 @@
         document.getElementById("captcha_code")?.addEventListener('input', function(e) {
             if (this.value.length === 4) {
                 document.getElementById("login-button").focus();
+            }
+        });
+
+        // 验证码输入框回车键提交
+        document.getElementById("captcha_code")?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById("login-button").click();
             }
         });
     </script>

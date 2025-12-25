@@ -447,9 +447,9 @@ def generate_captcha_svg(captcha_text):
     生成SVG格式的验证码图片
     """
     try:
-        # 使用svgwrite创建SVG
-        width = 120
-        height = 40
+        # 调整尺寸为100x44像素以匹配新样式
+        width = 100
+        height = 44
 
         # 创建SVG画布
         dwg = svgwrite.Drawing(size=(width, height))
@@ -457,35 +457,35 @@ def generate_captcha_svg(captcha_text):
         # 添加背景矩形
         dwg.add(dwg.rect(insert=(0, 0), size=(width, height), fill='#f8f9fa', stroke='#dee2e6', stroke_width=1))
 
-        # 添加干扰线
-        for i in range(5):
+        # 添加干扰线（减少数量以适应更小的尺寸）
+        for i in range(3):
             x1 = random.randint(0, width)
             y1 = random.randint(0, height)
             x2 = random.randint(0, width)
             y2 = random.randint(0, height)
             dwg.add(dwg.line(start=(x1, y1), end=(x2, y2),
                              stroke=random.choice(['#adb5bd', '#6c757d', '#495057']),
-                             stroke_width=random.uniform(0.5, 1.5)))
+                             stroke_width=random.uniform(0.5, 1)))
 
-        # 添加干扰点
-        for i in range(30):
+        # 添加干扰点（减少数量以适应更小的尺寸）
+        for i in range(15):
             x = random.randint(0, width)
             y = random.randint(0, height)
-            radius = random.uniform(0.5, 1.5)
+            radius = random.uniform(0.3, 1)
             dwg.add(dwg.circle(center=(x, y), r=radius,
                                fill=random.choice(['#adb5bd', '#6c757d', '#495057'])))
 
-        # 添加验证码文本
-        font_size = 24
-        text_x = 10
+        # 添加验证码文本（调整字体大小和位置）
+        font_size = 20
+        text_x = 5  # 减少左边距
 
         for i, char in enumerate(captcha_text):
-            # 每个字符稍微旋转和位移
-            rotation = random.uniform(-10, 10)
-            y_offset = random.uniform(-3, 3)
+            # 每个字符稍微旋转和位移（减小旋转角度）
+            rotation = random.uniform(-8, 8)
+            y_offset = random.uniform(-2, 2)
 
             # 添加字符阴影（轻微偏移）
-            dwg.add(dwg.text(char, insert=(text_x + 1, 28 + y_offset + 1),
+            dwg.add(dwg.text(char, insert=(text_x + 0.5, 28 + y_offset + 0.5),
                              font_size=font_size,
                              font_family="Arial, sans-serif",
                              fill='#adb5bd',
@@ -499,7 +499,7 @@ def generate_captcha_svg(captcha_text):
                              font_weight="bold",
                              transform=f"rotate({rotation},{text_x},{28 + y_offset})"))
 
-            text_x += 22  # 字符间距
+            text_x += 18  # 减少字符间距
 
         # 添加边框
         dwg.add(dwg.rect(insert=(0, 0), size=(width, height),
@@ -509,10 +509,10 @@ def generate_captcha_svg(captcha_text):
 
     except Exception as e:
         logger.error(f"生成SVG验证码失败: {str(e)}", exc_info=True)
-        # 返回简单的SVG作为后备
-        return f'''<svg width="120" height="40" xmlns="http://www.w3.org/2000/svg">
-            <rect width="120" height="40" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1"/>
-            <text x="60" y="25" font-family="Arial" font-size="20" text-anchor="middle" fill="#212529">{captcha_text}</text>
+        # 返回简单的SVG作为后备（调整尺寸）
+        return f'''<svg width="100" height="44" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="44" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1"/>
+            <text x="50" y="28" font-family="Arial" font-size="18" text-anchor="middle" fill="#212529">{captcha_text}</text>
         </svg>'''
 
 
