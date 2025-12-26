@@ -53,10 +53,15 @@ def get_static_file(file_name):
 
     for static_dir in static_dirs:
         if os.path.exists(os.path.join(static_dir, file_name)):
-            logger.debug(f"get_static_file, {static_dir}, {file_name}")
+            # logger.debug(f"get_static_file, {static_dir}, {file_name}")
             return send_from_directory(static_dir, file_name)
     logger.error(f"no_file_found_error, {file_name}")
     abort(404)
+
+@app.route('/webfonts/<path:file_name>')
+def get_webfonts_file(file_name):
+    font_file_name = f"webfonts/{file_name}"
+    return get_static_file(font_file_name)
 
 @app.route('/')
 def app_home():
