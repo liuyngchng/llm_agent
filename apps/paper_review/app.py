@@ -18,7 +18,7 @@ from flask import (Flask, request, jsonify, send_from_directory,
 
 from apps.paper_review.paper_reviewer import generate_review_report
 from common import docx_meta_util
-from common.bp_vdb import vdb_bp
+from common.bp_vdb import vdb_bp, clean_expired_vdb_file_task, process_vdb_file_task
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md, get_md_file_content
 from common import my_enums, statistic_util
@@ -45,6 +45,10 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 
+# 全局变量，用于存储后台任务状态
+background_tasks_started = False
+background_tasks_lock = threading.Lock()
+
 
 def create_app():
     """应用工厂函数"""
@@ -59,7 +63,40 @@ def create_app():
     app.register_blueprint(vdb_bp)
     # 注册路由
     register_routes(app)
+    with app.app_context():
+        logger.info("start_bg_task")
+        start_background_tasks_once()
     return app
+
+def start_background_tasks_once():
+    """确保后台任务只启动一次"""
+    global background_tasks_started
+    with background_tasks_lock:
+        if not background_tasks_started:
+            logger.info("start_init_bg_task...")
+            start_background_tasks()
+            background_tasks_started = True
+
+def start_background_tasks():
+    """启动后台任务线程"""
+    if my_cfg['sys'].get('debug_mode', False):
+        logger.warning("system_in_debug_mode_background_task_exit")
+        return
+
+    def _start_tasks():
+        # 等待应用完全启动
+        time.sleep(2)
+        logger.info("Starting background tasks...")
+        # 启动VDB清理任务
+        vdb_clean_thread = threading.Thread(target=clean_expired_vdb_file_task, daemon=True, name="vdb_clean_task")
+        vdb_clean_thread.start()
+        # 启动VDB处理任务
+        vdb_process_thread = threading.Thread(target=process_vdb_file_task, daemon=True, name="vdb_process_task")
+        vdb_process_thread.start()
+        logger.info("all_bg_tasks_started")
+
+    # 在新线程中启动后台任务，避免阻塞主线程
+    threading.Thread(target=_start_tasks, daemon=True).start()
 
 
 def register_routes(app):

@@ -17,6 +17,8 @@ import logging.config
 from common.docx_meta_util import update_process_info, get_doc_info
 from common.my_enums import FileType
 from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
+from common.sys_init import init_yml_cfg
+from common.vdb_util import search_txt
 from common.xlsx_util import convert_md_to_xlsx, convert_xlsx_to_md
 from common.const import MAX_SECTION_LENGTH
 
@@ -71,6 +73,7 @@ class PaperReviewer:
                 if not template:
                     err_info = f"prompt_template_config_err, {template_name}"
                     raise RuntimeError(err_info)
+                reference = get_reference_from_vdb(section_content, f"./vdb/vdb_idx_{self.uid}_1", self.sys_cfg)
                 prompt = template.format(
                     review_type = self.review_type,
                     review_topic=self.review_topic,
@@ -709,6 +712,31 @@ def generate_review_report(uid: int, task_id: int, doc_type: str, review_topic: 
     except Exception as e:
         update_process_info(uid, task_id, f"任务处理失败: {str(e)}")
         logger.exception("评审报告生成异常", e)
+
+def get_reference_from_vdb(keywords: str, vdb_dir: str, sys_cfg: dict) -> str:
+    """
+    获取vdb中与关键词相关的文本
+    :param keywords: 关键词
+    :param vdb_dir: 向量数据库目录
+    :param sys_cfg: 系统配置
+    :return: 文本
+    """
+    logger.debug(f"vdb_dir, {vdb_dir}")
+    reference = ""
+    if not vdb_dir:
+        return reference
+
+    try:
+        if "" != vdb_dir and os.path.exists(vdb_dir):
+            reference = search_txt(keywords, vdb_dir, 0.2, sys_cfg, 2).strip()
+        else:
+            logger.warning(f"vdb_dir_not_exist: {vdb_dir}, get no references")
+            reference = ""
+        # logging.info(f"vdb_get_txt:\n{reference}\nby_search_{keywords}")
+    except Exception as exp:
+        logger.exception(f"get_references_from_vdb_failed, {keywords}")
+    return reference
+
 
 if __name__ == '__main__':
     my_cfg = init_yml_cfg()

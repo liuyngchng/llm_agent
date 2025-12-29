@@ -20,6 +20,13 @@ api:
     #  大语言模型 模型名称
     llm_model_name: deepseek-chat
 
+    # embedding API 地址
+    embedding_api_uri: https://api.deepseek.com/v1
+    # embedding API Key
+    embedding_api_key: sk-123456
+    # embedding API name
+    embedding_model_name: bge-m3
+
 #  与大模型相关的提示词配置
 prompts:
 
