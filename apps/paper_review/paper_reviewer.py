@@ -79,7 +79,8 @@ class PaperReviewer:
                     review_topic=self.review_topic,
                     section_title=section_title,
                     section_content=section_content,
-                    criteria=self.criteria_markdown_data
+                    criteria=self.criteria_markdown_data,
+                    reference = reference,
                 )
                 input_tokens = estimate_tokens(prompt)
                 logger.info(f"{self.uid}, input_tokens, {input_tokens}")
