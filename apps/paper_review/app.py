@@ -18,6 +18,7 @@ from flask import (Flask, request, jsonify, send_from_directory,
 
 from apps.paper_review.paper_reviewer import generate_review_report
 from common import docx_meta_util
+from common.bp_vdb import vdb_bp
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md, get_md_file_content
 from common import my_enums, statistic_util
@@ -55,6 +56,7 @@ def create_app():
     app.config['APP_SOURCE'] = my_enums.AppType.PAPER_REVIEW.name.lower()
     # 注册蓝图
     app.register_blueprint(auth_bp)
+    app.register_blueprint(vdb_bp)
     # 注册路由
     register_routes(app)
     return app
