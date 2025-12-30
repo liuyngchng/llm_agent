@@ -8,6 +8,7 @@ from typing import List, Dict
 
 import requests
 
+from common.vdb_meta_util import VdbMeta
 from common.cfg_util import get_usr_prompt_template
 from common.cm_utils import estimate_tokens
 from common.docx_md_util import get_md_file_content, convert_md_to_docx, save_content_to_md_file, get_md_file_catalogue, \
@@ -20,7 +21,7 @@ from common.statistic_util import add_input_token_by_uid, add_output_token_by_ui
 from common.sys_init import init_yml_cfg
 from common.vdb_util import search_txt
 from common.xlsx_util import convert_md_to_xlsx, convert_xlsx_to_md
-from common.const import MAX_SECTION_LENGTH
+from common.const import MAX_SECTION_LENGTH, VDB_PREFIX
 
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
@@ -62,7 +63,7 @@ class PaperReviewer:
 
 
 
-    def review_single_section(self, section_title: str, section_content: str, max_retries: int = 3) -> Dict:
+    def review_single_section(self, section_title: str, section_content: str, vdb_dir: str, max_retries: int = 3) -> Dict:
         """
         评审单个章节，带重试机制
         """
@@ -73,7 +74,8 @@ class PaperReviewer:
                 if not template:
                     err_info = f"prompt_template_config_err, {template_name}"
                     raise RuntimeError(err_info)
-                reference = get_reference_from_vdb(section_content, f"./vdb/vdb_idx_{self.uid}_1", self.sys_cfg)
+                reference = get_reference_from_vdb(section_content, vdb_dir, self.sys_cfg)
+                logger.debug(f"review_single_section_reference, {reference}, for {section_content}")
                 prompt = template.format(
                     review_type = self.review_type,
                     review_topic=self.review_topic,
@@ -361,6 +363,19 @@ class PaperReviewer:
                 for title, content_parts in section.items():
                     total_sections += len(content_parts)
 
+            doc_info = get_doc_info(self.task_id)
+            if not doc_info or not doc_info[0]:
+                info = f"no_doc_info_found_for_task_id ,{self.task_id}"
+                raise RuntimeError(info)
+            vdb_id = doc_info[0]['vdb_id']
+
+            vdb_info = VdbMeta.get_vdb_info_by_id(vdb_id)
+
+            if vdb_info:
+                my_vector_db_dir = f"{VDB_PREFIX}{vdb_info[0]['uid']}_{vdb_id}"
+            else:
+                my_vector_db_dir = ""
+            logger.debug(f"my_vector_db_dir {my_vector_db_dir}")
             logger.info(f"开始逐章节评审，共 {len(self.sections_data)} 个原始章节，{total_sections} 个内容部分")
 
             # 3. 逐章节评审
@@ -386,7 +401,7 @@ class PaperReviewer:
 
                         logger.debug(f"评审内容部分: {full_section_title}, 长度: {len(content_part)}")
 
-                        section_result = self.review_single_section(full_section_title, content_part)
+                        section_result = self.review_single_section(full_section_title, content_part, my_vector_db_dir)
                         section_result['section_title'] = section_title  # 保存原始标题
                         section_result['part_index'] = part_index
                         section_result['total_parts'] = len(content_parts)

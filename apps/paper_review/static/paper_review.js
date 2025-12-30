@@ -179,6 +179,7 @@ async function gen_review_report() {
     const review_criteria_file_name = document.getElementById('review_criteria_file_name').value;
     const review_paper_file_name = document.getElementById('review_paper_file_name').value;
     const generateBtn = document.getElementById('generateBtn');
+    const kb_id = document.getElementById('kb_selector').value;
 
     // 验证输入
     if (!review_topic.trim()) {
@@ -211,7 +212,8 @@ async function gen_review_report() {
         review_type: review_type,
         task_id: task_id,
         review_criteria_file_name: review_criteria_file_name,
-        review_paper_file_name: review_paper_file_name
+        review_paper_file_name: review_paper_file_name,
+        kb_id: kb_id
     };
 
     try {
@@ -292,6 +294,7 @@ function resetForm() {
     document.getElementById('taskId').value = '';
     document.getElementById('review_criteria_file_name').value = '';
     document.getElementById('review_paper_file_name').value = '';
+    document.getElementById('kb_selector').value = ''
 
     resetGenerateState();
 }

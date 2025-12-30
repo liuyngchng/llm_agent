@@ -273,6 +273,11 @@ def register_routes(app):
         review_type = data.get("review_type")
         review_criteria_file_id = data.get("review_criteria_file_name")
         review_paper_file_id = data.get("review_paper_file_name")
+        kb_id = data.get("kb_id")
+        if kb_id:
+            vdb_id = int(kb_id)
+        else:
+            vdb_id = 0
 
         # 验证输入
         if not review_topic:
@@ -308,7 +313,7 @@ def register_routes(app):
         paper_file = review_paper_file_info[0]['full_path']
         docx_meta_util.save_doc_info(
             uid, task_id, review_type, review_topic, criteria_file, "",paper_file ,
-            0, False, docx_ctx, output_file_path, "",
+            vdb_id, False, docx_ctx, output_file_path, "",
             output_file_type=criteria_file_type
         )
 
