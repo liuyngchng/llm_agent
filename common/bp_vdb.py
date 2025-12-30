@@ -133,7 +133,7 @@ def get_vdb_file_list():
     t = data.get("t")
     vdb_id = data.get("vdb_id")
     if not uid or not vdb_id:
-        msg = {"success":False, "msg":"提交的参数为空"}
+        msg = {"success":False, "msg":"提交的参数 uid 或者 vdb_id 为空"}
         logger.error(f"err_msg, {msg}")
         return json.dumps(msg,ensure_ascii=False), 502
     dt = VdbMeta.get_vdb_file_list(uid, vdb_id)
@@ -283,7 +283,7 @@ def upload_file():
                 os.remove(old_file_full_path)
             logger.info(f"previous_file_deleted_from_disk, {old_file_full_path}")
             vdb = f"{VDB_PREFIX}{uid}_{kb_id}"
-            vdb_util.del_doc(old_file_full_path, vdb)
+            vdb_util.del_doc(str(old_file_full_path), vdb)
             logger.info(f"previous_file_deleted_from_vdb, {old_file_full_path}, {vdb}")
         VdbMeta.save_vdb_file_info(upload_file_name, disk_file_name, uid, kb_id, vdb_task_id, file_md5)
         logger.info(f"save_new_file_info_in_db, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")

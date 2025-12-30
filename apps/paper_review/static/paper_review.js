@@ -1,21 +1,6 @@
 // 当前步骤
 let currentStep = 1;
 
-// 初始化进度条
-function updateProgressBar() {
-    const progressBar = document.getElementById('progressBar');
-    const progress = ((currentStep - 1) / 1) * 100; // 只有2步，所以除以1
-    progressBar.style.width = `${progress}%`;
-
-    // 更新步骤激活状态
-    document.querySelectorAll('.step').forEach((step, index) => {
-        if (index < currentStep) {
-            step.classList.add('active');
-        } else {
-            step.classList.remove('active');
-        }
-    });
-}
 
 // 处理评审标准文件上传（支持xlsx和docx）
 function handleCriteriaUpload(input) {
@@ -253,6 +238,45 @@ async function gen_review_report() {
     }
 }
 
+// 加载知识库列表
+async function loadKnowledgeBases() {
+    console.log('loadKnowledgeBases triggered')
+    const selector = document.getElementById('kb_selector');
+    const uid = document.getElementById('uid').value;
+    const t = document.getElementById('t').value;
+
+    try {
+        const response = await fetch('/vdb/pub/list', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ uid, t })
+        });
+        // 添加状态码检查
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`API 错误 ${response.status}: ${errorText.slice(0, 100)}...`);
+        }
+        const result = await response.json();
+        console.log('vdb_list=' + result);
+        // 清空选择器（保留第一个选项）
+        while (selector.options.length > 1) {
+            selector.remove(1);
+        }
+
+        // 添加知识库选项
+        if (result.kb_list && result.kb_list.length > 0) {
+            result.kb_list.forEach(kb => {
+                const option = document.createElement('option');
+                option.value = kb.id;
+                option.textContent = kb.name;
+                selector.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('加载知识库失败:', error);
+    }
+}
+
 // 重置表单
 function resetForm() {
     // 清空表单数据
@@ -283,5 +307,5 @@ function resetGenerateState() {
 
 // 页面加载完成后的初始化
 document.addEventListener('DOMContentLoaded', function() {
-    updateProgressBar();
+    loadKnowledgeBases();
 });

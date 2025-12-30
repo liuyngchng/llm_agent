@@ -271,6 +271,66 @@ input:focus, textarea:focus {
     box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
 }
 
+/* 知识库选择器样式 */
+.kb-selector {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    background-color: white;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.3s;
+    appearance: none; /* 移除默认箭头 */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234b6cb7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
+
+.kb-selector:focus {
+    outline: none;
+    border-color: #4b6cb7;
+    box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
+}
+
+.kb-selector:hover {
+    border-color: #4b6cb7;
+}
+
+.kb-selector option {
+    padding: 10px;
+    font-size: 1rem;
+}
+
+.kb-selector option:disabled {
+    color: #999;
+    background-color: #f5f5f5;
+}
+
+.kb-selector option:checked {
+    background-color: #4b6cb7;
+    color: white;
+}
+
+/* 修改原来的表单组样式，确保一致 */
+.form-group select.kb-selector {
+    margin-top: 4px;
+}
+
+/* 对于必填字段的视觉提示 */
+.kb-selector:required:invalid {
+    border-color: #ff6b6b;
+    background-color: #fff5f5;
+}
+
+.kb-selector:required:valid {
+    border-color: #51cf66;
+}
+
 textarea {
     min-height: 120px;
     resize: vertical;
