@@ -74,8 +74,8 @@ class PaperReviewer:
                 if not template:
                     err_info = f"prompt_template_config_err, {template_name}"
                     raise RuntimeError(err_info)
-                reference = get_reference_from_vdb(section_content, vdb_dir, self.sys_cfg)
-                logger.debug(f"review_single_section_reference, {reference}, for {section_content}")
+                reference = get_reference_from_vdb(section_content, vdb_dir, self.sys_cfg['api'])
+                logger.info(f"review_single_section_get_reference, {reference}, for_section_content, {section_content}")
                 prompt = template.format(
                     review_type = self.review_type,
                     review_topic=self.review_topic,
@@ -368,14 +368,12 @@ class PaperReviewer:
                 info = f"no_doc_info_found_for_task_id ,{self.task_id}"
                 raise RuntimeError(info)
             vdb_id = doc_info[0]['vdb_id']
-
             vdb_info = VdbMeta.get_vdb_info_by_id(vdb_id)
-
             if vdb_info:
                 my_vector_db_dir = f"{VDB_PREFIX}{vdb_info[0]['uid']}_{vdb_id}"
             else:
                 my_vector_db_dir = ""
-            logger.debug(f"my_vector_db_dir {my_vector_db_dir}")
+            logger.info(f"my_vector_db_dir {my_vector_db_dir}")
             logger.info(f"开始逐章节评审，共 {len(self.sections_data)} 个原始章节，{total_sections} 个内容部分")
 
             # 3. 逐章节评审
@@ -729,12 +727,12 @@ def generate_review_report(uid: int, task_id: int, doc_type: str, review_topic: 
         update_process_info(uid, task_id, f"任务处理失败: {str(e)}")
         logger.exception("评审报告生成异常", e)
 
-def get_reference_from_vdb(keywords: str, vdb_dir: str, sys_cfg: dict) -> str:
+def get_reference_from_vdb(keywords: str, vdb_dir: str, llm_cfg: dict) -> str:
     """
     获取vdb中与关键词相关的文本
     :param keywords: 关键词
     :param vdb_dir: 向量数据库目录
-    :param sys_cfg: 系统配置
+    :param llm_cfg: 系统配置中的LLM API config
     :return: 文本
     """
     logger.debug(f"vdb_dir, {vdb_dir}")
@@ -744,7 +742,7 @@ def get_reference_from_vdb(keywords: str, vdb_dir: str, sys_cfg: dict) -> str:
 
     try:
         if "" != vdb_dir and os.path.exists(vdb_dir):
-            reference = search_txt(keywords, vdb_dir, 0.2, sys_cfg, 2).strip()
+            reference = search_txt(keywords, vdb_dir, 0.2, llm_cfg, 2).strip()
         else:
             logger.warning(f"vdb_dir_not_exist: {vdb_dir}, get no references")
             reference = ""

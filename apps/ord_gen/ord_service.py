@@ -233,7 +233,7 @@ class OrderService:
         :param uid: the user which msg send from
         :param sys_cfg: the system config information
         """
-        # sql_agent = SqlAgent(sys_cfg, uid,True, f"{self.get_const_dict().get('str1')} {uid}")
+        # sql_agent = SqlAgent(llm_cfg, uid,True, f"{self.get_const_dict().get('str1')} {uid}")
         # dt = sql_agent.get_dt_with_nl(
         #     uid,
         #     msg,
