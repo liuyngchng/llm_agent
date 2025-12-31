@@ -1,18 +1,18 @@
-from flask import Flask, render_template, request, Response, jsonify
+from flask import Flask, render_template, request, Response, jsonify, send_from_directory, abort
 import json
 import requests
 from typing import Generator
 import os
 from dotenv import load_dotenv
-import mimetypes
-import tempfile
+import logging.config
 
 from common.const import UPLOAD_FOLDER
 
 # 加载环境变量
 load_dotenv()
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app = Flask(__name__)
+
+app = Flask(__name__, static_folder=None)
 
 ALLOWED_EXTENSIONS = {
     'txt', 'md', 'py', 'js', 'html', 'css', 'json',
@@ -20,6 +20,14 @@ ALLOWED_EXTENSIONS = {
     'jpg', 'jpeg', 'png', 'gif'
 }
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+log_config_path = 'logging.conf'
+if os.path.exists(log_config_path):
+    logging.config.fileConfig(log_config_path, encoding="utf-8")
+else:
+    from common.const import LOG_FORMATTER
+    logging.basicConfig(level=logging.INFO,format= LOG_FORMATTER, force=True)
+logger = logging.getLogger(__name__)
 
 
 # ============== 配置常量 ==============
@@ -203,6 +211,26 @@ def generate_stream_response(messages: list) -> Generator[str, None, None]:
 
 
 # ============== 路由 ==============
+
+@app.route('/static/<path:file_name>')
+def get_static_file(file_name):
+    static_dirs = [
+        os.path.join(os.path.dirname(__file__), '../../common/static'),
+        os.path.join(os.path.dirname(__file__), 'static'),
+    ]
+
+    for static_dir in static_dirs:
+        if os.path.exists(os.path.join(static_dir, file_name)):
+            # logger.debug(f"get_static_file, {static_dir}, {file_name}")
+            return send_from_directory(static_dir, file_name)
+    logger.error(f"no_file_found_error, {file_name}")
+    abort(404)
+
+@app.route('/webfonts/<path:file_name>')
+def get_webfonts_file(file_name):
+    font_file_name = f"webfonts/{file_name}"
+    return get_static_file(font_file_name)
+
 @app.route('/')
 def index():
     """渲染主页面"""
