@@ -3,6 +3,7 @@
 **/.cproject
 **/.project
 **/.settings
+**/.env
 **/target
 **/*.out
 **/*.jar

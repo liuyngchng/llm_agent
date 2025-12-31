@@ -213,27 +213,29 @@
         function addMessageToUI(role, content, messageId = null) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${role}-message`;
-            
+
             if (messageId) {
                 messageDiv.id = messageId;
             }
-            
-            if (role === 'user') {
-                messageDiv.innerHTML = `
-                    <div class="message-header">
-                        <i class="fas fa-user"></i> <strong>你</strong>
+
+            const avatarIcon = role === 'user' ? 'fas fa-user' : 'fas fa-robot';
+
+            messageDiv.innerHTML = `
+                ${role === 'ai' ? `
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
                     </div>
-                    <div class="message-content">${content.replace(/\n/g, '<br>')}</div>
-                `;
-            } else {
-                messageDiv.innerHTML = `
-                    <div class="message-header">
-                        <i class="fas fa-robot"></i> <strong>AI助手</strong>
+                ` : ''}
+
+                <div class="message-content">${content.replace(/\n/g, '<br>')}</div>
+
+                ${role === 'user' ? `
+                    <div class="message-avatar">
+                        <i class="fas fa-user"></i>
                     </div>
-                    <div class="message-content">${content}</div>
-                `;
-            }
-            
+                ` : ''}
+            `;
+
             chatHistoryEl.appendChild(messageDiv);
             scrollToBottom();
         }
