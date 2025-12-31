@@ -221,6 +221,7 @@ def generate_stream_response(messages: list, max_tokens: int = None) -> Generato
 
     try:
         logger.info(f"向LLM API发送请求，模型: {LLMConfig.MODEL_NAME}, 消息数量: {len(messages)}")
+        logger.info(f"请求参数: max_tokens={payload['max_tokens']}, temperature={LLMConfig.TEMPERATURE}")
 
         response = requests.post(
             f"{LLMConfig.API_BASE_URL}/chat/completions",
@@ -229,6 +230,45 @@ def generate_stream_response(messages: list, max_tokens: int = None) -> Generato
             stream=True,
             timeout=LLMConfig.TIMEOUT
         )
+
+        # 记录响应状态码
+        logger.info(f"API响应状态码: {response.status_code}")
+
+        # 如果响应不是200，记录详细错误信息
+        if response.status_code != 200:
+            error_content = response.text
+            logger.error(f"API返回{response.status_code}错误: {error_content}")
+
+            # 尝试解析错误信息
+            try:
+                error_json = response.json()
+                logger.error(f"API错误详情 (JSON格式): {json.dumps(error_json, indent=2, ensure_ascii=False)}")
+
+                # 提取具体错误信息
+                if 'error' in error_json:
+                    error_msg = error_json['error']
+                    if isinstance(error_msg, dict) and 'message' in error_msg:
+                        error_detail = error_msg['message']
+                    elif isinstance(error_msg, str):
+                        error_detail = error_msg
+                    else:
+                        error_detail = str(error_msg)
+
+                    logger.error(f"错误消息: {error_detail}")
+                else:
+                    logger.error(f"完整错误响应: {json.dumps(error_json, ensure_ascii=False)}")
+
+            except json.JSONDecodeError:
+                logger.error(f"错误响应不是JSON格式，原始内容: {error_content}")
+            except Exception as e:
+                logger.error(f"解析错误响应时出错: {str(e)}, 原始内容: {error_content}")
+
+            # 向客户端返回错误信息
+            error_message = f"API请求失败: {response.status_code} - {response.reason}"
+            yield f"data: {json.dumps({'error': error_message})}\n\n"
+            yield "data: [DONE]\n\n"
+            return
+
         response.raise_for_status()
 
         for line in response.iter_lines():
@@ -252,6 +292,15 @@ def generate_stream_response(messages: list, max_tokens: int = None) -> Generato
     except requests.exceptions.RequestException as e:
         error_msg = f"API请求错误: {str(e)}"
         logger.error(error_msg)
+
+        # 如果有响应对象，记录更多信息
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_json = e.response.json()
+                logger.error(f"请求异常中的错误详情: {json.dumps(error_json, ensure_ascii=False)}")
+            except:
+                logger.error(f"请求异常中的响应内容: {e.response.text}")
+
         yield f"data: {json.dumps({'error': error_msg})}\n\n"
         yield "data: [DONE]\n\n"
 
@@ -302,6 +351,8 @@ def chat():
         history_length = len(data.get('history', []))
 
         logger.info(f"收到聊天请求，消息长度: {len(user_message)}, 历史长度: {history_length}")
+        logger.info(f"请求的max_tokens: {custom_max_tokens}")
+        logger.info(f"默认MAX_TOKENS: {LLMConfig.MAX_TOKENS}")
 
         if not user_message:
             logger.warning("消息为空")
@@ -317,6 +368,14 @@ def chat():
 
         # 添加用户消息
         messages.append({"role": "user", "content": user_message})
+
+        # 记录发送的messages内容（脱敏）
+        for i, msg in enumerate(messages):
+            role = msg.get('role', 'unknown')
+            content = msg.get('content', '')
+            if content:
+                preview = content[:100] + "..." if len(content) > 100 else content
+                logger.info(f"消息[{i}] role={role}, 内容预览: {preview}")
 
         # 返回流式响应
         return Response(
