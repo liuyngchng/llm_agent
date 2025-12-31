@@ -82,7 +82,7 @@
         </div>
 
         <footer class="footer">
-            <p>Powered by Flask & LLM API | 支持流式响应和文件上传</p>
+            <p>Powered by RD</p>
         </footer>
     </div>
 
@@ -158,8 +158,8 @@
                 'image/jpeg', 'image/png', 'image/gif',
                 'application/pdf',
                 'text/plain', 'text/markdown', 'text/html',
-                'application/msword', 
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             ];
             
             let addedFiles = 0;
@@ -174,7 +174,7 @@
                 }
                 
                 // 检查文件类型
-                if (!allowedTypes.includes(file.type) && !file.name.match(/\.(txt|md|pdf|doc|docx|jpg|jpeg|png|gif)$/i)) {
+                if (!allowedTypes.includes(file.type) && !file.name.match(/\.(txt|md|pdf|xlsx|docx|jpg|jpeg|png|gif)$/i)) {
                     showError(`不支持的文件类型: ${file.name}`);
                     continue;
                 }
