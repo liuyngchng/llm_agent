@@ -742,7 +742,7 @@ def get_reference_from_vdb(keywords: str, vdb_dir: str, llm_cfg: dict) -> str:
 
     try:
         if "" != vdb_dir and os.path.exists(vdb_dir):
-            reference = search_txt(keywords, vdb_dir, 0.2, llm_cfg, 2).strip()
+            reference = search_txt(keywords, vdb_dir, 0.5, llm_cfg, 2).strip()
         else:
             logger.warning(f"vdb_dir_not_exist: {vdb_dir}, get no references")
             reference = ""

@@ -29,7 +29,17 @@ api:
 
 # 与向量库检索相关的参数配置
 vdb:
+    # 进行向两库检索的时候，判定为相似的相似度阈值，值域[0, 1]
+    similar_threshold: 0.5
 
+    # 最终返回的文本段的数量
+    txt_num: 3
+
+    # 文本分割的最大长度
+    chunk_size: 300
+
+    # 文本分割的重叠长度
+    param chunk_overlap:
 
 #  与大模型相关的提示词配置
 prompts:
