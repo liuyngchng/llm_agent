@@ -62,7 +62,7 @@ class LLMConfig:
     MODEL_NAME = os.getenv("LLM_MODEL_NAME", "deepseek-chat")
 
     # 请求参数配置
-    MAX_TOKENS = int(os.getenv("MAX_TOKENS", 32000))
+    MAX_TOKENS = int(os.getenv("MAX_TOKENS", 8000))
     TEMPERATURE = float(os.getenv("TEMPERATURE", 0.7))
     TOP_P = float(os.getenv("TOP_P", 0.9))
 
