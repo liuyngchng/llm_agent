@@ -7,13 +7,13 @@ from dotenv import load_dotenv
 import mimetypes
 import tempfile
 
+from common.const import UPLOAD_FOLDER
+
 # 加载环境变量
 load_dotenv()
-
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app = Flask(__name__)
 
-# 配置文件上传
-UPLOAD_FOLDER = tempfile.gettempdir()  # 使用临时目录
 ALLOWED_EXTENSIONS = {
     'txt', 'md', 'py', 'js', 'html', 'css', 'json',
     'pdf', 'xlsx', 'docx',
@@ -74,7 +74,7 @@ def extract_text_from_file(filepath, filename):
                 return "[需要安装PyPDF2库来解析PDF文件]"
 
         # Word文档（需要安装python-docx）
-        elif ext in ['doc', 'docx']:
+        elif ext in ['docx']:
             try:
                 import docx
                 doc = docx.Document(filepath)
@@ -84,6 +84,54 @@ def extract_text_from_file(filepath, filename):
                 return '\n'.join(text)
             except ImportError:
                 return "[需要安装python-docx库来解析Word文档]"
+
+        # Excel文件（需要安装openpyxl）
+        elif ext in ['xlsx']:
+            try:
+                from openpyxl import load_workbook
+                wb = load_workbook(filename=filepath, read_only=True, data_only=True)
+                text_lines = []
+
+                for sheet_name in wb.sheetnames:
+                    ws = wb[sheet_name]
+                    text_lines.append(f"## {sheet_name}")
+
+                    # 获取最大列宽
+                    max_col = ws.max_column
+                    max_row = ws.max_row
+
+                    if max_row > 0 and max_col > 0:
+                        # 创建Markdown表格
+                        rows = []
+                        for row in ws.iter_rows(min_row=1, max_row=max_row,
+                                                min_col=1, max_col=max_col,
+                                                values_only=True):
+                            # 将None转换为空字符串
+                            formatted_row = [str(cell).replace('|', '\\|') if cell is not None else ""
+                                             for cell in row]
+                            rows.append(formatted_row)
+
+                        # 生成Markdown表格
+                        if rows:
+                            # 表头分隔线
+                            header_separator = ['---'] * len(rows[0])
+
+                            # 构建Markdown
+                            md_lines = []
+                            md_lines.append('| ' + ' | '.join(rows[0]) + ' |')
+                            md_lines.append('| ' + ' | '.join(header_separator) + ' |')
+
+                            for row in rows[1:]:
+                                md_lines.append('| ' + ' | '.join(row) + ' |')
+
+                            text_lines.append('\n'.join(md_lines))
+                        text_lines.append('')  # 空行分隔
+
+                return '\n'.join(text_lines)
+            except ImportError:
+                return "[需要安装openpyxl库来解析Excel文件]"
+            except Exception as e:
+                return f"[读取Excel文件时出错: {str(e)}]"
 
         # 图片文件（需要安装PIL和pytesseract）
         elif ext in ['jpg', 'jpeg', 'png', 'gif']:
@@ -234,11 +282,6 @@ def upload_file():
         # 提取文本内容
         content = extract_text_from_file(temp_path, file.filename)
 
-        # 清理临时文件
-        try:
-            os.remove(temp_path)
-        except:
-            pass
 
         return jsonify({
             'success': True,
