@@ -483,21 +483,20 @@ function addMessageToUI(role, content, messageId = null) {
 
     let displayContent = content;
 
-    // 只对AI消息进行特殊处理
     if (role === 'ai') {
-        // AI消息使用Markdown渲染，这里只设置占位符
-        displayContent = content;
+        // AI消息：只有内容，没有头像
+        messageDiv.innerHTML = `
+            <div class="message-content markdown-content">${displayContent}</div>
+        `;
     } else {
-        // 用户消息已经在 sendMessage 中单独处理了
-        displayContent = content;
+        // 用户消息：保持原有结构
+        messageDiv.innerHTML = `
+            <div class="message-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="message-content">${displayContent}</div>
+        `;
     }
-
-    messageDiv.innerHTML = `
-        <div class="message-avatar">
-            <i class="${role === 'user' ? 'fas fa-user' : 'fas fa-robot'}"></i>
-        </div>
-        <div class="message-content markdown-content">${displayContent}</div>
-    `;
 
     chatHistoryEl.appendChild(messageDiv);
 
