@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI聊天助手</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-robot"></i> AI聊天助手</h1>
+            <div class="model-info">
+                <span id="modelName">正在加载模型信息...</span>
+                <button id="clearChat" class="btn-clear">
+                    <i class="fas fa-trash-alt"></i> 清空聊天
+                </button>
+            </div>
+        </header>
+
+        <div class="chat-container">
+            <div class="chat-history" id="chatHistory">
+                <!-- 聊天消息会动态添加到这里 -->
+                <div class="welcome-message">
+                    <p>👋 你好！我是AI助手，有什么可以帮你的吗？</p>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="输入你的消息..." 
+                        rows="3"
+                        onkeydown="handleKeyPress(event)"
+                    ></textarea>
+                    <div class="input-actions">
+                        <div class="config-info">
+                            <span class="config-item">
+                                <i class="fas fa-brain"></i>
+                                <span id="currentModel">-</span>
+                            </span>
+                            <span class="config-item">
+                                <i class="fas fa-thermometer-half"></i>
+                                <span id="currentTemp">{{ '%.1f'|format(config.temperature|default(0.7)) }}</span>
+                            </span>
+                        </div>
+                        <button id="sendButton" class="btn-send">
+                            <i class="fas fa-paper-plane"></i> 发送
+                        </button>
+                    </div>
+                </div>
+                <div class="input-hint">
+                    <small>按 Enter 发送，Shift + Enter 换行</small>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Powered by Flask & LLM API | 支持流式响应</p>
+        </footer>
+    </div>
+
+    <script>
+        // 全局变量
+        let chatHistory = [];
+        let currentStream = null;
+
+        // DOM 元素
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const chatHistoryEl = document.getElementById('chatHistory');
+        const clearChatBtn = document.getElementById('clearChat');
+        const modelNameEl = document.getElementById('modelName');
+        const currentModelEl = document.getElementById('currentModel');
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfig();
+            setupEventListeners();
+            messageInput.focus();
+        });
+
+        // 加载配置
+        async function loadConfig() {
+            try {
+                const response = await fetch('/config');
+                const config = await response.json();
+                
+                modelNameEl.textContent = `模型: ${config.model}`;
+                currentModelEl.textContent = config.model;
+                
+                if (!config.has_api_key) {
+                    showError('未配置API密钥，请检查配置');
+                }
+            } catch (error) {
+                console.error('加载配置失败:', error);
+            }
+        }
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            sendButton.addEventListener('click', sendMessage);
+            clearChatBtn.addEventListener('click', clearChat);
+            
+            // 输入框自动调整高度
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            // 禁用输入和发送按钮
+            messageInput.disabled = true;
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 思考中...';
+            
+            // 添加用户消息到界面
+            addMessageToUI('user', message);
+            
+            // 清空输入框
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            
+            // 添加AI消息占位符
+            const aiMessageId = 'ai-' + Date.now();
+            addMessageToUI('ai', '', aiMessageId);
+            
+            // 发送请求
+            try {
+                currentStream = await streamAIResponse(message, aiMessageId);
+            } catch (error) {
+                console.error('发送消息失败:', error);
+                updateAIMessage(aiMessageId, `<span class="error">请求失败: ${error.message}</span>`);
+            } finally {
+                // 恢复输入和发送按钮
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> 发送';
+                messageInput.focus();
+            }
+        }
+
+        // 流式获取AI响应
+        async function streamAIResponse(userMessage, messageId) {
+            // 添加用户消息到历史
+            chatHistory.push({ role: 'user', content: userMessage });
+            
+            // 发起流式请求
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: userMessage,
+                    history: chatHistory.slice(-10) // 发送最近10条历史
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP错误: ${response.status}`);
+            }
+            
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let aiResponse = '';
+            
+            // 读取流数据
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+                
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.substring(6);
+                        
+                        if (data === '[DONE]') {
+                            // 流式传输完成
+                            chatHistory.push({ role: 'assistant', content: aiResponse });
+                            return;
+                        }
+                        
+                        try {
+                            const parsed = JSON.parse(data);
+                            
+                            if (parsed.error) {
+                                throw new Error(parsed.error);
+                            }
+                            
+                            if (parsed.content) {
+                                aiResponse += parsed.content;
+                                updateAIMessage(messageId, aiResponse);
+                            }
+                        } catch (e) {
+                            console.error('解析流数据失败:', e);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 添加消息到界面
+        function addMessageToUI(role, content, messageId = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            
+            if (messageId) {
+                messageDiv.id = messageId;
+            }
+            
+            if (role === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="message-header">
+                        <i class="fas fa-user"></i> <strong>你</strong>
+                    </div>
+                    <div class="message-content">${content.replace(/\n/g, '<br>')}</div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="message-header">
+                        <i class="fas fa-robot"></i> <strong>AI助手</strong>
+                    </div>
+                    <div class="message-content">${content}</div>
+                `;
+            }
+            
+            chatHistoryEl.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // 更新AI消息
+        function updateAIMessage(messageId, content) {
+            const messageDiv = document.getElementById(messageId);
+            if (messageDiv) {
+                const contentDiv = messageDiv.querySelector('.message-content');
+                contentDiv.innerHTML = content.replace(/\n/g, '<br>');
+                scrollToBottom();
+            }
+        }
+
+        // 清空聊天
+        function clearChat() {
+            if (confirm('确定要清空聊天记录吗？')) {
+                // 中止当前流
+                if (currentStream) {
+                    currentStream.cancel?.();
+                }
+                
+                // 清空历史
+                chatHistory = [];
+                
+                // 清空界面（保留欢迎消息）
+                const welcomeMessage = document.querySelector('.welcome-message');
+                chatHistoryEl.innerHTML = '';
+                if (welcomeMessage) {
+                    chatHistoryEl.appendChild(welcomeMessage);
+                }
+                
+                scrollToBottom();
+            }
+        }
+
+        // 处理键盘快捷键
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // 显示错误
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+            chatHistoryEl.appendChild(errorDiv);
+            setTimeout(() => errorDiv.remove(), 5000);
+        }
+
+        // 滚动到底部
+        function scrollToBottom() {
+            chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+        }
+    </script>
+</body>
+</html>
