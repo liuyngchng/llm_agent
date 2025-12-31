@@ -16,7 +16,7 @@ app = Flask(__name__)
 UPLOAD_FOLDER = tempfile.gettempdir()  # 使用临时目录
 ALLOWED_EXTENSIONS = {
     'txt', 'md', 'py', 'js', 'html', 'css', 'json',
-    'pdf', 'doc', 'docx',
+    'pdf', 'xlsx', 'docx',
     'jpg', 'jpeg', 'png', 'gif'
 }
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
