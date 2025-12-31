@@ -62,13 +62,13 @@ class LLMConfig:
     MODEL_NAME = os.getenv("LLM_MODEL_NAME", "deepseek-chat")
 
     # 请求参数配置
-    MAX_TOKENS = int(os.getenv("MAX_TOKENS", 2000))
+    MAX_TOKENS = int(os.getenv("MAX_TOKENS", 32000))
     TEMPERATURE = float(os.getenv("TEMPERATURE", 0.7))
     TOP_P = float(os.getenv("TOP_P", 0.9))
 
     # 流式响应配置
     STREAM = True
-    TIMEOUT = 30  # 请求超时时间（秒）
+    TIMEOUT = 1180  # 请求超时时间（秒）
 
     # 系统提示词
     SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "你是一个有用的AI助手。请用中文回答用户的问题。")
@@ -201,7 +201,7 @@ def extract_text_from_file(filepath, filename):
         return f"[读取文件时出错: {str(e)}]"
 
 
-def generate_stream_response(messages: list) -> Generator[str, None, None]:
+def generate_stream_response(messages: list, max_tokens: int = None) -> Generator[str, None, None]:
     """
     生成流式响应
     """
@@ -213,7 +213,7 @@ def generate_stream_response(messages: list) -> Generator[str, None, None]:
     payload = {
         "model": LLMConfig.MODEL_NAME,
         "messages": messages,
-        "max_tokens": LLMConfig.MAX_TOKENS,
+        "max_tokens": max_tokens or LLMConfig.MAX_TOKENS,
         "temperature": LLMConfig.TEMPERATURE,
         "top_p": LLMConfig.TOP_P,
         "stream": LLMConfig.STREAM,
@@ -298,6 +298,7 @@ def chat():
     try:
         data = request.json
         user_message = data.get('message', '').strip()
+        custom_max_tokens = data.get('max_tokens')
         history_length = len(data.get('history', []))
 
         logger.info(f"收到聊天请求，消息长度: {len(user_message)}, 历史长度: {history_length}")
@@ -319,7 +320,7 @@ def chat():
 
         # 返回流式响应
         return Response(
-            generate_stream_response(messages),
+            generate_stream_response(messages, max_tokens=custom_max_tokens),
             mimetype='text/event-stream',
             headers={
                 'Cache-Control': 'no-cache',
