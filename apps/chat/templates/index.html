@@ -29,12 +29,26 @@
 
             <div class="input-area">
                 <div class="input-container">
-                    <textarea 
-                        id="messageInput" 
-                        placeholder="输入你的消息..." 
-                        rows="3"
-                        onkeydown="handleKeyPress(event)"
-                    ></textarea>
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="输入你的消息..." 
+                            rows="3"
+                            onkeydown="handleKeyPress(event)"
+                        ></textarea>
+                        
+                        <!-- 文件列表 - 显示已选择的文件 -->
+                        <div class="file-list-container" id="fileListContainer" style="display: none;">
+                            <div class="file-list-header">
+                                <span>已选择文件:</span>
+                                <button class="clear-files-btn" onclick="clearFileList()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="file-list" id="fileList"></div>
+                        </div>
+                    </div>
+                    
                     <div class="input-actions">
                         <div class="config-info">
                             <span class="config-item">
@@ -46,19 +60,29 @@
                                 <span id="currentTemp">{{ '%.1f'|format(config.temperature|default(0.7)) }}</span>
                             </span>
                         </div>
-                        <button id="sendButton" class="btn-send">
-                            <i class="fas fa-paper-plane"></i> 发送
-                        </button>
+                        <div class="input-buttons">
+                            <!-- 简洁的文件上传按钮 -->
+                            <div class="file-upload-btn-container">
+                                <input type="file" id="fileInput" multiple style="display: none;">
+                                <button id="uploadButton" class="btn-attach" title="上传文件">
+                                    <i class="fas fa-paperclip"></i>
+                                </button>
+                                <div class="file-count-badge" id="fileCountBadge" style="display: none;">0</div>
+                            </div>
+                            <button id="sendButton" class="btn-send">
+                                <i class="fas fa-paper-plane"></i> 发送
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="input-hint">
-                    <small>按 Enter 发送，Shift + Enter 换行</small>
+                    <small>按 Enter 发送，Shift + Enter 换行 • 支持上传文本、PDF、图片等文件</small>
                 </div>
             </div>
         </div>
 
         <footer class="footer">
-            <p>Powered by Flask & LLM API | 支持流式响应</p>
+            <p>Powered by Flask & LLM API | 支持流式响应和文件上传</p>
         </footer>
     </div>
 
@@ -66,14 +90,20 @@
         // 全局变量
         let chatHistory = [];
         let currentStream = null;
+        let uploadedFiles = [];
 
         // DOM 元素
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
+        const uploadButton = document.getElementById('uploadButton');
         const chatHistoryEl = document.getElementById('chatHistory');
         const clearChatBtn = document.getElementById('clearChat');
         const modelNameEl = document.getElementById('modelName');
         const currentModelEl = document.getElementById('currentModel');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const fileListContainer = document.getElementById('fileListContainer');
+        const fileCountBadge = document.getElementById('fileCountBadge');
 
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
@@ -103,6 +133,10 @@
         function setupEventListeners() {
             sendButton.addEventListener('click', sendMessage);
             clearChatBtn.addEventListener('click', clearChat);
+            uploadButton.addEventListener('click', () => fileInput.click());
+            
+            // 文件选择事件
+            fileInput.addEventListener('change', handleFileSelect);
             
             // 输入框自动调整高度
             messageInput.addEventListener('input', function() {
@@ -111,22 +145,189 @@
             });
         }
 
+        // 处理文件选择
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            processFiles(files);
+        }
+
+        // 处理文件
+        function processFiles(files) {
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            const allowedTypes = [
+                'image/jpeg', 'image/png', 'image/gif',
+                'application/pdf',
+                'text/plain', 'text/markdown', 'text/html',
+                'application/msword', 
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ];
+            
+            let addedFiles = 0;
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                // 检查文件大小
+                if (file.size > maxSize) {
+                    showError(`文件 ${file.name} 超过10MB限制`);
+                    continue;
+                }
+                
+                // 检查文件类型
+                if (!allowedTypes.includes(file.type) && !file.name.match(/\.(txt|md|pdf|doc|docx|jpg|jpeg|png|gif)$/i)) {
+                    showError(`不支持的文件类型: ${file.name}`);
+                    continue;
+                }
+                
+                // 检查是否已存在同名文件
+                const existingFile = uploadedFiles.find(f => f.name === file.name && f.size === file.size);
+                if (existingFile) {
+                    showError(`文件 ${file.name} 已添加`);
+                    continue;
+                }
+                
+                // 添加到上传列表
+                addFileToList(file);
+                uploadedFiles.push(file);
+                addedFiles++;
+            }
+            
+            if (addedFiles > 0) {
+                updateFileListDisplay();
+                showSuccess(`已添加 ${addedFiles} 个文件`);
+            }
+            
+            fileInput.value = ''; // 重置input以便重新选择相同文件
+        }
+
+        // 添加文件到列表
+        function addFileToList(file) {
+            const fileId = 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            file.fileId = fileId;
+            
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.id = fileId;
+            fileItem.innerHTML = `
+                <div class="file-info">
+                    <i class="fas ${getFileIcon(file.type, file.name)}"></i>
+                    <div class="file-details">
+                        <span class="file-name">${file.name}</span>
+                        <span class="file-size">${formatFileSize(file.size)}</span>
+                    </div>
+                </div>
+                <button class="file-remove" onclick="removeFile('${fileId}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            fileList.appendChild(fileItem);
+        }
+
+        // 获取文件图标
+        function getFileIcon(type, name) {
+            if (type.startsWith('image/')) return 'fa-image';
+            if (type === 'application/pdf') return 'fa-file-pdf';
+            if (type.startsWith('text/')) return 'fa-file-alt';
+            if (name.match(/\.docx?$/i)) return 'fa-file-word';
+            if (name.match(/\.xlsx?$/i)) return 'fa-file-excel';
+            return 'fa-file';
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 移除文件
+        function removeFile(fileId) {
+            // 从界面移除
+            const fileElement = document.getElementById(fileId);
+            if (fileElement) {
+                fileElement.remove();
+            }
+            
+            // 从数组移除
+            uploadedFiles = uploadedFiles.filter(file => file.fileId !== fileId);
+            updateFileListDisplay();
+        }
+
+        // 更新文件列表显示
+        function updateFileListDisplay() {
+            if (uploadedFiles.length > 0) {
+                fileListContainer.style.display = 'block';
+                fileCountBadge.textContent = uploadedFiles.length;
+                fileCountBadge.style.display = 'block';
+            } else {
+                fileListContainer.style.display = 'none';
+                fileCountBadge.style.display = 'none';
+            }
+            
+            // 调整文本区域边距
+            if (uploadedFiles.length > 0) {
+                messageInput.style.marginBottom = '10px';
+            } else {
+                messageInput.style.marginBottom = '0';
+            }
+        }
+
+        // 清空文件列表
+        function clearFileList() {
+            if (uploadedFiles.length > 0) {
+                if (confirm(`确定要移除 ${uploadedFiles.length} 个文件吗？`)) {
+                    fileList.innerHTML = '';
+                    uploadedFiles = [];
+                    updateFileListDisplay();
+                }
+            }
+        }
+
         // 发送消息
         async function sendMessage() {
             const message = messageInput.value.trim();
-            if (!message) return;
+            
+            // 如果没有消息和文件，直接返回
+            if (!message && uploadedFiles.length === 0) {
+                showError('请输入消息或上传文件');
+                return;
+            }
             
             // 禁用输入和发送按钮
             messageInput.disabled = true;
             sendButton.disabled = true;
+            uploadButton.disabled = true;
             sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 思考中...';
             
-            // 添加用户消息到界面
-            addMessageToUI('user', message);
+            // 如果有文件，先上传文件
+            let fileContents = [];
+            if (uploadedFiles.length > 0) {
+                try {
+                    fileContents = await uploadFiles();
+                } catch (error) {
+                    console.error('上传文件失败:', error);
+                    showError('文件上传失败');
+                    resetInputState();
+                    return;
+                }
+            }
             
-            // 清空输入框
+            // 构建完整消息
+            let fullMessage = message;
+            if (fileContents.length > 0) {
+                fullMessage += '\n\n上传的文件内容:\n' + fileContents.join('\n\n---\n\n');
+            }
+            
+            // 添加用户消息到界面
+            addMessageToUI('user', fullMessage);
+            
+            // 清空输入框和文件列表
             messageInput.value = '';
             messageInput.style.height = 'auto';
+            clearFileList();
             
             // 添加AI消息占位符
             const aiMessageId = 'ai-' + Date.now();
@@ -134,17 +335,52 @@
             
             // 发送请求
             try {
-                currentStream = await streamAIResponse(message, aiMessageId);
+                currentStream = await streamAIResponse(fullMessage, aiMessageId);
             } catch (error) {
                 console.error('发送消息失败:', error);
                 updateAIMessage(aiMessageId, `<span class="error">请求失败: ${error.message}</span>`);
             } finally {
-                // 恢复输入和发送按钮
-                messageInput.disabled = false;
-                sendButton.disabled = false;
-                sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> 发送';
-                messageInput.focus();
+                resetInputState();
             }
+        }
+
+        // 上传文件到服务器
+        async function uploadFiles() {
+            const fileContents = [];
+            
+            for (let i = 0; i < uploadedFiles.length; i++) {
+                const file = uploadedFiles[i];
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`文件 ${file.name} 上传失败`);
+                }
+                
+                const result = await response.json();
+                if (result.success) {
+                    fileContents.push(`文件: ${file.name}\n${result.content}`);
+                }
+                
+                // 更新进度提示
+                showProgress(`正在处理文件 (${i + 1}/${uploadedFiles.length})...`);
+            }
+            
+            return fileContents;
+        }
+
+        // 重置输入状态
+        function resetInputState() {
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            uploadButton.disabled = false;
+            sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> 发送';
+            messageInput.focus();
         }
 
         // 流式获取AI响应
@@ -250,6 +486,7 @@
                 
                 // 清空历史
                 chatHistory = [];
+                clearFileList();
                 
                 // 清空界面（保留欢迎消息）
                 const welcomeMessage = document.querySelector('.welcome-message');
@@ -277,6 +514,35 @@
             errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
             chatHistoryEl.appendChild(errorDiv);
             setTimeout(() => errorDiv.remove(), 5000);
+        }
+
+        // 显示成功消息
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            chatHistoryEl.appendChild(successDiv);
+            setTimeout(() => successDiv.remove(), 3000);
+        }
+
+        // 显示进度消息
+        function showProgress(message) {
+            // 如果有旧的进度消息，先移除
+            const oldProgress = document.querySelector('.progress-message');
+            if (oldProgress) oldProgress.remove();
+            
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'progress-message';
+            progressDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${message}`;
+            chatHistoryEl.appendChild(progressDiv);
+            scrollToBottom();
+            
+            // 5秒后自动移除
+            setTimeout(() => {
+                if (progressDiv.parentNode) {
+                    progressDiv.remove();
+                }
+            }, 5000);
         }
 
         // 滚动到底部

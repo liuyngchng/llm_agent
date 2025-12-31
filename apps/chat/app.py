@@ -4,11 +4,23 @@ import requests
 from typing import Generator
 import os
 from dotenv import load_dotenv
+import mimetypes
+import tempfile
 
 # 加载环境变量
 load_dotenv()
 
 app = Flask(__name__)
+
+# 配置文件上传
+UPLOAD_FOLDER = tempfile.gettempdir()  # 使用临时目录
+ALLOWED_EXTENSIONS = {
+    'txt', 'md', 'py', 'js', 'html', 'css', 'json',
+    'pdf', 'doc', 'docx',
+    'jpg', 'jpeg', 'png', 'gif'
+}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
 
 # ============== 配置常量 ==============
 # LLM API 配置（可替换为任何兼容OpenAI API的接口）
@@ -17,20 +29,80 @@ class LLMConfig:
     API_BASE_URL = os.getenv("LLM_API_BASE_URL", "https://api.deepseek.com/v1")
     API_KEY = os.getenv("LLM_API_KEY", "sk-********")
     MODEL_NAME = os.getenv("LLM_MODEL_NAME", "deepseek-chat")
-    
+
     # 请求参数配置
     MAX_TOKENS = int(os.getenv("MAX_TOKENS", 2000))
     TEMPERATURE = float(os.getenv("TEMPERATURE", 0.7))
     TOP_P = float(os.getenv("TOP_P", 0.9))
-    
+
     # 流式响应配置
     STREAM = True
     TIMEOUT = 30  # 请求超时时间（秒）
-    
+
     # 系统提示词
     SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "你是一个有用的AI助手。请用中文回答用户的问题。")
 
+
 # ============== 辅助函数 ==============
+def allowed_file(filename):
+    """检查文件扩展名是否允许"""
+    return '.' in filename and \
+        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def extract_text_from_file(filepath, filename):
+    """从文件中提取文本内容"""
+    try:
+        ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+
+        # 文本文件直接读取
+        if ext in ['txt', 'md', 'py', 'js', 'html', 'css', 'json']:
+            with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                return f.read()
+
+        # PDF文件（需要安装PyPDF2或pdfplumber）
+        elif ext == 'pdf':
+            try:
+                import PyPDF2
+                text = []
+                with open(filepath, 'rb') as f:
+                    pdf = PyPDF2.PdfReader(f)
+                    for page in pdf.pages:
+                        text.append(page.extract_text())
+                return '\n'.join(text)
+            except ImportError:
+                return "[需要安装PyPDF2库来解析PDF文件]"
+
+        # Word文档（需要安装python-docx）
+        elif ext in ['doc', 'docx']:
+            try:
+                import docx
+                doc = docx.Document(filepath)
+                text = []
+                for paragraph in doc.paragraphs:
+                    text.append(paragraph.text)
+                return '\n'.join(text)
+            except ImportError:
+                return "[需要安装python-docx库来解析Word文档]"
+
+        # 图片文件（需要安装PIL和pytesseract）
+        elif ext in ['jpg', 'jpeg', 'png', 'gif']:
+            try:
+                from PIL import Image
+                import pytesseract
+                image = Image.open(filepath)
+                text = pytesseract.image_to_string(image, lang='chi_sim+eng')
+                return text if text else "[图片中未识别到文字]"
+            except ImportError:
+                return "[需要安装PIL和pytesseract库来识别图片文字]"
+
+        else:
+            return f"[不支持的文件格式: {ext}]"
+
+    except Exception as e:
+        return f"[读取文件时出错: {str(e)}]"
+
+
 def generate_stream_response(messages: list) -> Generator[str, None, None]:
     """
     生成流式响应
@@ -39,7 +111,7 @@ def generate_stream_response(messages: list) -> Generator[str, None, None]:
         "Content-Type": "application/json",
         "Authorization": f"Bearer {LLMConfig.API_KEY}"
     }
-    
+
     payload = {
         "model": LLMConfig.MODEL_NAME,
         "messages": messages,
@@ -48,7 +120,7 @@ def generate_stream_response(messages: list) -> Generator[str, None, None]:
         "top_p": LLMConfig.TOP_P,
         "stream": LLMConfig.STREAM,
     }
-    
+
     try:
         response = requests.post(
             f"{LLMConfig.API_BASE_URL}/chat/completions",
@@ -58,7 +130,7 @@ def generate_stream_response(messages: list) -> Generator[str, None, None]:
             timeout=LLMConfig.TIMEOUT
         )
         response.raise_for_status()
-        
+
         for line in response.iter_lines():
             if line:
                 line = line.decode('utf-8')
@@ -73,19 +145,23 @@ def generate_stream_response(messages: list) -> Generator[str, None, None]:
                                     yield f"data: {json.dumps({'content': delta['content']})}\n\n"
                         except json.JSONDecodeError:
                             continue
-        
+
         yield "data: [DONE]\n\n"
-        
+
     except requests.exceptions.RequestException as e:
         error_msg = f"API请求错误: {str(e)}"
         yield f"data: {json.dumps({'error': error_msg})}\n\n"
         yield "data: [DONE]\n\n"
 
+
 # ============== 路由 ==============
 @app.route('/')
 def index():
     """渲染主页面"""
-    return render_template('index.html')
+    return render_template('index.html', config={
+        'temperature': LLMConfig.TEMPERATURE
+    })
+
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -93,21 +169,21 @@ def chat():
     try:
         data = request.json
         user_message = data.get('message', '').strip()
-        
+
         if not user_message:
             return jsonify({'error': '消息不能为空'}), 400
-        
+
         # 构建消息历史
         messages = [{"role": "system", "content": LLMConfig.SYSTEM_PROMPT}]
-        
+
         # 添加上下文消息（如果需要）
         chat_history = data.get('history', [])
         for msg in chat_history[-10:]:  # 限制历史记录长度
             messages.append(msg)
-        
+
         # 添加用户消息
         messages.append({"role": "user", "content": user_message})
-        
+
         # 返回流式响应
         return Response(
             generate_stream_response(messages),
@@ -117,9 +193,62 @@ def chat():
                 'X-Accel-Buffering': 'no'  # 禁用Nginx缓冲
             }
         )
-        
+
     except Exception as e:
         return jsonify({'error': f'服务器错误: {str(e)}'}), 500
+
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    """处理文件上传"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': '没有选择文件'}), 400
+
+        file = request.files['file']
+
+        if file.filename == '':
+            return jsonify({'success': False, 'error': '没有选择文件'}), 400
+
+        if not allowed_file(file.filename):
+            return jsonify({
+                'success': False,
+                'error': f'不支持的文件类型。支持的类型: {", ".join(ALLOWED_EXTENSIONS)}'
+            }), 400
+
+        # 检查文件大小
+        file.seek(0, os.SEEK_END)
+        file_length = file.tell()
+        file.seek(0)
+
+        if file_length > MAX_FILE_SIZE:
+            return jsonify({
+                'success': False,
+                'error': f'文件太大。最大支持 {MAX_FILE_SIZE // 1024 // 1024}MB'
+            }), 400
+
+        # 保存临时文件
+        temp_path = os.path.join(UPLOAD_FOLDER, file.filename)
+        file.save(temp_path)
+
+        # 提取文本内容
+        content = extract_text_from_file(temp_path, file.filename)
+
+        # 清理临时文件
+        try:
+            os.remove(temp_path)
+        except:
+            pass
+
+        return jsonify({
+            'success': True,
+            'filename': file.filename,
+            'content': content[:5000]  # 限制内容长度
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @app.route('/config', methods=['GET'])
 def get_config():
@@ -132,11 +261,12 @@ def get_config():
     }
     return jsonify(config_info)
 
+
 if __name__ == '__main__':
     # 检查API密钥
     if not LLMConfig.API_KEY:
         print("警告: LLM_API_KEY 未设置，请配置环境变量或修改代码")
-    
+
     app.run(
         debug=True,
         host='0.0.0.0',

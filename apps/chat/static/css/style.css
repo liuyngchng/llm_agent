@@ -188,6 +188,10 @@ body {
     border-color: #4b6cb7;
 }
 
+.input-wrapper {
+    position: relative;
+}
+
 textarea {
     width: 100%;
     border: none;
@@ -200,10 +204,174 @@ textarea {
     font-family: inherit;
     max-height: 150px;
     color: #333;
+    transition: all 0.2s;
 }
 
 textarea::placeholder {
     color: #999;
+}
+
+/* 文件列表容器 */
+.file-list-container {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+    border: 1px solid #eaeaea;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.file-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eaeaea;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.clear-files-btn {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.clear-files-btn:hover {
+    color: #e74c3c;
+    background: #fff5f5;
+}
+
+/* 文件列表 */
+.file-list {
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    background: white;
+    border: 1px solid #eaeaea;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    animation: fadeIn 0.3s ease;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.file-info i {
+    color: #4b6cb7;
+    font-size: 0.9rem;
+    min-width: 16px;
+}
+
+.file-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    color: #333;
+}
+
+.file-size {
+    font-size: 0.75rem;
+    color: #999;
+    margin-top: 2px;
+}
+
+.file-remove {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.file-remove:hover {
+    color: #e74c3c;
+    background: #fff5f5;
+}
+
+/* 文件上传按钮 */
+.file-upload-btn-container {
+    position: relative;
+}
+
+.btn-attach {
+    background: #f0f2f5;
+    color: #666;
+    border: 1px solid #e0e0e0;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-attach:hover {
+    background: #e4e6e9;
+    color: #4b6cb7;
+    border-color: #4b6cb7;
+}
+
+.btn-attach:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.file-count-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #e74c3c;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 600;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: popIn 0.2s ease;
+}
+
+@keyframes popIn {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
 }
 
 .input-actions {
@@ -224,6 +392,12 @@ textarea::placeholder {
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+.input-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
 }
 
 .btn-send {
@@ -257,7 +431,7 @@ textarea::placeholder {
     margin-top: 8px;
 }
 
-/* 错误消息 */
+/* 消息提示 */
 .error-message {
     background: #fff5f5;
     color: #e74c3c;
@@ -268,6 +442,33 @@ textarea::placeholder {
     align-items: center;
     gap: 8px;
     font-size: 0.9rem;
+    animation: fadeIn 0.3s ease;
+}
+
+.success-message {
+    background: #f0fff4;
+    color: #38a169;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    animation: fadeIn 0.3s ease;
+}
+
+.progress-message {
+    background: #f0f7ff;
+    color: #3182ce;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    animation: fadeIn 0.3s ease;
 }
 
 /* 底部 */
@@ -281,20 +482,24 @@ textarea::placeholder {
 }
 
 /* 滚动条样式 */
-.chat-history::-webkit-scrollbar {
+.chat-history::-webkit-scrollbar,
+.file-list::-webkit-scrollbar {
     width: 6px;
 }
 
-.chat-history::-webkit-scrollbar-track {
+.chat-history::-webkit-scrollbar-track,
+.file-list::-webkit-scrollbar-track {
     background: #f1f1f1;
 }
 
-.chat-history::-webkit-scrollbar-thumb {
+.chat-history::-webkit-scrollbar-thumb,
+.file-list::-webkit-scrollbar-thumb {
     background: #d1d1d1;
     border-radius: 3px;
 }
 
-.chat-history::-webkit-scrollbar-thumb:hover {
+.chat-history::-webkit-scrollbar-thumb:hover,
+.file-list::-webkit-scrollbar-thumb:hover {
     background: #b1b1b1;
 }
 
@@ -328,9 +533,48 @@ textarea::placeholder {
         align-items: stretch;
     }
 
-    .btn-send {
+    .input-buttons {
         width: 100%;
+        justify-content: space-between;
+    }
+
+    .btn-attach, .btn-send {
+        flex: 1;
+    }
+
+    .btn-send {
         justify-content: center;
         padding: 10px;
+    }
+
+    .file-item {
+        padding: 5px;
+    }
+
+    .file-name {
+        font-size: 0.8rem;
+    }
+
+    .file-size {
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .input-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .btn-attach, .btn-send {
+        width: 100%;
+    }
+
+    .btn-attach {
+        justify-content: center;
+    }
+
+    .file-count-badge {
+        right: calc(50% - 15px);
     }
 }
