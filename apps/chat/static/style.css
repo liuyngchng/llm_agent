@@ -503,6 +503,134 @@ textarea::placeholder {
     background: #b1b1b1;
 }
 
+.message-content.markdown-rendered {
+    line-height: 1.6;
+}
+
+.message-content.markdown-rendered h1,
+.message-content.markdown-rendered h2,
+.message-content.markdown-rendered h3,
+.message-content.markdown-rendered h4 {
+    margin-top: 1.2em;
+    margin-bottom: 0.6em;
+    font-weight: 600;
+    color: #333;
+}
+
+.message-content.markdown-rendered h1 {
+    font-size: 1.5em;
+    border-bottom: 2px solid #eaeaea;
+    padding-bottom: 0.3em;
+}
+
+.message-content.markdown-rendered h2 {
+    font-size: 1.3em;
+    border-bottom: 1px solid #eaeaea;
+    padding-bottom: 0.2em;
+}
+
+.message-content.markdown-rendered h3 {
+    font-size: 1.1em;
+}
+
+.message-content.markdown-rendered p {
+    margin: 0.8em 0;
+    color: #666;
+}
+
+.message-content.markdown-rendered ul,
+.message-content.markdown-rendered ol {
+    margin: 0.8em 0;
+    padding-left: 1.5em;
+    color: #666;
+}
+
+.message-content.markdown-rendered li {
+    margin: 0.3em 0;
+}
+
+.message-content.markdown-rendered blockquote {
+    margin: 0.8em 0;
+    padding: 0.5em 1em;
+    border-left: 4px solid #4b6cb7;
+    background: #f8f9fa;
+    color: #666;
+    font-style: italic;
+}
+
+.message-content.markdown-rendered pre {
+    margin: 1em 0;
+    padding: 1em;
+    background: #f8f9fa;
+    border-radius: 6px;
+    overflow-x: auto;
+}
+
+.message-content.markdown-rendered code {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    font-size: 0.9em;
+    padding: 0.2em 0.4em;
+    background: #f1f3f5;
+    border-radius: 3px;
+    color: #d63384;
+}
+
+.message-content.markdown-rendered pre code {
+    padding: 0;
+    background: transparent;
+    color: inherit;
+}
+
+.message-content.markdown-rendered .markdown-table {
+    width: 100%;
+    margin: 1em 0;
+    border-collapse: collapse;
+    border: 1px solid #eaeaea;
+    font-size: 0.9em;
+}
+
+.message-content.markdown-rendered .markdown-table th,
+.message-content.markdown-rendered .markdown-table td {
+    padding: 0.6em 0.8em;
+    border: 1px solid #eaeaea;
+    text-align: left;
+    color: #666;
+}
+
+.message-content.markdown-rendered .markdown-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+.message-content.markdown-rendered .markdown-table tr:nth-child(even) {
+    background: #fcfcfc;
+}
+
+.message-content.markdown-rendered a {
+    color: #4b6cb7;
+    text-decoration: none;
+}
+
+.message-content.markdown-rendered a:hover {
+    text-decoration: underline;
+}
+
+.message-content.markdown-rendered strong {
+    font-weight: 600;
+    color: #333;
+}
+
+.message-content.markdown-rendered em {
+    font-style: italic;
+}
+
+.message-content.markdown-rendered hr {
+    margin: 1.5em 0;
+    border: 0;
+    border-top: 1px solid #eaeaea;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .container {
