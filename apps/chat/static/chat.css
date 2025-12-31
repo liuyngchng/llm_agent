@@ -423,6 +423,18 @@ textarea::placeholder {
     opacity: 0.6;
     cursor: not-allowed;
 }
+/* 停止按钮样式 */
+.btn-stop {
+    background: #e74c3c !important; /* 红色背景 */
+}
+
+.btn-stop:hover:not(:disabled) {
+    background: #c0392b !important; /* 深红色悬停 */
+}
+
+.btn-stop i {
+    animation: none !important; /* 移除旋转动画 */
+}
 
 .input-hint {
     text-align: center;
@@ -629,6 +641,55 @@ textarea::placeholder {
     margin: 1.5em 0;
     border: 0;
     border-top: 1px solid #eaeaea;
+}
+
+.file-preview-list {
+    margin-top: 10px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #eaeaea;
+    font-size: 0.9rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.file-preview-item {
+    display: flex;
+    align-items: center;
+    padding: 4px 6px;
+    margin: 2px 0;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #f0f0f0;
+}
+
+.file-preview-item i {
+    color: #4b6cb7;
+    margin-right: 8px;
+    font-size: 0.85rem;
+    min-width: 16px;
+}
+
+.file-preview-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #333;
+}
+
+.file-preview-size {
+    color: #999;
+    font-size: 0.8rem;
+    margin-left: 8px;
+    white-space: nowrap;
+}
+
+/* 确保用户消息中的文本正常显示 */
+.user-message .message-content {
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 /* 响应式设计 */

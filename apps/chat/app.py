@@ -41,38 +41,13 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 # 配置日志
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
-    try:
-        logging.config.fileConfig(log_config_path, encoding="utf-8", disable_existing_loggers=False)
-        print(f"使用日志配置文件: {log_config_path}")
-    except Exception as e:
-        print(f"加载日志配置文件失败: {e}")
-        # 使用默认配置
-        from common.const import LOG_FORMATTER
-
-        logging.basicConfig(
-            level=logging.INFO,
-            format=LOG_FORMATTER,
-            force=True,
-            stream=sys.stdout
-        )
+    logging.config.fileConfig(log_config_path, encoding="utf-8", disable_existing_loggers=False)
+    print(f"使用日志配置文件: {log_config_path}")
 else:
     print("日志配置文件不存在，使用默认配置")
-    try:
-        from common.const import LOG_FORMATTER
+    from common.const import LOG_FORMATTER
+    logging.basicConfig(level=logging.INFO,format=LOG_FORMATTER,force=True,stream=sys.stdout)
 
-        logging.basicConfig(
-            level=logging.INFO,
-            format=LOG_FORMATTER,
-            force=True,
-            stream=sys.stdout
-        )
-    except ImportError:
-        # 如果 LOG_FORMATTER 不存在，使用简单格式
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            stream=sys.stdout
-        )
 
 logger = logging.getLogger(__name__)
 logger.info("应用程序启动")
