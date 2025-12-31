@@ -27,6 +27,10 @@ api:
     # embedding API name
     embedding_model_name: bge-m3
 
+# 与向量库检索相关的参数配置
+vdb:
+
+
 #  与大模型相关的提示词配置
 prompts:
 
