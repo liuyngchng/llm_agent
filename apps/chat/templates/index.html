@@ -218,22 +218,12 @@
                 messageDiv.id = messageId;
             }
 
-            const avatarIcon = role === 'user' ? 'fas fa-user' : 'fas fa-robot';
-
+            // 统一结构：图标都在消息前面，只是顺序不同
             messageDiv.innerHTML = `
-                ${role === 'ai' ? `
-                    <div class="message-avatar">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                ` : ''}
-
+                <div class="message-avatar">
+                    <i class="${role === 'user' ? 'fas fa-user' : 'fas fa-robot'}"></i>
+                </div>
                 <div class="message-content">${content.replace(/\n/g, '<br>')}</div>
-
-                ${role === 'user' ? `
-                    <div class="message-avatar">
-                        <i class="fas fa-user"></i>
-                    </div>
-                ` : ''}
             `;
 
             chatHistoryEl.appendChild(messageDiv);

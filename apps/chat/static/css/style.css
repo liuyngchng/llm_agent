@@ -92,6 +92,7 @@ body {
 .message {
     margin-bottom: 20px;
     display: flex;
+    align-items: flex-start; /* 顶部对齐 */
     animation: fadeIn 0.3s ease-in;
 }
 
@@ -121,14 +122,14 @@ body {
 /* AI消息 - 左侧浅灰色 */
 .ai-message .message-content {
     background: #f8f9fa;
-    color: #333;
+    color: #666; /* 灰色文字 */
     border-radius: 12px 12px 12px 4px;
 }
 
 /* 用户消息 - 右侧蓝色 */
 .user-message .message-content {
-    background: #4b6cb7;
-    color: white;
+    background: white; /* 白色背景 */
+    color: #4b6cb7; /* 蓝色文字 */
     border-radius: 12px 12px 4px 12px;
 }
 
