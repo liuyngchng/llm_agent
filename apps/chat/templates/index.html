@@ -300,12 +300,22 @@
         }
 
         // 清空文件列表
-        function clearFileList() {
+        function clearFileList(silent = false) {
             if (uploadedFiles.length > 0) {
-                if (confirm(`确定要移除 ${uploadedFiles.length} 个文件吗？`)) {
-                    fileList.innerHTML = '';
-                    uploadedFiles = [];
-                    updateFileListDisplay();
+                // 如果是静默模式（发送时自动清理），不弹确认框
+                if (!silent) {
+                    if (!confirm(`确定要移除 ${uploadedFiles.length} 个文件吗？`)) {
+                        return;
+                    }
+                }
+
+                fileList.innerHTML = '';
+                uploadedFiles = [];
+                updateFileListDisplay();
+
+                // 如果不是静默模式，显示成功消息
+                if (!silent) {
+                    showSuccess('已移除所有文件');
                 }
             }
         }
@@ -351,7 +361,7 @@
             // 清空输入框和文件列表
             messageInput.value = '';
             messageInput.style.height = 'auto';
-            clearFileList();
+            clearFileList(true);
 
             // 添加AI消息占位符
             const aiMessageId = 'ai-' + Date.now();
