@@ -8,11 +8,11 @@
 
 通过 `IDE`（`Pycharm`, `VsCode` 等）直接启动 `debug`，为 `HTTP` 服务，通过脚本部署的 `docker` 应用为`HTTPS` 服务。
 
-| No. | 名称                  | 服务类型 | 端口 | 描述                            |
-|-----|---------------------|------------|------------|-------------------------------|
+| No. | 名称                  | 服务类型 | 端口    | 描述                            |
+|-----|---------------------|------------|-------|-------------------------------|
 | 1 | apps/db_service     | HTTP/HTTPS | 17000 | 数据访问服务                        |
 | 2  | apps/gateway        | HTTP/HTTPS | 18000 | 开放平台，提供与其他平台进行集成的接口           |
-| 3 | apps/chat           | HTTP/HTTPS | 19011 | AI 助手                         |
+| 3 | apps/chat           | HTTP/HTTPS | 20000     | AI 助手                         |
 | 4 | apps/chat2db        | HTTP/HTTPS | 19001 | 自然语言数据查询，支持MySQL, Oracle, DM8 |
 | 5 | apps/chat2kb        | HTTP/HTTPS | 19002 | 知识库问答, 提供基于知识库的问答能力           |
 | 6 | apps/docx           | HTTP/HTTPS | 19003 | 文档生成，支持在线生成 Word docx文档       |
@@ -25,7 +25,7 @@
 | 13 | apps/team_building  | HTTP/HTTPS | 19010 | 团队建设与管理                       |
 | 14 | apps/llm            | HTTP/HTTPS | 16000 | 兼容 OpenAI 接口格式的大语言模型服务        |
 | 15 | apps/embedding      | HTTP/HTTPS | 17000 | 兼容 OpenAI 接口格式的文本嵌入模型服务       |
-| 16 | apps/portal         | HTTPS | 443 | 集成所有应用的入口地址，提供所有地址导航          |
+| 16 | apps/portal         | HTTPS | 443   | 集成所有应用的入口地址，提供所有地址导航          |
 
 # 2. 开发环境配置
 
