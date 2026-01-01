@@ -484,9 +484,28 @@ function addMessageToUI(role, content, messageId = null) {
     let displayContent = content;
 
     if (role === 'ai') {
-        // AI消息：只有内容，没有头像
+        // AI消息：包含操作按钮和内容
         messageDiv.innerHTML = `
             <div class="message-content markdown-content">${displayContent}</div>
+            <div class="message-actions">
+                <div class="action-buttons">
+                    <button class="action-btn copy-btn" title="复制">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="action-btn refresh-btn" title="重新生成">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                    <button class="action-btn like-btn" title="赞">
+                        <i class="fas fa-thumbs-up"></i>
+                    </button>
+                    <button class="action-btn dislike-btn" title="踩">
+                        <i class="fas fa-thumbs-down"></i>
+                    </button>
+                    <button class="action-btn download-btn" title="下载">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+            </div>
         `;
     } else {
         // 用户消息：保持原有结构
@@ -505,7 +524,111 @@ function addMessageToUI(role, content, messageId = null) {
         renderAIMessage(messageId, content);
     }
 
+    // 为AI消息添加事件监听器
+    if (role === 'ai') {
+        setTimeout(() => setupMessageActions(messageDiv, messageId), 100);
+    }
+
     scrollToBottom();
+}
+
+// 设置消息操作按钮事件
+function setupMessageActions(messageDiv, messageId) {
+    const contentDiv = messageDiv.querySelector('.message-content');
+    const copyBtn = messageDiv.querySelector('.copy-btn');
+    const refreshBtn = messageDiv.querySelector('.refresh-btn');
+    const likeBtn = messageDiv.querySelector('.like-btn');
+    const dislikeBtn = messageDiv.querySelector('.dislike-btn');
+    const downloadBtn = messageDiv.querySelector('.download-btn');
+
+    // 复制功能
+    copyBtn.addEventListener('click', async () => {
+        const textToCopy = contentDiv.textContent;
+        try {
+            await navigator.clipboard.writeText(textToCopy);
+            showSuccess('已复制到剪贴板');
+            copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+            }, 2000);
+        } catch (err) {
+            console.error('复制失败:', err);
+            showError('复制失败');
+        }
+    });
+
+    // 重新生成功能
+    refreshBtn.addEventListener('click', () => {
+        if (confirm('确定要重新生成这条消息吗？')) {
+            // 移除当前消息
+            messageDiv.remove();
+
+            // 从历史记录中移除
+            const aiIndex = chatHistory.findIndex(msg => msg.role === 'assistant');
+            if (aiIndex !== -1) {
+                chatHistory.splice(aiIndex, 1);
+            }
+
+            // 重新发送最后一条用户消息
+            const lastUserMessage = chatHistory.findLast(msg => msg.role === 'user');
+            if (lastUserMessage) {
+                sendMessageFromHistory(lastUserMessage.content);
+            }
+        }
+    });
+
+    // 点赞功能
+    likeBtn.addEventListener('click', () => {
+        likeBtn.classList.toggle('active');
+        if (likeBtn.classList.contains('active')) {
+            likeBtn.innerHTML = '<i class="fas fa-thumbs-up" style="color: #4b6cb7;"></i>';
+            dislikeBtn.classList.remove('active');
+            dislikeBtn.innerHTML = '<i class="fas fa-thumbs-down"></i>';
+            console.log(`点赞消息: ${messageId}`);
+            showSuccess('已点赞');
+        } else {
+            likeBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
+        }
+    });
+
+    // 点踩功能
+    dislikeBtn.addEventListener('click', () => {
+        dislikeBtn.classList.toggle('active');
+        if (dislikeBtn.classList.contains('active')) {
+            dislikeBtn.innerHTML = '<i class="fas fa-thumbs-down" style="color: #e74c3c;"></i>';
+            likeBtn.classList.remove('active');
+            likeBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
+            console.log(`点踩消息: ${messageId}`);
+            showSuccess('已点踩');
+        } else {
+            dislikeBtn.innerHTML = '<i class="fas fa-thumbs-down"></i>';
+        }
+    });
+
+    // 下载功能
+    downloadBtn.addEventListener('click', () => {
+        const textContent = contentDiv.textContent;
+        const blob = new Blob([textContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ai_response_${Date.now()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showSuccess('已开始下载');
+    });
+}
+
+// 从历史记录发送消息
+async function sendMessageFromHistory(messageContent) {
+    messageInput.value = messageContent;
+    messageInput.style.height = 'auto';
+    messageInput.style.height = (messageInput.scrollHeight) + 'px';
+
+    // 直接调用发送消息函数
+    await sendMessage();
 }
 
 // 渲染AI消息的Markdown

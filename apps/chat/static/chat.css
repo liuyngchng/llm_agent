@@ -103,7 +103,9 @@ body {
 
 /* AI消息在左侧 */
 .ai-message {
-    justify-content: flex-start;
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
 }
 
 /* 用户消息在右侧 */
@@ -112,7 +114,7 @@ body {
 }
 
 .message-content {
-    max-width: 75%;
+    max-width: 85%;
     padding: 12px 16px;
     line-height: 1.5;
     word-wrap: break-word;
@@ -124,6 +126,8 @@ body {
     background: #f8f9fa;
     color: #666; /* 灰色文字 */
     border-radius: 12px 12px 12px 4px;
+    width: 100%;
+    max-width: 100%;
 }
 
 /* 用户消息 - 右侧蓝色 */
@@ -159,6 +163,75 @@ body {
 
 .message-avatar i {
     font-size: 0.9rem;
+}
+
+/* 消息操作按钮 */
+.message-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.ai-message:hover .message-actions {
+    opacity: 1;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 4px;
+    background: white;
+    border-radius: 20px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #eaeaea;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #666;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: #f5f7fa;
+    color: #4b6cb7;
+}
+
+.action-btn.active {
+    color: #4b6cb7;
+}
+
+.action-btn.copy-btn:hover {
+    color: #4b6cb7;
+}
+
+.action-btn.refresh-btn:hover {
+    color: #38a169;
+}
+
+.action-btn.like-btn:hover,
+.action-btn.like-btn.active {
+    color: #4b6cb7;
+}
+
+.action-btn.dislike-btn:hover,
+.action-btn.dislike-btn.active {
+    color: #e74c3c;
+}
+
+.action-btn.download-btn:hover {
+    color: #3182ce;
 }
 
 /* 欢迎消息 */
@@ -711,6 +784,10 @@ textarea::placeholder {
         max-width: 85%;
     }
 
+    .ai-message .message-content {
+        max-width: 100%;
+    }
+
     .config-info {
         flex-direction: column;
         gap: 5px;
@@ -747,6 +824,16 @@ textarea::placeholder {
     .file-size {
         font-size: 0.7rem;
     }
+
+    .action-buttons {
+        padding: 3px;
+    }
+
+    .action-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -765,5 +852,9 @@ textarea::placeholder {
 
     .file-count-badge {
         right: calc(50% - 15px);
+    }
+
+    .message-actions {
+        opacity: 1;
     }
 }
