@@ -434,6 +434,18 @@ async function streamAIResponse(userMessage, messageId) {
     const decoder = new TextDecoder();
     let aiResponse = '';
 
+    // 创建消息对象来存储原始Markdown内容
+    const messageObject = {
+        id: messageId,
+        rawMarkdown: '', // 存储原始Markdown内容
+        renderedHTML: '',
+        timestamp: Date.now()
+    };
+
+    // 将消息对象存储在全局
+    window.messageMap = window.messageMap || {};
+    window.messageMap[messageId] = messageObject;
+
     // 读取流数据
     while (true) {
         const { done, value } = await reader.read();
@@ -448,7 +460,16 @@ async function streamAIResponse(userMessage, messageId) {
 
                 if (data === '[DONE]') {
                     // 流式传输完成
-                    chatHistory.push({ role: 'assistant', content: aiResponse });
+                    const completedMessage = {
+                        role: 'assistant',
+                        content: aiResponse,
+                        messageId: messageId
+                    };
+                    chatHistory.push(completedMessage);
+
+                    // 更新消息对象的完整内容
+                    messageObject.rawMarkdown = aiResponse;
+
                     return;
                 }
 
@@ -461,6 +482,9 @@ async function streamAIResponse(userMessage, messageId) {
 
                     if (parsed.content) {
                         aiResponse += parsed.content;
+                        // 累积原始Markdown内容
+                        messageObject.rawMarkdown += parsed.content;
+
                         // 使用新函数渲染 Markdown
                         renderAIMessage(messageId, aiResponse);
                     }
@@ -607,17 +631,52 @@ function setupMessageActions(messageDiv, messageId) {
 
     // 下载功能
     downloadBtn.addEventListener('click', () => {
-        const textContent = contentDiv.textContent;
-        const blob = new Blob([textContent], { type: 'text/plain' });
+        // 从全局消息映射中获取原始Markdown内容
+        let markdownContent = '';
+
+        if (window.messageMap && window.messageMap[messageId]) {
+            markdownContent = window.messageMap[messageId].rawMarkdown;
+        }
+
+        // 如果消息映射中没有，尝试从聊天历史中查找
+        if (!markdownContent) {
+            for (let i = chatHistory.length - 1; i >= 0; i--) {
+                const msg = chatHistory[i];
+                if (msg.messageId === messageId) {
+                    markdownContent = msg.content;
+                    break;
+                }
+            }
+        }
+
+        // 如果还是没找到，使用当前显示的内容
+        if (!markdownContent) {
+            // 获取文本内容（虽然没有格式，但总比没有好）
+            markdownContent = contentDiv.textContent;
+        }
+
+        // 创建Markdown文件
+        const blob = new Blob([markdownContent], {
+            type: 'text/markdown;charset=utf-8'
+        });
+
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `ai_response_${Date.now()}.txt`;
+
+        // 生成文件名，包含时间戳
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+        const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '-'); // HH-MM-SS
+
+        a.download = `AI助手回复_${dateStr}_${timeStr}.md`;
+
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showSuccess('已开始下载');
+
+        showSuccess('已下载Markdown文件');
     });
 }
 
