@@ -68,7 +68,7 @@ class LLMConfig:
 
     # 流式响应配置
     STREAM = True
-    TIMEOUT = 1180  # 请求超时时间（秒）
+    TIMEOUT = 600  # 请求超时时间（秒）
 
     # 系统提示词
     SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "你是一个有用的AI助手。请用中文回答用户的问题。")
@@ -143,26 +143,34 @@ def extract_text_from_file(filepath, filename):
                     max_row = ws.max_row
 
                     if max_row > 0 and max_col > 0:
-                        # 创建Markdown表格
+                        # 创建Markdown表格 - 修复这里
                         rows = []
                         for row in ws.iter_rows(min_row=1, max_row=max_row,
                                                 min_col=1, max_col=max_col,
                                                 values_only=True):
-                            # 将None转换为空字符串
-                            formatted_row = [str(cell).replace('|', '\\|') if cell is not None else ""
-                                             for cell in row]
+                            # 不要转义管道符，而是处理空值和特殊字符
+                            formatted_row = []
+                            for cell in row:
+                                if cell is None:
+                                    formatted_row.append("")
+                                else:
+                                    # 将单元格内容转换为字符串，并处理换行
+                                    cell_str = str(cell)
+                                    # 替换换行符为空格，避免破坏表格格式
+                                    cell_str = cell_str.replace('\n', ' ').replace('\r', ' ')
+                                    # 清理多余的空白字符
+                                    cell_str = ' '.join(cell_str.split())
+                                    formatted_row.append(cell_str)
                             rows.append(formatted_row)
 
                         # 生成Markdown表格
                         if rows:
+                            # 表头
+                            md_lines = ['| ' + ' | '.join(rows[0]) + ' |']
                             # 表头分隔线
                             header_separator = ['---'] * len(rows[0])
-
-                            # 构建Markdown
-                            md_lines = []
-                            md_lines.append('| ' + ' | '.join(rows[0]) + ' |')
                             md_lines.append('| ' + ' | '.join(header_separator) + ' |')
-
+                            # 数据行
                             for row in rows[1:]:
                                 md_lines.append('| ' + ' | '.join(row) + ' |')
 
