@@ -36,7 +36,7 @@ DOC_MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 documents_db = {}  # 简单的内存存储，生产环境请用数据库
 
 JWT_SECRET = "your_jwt_secret_here"
-ONLY_OFFICE_HOST = "http://localhost"
+ONLY_OFFICE_API = "http://localhost"
 
 # 创建 Flask 应用
 app = Flask(__name__, static_folder=None)
@@ -191,7 +191,7 @@ def index():
     return render_template(
         'index.html',
         config={
-            'only_office_host': ONLY_OFFICE_HOST
+            'only_office_api': ONLY_OFFICE_API
         }
     )
 
