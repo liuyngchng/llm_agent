@@ -1,34 +1,33 @@
 let currentDocEditor = null;
 let currentDocument = null;
 
-// 拖放功能
-function handleDragOver(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('uploadArea').classList.add('highlight');
-}
+// 页面加载完成
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('文档审阅系统已加载');
 
-function handleDragLeave(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('uploadArea').classList.remove('highlight');
-}
-
-function handleDrop(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('uploadArea').classList.remove('highlight');
-
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        handleFiles(files[0]);
+    // 检查OnlyOffice API是否可用
+    if (typeof DocsAPI === 'undefined') {
+        console.error('OnlyOffice API未加载，请检查Document Server是否运行');
+    } else {
+        console.log('OnlyOffice API已就绪');
     }
-}
+
+    // 绑定文件输入事件
+    const fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', handleFileSelect);
+
+    // 添加上传按钮点击事件 - 改为直接触发文件选择
+    const uploadButton = document.getElementById('uploadButton');
+    uploadButton.addEventListener('click', function() {
+        fileInput.click();
+    });
+});
 
 // 文件选择处理
 function handleFileSelect(e) {
     if (e.target.files.length > 0) {
-        handleFiles(e.target.files[0]);
+        const file = e.target.files[0];
+        handleFiles(file);
     }
 }
 
@@ -36,12 +35,14 @@ function handleFileSelect(e) {
 async function handleFiles(file) {
     const statusDiv = document.getElementById('uploadStatus');
 
+    // 清空之前的消息
+    statusDiv.innerHTML = '';
+
     // 显示上传状态
-    statusDiv.innerHTML = `
-        <div class="status-message">
-            <span class="loading"></span> 正在上传 ${file.name}...
-        </div>
-    `;
+    const statusMessage = document.createElement('div');
+    statusMessage.className = 'status-message';
+    statusMessage.innerHTML = `<span class="loading"></span> 正在上传 ${file.name}...`;
+    statusDiv.appendChild(statusMessage);
 
     try {
         // 创建FormData
@@ -58,16 +59,23 @@ async function handleFiles(file) {
 
         if (result.success) {
             // 上传成功
-            statusDiv.innerHTML = `
-                <div class="status-message status-success">
-                    ✅ 上传成功: ${result.document.original_filename}
-                </div>
-            `;
+            statusMessage.className = 'status-message status-success';
+            statusMessage.innerHTML = `✅ 上传成功: ${result.document.original_filename}`;
+
+            // 3秒后自动隐藏成功消息
+            setTimeout(() => {
+                statusMessage.style.opacity = '0';
+                setTimeout(() => {
+                    if (statusMessage.parentNode === statusDiv) {
+                        statusDiv.removeChild(statusMessage);
+                    }
+                }, 500);
+            }, 3000);
 
             // 保存文档信息
             currentDocument = result.document;
 
-            // 初始化OnlyOffice编辑器（传入完整配置）
+            // 初始化OnlyOffice编辑器
             if (result.onlyoffice_config) {
                 initDocumentEditor(result.onlyoffice_config);
             } else {
@@ -77,19 +85,13 @@ async function handleFiles(file) {
 
         } else {
             // 上传失败
-            statusDiv.innerHTML = `
-                <div class="status-message status-error">
-                    ❌ 上传失败: ${result.error}
-                </div>
-            `;
+            statusMessage.className = 'status-message status-error';
+            statusMessage.innerHTML = `❌ 上传失败: ${result.error || '未知错误'}`;
         }
 
     } catch (error) {
-        statusDiv.innerHTML = `
-            <div class="status-message status-error">
-                ❌ 上传出错: ${error.message}
-            </div>
-        `;
+        statusMessage.className = 'status-message status-error';
+        statusMessage.innerHTML = `❌ 上传出错: ${error.message}`;
         console.error('上传错误:', error);
     }
 }
@@ -187,7 +189,7 @@ function initDocumentEditor(onlyofficeConfig) {
             console.error("编辑器错误:", event.data);
             // 处理JWT错误
             if (event.data && event.data.includes('token')) {
-                alert("文档令牌错误，请重新上传文档");
+                showError("文档令牌错误，请重新上传文档");
             }
         },
         onMakeActionLink: function(event) {
@@ -389,14 +391,21 @@ function skipSuggestion(suggestionId) {
     console.log(`忽略建议 ${suggestionId}`);
 }
 
-// 页面加载完成
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('文档审阅系统已加载');
+// 显示错误消息
+function showError(message) {
+    const statusDiv = document.getElementById('uploadStatus');
+    const errorMessage = document.createElement('div');
+    errorMessage.className = 'status-message status-error';
+    errorMessage.innerHTML = `❌ ${message}`;
+    statusDiv.appendChild(errorMessage);
 
-    // 检查OnlyOffice API是否可用
-    if (typeof DocsAPI === 'undefined') {
-        console.error('OnlyOffice API未加载，请检查Document Server是否运行');
-    } else {
-        console.log('OnlyOffice API已就绪');
-    }
-});
+    // 5秒后自动隐藏
+    setTimeout(() => {
+        errorMessage.style.opacity = '0';
+        setTimeout(() => {
+            if (errorMessage.parentNode === statusDiv) {
+                statusDiv.removeChild(errorMessage);
+            }
+        }, 500);
+    }, 5000);
+}

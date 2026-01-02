@@ -204,3 +204,90 @@ body {
     font-size: 48px;
     margin-bottom: 20px;
 }
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* 文件上传按钮容器 */
+.file-upload-btn-container {
+    position: relative;
+}
+
+/* 回形针按钮 */
+.btn-attach {
+    background: #f0f2f5;
+    color: #666;
+    border: 1px solid #e0e0e0;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-attach:hover {
+    background: #e4e6e9;
+    color: #3498db;
+    border-color: #3498db;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-attach:active {
+    transform: translateY(0);
+}
+
+/* 状态容器 */
+.status-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    max-width: 300px;
+    z-index: 1000;
+}
+
+/* 移除原来的上传区域样式 */
+.upload-section {
+    display: none;
+}
+
+/* 更新空状态样式 */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #95a5a6;
+    text-align: center;
+    padding: 20px;
+}
+
+.file-types {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-top: 10px;
+    opacity: 0.8;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .btn-attach {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+    }
+
+    .status-container {
+        bottom: 10px;
+        right: 10px;
+        max-width: 250px;
+    }
+}
