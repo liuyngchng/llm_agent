@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+import sys
 
 import jwt
 import os
@@ -387,9 +388,6 @@ def get_content_type(ext):
         'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
     }
     return content_types.get(ext, 'application/octet-stream')
-
-
-
 
 
 def get_docker_host():
