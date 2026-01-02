@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>doc</title>
+<!--    本地已经启动 localhost:8080 的 onlyoffice/documentserver-->
+    <script type="text/javascript" src="http://localhost/web-apps/apps/api/documents/api.js"></script>
+    <link rel="stylesheet" href="/static/doc.css">
+</head>
+<body>
+    <div class="header">
+        <div class="logo">AI 文档审阅系统</div>
+        <div>
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                上传文档
+            </button>
+        </div>
+    </div>
+
+    <div class="upload-section">
+        <div class="upload-area" id="uploadArea"
+             onclick="document.getElementById('fileInput').click()"
+             ondrop="handleDrop(event)"
+             ondragover="handleDragOver(event)"
+             ondragleave="handleDragLeave(event)">
+            <h3>拖放文件到此处或点击上传</h3>
+            <p>支持 Word (.docx, .doc), PDF, Excel, PowerPoint 文件</p>
+            <p>最大文件大小: 50MB</p>
+        </div>
+        <input type="file" id="fileInput" accept=".docx,.doc,.txt,.pdf,.xlsx,.pptx" onchange="handleFileSelect(event)">
+
+        <div id="uploadStatus"></div>
+    </div>
+
+    <div class="review-container">
+        <div class="editor-panel">
+            <div class="panel-header">文档预览</div>
+            <div id="editorContainer">
+                <div class="empty-state">
+                    <div style="font-size: 48px; margin-bottom: 20px;">📄</div>
+                    <h3>请先上传文档</h3>
+                    <p>上传文档后，将在此处显示文档内容</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-panel">
+            <div class="panel-header">AI 修改意见</div>
+            <div class="panel-content" id="suggestionsList">
+                <div class="empty-state">
+                    <div style="font-size: 48px; margin-bottom: 20px;">🤖</div>
+                    <h3>等待文档分析</h3>
+                    <p>上传文档后，AI将自动分析并显示修改意见</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="/static/doc.js"></script>
+</body>
+</html>

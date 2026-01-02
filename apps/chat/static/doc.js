@@ -1,0 +1,402 @@
+let currentDocEditor = null;
+let currentDocument = null;
+
+// 拖放功能
+function handleDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('uploadArea').classList.add('highlight');
+}
+
+function handleDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('uploadArea').classList.remove('highlight');
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('uploadArea').classList.remove('highlight');
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFiles(files[0]);
+    }
+}
+
+// 文件选择处理
+function handleFileSelect(e) {
+    if (e.target.files.length > 0) {
+        handleFiles(e.target.files[0]);
+    }
+}
+
+// 处理上传
+async function handleFiles(file) {
+    const statusDiv = document.getElementById('uploadStatus');
+
+    // 显示上传状态
+    statusDiv.innerHTML = `
+        <div class="status-message">
+            <span class="loading"></span> 正在上传 ${file.name}...
+        </div>
+    `;
+
+    try {
+        // 创建FormData
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // 发送上传请求
+        const response = await fetch('/api/documents/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // 上传成功
+            statusDiv.innerHTML = `
+                <div class="status-message status-success">
+                    ✅ 上传成功: ${result.document.original_filename}
+                </div>
+            `;
+
+            // 保存文档信息
+            currentDocument = result.document;
+
+            // 初始化OnlyOffice编辑器（传入完整配置）
+            if (result.onlyoffice_config) {
+                initDocumentEditor(result.onlyoffice_config);
+            } else {
+                // 如果没有返回配置，使用旧方式
+                initDocumentEditorLegacy(result.document.url, result.document.key);
+            }
+
+        } else {
+            // 上传失败
+            statusDiv.innerHTML = `
+                <div class="status-message status-error">
+                    ❌ 上传失败: ${result.error}
+                </div>
+            `;
+        }
+
+    } catch (error) {
+        statusDiv.innerHTML = `
+            <div class="status-message status-error">
+                ❌ 上传出错: ${error.message}
+            </div>
+        `;
+        console.error('上传错误:', error);
+    }
+}
+
+function initDocumentEditorLegacy(documentUrl, documentKey) {
+    // 清空原来的编辑器
+    const editorContainer = document.getElementById('editorContainer');
+    editorContainer.innerHTML = '';
+
+    // 直接使用API生成令牌
+    const config = {
+        token: generateLocalJWT(documentKey, documentUrl),
+        document: {
+            fileType: "docx",
+            key: documentKey,
+            title: currentDocument.original_filename,
+            url: documentUrl,
+            permissions: {
+                edit: true,
+                comment: true,
+                download: true,
+                print: true,
+                review: true
+            }
+        },
+        documentType: "word",
+        editorConfig: {
+            mode: "edit",
+            lang: "zh-CN",
+            callbackUrl: "http://localhost:19000/callback",
+            customization: {
+                autosave: true,
+                autosaveInterval: 60,
+                comments: true,
+                compactHeader: true,
+                feedback: false,
+                help: false,
+                hideRightMenu: false,
+                toolbarNoTabs: false,
+                zoom: 100
+            },
+            user: {
+                id: "user-" + Date.now(),
+                name: "审阅者"
+            }
+        }
+    };
+
+    console.log("使用备选配置:", config);
+    currentDocEditor = new DocsAPI.DocEditor("editorContainer", config);
+}
+
+// 初始化OnlyOffice编辑器
+function initDocumentEditor(onlyofficeConfig) {
+    // 清空原来的编辑器
+    const editorContainer = document.getElementById('editorContainer');
+    editorContainer.innerHTML = '';
+
+    // 从配置中提取信息
+    const config = onlyofficeConfig;
+
+    // 设置用户信息
+    config.editorConfig.user = {
+        id: "user-" + Date.now(),
+        name: "审阅者"
+    };
+
+    // 添加更多配置项
+    config.editorConfig.customization = {
+        autosave: true,
+        autosaveInterval: 60,
+        comments: true,
+        compactHeader: true,
+        feedback: false,
+        help: false,
+        hideRightMenu: false,
+        toolbarNoTabs: false,
+        zoom: 100
+    };
+
+    config.events = {
+        onDocumentReady: function() {
+            console.log("文档已加载完成");
+            // 开始AI分析
+            analyzeDocument();
+        },
+        onDocumentStateChange: function(event) {
+            console.log("文档状态变化:", event.data);
+        },
+        onRequestSave: function(event) {
+            console.log("请求保存:", event.data);
+            saveDocument(event.data);
+        },
+        onError: function(event) {
+            console.error("编辑器错误:", event.data);
+            // 处理JWT错误
+            if (event.data && event.data.includes('token')) {
+                alert("文档令牌错误，请重新上传文档");
+            }
+        },
+        onMakeActionLink: function(event) {
+            console.log("Action link:", event.data);
+        }
+    };
+
+    // 创建新的编辑器实例
+    console.log("初始化OnlyOffice配置:", config);
+    currentDocEditor = new DocsAPI.DocEditor("editorContainer", config);
+}
+
+function generateLocalJWT(key, url) {
+    try {
+        // 这是一个简单的JWT生成示例
+        // 注意：在生产环境中，JWT应该在后端生成
+        const header = {
+            "alg": "HS256",
+            "typ": "JWT"
+        };
+
+        const payload = {
+            "document": {
+                "fileType": "docx",
+                "key": key,
+                "title": currentDocument.original_filename,
+                "url": url
+            },
+            "iss": "FlaskApp",
+            "iat": Math.floor(Date.now() / 1000)
+        };
+
+        // 将header和payload转为base64
+        const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '');
+        const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '');
+
+        // 模拟签名（实际应该在后端用secret签名）
+        const signature = "simulated_signature";
+
+        return `${encodedHeader}.${encodedPayload}.${signature}`;
+    } catch (error) {
+        console.error("生成JWT失败:", error);
+        return "";
+    }
+}
+
+// 保存文档
+async function saveDocument(data) {
+    try {
+        // 这里可以处理文档保存逻辑
+        console.log("保存文档数据:", data);
+
+        // 如果是OnlyOffice回调的保存
+        if (data.url) {
+            // 可以下载最新版本
+            const response = await fetch(data.url);
+            // 处理下载的文件...
+        }
+
+    } catch (error) {
+        console.error("保存文档失败:", error);
+    }
+}
+
+// AI分析文档
+async function analyzeDocument() {
+    const suggestionsList = document.getElementById('suggestionsList');
+    suggestionsList.innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+            <div class="loading" style="margin: 0 auto 20px;"></div>
+            <p>AI正在分析文档...</p>
+        </div>
+    `;
+
+    try {
+        // 模拟AI分析延迟
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // 模拟AI返回的数据
+        const mockSuggestions = [
+            {
+                id: 1,
+                originalText: "本项目",
+                suggestion: "建议改为'本项目旨在'，使表达更完整",
+                reason: "语言不够规范",
+                position: "第1段",
+                severity: "低"
+            },
+            {
+                id: 2,
+                originalText: "非常重大",
+                suggestion: "建议改为'至关重要'或'极为重要'",
+                reason: "用词可以更专业",
+                position: "第2段",
+                severity: "中"
+            },
+            {
+                id: 3,
+                originalText: "等等",
+                suggestion: "建议列举具体项目，或删除'等等'",
+                reason: "避免使用模糊词汇",
+                position: "列举部分",
+                severity: "低"
+            },
+            {
+                id: 4,
+                originalText: "尽快完成",
+                suggestion: "建议明确具体时间，如'在本月底前完成'",
+                reason: "时间要求不够明确",
+                position: "时间安排部分",
+                severity: "高"
+            }
+        ];
+
+        // 显示AI意见
+        displaySuggestions(mockSuggestions);
+
+    } catch (error) {
+        console.error("AI分析失败:", error);
+        suggestionsList.innerHTML = `
+            <div class="status-message status-error">
+                ❌ AI分析失败: ${error.message}
+            </div>
+        `;
+    }
+}
+
+// 显示AI意见
+function displaySuggestions(suggestions) {
+    const suggestionsList = document.getElementById('suggestionsList');
+
+    if (suggestions.length === 0) {
+        suggestionsList.innerHTML = `
+            <div class="empty-state">
+                <div style="font-size: 48px; margin-bottom: 20px;">✅</div>
+                <h3>文档质量良好</h3>
+                <p>AI未发现需要修改的问题</p>
+            </div>
+        `;
+        return;
+    }
+
+    suggestionsList.innerHTML = suggestions.map(suggestion => `
+        <div class="ai-suggestion" data-id="${suggestion.id}">
+            <div class="suggestion-title">
+                ${getSeverityIcon(suggestion.severity)}
+                问题 ${suggestion.id}: ${suggestion.position}
+            </div>
+            <div class="suggestion-text">
+                <strong>原文：</strong>${suggestion.originalText}
+            </div>
+            <div class="suggestion-text">
+                <strong>建议：</strong>${suggestion.suggestion}
+            </div>
+            <div class="suggestion-text">
+                <strong>原因：</strong>${suggestion.reason}
+            </div>
+            <div class="action-buttons">
+                <button class="accept-btn" onclick="acceptSuggestion(${suggestion.id})">
+                    接受建议
+                </button>
+                <button class="skip-btn" onclick="skipSuggestion(${suggestion.id})">
+                    忽略
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 获取严重性图标
+function getSeverityIcon(severity) {
+    const icons = {
+        '高': '🔴',
+        '中': '🟡',
+        '低': '🟢'
+    };
+    return icons[severity] || '⚪';
+}
+
+// 接受建议
+function acceptSuggestion(suggestionId) {
+    const suggestionElement = document.querySelector(`[data-id="${suggestionId}"]`);
+    suggestionElement.style.opacity = '0.5';
+
+    // 这里应该调用API应用修改到文档
+    console.log(`接受建议 ${suggestionId}`);
+
+    // 模拟修改文档
+    if (currentDocEditor) {
+        // 在实际应用中，这里应该调用OnlyOffice API修改文档
+        alert(`建议 ${suggestionId} 已接受，将在文档中应用修改`);
+    }
+}
+
+// 忽略建议
+function skipSuggestion(suggestionId) {
+    const suggestionElement = document.querySelector(`[data-id="${suggestionId}"]`);
+    suggestionElement.style.display = 'none';
+    console.log(`忽略建议 ${suggestionId}`);
+}
+
+// 页面加载完成
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('文档审阅系统已加载');
+
+    // 检查OnlyOffice API是否可用
+    if (typeof DocsAPI === 'undefined') {
+        console.error('OnlyOffice API未加载，请检查Document Server是否运行');
+    } else {
+        console.log('OnlyOffice API已就绪');
+    }
+});
