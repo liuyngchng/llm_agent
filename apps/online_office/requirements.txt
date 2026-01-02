@@ -1,0 +1,4 @@
+gunicorn
+flask
+concurrent-log-handler
+pyjwt

@@ -38,7 +38,7 @@ JWT_SECRET = "your_jwt_secret_here"
 ONLY_OFFICE_HOST = "http://localhost"
 
 # 创建 Flask 应用
-app = Flask(__name__)
+app = Flask(__name__, static_folder=None)
 
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
@@ -188,7 +188,7 @@ def index():
     """渲染主页面"""
     logger.info("访问首页")
     return render_template(
-        'doc.html',
+        'index.html',
         config={
             'only_office_host': ONLY_OFFICE_HOST
         }
@@ -534,7 +534,7 @@ if __name__ == '__main__':
 
     logger.info("启动Flask应用...")
     app.run(
-        debug=True,
+        debug=False,
         host='0.0.0.0',
         port=19000,
         threaded=True

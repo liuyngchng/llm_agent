@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 import logging.config
 import logging
 
-from apps.chat.doc_util import LLMConfig, generate_stream_response, allowed_file, MAX_FILE_SIZE, ALLOWED_EXTENSIONS, \
+from apps.chat.chat_util import LLMConfig, generate_stream_response, allowed_file, MAX_FILE_SIZE, ALLOWED_EXTENSIONS, \
     extract_text_from_file
 from common.const import UPLOAD_FOLDER
 
@@ -25,7 +25,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 print(f"上传文件夹路径: {UPLOAD_FOLDER}")
 
 # 创建 Flask 应用
-app = Flask(__name__)
+app = Flask(__name__, static_folder=None)
 
 # 配置模板文件夹路径
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
