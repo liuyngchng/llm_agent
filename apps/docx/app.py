@@ -168,10 +168,6 @@ def register_routes(app):
         task_list = docx_meta_util.get_user_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
 
-
-
-
-
     @app.route('/docx/generate/outline', methods=['POST'])
     def generate_outline():
         """
@@ -499,6 +495,45 @@ def register_routes(app):
         file_info[0]['elapsed_time'] = time.time() - task_id
         # logger.info(f"get_doc_process_info, {info}")
         return json.dumps(file_info, ensure_ascii=False), 200
+
+
+
+    @app.post("/analyze/doc")
+    async def analyze_document(file_content: str, standards: str):
+        doc = Document(file_content)
+        structured_text = []
+        for i, paragraph in enumerate(doc.paragraphs):
+            if paragraph.text.strip():
+                structured_text.append({
+                    "index": i,
+                    "text": paragraph.text,
+                    "style": paragraph.style.name
+                })
+
+        # 2. 调用大模型API
+        prompt = f"""
+        请审阅以下文档，根据审核标准提供修改意见。
+        审核标准：{standards}
+
+        文档内容：
+        {json.dumps(structured_text, ensure_ascii=False)}
+
+        请以JSON格式返回，包含：
+        - original_text: 原文
+        - suggested_text: 建议修改后的文本
+        - paragraph_index: 段落索引
+        - char_start: 字符起始位置（在段落内）
+        - char_end: 字符结束位置
+        - reason: 修改理由
+        """
+        response = ""
+        # response = openai.ChatCompletion.create(
+        #     model="gpt-4",
+        #     messages=[{"role": "user", "content": prompt}],
+        #     response_format={"type": "json_object"}
+        # )
+
+        return json.loads(response.choices[0].message.content)
 
 def save_doc_args(uid: int, task_id: int, doc_type: str, doc_title: str,  doc_outline: str,
                   keywords: str, input_file_path: str,  vbd_id: int, is_include_para_txt: bool):
