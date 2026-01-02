@@ -144,63 +144,45 @@ function initDocumentEditorLegacy(documentUrl, documentKey) {
     currentDocEditor = new DocsAPI.DocEditor("editorContainer", config);
 }
 
-// 初始化OnlyOffice编辑器
+// 初始化OnlyOffice编辑器 - 简化版
 function initDocumentEditor(onlyofficeConfig) {
     // 清空原来的编辑器
     const editorContainer = document.getElementById('editorContainer');
     editorContainer.innerHTML = '';
 
-    // 从配置中提取信息
+    console.log("收到的OnlyOffice配置:", onlyofficeConfig);
+
+    // 直接使用后端返回的完整配置
     const config = onlyofficeConfig;
 
-    // 设置用户信息
-    config.editorConfig.user = {
-        id: "user-" + Date.now(),
-        name: "审阅者"
-    };
-
-    // 添加更多配置项
-    config.editorConfig.customization = {
-        autosave: true,
-        autosaveInterval: 60,
-        comments: true,
-        compactHeader: true,
-        feedback: false,
-        help: false,
-        hideRightMenu: false,
-        toolbarNoTabs: false,
-        zoom: 100
-    };
-
+    // 添加事件监听
     config.events = {
         onDocumentReady: function() {
             console.log("文档已加载完成");
-            // 开始AI分析
             analyzeDocument();
-        },
-        onDocumentStateChange: function(event) {
-            console.log("文档状态变化:", event.data);
-        },
-        onRequestSave: function(event) {
-            console.log("请求保存:", event.data);
-            saveDocument(event.data);
         },
         onError: function(event) {
             console.error("编辑器错误:", event.data);
-            // 处理JWT错误
-            if (event.data && event.data.includes('token')) {
-                showError("文档令牌错误，请重新上传文档");
-            }
-        },
-        onMakeActionLink: function(event) {
-            console.log("Action link:", event.data);
+            showError("文档加载失败: " + (event.data.errorDescription || event.data));
         }
     };
 
-    // 创建新的编辑器实例
-    console.log("初始化OnlyOffice配置:", config);
-    currentDocEditor = new DocsAPI.DocEditor("editorContainer", config);
+    console.log("最终配置:", config);
+
+    // 检查token是否存在
+    if (!config.token) {
+        showError("JWT令牌缺失，请检查服务器配置");
+        return;
+    }
+
+    try {
+        currentDocEditor = new DocsAPI.DocEditor("editorContainer", config);
+    } catch (error) {
+        console.error("初始化编辑器失败:", error);
+        showError("初始化编辑器失败: " + error.message);
+    }
 }
+
 
 function generateLocalJWT(key, url) {
     try {

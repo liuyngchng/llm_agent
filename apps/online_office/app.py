@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
-import sys
 
-import jwt
+import json
+import sys
 import os
+import jwt
 import logging.config
 
 from dotenv import load_dotenv
 from flask import Flask, render_template, send_from_directory, abort, request, jsonify
 
+from apps.online_office.office_util import generate_jwt_token, JWT_SECRET, get_content_type, generate_onlyoffice_config, \
+    get_docker_host, get_file_type
 from common.const import UPLOAD_FOLDER
 
 import uuid
 import shutil
 from datetime import datetime
-from pathlib import Path
 
 # 在已有配置后添加文档相关的配置
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -35,7 +37,7 @@ DOC_MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 # 文档数据结构
 documents_db = {}  # 简单的内存存储，生产环境请用数据库
 
-JWT_SECRET = "your_jwt_secret_here"
+
 ONLY_OFFICE_API = "http://localhost"
 
 # 创建 Flask 应用
@@ -59,104 +61,6 @@ load_dotenv()
 # 确保上传文件夹存在
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 print(f"上传文件夹路径: {UPLOAD_FOLDER}")
-
-import time
-import json
-
-
-def generate_jwt_token(payload):
-    """生成JWT令牌"""
-    # 添加必要的声明
-    payload_with_claims = {
-        "iss": "FlaskApp",  # 发行人
-        "iat": int(time.time()),  # 签发时间
-        **payload
-    }
-
-    # 生成JWT
-    token = jwt.encode(
-        payload_with_claims,
-        JWT_SECRET,
-        algorithm='HS256'
-    )
-
-    # PyJWT返回的是bytes，需要转为字符串
-    if isinstance(token, bytes):
-        token = token.decode('utf-8')
-
-    return token
-
-
-def generate_onlyoffice_config(document_info, action="view"):
-    """生成OnlyOffice配置"""
-    doc_key = document_info['key']
-    doc_url = document_info['url']
-    filename = document_info['original_filename']
-    file_ext = document_info.get('file_ext', 'docx')
-
-    # 确定文件类型
-    file_type = file_ext if file_ext in ['docx', 'doc'] else 'docx'
-    doc_type = "word"
-
-    if file_ext in ['xlsx', 'xls']:
-        doc_type = "cell"
-    elif file_ext in ['pptx', 'ppt']:
-        doc_type = "slide"
-
-    # 获取Docker可访问的主机地址
-    docker_host = get_docker_host()
-    logger.info(f"使用Docker主机地址: {docker_host}")
-    callback_url = f"http://{docker_host}:19000/callback"
-    logger.info(f"回调URL（Docker）: {callback_url}")
-    # 构建配置对象
-    config = {
-        "document": {
-            "fileType": file_type,
-            "key": doc_key,
-            "title": filename,
-            "url": doc_url,
-            "permissions": {
-                "edit": True,
-                "comment": True,
-                "download": True,
-                "print": True,
-                "review": True,
-                "fillForms": True,
-                "modifyFilter": True,
-                "modifyContentControl": True
-            }
-        },
-        "documentType": doc_type,
-        "editorConfig": {
-            "mode": "edit" if action == "edit" else "view",
-            "lang": "zh-CN",
-            "callbackUrl": callback_url,
-            "customization": {
-                "autosave": False,  # 先禁用自动保存
-                "comments": True,
-                "compactHeader": True,
-                "feedback": False,
-                "help": False,
-                "hideRightMenu": False,
-                "toolbarNoTabs": False,
-                "zoom": 100
-            },
-            "user": {
-                "id": "anonymous",
-                "name": "匿名用户"
-            }
-        }
-    }
-
-    # 生成JWT令牌（如果需要）
-    try:
-        token = generate_jwt_token(config)
-        config["token"] = token
-    except:
-        # 如果JWT生成失败，就使用无token模式
-        logger.warning("JWT生成失败，使用无token模式")
-
-    return config
 
 @app.route('/static/<path:file_name>')
 def get_static_file(file_name):
@@ -262,7 +166,6 @@ def upload_document():
         }
 
         documents_db[doc_id] = document_info
-        # 生成OnlyOffice配置（包含JWT）
         onlyoffice_config = generate_onlyoffice_config(document_info)
         logger.info(f"生成的OnlyOffice配置: {json.dumps(onlyoffice_config, indent=2)}")
 
@@ -277,7 +180,7 @@ def upload_document():
                 'key': document_info['key'],
                 'file_ext': file_ext
             },
-            'onlyoffice_config': onlyoffice_config
+            'onlyoffice_config': onlyoffice_config  # 返回完整配置
         })
 
     except Exception as e:
@@ -363,56 +266,6 @@ def debug_jwt():
             'error': str(e),
             'token': token
         })
-
-
-def get_file_type(ext):
-    """根据扩展名获取文件类型"""
-    doc_types = {
-        'docx': 'word', 'doc': 'word',
-        'txt': 'text',
-        'pdf': 'pdf',
-        'xlsx': 'cell', 'xls': 'cell',
-        'pptx': 'slide', 'ppt': 'slide'
-    }
-    return doc_types.get(ext, 'word')
-
-
-def get_content_type(ext):
-    """获取正确的Content-Type"""
-    content_types = {
-        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'doc': 'application/msword',
-        'txt': 'text/plain',
-        'pdf': 'application/pdf',
-        'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-    }
-    return content_types.get(ext, 'application/octet-stream')
-
-
-def get_docker_host():
-    """获取Docker容器可以访问的宿主机地址"""
-    # 在宿主机运行时，返回 host.docker.internal
-    # 这样OnlyOffice容器就能访问到宿主机服务
-
-    # 也可以尝试获取宿主机IP
-    import socket
-    try:
-        # 获取局域网IP
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(('8.8.8.8', 80))
-        host_ip = s.getsockname()[0]
-        s.close()
-        logger.info(f"检测到局域网IP: {host_ip}")
-
-        # 返回Docker能访问的地址
-        # 在容器内：host.docker.internal
-        # 在宿主机：自己的IP
-        return "127.0.0.1"
-
-    except Exception as e:
-        print(f"获取IP失败，使用默认值: {e}")
-        return "127.0.0.1"
 
 
 @app.route('/callback', methods=['POST'])
@@ -513,23 +366,7 @@ def save_document(doc_id):
 
 if __name__ == '__main__':
 
-    # 修改导入部分
-    try:
-        import jwt  # PyJWT
-
-        JWT_AVAILABLE = True
-        logger.info("✓ PyJWT 已安装")
-    except ImportError:
-        logger.warning("⚠ PyJWT 未安装，需要手动安装")
-        try:
-            # 尝试其他可能的导入方式
-            import PyJWT as jwt
-
-            JWT_AVAILABLE = True
-        except ImportError:
-            JWT_AVAILABLE = False
-            logger.warning("JWT库未安装，将禁用JWT功能")
-
+    JWT_AVAILABLE = True
     logger.info("启动Flask应用...")
     app.run(
         debug=False,

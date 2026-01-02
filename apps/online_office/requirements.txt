@@ -2,3 +2,4 @@ gunicorn
 flask
 concurrent-log-handler
 pyjwt
+python-dotenv
