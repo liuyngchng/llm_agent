@@ -22,7 +22,7 @@
 
 ![arch.png](./arch.png)
 
-<div align="center"><b>图 2-1 系统结构示意图</b></div>
+<div align="center"><b>图 2-1 系统架构示意图</b></div>
 
 ### 2.2 核心模块
 
