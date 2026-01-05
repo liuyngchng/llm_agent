@@ -34,6 +34,8 @@ const fileInput = document.getElementById('fileInput');
 const fileList = document.getElementById('fileList');
 const fileListContainer = document.getElementById('fileListContainer');
 const fileCountBadge = document.getElementById('fileCountBadge');
+const uid = document.getElementById('uid');
+const t = document.getElementById('t');
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
@@ -420,8 +422,11 @@ async function streamAIResponse(userMessage, messageId) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+            uid: uid.value,
+            t: t.value,
             message: userMessage,
             history: chatHistory.slice(-10) // 发送最近10条历史
+
         }),
         signal: currentStreamController.signal
     });

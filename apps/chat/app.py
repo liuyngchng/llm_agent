@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+import time
 
-from flask import Flask, render_template, request, Response, jsonify, send_from_directory, abort
+from flask import Flask, request, Response, jsonify, send_from_directory, abort, redirect, url_for
 
 import os
 import sys
@@ -13,12 +14,16 @@ import logging
 
 from apps.chat.chat_util import LLMConfig, generate_stream_response, allowed_file, MAX_FILE_SIZE, ALLOWED_EXTENSIONS, \
     extract_text_from_file
-from common.const import UPLOAD_FOLDER
-
-
+from apps.chat2db.app import illegal_access
+from common import my_enums
+from common.bp_auth import auth_bp, get_client_ip, auth_info
+from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT
+from common.my_enums import AppType
+from common.sys_init import init_yml_cfg
 
 # 加载环境变量
 load_dotenv()
+my_cfg = init_yml_cfg()
 
 # 确保上传文件夹存在
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -26,6 +31,11 @@ print(f"上传文件夹路径: {UPLOAD_FOLDER}")
 
 # 创建 Flask 应用
 app = Flask(__name__, static_folder=None)
+app.config['CFG'] = {}
+app.config['CFG'] = my_cfg
+app.config['APP_SOURCE'] = my_enums.AppType.CHAT.name.lower()
+
+app.register_blueprint(auth_bp)
 
 # 配置模板文件夹路径
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -72,14 +82,18 @@ def get_webfonts_file(file_name):
     font_file_name = f"webfonts/{file_name}"
     return get_static_file(font_file_name)
 
-
 @app.route('/')
-def index():
-    """渲染主页面"""
-    logger.info("访问首页")
-    return render_template('index.html', config={
-        'temperature': LLMConfig.TEMPERATURE
-    })
+def app_home():
+    logger.info("redirect_auth_login_index")
+    return redirect(url_for('auth.login_index', app_source=AppType.CHAT.name.lower()))
+
+# @app.route('/')
+# def index():
+#     """渲染主页面"""
+#     logger.info("访问首页")
+#     return render_template('index.html', config={
+#         'temperature': LLMConfig.TEMPERATURE
+#     })
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -89,7 +103,14 @@ def chat():
         user_message = data.get('message', '').strip()
         custom_max_tokens = data.get('max_tokens')
         history_length = len(data.get('history', []))
-
+        t = data.get('t', 0)
+        uid = int(data.get('uid', ''))
+        session_key = f"{uid}_{get_client_ip()}"
+        if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
+            return Response(
+                illegal_access(uid),
+                mimetype='text/event-stream; charset=utf-8'
+            )
         logger.info(f"收到聊天请求，消息长度: {len(user_message)}, 历史长度: {history_length}")
         logger.info(f"请求的max_tokens: {custom_max_tokens}")
         logger.info(f"默认MAX_TOKENS: {LLMConfig.MAX_TOKENS}")
@@ -206,54 +227,6 @@ def get_config():
 def health_check():
     """健康检查"""
     return jsonify({'status': 'healthy', 'service': 'AI Chat Assistant'})
-
-
-
-@app.route('/callback', methods=['POST'])
-def onlyoffice_callback():
-    """处理OnlyOffice的回调"""
-    data = request.json
-
-    # 验证JWT令牌
-    try:
-        decoded = jwt.decode(data['token'], JWT_SECRET, algorithms=['HS256'])
-    except:
-        return jsonify({"error": "Invalid token"}), 401
-
-    # 处理不同的事件
-    event_type = data.get('status', 0)
-
-    if event_type == 2:  # 文档已保存
-        # 获取文档的最新版本
-        download_url = data['url']
-        # 下载文档并存储
-        # ...
-        return jsonify({"error": 0})
-
-    elif event_type == 6:  # 用户正在编辑
-        # 可以记录用户活动
-        user_id = data.get('users', [])[0] if data.get('users') else None
-
-    return jsonify({"error": 0})
-
-
-@app.route('/analyze/doc', methods=['POST'])
-def ai_analyze():
-    """AI分析文档"""
-    data = request.json
-    document_content = data['content']
-    standards = data['standards']
-
-    # 调用AI服务
-    ai_suggestions = {}
-    # ai_suggestions = get_ai_suggestion(document_content, standards)
-
-    # 返回结构化意见
-    return jsonify({
-        "suggestions": ai_suggestions,
-        "document_id": data.get('document_id')
-    })
-
 
 if __name__ == '__main__':
     # 检查API密钥
