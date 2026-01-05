@@ -32,7 +32,7 @@ class VdbMeta:
     @staticmethod
     def get_vdb_info_by_id(vdb_id: int):
         if not vdb_id:
-            raise RuntimeError("uid_null_err")
+            return None
         sql = f"select * from vdb_info where id = {vdb_id} limit 1"
         logger.info(f"get_vdb_info_by_id_sql, {sql}")
         my_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
