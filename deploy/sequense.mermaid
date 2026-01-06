@@ -1,0 +1,37 @@
+sequenceDiagram
+    participant U as 用户
+    participant W as Web界面
+    participant AG as API网关
+    participant AS as 智能体调度服务
+    participant WM as 工作流引擎
+    participant KB as 知识库检索<br>(ES+向量)
+    participant T as 工具集
+    participant LLM as LLM服务
+    participant AM as 审计监控
+
+    U->>W: 提问/发起任务
+    W->>AG: 请求
+    AG->>AG: 认证/限流/路由
+    AG->>AS: 调用智能体
+    AS->>WM: 加载并执行工作流
+
+    Note over WM, LLM: 智能体推理循环开始
+    loop 工作流步骤
+        WM->>KB: 1. 检索相关知识
+        KB-->>WM: 返回片段与引用
+        WM->>T: 2. 条件判断/调用工具<br>(计算/查询API)
+        T-->>WM: 返回工具结果
+        WM->>LLM: 3. 整合信息，生成回复/下一步指令
+        LLM-->>WM: 返回AI回复
+    end
+    Note over WM, LLM: 智能体推理循环结束
+
+    WM->>AS: 返回最终结果
+    AS->>AG: 返回
+    AG->>W: 返回
+    W->>U: 展示回答/结果
+
+    Note over AS, AM: 全链路可观测
+    AS->>AM: 记录审计日志
+    WM->>AM: 上报执行跟踪
+    LLM->>AM: 记录Token消耗与延迟
