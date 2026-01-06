@@ -1,5 +1,5 @@
 #!/bin/bash
-APP='chat'
+APP='chat2kb'
 CONTAINER="${APP}_app"
 APP_DIR="apps/${APP}"
 CURRENT_DIR=$(pwd)
