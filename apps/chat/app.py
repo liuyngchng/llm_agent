@@ -14,7 +14,6 @@ import logging
 
 from apps.chat.chat_util import LLMConfig, generate_stream_response, allowed_file, MAX_FILE_SIZE, ALLOWED_EXTENSIONS, \
     extract_text_from_file
-from apps.chat2db.app import illegal_access
 from common import my_enums
 from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT
@@ -107,10 +106,7 @@ def chat():
         uid = int(data.get('uid', ''))
         session_key = f"{uid}_{get_client_ip()}"
         if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
-            return Response(
-                illegal_access(uid),
-                mimetype='text/event-stream; charset=utf-8'
-            )
+            raise RuntimeError("illegal_access")
         logger.info(f"收到聊天请求，消息长度: {len(user_message)}, 历史长度: {history_length}")
         logger.info(f"请求的max_tokens: {custom_max_tokens}")
         logger.info(f"默认MAX_TOKENS: {LLMConfig.MAX_TOKENS}")
