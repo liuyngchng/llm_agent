@@ -21,7 +21,6 @@ echo "正在创建 ${CONTAINER} 容器"
 docker run -dit --name ${CONTAINER}  \
   --security-opt seccomp=unconfined \
   -v ${CURRENT_DIR}:/opt/app \
-  -v /data/nltk_data:/usr/share/nltk_data \
   -p 20000:19000 \
   -e APP_NAME=${APP} \
   llm_docx:1.1
