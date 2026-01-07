@@ -65,7 +65,7 @@ class PaperReviewer:
 
     def review_single_section(self, section_title: str, section_content: str, vdb_dir: str, max_retries: int = 3) -> Dict:
         """
-        评审单个章节，带重试机制
+        评审单个章节
         """
         for attempt in range(max_retries):
             try:
@@ -93,6 +93,15 @@ class PaperReviewer:
                 add_output_token_by_uid(self.uid, output_tokens)
                 # 验证结果格式
                 PaperReviewer._validate_review_result(result)
+                if result.get('issues') and len(result['issues']) > 0:
+                    modification_examples = self.generate_modification_examples(
+                        section_content,
+                        result['issues'],
+                        self.criteria_markdown_data[:2000]  # 限制长度
+                    )
+                    if modification_examples:
+                        result['modification_examples'] = modification_examples
+
                 return result
 
             except Exception as e:
@@ -306,8 +315,10 @@ class PaperReviewer:
 
 ## 各章节评审结果
 """
-
+            # 收集所有修改示例
+            all_modification_examples = []
             for section_result in section_results:
+                # 基本章节信息
                 report_content += f"""
 ### {section_result['section_title']}
 - **评分**: {section_result['score']}/100
@@ -317,17 +328,63 @@ class PaperReviewer:
 {chr(10).join(f"  - {strength}" for strength in section_result['strengths'])}
 
 #### 问题
-{chr(10).join(f"  - {issue}" for issue in section_result['issues'])}
-
-#### 改进建议
-{chr(10).join(f"  - {suggestion}" for suggestion in section_result['suggestions'])}
-
 """
+                # 格式化问题列表
+                for issue in section_result['issues']:
+                    if isinstance(issue, dict):
+                        report_content += f"  - **{issue.get('location', '未知位置')}**: {issue.get('description', issue)}\n"
+                        if issue.get('severity'):
+                            report_content += f"    - 严重程度: {issue['severity']}\n"
+                    else:
+                        report_content += f"  - {issue}\n"
+
+                report_content += "\n#### 改进建议\n"
+
+                # 格式化建议列表
+                for suggestion in section_result['suggestions']:
+                    if isinstance(suggestion, dict):
+                        report_content += f"  - **建议**: {suggestion.get('recommendation', suggestion)}\n"
+                        if suggestion.get('reason'):
+                            report_content += f"    - 理由: {suggestion['reason']}\n"
+                        if suggestion.get('example_before') and suggestion.get('example_after'):
+                            report_content += f"    - 修改前: {suggestion['example_before']}\n"
+                            report_content += f"    - 修改后: {suggestion['example_after']}\n"
+                    else:
+                        report_content += f"  - {suggestion}\n"
+
+                # 收集具体修改示例
+                if 'modification_examples' in section_result:
+                    for example in section_result['modification_examples']:
+                        if isinstance(example, dict):
+                            all_modification_examples.append({
+                                'section': section_result['section_title'],
+                                'example': example
+                            })
+                            # 在章节中显示示例
+                            report_content += f"\n#### 具体修改示例\n"
+                            report_content += f"**原文**: {example.get('original_text', '')}\n"
+                            report_content += f"**修改建议**: {example.get('modified_text', '')}\n"
+                            report_content += f"**说明**: {example.get('explanation', '')}\n\n"
+
+            # 添加专门的修改示例部分
+            if all_modification_examples:
+                report_content += "\n## 📝 具体修改示例汇总\n\n"
+                report_content += "以下为各章节的具体修改示例，可直接应用于文档修改：\n\n"
+
+                for i, item in enumerate(all_modification_examples, 1):
+                    example = item['example']
+                    report_content += f"### 示例 {i}: {item['section']}\n\n"
+                    report_content += f"**问题位置**: {example.get('location', '该章节')}\n\n"
+                    report_content += f"**原文**:\n```\n{example.get('original_text', '')}\n```\n\n"
+                    report_content += f"**修改建议**:\n```\n{example.get('modified_text', '')}\n```\n\n"
+                    report_content += f"**修改说明**: {example.get('explanation', '')}\n\n"
+                    report_content += "---\n\n"
 
             report_content += """
-## 评审说明
-本评审报告由AI系统生成，建议结合专家人工评审最终确定。
-"""
+    ## 评审说明
+    本评审报告由AI系统生成，包含具体的修改示例，可直接参考进行文档修订。
+    建议结合专家人工评审最终确定。
+    """
 
             return report_content
 
@@ -646,6 +703,70 @@ class PaperReviewer:
 
         return ""
 
+    def generate_modification_examples(self, section_content: str, issues: List, criteria: str) -> List[Dict]:
+        """
+        针对问题生成具体的修改示例
+        """
+        if not issues:
+            return []
+
+        examples = []
+        for issue in issues:
+            if isinstance(issue, dict):
+                issue_desc = issue.get('description', '')
+                issue_loc = issue.get('location', '')
+            else:
+                issue_desc = issue
+                issue_loc = ''
+
+            # 调用LLM生成修改示例
+            example = self._generate_single_modification_example(
+                section_content, issue_desc, issue_loc, criteria
+            )
+            if example:
+                examples.append(example)
+
+        return examples
+
+    @staticmethod
+    def _generate_single_modification_example(self, content: str, issue: str, location: str, criteria: str) -> Dict:
+        """
+        生成单个问题的修改示例
+        """
+        try:
+            template_name = "modification_example_msg"
+            template = get_usr_prompt_template(template_name, self.sys_cfg)
+            if not template:
+                info = f"未找到修改示例模板 {template_name}，使用默认处理"
+                logger.warning(info)
+                raise RuntimeError(info)
+
+            prompt = template.format(
+                review_type=self.review_type,
+                review_topic=self.review_topic,
+                original_content=content[:2000],  # 限制长度
+                issue_description=issue,
+                issue_location=location,
+                criteria_requirement=criteria[:1000]
+            )
+
+            result = self.call_llm_api(prompt)
+
+            # 验证结果格式
+            if isinstance(result, dict) and 'original_excerpt' in result:
+                return {
+                    'original_text': result['original_excerpt'],
+                    'modified_text': result.get('modified_version', ''),
+                    'explanation': result.get('modification_rationale', ''),
+                    'standard': result.get('applicable_standard', ''),
+                    'location': location
+                }
+
+        except Exception as e:
+            logger.error(f"生成修改示例失败: {str(e)}")
+
+        return None
+
 
     @staticmethod
     def _is_valid_filled_report(report: str) -> bool:
@@ -751,6 +872,9 @@ def get_reference_from_vdb(keywords: str, vdb_dir: str, llm_cfg: dict) -> str:
     except Exception as exp:
         logger.exception(f"get_references_from_vdb_failed, {keywords}")
     return reference
+
+
+
 
 
 if __name__ == '__main__':
