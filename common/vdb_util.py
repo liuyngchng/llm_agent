@@ -52,11 +52,11 @@ class RemoteChromaEmbedder(EmbeddingFunction):
         batch_size = 32
         embeddings = []
         for i in range(0, len(doc), batch_size):
-            batch = doc[i:i+batch_size]
-            resp = self.client.embeddings.create(
-                model=self.model_name,
-                input=batch
-            )
+            batch = doc[i:i + batch_size]
+            resp = self.client.embeddings.create(model=self.model_name, input=batch)
+            if i == 0 and resp.data:
+                dimension = len(resp.data[0].embedding)
+                logger.info(f"{self.model_name}, embedding_model_dimension, {dimension}")
             embeddings.extend([
                 np.array(item.embedding, dtype=np.float32)
                 for item in resp.data

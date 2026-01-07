@@ -37,7 +37,8 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.normpath(os.path.join(current_dir, "..", "..", "..", my_cfg["api"]["embedding_model_name"]))
 print(f"尝试加载模型路径: {model_path}")  # 调试信息
 model = SentenceTransformer(model_path, device='cpu')
-print(f"模型加载完毕, {model_path}")  # 调试信息
+model_dimension = model.get_sentence_embedding_dimension()
+print(f"模型加载完毕, {model_path}, 向量维度: {model_dimension}")  # 调试信息
 # # 明确指定使用 CPU
 # model = SentenceTransformer('your_model_name', device='cpu')
 # # 或明确指定使用 GPU
