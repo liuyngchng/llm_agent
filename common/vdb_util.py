@@ -449,7 +449,7 @@ def search_txt(txt: str, vector_db_dir: str, score_threshold: float,
     try:
         search_results = search(txt, score_threshold, vector_db_dir, llm_cfg, txt_num)
     except Exception as e:
-        logger.exception(f"search_txt_err, embedding uri: {llm_cfg['embedding_uri']}, err={e}", exc_info=True)
+        logger.exception(f"search_txt_err, embedding uri: {llm_cfg['embedding_api_uri']}, err={e}", exc_info=True)
 
     all_txt = ""
     if not search_results:
