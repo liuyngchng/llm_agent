@@ -227,6 +227,7 @@ class PaperReviewer:
                     'risk_level': result.get('risk_level', '未知')
                 }
                 section_summaries.append(summary)
+            logger.debug(f"section_summaries {section_summaries}")
             template_name = "paper_review_msg"
             template = get_usr_prompt_template(template_name, self.sys_cfg)
             if not template:
