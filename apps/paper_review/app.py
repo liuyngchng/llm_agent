@@ -20,7 +20,7 @@ from apps.paper_review.paper_reviewer import generate_review_report
 from common import docx_meta_util
 from common.bp_vdb import vdb_bp, clean_expired_vdb_file_task, process_vdb_file_task
 from common.cfg_util import save_file_info, get_file_info
-from common.docx_md_util import convert_docx_to_md, get_md_file_content
+from common.docx_md_util import convert_docx_to_md, get_md_file_content, convert_md_to_docx
 from common import my_enums, statistic_util
 from common.docx_meta_util import get_doc_info
 from common.html_util import convert_md_to_html_with_css, get_html_ctx_from_md, convert_markdown_to_html
@@ -403,17 +403,16 @@ def register_routes(app):
         output_file_type = file_path_info[0]['output_file_type']
         output_file_suffix = ".docx"
         mimetype = DOCX_MIME_TYPE
-        if FileType.XLSX.value == output_file_type:
-            output_file_suffix = ".xlsx"
-            mimetype = XLSX_MIME_TYPE
+        # if FileType.XLSX.value == output_file_type:
+        #     output_file_suffix = ".xlsx"
+        #     mimetype = XLSX_MIME_TYPE
         # 分离目录和文件名
-        dir_path, filename = os.path.split(absolute_path)
+        # dir_path, filename = os.path.split(absolute_path)
         # 分离文件名和扩展名
-        name, _ = os.path.splitext(filename)
+        # name, _ = os.path.splitext(filename)
         # 构建新的文件路径
-        output_file_path = str(os.path.join(dir_path, name + output_file_suffix))
-
-        print(output_file_path)
+        # md_file_full_path = str(os.path.join(dir_path, name + output_file_suffix))
+        output_file_path = convert_md_to_docx(absolute_path, True, OUTPUT_DIR)
         logger.info(f"文件检查 - 绝对路径: {output_file_path}")
         if not os.path.exists(output_file_path):
             logger.error(f"文件不存在: {output_file_path}")
