@@ -882,16 +882,15 @@ def generate_review_report(uid: int, task_id: int, doc_type: str, review_topic: 
     """
     logger.info(f"{uid}, {task_id},doc_type: {doc_type}, doc_title: {review_topic}, "
                 f"criteria_file: {criteria_file}, review_file: {paper_file}")
+    start_time = time.time()
     try:
         update_process_info(uid, task_id, "开始解析评审标准...")
         # 获取评审标准的文件内容，格式为 Markdown
         criteria_markdown_data = get_md_file_content(criteria_file)
         update_process_info(uid, task_id, "开始分析评审材料...")
-
         # 调用AI评审生成
         review_result = start_ai_review(uid, task_id, doc_type, review_topic,
             criteria_markdown_data, paper_file, criteria_file_type, sys_cfg)
-
         doc_info = get_doc_info(task_id)
         if not doc_info or not doc_info[0]:
             info = f"no_doc_info_found_for_task_id ,{task_id}"
@@ -902,12 +901,37 @@ def generate_review_report(uid: int, task_id: int, doc_type: str, review_topic: 
             output_file = convert_md_to_xlsx(output_md_file, True)
         else:
             output_file = convert_md_to_docx(output_md_file, True)
-        logger.info(f"{uid}, {task_id}, 评审报告生成成功, {output_file}")
-        update_process_info(uid, task_id, "评审报告生成完毕", 100)
-
+        end_time = time.time()
+        total_seconds = end_time - start_time
+        time_str = _format_time_duration(total_seconds)
+        logger.info(f"{uid}, {task_id}, 评审报告生成成功, 用时 {time_str}, 输出文件:{output_file}")
+        update_process_info(uid, task_id, f"评审报告生成完毕，总用时 {time_str}", 100)
     except Exception as e:
-        update_process_info(uid, task_id, f"任务处理失败: {str(e)}")
+        error_time = time.time()
+        total_seconds = error_time - start_time
+        time_str = _format_time_duration(total_seconds)
+        error_msg = f"任务处理失败: {str(e)}，已运行{time_str}"
+        update_process_info(uid, task_id, error_msg)
         logger.exception("评审报告生成异常", e)
+
+
+def _format_time_duration(seconds: float) -> str:
+    """
+    格式化时间间隔为可读字符串
+
+    :param seconds: 总秒数
+    :return: 格式化后的时间字符串，如 "1小时23分45秒" 或 "2分30秒"
+    """
+    if seconds < 60:
+        return f"{int(seconds)}秒"
+    minutes = int(seconds // 60)
+    remaining_seconds = int(seconds % 60)
+
+    if minutes < 60:
+        return f"{minutes}分{remaining_seconds}秒"
+    hours = int(minutes // 60)
+    remaining_minutes = int(minutes % 60)
+    return f"{hours}小时{remaining_minutes}分{remaining_seconds}秒"
 
 def get_reference_from_vdb(keywords: str, vdb_dir: str, llm_cfg: dict) -> str:
     """
