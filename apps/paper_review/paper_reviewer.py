@@ -97,7 +97,7 @@ class PaperReviewer:
                     modification_examples = self.generate_modification_examples(
                         section_content,
                         result['issues'],
-                        self.criteria_markdown_data[:2000]  # 限制长度
+                        self.criteria_markdown_data
                     )
                     if modification_examples:
                         result['modification_examples'] = modification_examples
@@ -229,10 +229,22 @@ class PaperReviewer:
             # 生成各章节概要
             section_summaries = []
             for result in section_results:
+                # 处理 issues，确保是字符串格式
+                main_issues = []
+                if isinstance(result.get('issues'), list) and len(result['issues']) > 0:
+                    for issue in result['issues'][:2]:
+                        if isinstance(issue, dict):
+                            # 从字典中提取描述
+                            issue_desc = issue.get('description', str(issue))
+                            issue_loc = issue.get('location', '')
+                            main_issues.append(f"{issue_loc}: {issue_desc}" if issue_loc else issue_desc)
+                        else:
+                            main_issues.append(str(issue))
+
                 summary = {
                     'title': result['section_title'],
                     'score': result['score'],
-                    'main_issues': result['issues'][:2] if result['issues'] else [],
+                    'main_issues': main_issues,
                     'risk_level': result.get('risk_level', '未知')
                 }
                 section_summaries.append(summary)
@@ -332,7 +344,9 @@ class PaperReviewer:
                 # 格式化问题列表
                 for issue in section_result['issues']:
                     if isinstance(issue, dict):
-                        report_content += f"  - **{issue.get('location', '未知位置')}**: {issue.get('description', issue)}\n"
+                        issue_desc = issue.get('description', str(issue))
+                        issue_loc = issue.get('location', '未知位置')
+                        report_content += f"  - **{issue_loc}**: {issue_desc}\n"
                         if issue.get('severity'):
                             report_content += f"    - 严重程度: {issue['severity']}\n"
                     else:
@@ -520,8 +534,25 @@ class PaperReviewer:
             # 收集各部分结果
             merged_results[section_title]['scores'].append(result['score'])
             merged_results[section_title]['strengths'].extend(result['strengths'])
-            merged_results[section_title]['issues'].extend(result['issues'])
-            merged_results[section_title]['suggestions'].extend(result['suggestions'])
+
+            # 处理 issues：如果是字典则转换为可哈希的元组
+            for issue in result['issues']:
+                if isinstance(issue, dict):
+                    # 将字典转换为可哈希的元组
+                    issue_tuple = tuple(sorted(issue.items()))
+                    merged_results[section_title]['issues'].append(issue_tuple)
+                else:
+                    merged_results[section_title]['issues'].append(issue)
+
+            # 处理 suggestions：如果是字典则转换为可哈希的元组
+            for suggestion in result['suggestions']:
+                if isinstance(suggestion, dict):
+                    # 将字典转换为可哈希的元组
+                    suggestion_tuple = tuple(sorted(suggestion.items()))
+                    merged_results[section_title]['suggestions'].append(suggestion_tuple)
+                else:
+                    merged_results[section_title]['suggestions'].append(suggestion)
+
             merged_results[section_title]['risk_levels'].append(result.get('risk_level', '未知'))
 
         # 生成最终合并结果
@@ -532,8 +563,38 @@ class PaperReviewer:
 
             # 去重并保留重要信息
             unique_strengths = list(dict.fromkeys(data['strengths']))  # 保持顺序去重
-            unique_issues = list(dict.fromkeys(data['issues']))
-            unique_suggestions = list(dict.fromkeys(data['suggestions']))
+
+            # 处理 issues：先去重，然后还原格式
+            unique_issues = []
+            seen_issues = set()
+            for issue in data['issues']:
+                if isinstance(issue, tuple):
+                    # 元组格式的issue（原始为字典）
+                    if issue not in seen_issues:
+                        seen_issues.add(issue)
+                        # 将元组转换回字典
+                        unique_issues.append(dict(issue))
+                else:
+                    # 字符串格式的issue
+                    if issue not in seen_issues:
+                        seen_issues.add(issue)
+                        unique_issues.append(issue)
+
+            # 处理 suggestions：先去重，然后还原格式
+            unique_suggestions = []
+            seen_suggestions = set()
+            for suggestion in data['suggestions']:
+                if isinstance(suggestion, tuple):
+                    # 元组格式的suggestion（原始为字典）
+                    if suggestion not in seen_suggestions:
+                        seen_suggestions.add(suggestion)
+                        # 将元组转换回字典
+                        unique_suggestions.append(dict(suggestion))
+                else:
+                    # 字符串格式的suggestion
+                    if suggestion not in seen_suggestions:
+                        seen_suggestions.add(suggestion)
+                        unique_suggestions.append(suggestion)
 
             # 确定主要风险等级（取最严重的）
             risk_levels = data['risk_levels']
@@ -728,7 +789,6 @@ class PaperReviewer:
 
         return examples
 
-    @staticmethod
     def _generate_single_modification_example(self, content: str, issue: str, location: str, criteria: str) -> Dict:
         """
         生成单个问题的修改示例
