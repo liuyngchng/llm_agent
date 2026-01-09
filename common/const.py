@@ -69,6 +69,9 @@ MAX_HISTORY_SIZE = 19
 # 单次提交给大语言模型的最大字数
 MAX_SECTION_LENGTH = 5000  # 字符数量
 
+# 嵌入模型要求输入文本的字符的最大长度
+MAX_EMBEDDING_TXT_LENGTH=8192
+
 import json
 
 

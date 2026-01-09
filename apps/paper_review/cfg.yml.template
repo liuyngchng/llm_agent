@@ -26,6 +26,8 @@ api:
     embedding_api_key: sk-123456
     # embedding API name
     embedding_model_name: bge-m3
+    # 嵌入模型的文本最大输入长度
+    embedding_max_input_length: 8192
 
 # 与向量库检索相关的参数配置
 vdb:
