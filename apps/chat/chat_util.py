@@ -4,6 +4,7 @@
 import json
 import os
 import logging.config
+import sys
 from typing import Generator
 
 import requests
@@ -47,6 +48,7 @@ class LLMConfig:
 
     # 系统提示词
     SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "你是一个有用的AI助手。请用中文回答用户的问题。")
+    logger.info(f"API_BASE_URL={API_BASE_URL}, API_KEY={API_KEY}, MODEL_NAME={MODEL_NAME}")
 
 
 def allowed_file(filename):
@@ -209,6 +211,7 @@ def generate_stream_response(messages: list, max_tokens: int = None) -> Generato
             headers=headers,
             json=payload,
             stream=True,
+            verify=False,
             timeout=LLMConfig.TIMEOUT
         )
 
