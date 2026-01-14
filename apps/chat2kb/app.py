@@ -103,7 +103,7 @@ def register_routes(app):
     @app.route('/')
     def app_home():
         logger.info("redirect_auth_login_index")
-        return redirect(url_for('auth.login_index', app_source=AppType.CHAT.name.lower()))
+        return redirect(url_for('auth.login_index', app_source=AppType.CHAT2KB.name.lower()))
 
 
     @app.route('/chat/statistic/index', methods=['GET'])
