@@ -1,4 +1,4 @@
-<div align='center'><h1>AI 数字评委系统用户手册</h1></div>
+<div align='center'><h1>内容评审系统用户手册</h1></div>
 
 # 1. 系统简介
 
