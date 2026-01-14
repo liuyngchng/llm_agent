@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta id="csm_index.html">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="/static/purify.min.js"></script>
-    <script src="/static/marked.min.js"></script>
+    <script type="text/javascript" src="/static/purify.min.js"></script>
+    <script type="text/javascript" src="/static/marked.min.js"></script>
     <link rel="stylesheet" href="/static/csm.css">
+    <link rel="stylesheet" href="/static/font-awesome.all.min.css">
     <title>
         {% if role == 1 %}
             人工客服座席[编号{{uid}}]
@@ -17,21 +18,21 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <div class="title">
-                <div class="icon">
-                    <i class="fas fa-headset"></i>
-                </div>
-                <div>
-                    {% if role == 1 %}
-                        人工客服座席[编号{{uid}}]
-                    {% else %}
-                        AI客服助手
-                    {% endif %}
-                </div>
+        <header>
+            <h1>
+                <i class="fas fa-headset"></i>
+                {% if role == 1 %}
+                    人工客服座席[编号{{uid}}]
+                {% else %}
+                    AI客服助手
+                {% endif %}
+            </h1>
+            <div class="system-settings-link-container">
+                <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="system-settings-link" target="_blank">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </a>
             </div>
-            <p class="subtitle">随时为您提供专业的燃气服务咨询</p>
-        </div>
+        </header>
 
         <div class="chat-container" id="chat-container">
             <!-- 聊天内容将在这里动态生成 -->
@@ -39,16 +40,21 @@
 
         <form id="query-form">
             <div class="input-container">
-                <div class="input-icon">
-                    <i class="fas fa-comment-alt"></i>
+                <input type="text" class="input-field" id="query-input" name="msg"
+                       placeholder="输入您的问题，为您深度解答..." required autocomplete="off">
+                <div class="button-container">
+                    <button type="submit" class="send-button" id="send-button">
+                        <i class="fas fa-paper-plane"></i> 发送
+                    </button>
+                    <button type="button" class="stop-button" id="stop-button" style="display:none;">
+                        <i class="fas fa-stop"></i> 停止
+                    </button>
                 </div>
-                <input type="text" class="input-field" id="query-input" name="msg" placeholder="输入您的问题，为您深度解答" required>
-                <button type="submit" class="send-button">
-                    <i class="fas fa-paper-plane"></i> 发送
-                </button>
             </div>
+
             <input type="hidden" id ="uid" name="uid" value="{{uid}}">
             <input type="hidden" id ="t" name="t" value="{{t}}">
+            <input type="hidden" id ="app_source" name="app_source" value="{{app_source}}">
         </form>
     </div>
     <script>
@@ -61,6 +67,6 @@
         // 将Jinja2变量转为JS全局变量
         window.initialGreeting = my_greeting;
     </script>
-    <script src="/static/csm.js"></script>
+    <script type="text/javascript" src="/static/csm.js"></script>
 </body>
 </html>
