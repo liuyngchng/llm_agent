@@ -9,6 +9,8 @@ from typing import Generator
 
 import requests
 
+from common.docx_md_util import convert_docx_to_md, get_md_file_content
+
 ALLOWED_EXTENSIONS = {
     'txt', 'md', 'py', 'js', 'html', 'css', 'json',
     'pdf', 'xlsx', 'docx',
@@ -91,17 +93,12 @@ def extract_text_from_file(filepath, filename):
         # Word文档（需要安装python-docx）
         elif ext in ['docx']:
             try:
-                import docx
-                doc = docx.Document(filepath)
-                text = []
-                for paragraph in doc.paragraphs:
-                    text.append(paragraph.text)
-                result = '\n'.join(text)
-                logger.info(f"Word文档解析成功，段落数: {len(text)}，长度: {len(result)} 字符")
+                md_file = convert_docx_to_md(filepath, True)
+                result = get_md_file_content(md_file)
                 return result
             except ImportError:
-                logger.warning("需要安装python-docx库来解析Word文档")
-                return "[需要安装python-docx库来解析Word文档]"
+                logger.warning("需要安装 pypandoc 库来解析Word文档")
+                return "[需要安装 pypandoc 库来解析Word文档]"
 
         # Excel文件（需要安装openpyxl）
         elif ext in ['xlsx']:
