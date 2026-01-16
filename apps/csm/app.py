@@ -28,7 +28,7 @@ if os.path.exists(log_config_path):
 else:
     from common.const import LOG_FORMATTER
     logging.basicConfig(level=logging.INFO,format= LOG_FORMATTER, force=True)
-logger = logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
 
 my_cfg = init_yml_cfg()
 app = Flask(__name__, static_folder=None)
