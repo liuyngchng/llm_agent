@@ -6,6 +6,7 @@ import hashlib
 import logging.config
 import os
 import re
+import tempfile
 from pathlib import Path
 
 from common.const import OUTPUT_DIR, MAX_SECTION_LENGTH
@@ -173,6 +174,99 @@ def convert_md_to_docx(md_path: str, output_abs_path: bool = False,
     except Exception as e:
         logger.error(f"md_to_docx_error, file {md_path}, {str(e)}")
         return ""
+
+
+def convert_docx_to_md_by_pages(filepath: str, pages_per_chunk: int = 20) -> list[str]:
+    """
+    按页分块将Word文档转换为Markdown，处理大型 word 文档
+
+    Args:
+        filepath: Word文档路径
+        pages_per_chunk: 每个分块的页数
+
+    Returns:
+        Markdown文件路径列表
+    """
+    try:
+        import pypandoc
+        import mammoth
+    except ImportError:
+        logger.error("需要安装 pypandoc 和 mammoth 库")
+        raise ImportError("请安装: pip install pypandoc mammoth")
+
+    try:
+        # 方法1: 使用mammoth按段落处理
+        with open(filepath, "rb") as docx_file:
+            result = mammoth.convert_to_html(docx_file)
+            html_content = result.value
+
+        # 将HTML转换为Markdown
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
+            f.write(html_content)
+            html_file = f.name
+
+        # 使用pandoc转换为markdown
+        output_files = []
+
+        # 分割HTML内容（这里简化处理，实际应该按页分割）
+        # 更复杂的实现可以使用python-docx按页分割
+        paragraphs = html_content.split('</p>')
+
+        current_chunk = []
+        chunk_count = 0
+        md_files = []
+
+        for i, para in enumerate(paragraphs):
+            if para.strip():
+                current_chunk.append(para + '</p>')
+
+            # 每N个段落或遇到分页符时创建一个分块
+            if len(current_chunk) >= 50 or '</div' in para or 'page-break' in para.lower():
+                if current_chunk:
+                    chunk_html = ''.join(current_chunk)
+                    chunk_count += 1
+
+                    # 转换为markdown
+                    md_content = pypandoc.convert_text(chunk_html, 'md', format='html')
+
+                    # 保存分块
+                    md_file = tempfile.NamedTemporaryFile(
+                        mode='w',
+                        suffix=f'_chunk_{chunk_count}.md',
+                        delete=False,
+                        encoding='utf-8'
+                    )
+                    md_file.write(md_content)
+                    md_file.close()
+
+                    md_files.append(md_file.name)
+                    current_chunk = []
+
+        # 处理剩余内容
+        if current_chunk:
+            chunk_html = ''.join(current_chunk)
+            md_content = pypandoc.convert_text(chunk_html, 'md', format='html')
+
+            md_file = tempfile.NamedTemporaryFile(
+                mode='w',
+                suffix=f'_chunk_{chunk_count + 1}.md',
+                delete=False,
+                encoding='utf-8'
+            )
+            md_file.write(md_content)
+            md_file.close()
+            md_files.append(md_file.name)
+        try:
+            os.unlink(html_file)
+        except:
+            pass
+
+        logger.info(f"Word文档已分割为 {len(md_files)} 个markdown文件")
+        return md_files
+
+    except Exception as e:
+        logger.error(f"按页转换Word文档失败: {e}")
+        raise
 
 def get_md_file_content(md_file_path:str, max_length: int = 327670) -> str:
     """

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
+import json
+import tempfile
 import time
 
 from flask import Flask, request, Response, jsonify, send_from_directory, abort, redirect, url_for
@@ -14,6 +16,7 @@ import logging
 
 from apps.chat.chat_util import LLMConfig, generate_stream_response, allowed_file, MAX_FILE_SIZE, ALLOWED_EXTENSIONS, \
     extract_text_from_file
+from apps.chat.document_processor import DocumentProcessor
 from common import my_enums
 from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT
@@ -56,6 +59,8 @@ else:
 logger = logging.getLogger(__name__)
 logger.info("应用程序启动")
 
+# 初始化文档处理器
+doc_processor = DocumentProcessor(UPLOAD_FOLDER)
 
 @app.route('/static/<path:file_name>')
 def get_static_file(file_name):
@@ -205,9 +210,197 @@ def upload_file():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/document_chat')
+def document_chat():
+    """文档问答页面"""
+    try:
+        uid = request.args.get('uid')
+        t = request.args.get('t')
+        app_source = request.args.get('app_source', AppType.CHAT.name.lower())
+
+        if not uid or not t:
+            return redirect(url_for('auth.login_index', app_source=app_source))
+
+        # 验证会话（使用原有逻辑）
+        session_key = f"{uid}_{get_client_ip()}"
+        if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
+            return redirect(url_for('auth.login_index', app_source=app_source))
+
+        logger.info(f"用户 {uid} 访问文档问答页面")
+
+        # 渲染文档聊天页面
+        return render_template('document_chat.html',
+                               uid=uid,
+                               t=t,
+                               app_source=app_source)
+
+    except Exception as e:
+        logger.error(f"渲染文档页面失败: {str(e)}")
+        return redirect(url_for('app_home'))
+
+@app.route('/upload_document', methods=['POST'])
+def upload_document():
+    """上传并处理大文档"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': '没有选择文件'}), 400
+
+        file = request.files['file']
+
+        if file.filename == '':
+            return jsonify({'success': False, 'error': '没有选择文件'}), 400
+
+        if not file.filename.lower().endswith('.docx'):
+            return jsonify({'success': False, 'error': '仅支持Word文档(.docx)'}), 400
+
+        # 保存临时文件
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_file:
+            file.save(tmp_file.name)
+            temp_path = tmp_file.name
+
+        try:
+            # 处理大文档
+            result = doc_processor.process_large_document(temp_path, file.filename)
+
+            if 'error' in result:
+                return jsonify({
+                    'success': False,
+                    'error': result['error']
+                }), 500
+
+            return jsonify({
+                'success': True,
+                'document_id': result['metadata']['file_hash'],
+                'filename': file.filename,
+                'total_chunks': result.get('total_chunks', 0),
+                'vectorized': result.get('vectorized', False),
+                'message': f'文档已成功处理，分为 {result.get("total_chunks", 0)} 个分块'
+            })
+
+        finally:
+            # 清理临时文件
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+
+    except Exception as e:
+        logger.error(f"上传大文档失败: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/chat_with_document', methods=['POST'])
+def chat_with_document():
+    """基于文档的聊天"""
+    try:
+        data = request.json
+        user_message = data.get('message', '').strip()
+        document_id = data.get('document_id')
+
+        if not user_message:
+            return jsonify({'error': '消息不能为空'}), 400
+
+        if not document_id:
+            return jsonify({'error': '请指定文档ID'}), 400
+
+        # 身份验证（使用原有逻辑）
+        uid = int(data.get('uid', ''))
+        session_key = f"{uid}_{get_client_ip()}"
+        if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
+            raise RuntimeError("illegal_access")
+
+        # 搜索相关文档片段
+        relevant_chunks = doc_processor.search_relevant_chunks(document_id, user_message, top_k=3)
+
+        if not relevant_chunks:
+            return jsonify({
+                'error': '未找到相关文档内容，请尝试其他问题'
+            }), 404
+
+        # 构建增强的提示词
+        context_parts = []
+        for i, chunk in enumerate(relevant_chunks):
+            context_parts.append(f"【文档片段 {i + 1}】\n{chunk['content'][:1500]}...")
+
+        context = "\n\n".join(context_parts)
+
+        enhanced_prompt = f"""基于以下文档片段，回答用户的问题：
+
+{context}
+
+用户问题：{user_message}
+
+要求：
+1. 只根据提供的文档内容回答
+2. 如果文档中没有相关信息，请说明"文档中没有找到相关信息"
+3. 回答要具体，必要时可以引用片段编号
+4. 用中文回答
+
+回答："""
+
+        # 构建消息
+        messages = [
+            {"role": "system", "content": "你是一个专业的文档问答助手。"},
+            {"role": "user", "content": enhanced_prompt}
+        ]
+
+        # 流式响应
+        return Response(
+            generate_stream_response(messages),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'X-Accel-Buffering': 'no'
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"文档聊天失败: {str(e)}")
+        return jsonify({'error': f'服务器错误: {str(e)}'}), 500
+
+
+@app.route('/list_documents', methods=['GET'])
+def list_documents():
+    """获取已处理的文档列表"""
+    try:
+        documents = []
+        cache_dir = os.path.join(UPLOAD_FOLDER, "document_cache")
+        if not os.path.exists(cache_dir):
+            return jsonify({
+                'success': True,
+                'documents': documents,
+                'total': 0
+            })
+
+        for file in os.listdir(cache_dir):
+            if file.endswith('.json'):
+                file_path = os.path.join(cache_dir, file)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        documents.append({
+                            'document_id': data['metadata']['file_hash'],
+                            'filename': data['metadata']['filename'],
+                            'processed_time': data.get('processed_time'),
+                            'total_chunks': data.get('total_chunks', 0),
+                            'file_size': data['metadata'].get('file_size')
+                        })
+                except Exception as e:
+                    logger.error(f"读取文档缓存失败 {file}: {e}")
+
+        return jsonify({
+            'success': True,
+            'documents': documents,
+            'total': len(documents)
+        })
+
+    except Exception as e:
+        logger.error(f"获取文档列表失败: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/config', methods=['GET'])
 def get_config():
-    """获取当前配置（不包含敏感信息）"""
+    """获取当前配置（配置中不包含敏感信息）"""
     logger.info("获取配置信息")
     config_info = {
         'model': LLMConfig.MODEL_NAME,
