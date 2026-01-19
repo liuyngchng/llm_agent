@@ -58,7 +58,7 @@ class VdbMeta:
         public_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         merged_dt = my_dt + public_dt
         for item in merged_dt:
-            if uid == item.get('uid', None):  # 自己的知识库
+            if uid == item.get('uid', None):                    # 自己的知识库
                 item['name'] = '我的_' + item.get('name', '')
             else:  # 其他用户的知识库
                 uid = item.get("uid", None)
