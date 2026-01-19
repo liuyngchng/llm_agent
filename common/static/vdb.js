@@ -39,11 +39,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const selectedOption = this.options[this.selectedIndex];
             const kbName = selectedOption.text;
 
+            const originalName = selectedOption.dataset.originalName ||
+                            kbName.replace(' (默认)', '').trim();
+
             // 提取知识库信息
             currentKbInfo = {
                 id: this.value,
-                name: kbName.replace(' (默认)', ''), // 移除默认标记
-                isDefault: kbName.includes('(默认)'),
+                name: originalName, // 使用原始名称
+                isDefault: selectedOption.dataset.default === 'true',
                 isPublic: selectedOption.dataset.public === 'true'
             };
 
@@ -76,6 +79,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             await loadKnowledgeBases();
+            // 重要：刷新后需要同步当前选中的知识库状态
+            if (currentKB) {
+                const selector = document.getElementById('kb_selector');
+                if (selector.value === currentKB) {
+                    // 重新触发change事件来同步状态
+                    const event = new Event('change');
+                    selector.dispatchEvent(event);
+                }
+            }
             showNotification('知识库列表已刷新', 'success');
         } catch (error) {
             console.error('刷新失败:', error);
@@ -108,7 +120,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const uid = document.getElementById('uid').value;
         const t = document.getElementById('t').value;
         const isPublic = document.getElementById('public_checkbox').checked;
+        const selector = document.getElementById('kb_selector');
+        const existingNames = Array.from(selector.options)
+            .map(option => option.dataset.originalName)
+            .filter(name => name && name.toLowerCase() === kbName.toLowerCase());
 
+        if (existingNames.length > 0) {
+            showNotification(`知识库名称 "${kbName}" 已存在，请使用其他名称`, 'error');
+            return;
+        }
         try {
             // 禁用按钮并显示加载状态
             btn.disabled = true;
@@ -136,9 +156,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 自动选择新创建的知识库
                 const selector = document.getElementById('kb_selector');
                 for (let option of selector.options) {
-                    if (option.text.includes(kbName)) {
+                    if (option.dataset.originalName === kbName) {
                         selector.value = option.value;
-                        selector.dispatchEvent(new Event('change'));
+                        // 触发change事件更新界面状态
+                        const event = new Event('change');
+                        selector.dispatchEvent(event);
                         break;
                     }
                 }
@@ -342,10 +364,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const result = await response.json();
 
             if (result.success) {
-                alert('已设置为默认知识库！');
-                // 更新状态显示
-                document.getElementById('vdb_status_desc').textContent =
-                    `${result.kb_name} (默认)`;
+                showNotification('已设置为默认知识库！', 'success');
+                //更新当前知识库信息
+                if (currentKbInfo) {
+                    currentKbInfo.isDefault = true;
+                    updateKbBadges(); // 更新徽章显示
+                }
                 // 刷新知识库下拉菜单
                 await loadKnowledgeBases();
                 // 重新选中当前知识库
@@ -360,7 +384,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         } catch (error) {
             console.error('设置默认知识库失败:', error);
-            alert(`设置失败: ${error.message}`);
+            showNotification(`设置失败: ${error.message}`, 'error');
         } finally {
             // 恢复按钮状态
             setDefaultBtn.disabled = false;
@@ -579,9 +603,11 @@ async function loadKnowledgeBases() {
             result.kb_list.forEach(kb => {
                 const option = document.createElement('option');
                 option.value = kb.id;
-                option.textContent = kb.name + (kb.is_default ? ' (默认)' : '');
+                const displayName = kb.is_default ? `${kb.name} (默认)` : kb.name;
+                option.textContent = displayName;
                 option.dataset.public = kb.is_public || false;
                 option.dataset.default = kb.is_default || false;
+                option.dataset.originalName = kb.name;
                 selector.appendChild(option);
             });
 
@@ -590,10 +616,21 @@ async function loadKnowledgeBases() {
                 selector.value = currentValue;
             }
         }
-        // 在成功加载后，如果有当前选中的知识库，更新状态
-        if (currentKB && selector.value === currentKB) {
-            // 触发 change 事件以更新界面状态
-            selector.dispatchEvent(new Event('change'));
+        // 如果当前选中的知识库是默认的，需要同步更新 currentKbInfo
+        if (currentKB && currentKbInfo) {
+            const selectedOption = selector.querySelector(`option[value="${currentKB}"]`);
+            if (selectedOption) {
+                // 同步更新当前知识库的默认状态
+                currentKbInfo.isDefault = selectedOption.dataset.default === 'true';
+                currentKbInfo.isPublic = selectedOption.dataset.public === 'true';
+
+                // 如果选项中有原始名称，也同步更新
+                if (selectedOption.dataset.originalName) {
+                    currentKbInfo.name = selectedOption.dataset.originalName;
+                }
+
+                updateKbBadges();
+            }
         }
     } catch (error) {
         console.error('加载知识库失败:', error);
@@ -615,12 +652,15 @@ function resetKbSelection() {
     document.getElementById('default_badge').style.display = 'none';
 }
 
-// 新增函数：更新知识库徽章
+// 更新知识库徽章
 function updateKbBadges() {
     const publicBadge = document.getElementById('public_badge');
     const defaultBadge = document.getElementById('default_badge');
+    const statusDesc = document.getElementById('vdb_status_desc');
 
     if (currentKbInfo) {
+        // 确保状态描述只显示名称
+        statusDesc.textContent = currentKbInfo.name;
         // 更新公开徽章
         if (currentKbInfo.isPublic) {
             publicBadge.style.display = 'flex';
@@ -772,7 +812,8 @@ async function loadFileList(kb_id) {
         // 填充文件列表
         files.forEach((file, index)  => {
             const row = document.createElement('tr');
-            const displayName = truncateFileName(file.name, 25); // 25个字符长度
+            const displayName = truncateFileName(file.name, 20); // 20 个字符长度
+            const shouldShowTooltip = file.name.length > 20 || displayName !== file.name;
             const sequenceNumber = formatSequenceNumber(index, files.length);
 
             // 处理创建时间
@@ -790,7 +831,7 @@ async function loadFileList(kb_id) {
                 <td>${sequenceNumber}</td>
                 <td class="filename-cell">
                     ${displayName}
-                    ${file.name.length > 25 ? `<div class="filename-tooltip">${file.name}</div>` : ''}
+                    ${shouldShowTooltip ? `<div class="filename-tooltip">${file.name}</div>` : ''}
                 </td>
                 <td class="create-time-cell">${createTime}</td>
                 <td>${file.percent}%</td>
@@ -828,8 +869,28 @@ function truncateFileName(filename, maxLength) {
     if (filename.length <= maxLength) {
         return filename;
     }
-    // 确保截断后总长度不超过maxLength
-    return filename.substring(0, maxLength - 3) + '...';
+
+    // 获取文件扩展名
+    const extensionIndex = filename.lastIndexOf('.');
+    if (extensionIndex === -1) {
+        return filename.substring(0, maxLength - 3) + '...';
+    }
+
+    const name = filename.substring(0, extensionIndex);
+    const extension = filename.substring(extensionIndex);
+
+    // 如果扩展名过长，直接截断
+    if (extension.length >= maxLength - 3) {
+        return filename.substring(0, maxLength - 3) + '...';
+    }
+
+    // 计算可用的名称长度
+    const availableLength = maxLength - 3 - extension.length;
+    if (name.length <= availableLength) {
+        return filename;
+    }
+
+    return name.substring(0, availableLength) + '...' + extension;
 }
 
 // 处理文件删除

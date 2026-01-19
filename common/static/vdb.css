@@ -16,7 +16,7 @@ body {
 }
 
 .container {
-    width: auto;
+    width: 1280px;
     min-width: 1280px;
     background: white;
     border-radius: 16px;
@@ -869,17 +869,11 @@ h2 i.fas {
 }
 
 .public-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 15px;
-    background: #f0f4ff;
-    border: 1px solid #d1e0ff;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s;
-    color: #4b6cb7;
-    font-weight: 500;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .public-label:hover {
@@ -897,7 +891,9 @@ h2 i.fas {
 }
 
 .btn-create {
-    min-width: 140px;
+    min-width: 130px;
+    padding: 10px 15px;
+    font-size: 0.95rem;
 }
 
 /* 状态徽章 */
@@ -929,15 +925,28 @@ h2 i.fas {
 }
 
 
-
-
-
-
-
-
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 1024px) {
+    .kb-create-inputs {
+        flex-wrap: wrap;
+    }
+
+    .kb-create-input {
+        min-width: 200px;
+        max-width: 100%;
+    }
+
+    .visibility-toggle {
+        width: 100px;
+    }
+
+    .public-label {
+        padding: 8px 10px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -1083,18 +1092,27 @@ h2 i.fas {
     }
 
     .kb-creation-group {
-        flex-direction: column;
-        align-items: stretch;
+        flex-wrap: wrap;
     }
 
     .kb-create-inputs {
         flex-direction: column;
-        gap: 10px;
+        align-items: stretch;
+        width: 100%;
     }
 
-    .kb-create-input,
+    .kb-create-input {
+        min-width: 100%;
+        max-width: 100%;
+    }
+
     .visibility-toggle {
         width: 100%;
+    }
+
+    .public-label {
+        justify-content: center;
+        padding: 10px;
     }
 
     .btn-create {
