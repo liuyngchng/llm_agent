@@ -11,6 +11,9 @@ AI 问答助手是一个基于Flask框架构建的智能对话助手，支持：
 - **流式响应**：实时显示AI生成的内容
 - **多格式支持**：文本、PDF、Word、Excel、图片等
 
+系统所有代码开源，详见 <a href="https://github.com/liuyngchng/llm_agent" target="_blank">github.com</a> 或者 <a href="https://gitee.com/liuyngchng/gitee_llm_agent" target="_blank">gitee.com</a>。
+
+
 ## 快速开始
 
 ### 访问方式
