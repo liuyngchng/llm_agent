@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const kbName = selectedOption.text;
 
             const originalName = selectedOption.dataset.originalName ||
-                            kbName.replace(' (默认)', '').trim();
+                   kbName.replace('(默认)', '').trim();
 
             // 提取知识库信息
             currentKbInfo = {
@@ -603,11 +603,10 @@ async function loadKnowledgeBases() {
             result.kb_list.forEach(kb => {
                 const option = document.createElement('option');
                 option.value = kb.id;
-                const displayName = kb.is_default ? `${kb.name} (默认)` : kb.name;
-                option.textContent = displayName;
+                option.textContent = kb.name;
                 option.dataset.public = kb.is_public || false;
                 option.dataset.default = kb.is_default || false;
-                option.dataset.originalName = kb.name;
+                option.dataset.originalName = kb.name.replace('(默认)', '').trim();
                 selector.appendChild(option);
             });
 
