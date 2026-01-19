@@ -34,10 +34,6 @@ logger = logging.getLogger(__name__)
 # ============== 配置常量 ==============
 # LLM API 配置（可替换为任何兼容OpenAI API的接口）
 class LLMConfig:
-    # API 基础配置
-    API_BASE_URL = os.getenv("LLM_API_BASE_URL", "https://api.deepseek.com/v1")
-    API_KEY = os.getenv("LLM_API_KEY", "")
-    MODEL_NAME = os.getenv("LLM_MODEL_NAME", "deepseek-chat")
 
     # 请求参数配置
     MAX_TOKENS = int(os.getenv("MAX_TOKENS", 8000))
@@ -50,7 +46,6 @@ class LLMConfig:
 
     # 系统提示词
     SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "你是一个有用的AI助手。请用中文回答用户的问题。")
-    logger.info(f"API_BASE_URL={API_BASE_URL}, API_KEY={API_KEY}, MODEL_NAME={MODEL_NAME}")
 
 
 def allowed_file(filename):
@@ -189,17 +184,17 @@ def get_xlsx_content(filepath) -> str:
         return f"[读取Excel文件时出错: {str(e)}]"
 
 
-def generate_stream_response(messages: list, max_tokens: int = None) -> Generator[str, None, None]:
+def generate_stream_response(messages: list, llm_cfg: dict, max_tokens: int = None) -> Generator[str, None, None]:
     """
     生成流式响应
     """
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {LLMConfig.API_KEY}"
+        "Authorization": f"Bearer {llm_cfg['llm_api_key']}"
     }
 
     payload = {
-        "model": LLMConfig.MODEL_NAME,
+        "model": llm_cfg['llm_model_name'],
         "messages": messages,
         "max_tokens": max_tokens or LLMConfig.MAX_TOKENS,
         "temperature": LLMConfig.TEMPERATURE,
@@ -208,11 +203,11 @@ def generate_stream_response(messages: list, max_tokens: int = None) -> Generato
     }
 
     try:
-        logger.info(f"向LLM API发送请求，模型: {LLMConfig.MODEL_NAME}, 消息数量: {len(messages)}")
+        logger.info(f"向LLM API发送请求，模型: {llm_cfg['llm_model_name']}, 消息数量: {len(messages)}")
         logger.info(f"请求参数: max_tokens={payload['max_tokens']}, temperature={LLMConfig.TEMPERATURE}")
 
         response = requests.post(
-            f"{LLMConfig.API_BASE_URL}/chat/completions",
+            f"{llm_cfg['llm_api_uri']}/chat/completions",
             headers=headers,
             json=payload,
             stream=True,
@@ -221,17 +216,16 @@ def generate_stream_response(messages: list, max_tokens: int = None) -> Generato
         )
 
         # 记录响应状态码
-        logger.info(f"API响应状态码: {response.status_code}")
+        logger.info(f"llm_api_response_code: {response.status_code}")
 
         # 如果响应不是200，记录详细错误信息
         if response.status_code != 200:
             error_content = response.text
-            logger.error(f"API返回{response.status_code}错误: {error_content}")
+            logger.error(f"llm_api_response_error, {response.status_code}: {error_content}")
 
-            # 尝试解析错误信息
             try:
                 error_json = response.json()
-                logger.error(f"API错误详情 (JSON格式): {json.dumps(error_json, indent=2, ensure_ascii=False)}")
+                logger.error(f"llm_api_response_error_json: {json.dumps(error_json, indent=2, ensure_ascii=False)}")
 
                 # 提取具体错误信息
                 if 'error' in error_json:

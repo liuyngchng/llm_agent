@@ -8,8 +8,6 @@ from flask import Flask, request, Response, jsonify, send_from_directory, abort,
 
 import os
 import sys
-
-from dotenv import load_dotenv
 import logging.config
 import logging
 
@@ -21,8 +19,6 @@ from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 
-# 加载环境变量
-load_dotenv()
 my_cfg = init_yml_cfg()
 
 # 确保上传文件夹存在
@@ -68,7 +64,7 @@ def get_static_file(file_name):
     for static_dir in static_dirs:
         file_path = os.path.join(static_dir, file_name)
         if os.path.exists(file_path):
-            logger.debug(f"提供静态文件: {file_name} 从 {static_dir}")
+            # logger.debug(f"提供静态文件: {file_name} 从 {static_dir}")
             return send_from_directory(static_dir, file_name)
 
     logger.error(f"静态文件未找到: {file_name}")
@@ -136,7 +132,7 @@ def chat():
 
         # 返回流式响应
         return Response(
-            generate_stream_response(messages, max_tokens=custom_max_tokens),
+            generate_stream_response(messages, my_cfg['api'], max_tokens=custom_max_tokens),
             mimetype='text/event-stream',
             headers={
                 'Cache-Control': 'no-cache',
@@ -209,10 +205,10 @@ def get_config():
     """获取当前配置（配置中不包含敏感信息）"""
     logger.info("获取配置信息")
     config_info = {
-        'model': LLMConfig.MODEL_NAME,
+        'model': my_cfg['api']['llm_model_name'],
         'max_tokens': LLMConfig.MAX_TOKENS,
         'temperature': LLMConfig.TEMPERATURE,
-        'has_api_key': bool(LLMConfig.API_KEY and LLMConfig.API_KEY.strip())
+        'has_api_key': bool(my_cfg['api']['llm_api_key'] and my_cfg['api']['llm_api_key'].strip())
     }
     return jsonify(config_info)
 
@@ -225,10 +221,10 @@ def health_check():
 
 if __name__ == '__main__':
     # 检查API密钥
-    if not LLMConfig.API_KEY or not LLMConfig.API_KEY.strip():
+    if not my_cfg['api']['llm_api_key'] or not my_cfg['api']['llm_api_key'].strip():
         logger.warning("LLM_API_KEY 未设置，请配置环境变量或修改代码")
     else:
-        logger.info(f"API密钥已配置，使用模型: {LLMConfig.MODEL_NAME}")
+        logger.info(f"API密钥已配置，使用模型: {my_cfg['api']['llm_model_name']}")
 
     # 检查依赖库
     logger.info("检查依赖库...")
