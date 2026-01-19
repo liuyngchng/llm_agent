@@ -102,63 +102,7 @@ def extract_text_from_file(filepath, filename):
 
         # Excel文件（需要安装openpyxl）
         elif ext in ['xlsx']:
-            try:
-                from openpyxl import load_workbook
-                wb = load_workbook(filename=filepath, read_only=True, data_only=True)
-                text_lines = []
-
-                for sheet_name in wb.sheetnames:
-                    ws = wb[sheet_name]
-                    text_lines.append(f"## {sheet_name}")
-
-                    # 获取最大列宽
-                    max_col = ws.max_column
-                    max_row = ws.max_row
-
-                    if max_row > 0 and max_col > 0:
-                        # 创建Markdown表格 - 修复这里
-                        rows = []
-                        for row in ws.iter_rows(min_row=1, max_row=max_row,
-                                                min_col=1, max_col=max_col,
-                                                values_only=True):
-                            # 不要转义管道符，而是处理空值和特殊字符
-                            formatted_row = []
-                            for cell in row:
-                                if cell is None:
-                                    formatted_row.append("")
-                                else:
-                                    # 将单元格内容转换为字符串，并处理换行
-                                    cell_str = str(cell)
-                                    # 替换换行符为空格，避免破坏表格格式
-                                    cell_str = cell_str.replace('\n', ' ').replace('\r', ' ')
-                                    # 清理多余的空白字符
-                                    cell_str = ' '.join(cell_str.split())
-                                    formatted_row.append(cell_str)
-                            rows.append(formatted_row)
-
-                        # 生成Markdown表格
-                        if rows:
-                            # 表头
-                            md_lines = ['| ' + ' | '.join(rows[0]) + ' |']
-                            # 表头分隔线
-                            header_separator = ['---'] * len(rows[0])
-                            md_lines.append('| ' + ' | '.join(header_separator) + ' |')
-                            # 数据行
-                            for row in rows[1:]:
-                                md_lines.append('| ' + ' | '.join(row) + ' |')
-
-                            text_lines.append('\n'.join(md_lines))
-                        text_lines.append('')  # 空行分隔
-
-                result = '\n'.join(text_lines)
-                logger.info(f"Excel文件解析成功，工作表数: {len(wb.sheetnames)}，长度: {len(result)} 字符")
-                return result
-            except ImportError:
-                logger.warning("需要安装openpyxl库来解析Excel文件")
-                return "[需要安装openpyxl库来解析Excel文件]"
-            except Exception as e:
-                logger.error(f"读取Excel文件时出错: {str(e)}")
-                return f"[读取Excel文件时出错: {str(e)}]"
+            return get_xlsx_content(filepath)
 
         # 图片文件（需要安装PIL和pytesseract）
         elif ext in ['jpg', 'jpeg', 'png', 'gif']:
@@ -180,6 +124,70 @@ def extract_text_from_file(filepath, filename):
     except Exception as e:
         logger.error(f"读取文件时出错: {str(e)}")
         return f"[读取文件时出错: {str(e)}]"
+
+
+def get_xlsx_content(filepath) -> str:
+    """
+    获取 xlsx 文件的内容
+    """
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(filename=filepath, read_only=True, data_only=True)
+        text_lines = []
+
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            text_lines.append(f"## {sheet_name}")
+
+            # 获取最大列宽
+            max_col = ws.max_column
+            max_row = ws.max_row
+
+            if max_row > 0 and max_col > 0:
+                # 创建Markdown表格 - 修复这里
+                rows = []
+                for row in ws.iter_rows(min_row=1, max_row=max_row,
+                                        min_col=1, max_col=max_col,
+                                        values_only=True):
+                    # 不要转义管道符，而是处理空值和特殊字符
+                    formatted_row = []
+                    for cell in row:
+                        if cell is None:
+                            formatted_row.append("")
+                        else:
+                            # 将单元格内容转换为字符串，并处理换行
+                            cell_str = str(cell)
+                            # 替换换行符为空格，避免破坏表格格式
+                            cell_str = cell_str.replace('\n', ' ').replace('\r', ' ')
+                            # 清理多余的空白字符
+                            cell_str = ' '.join(cell_str.split())
+                            formatted_row.append(cell_str)
+                    rows.append(formatted_row)
+
+                # 生成Markdown表格
+                if rows:
+                    # 表头
+                    md_lines = ['| ' + ' | '.join(rows[0]) + ' |']
+                    # 表头分隔线
+                    header_separator = ['---'] * len(rows[0])
+                    md_lines.append('| ' + ' | '.join(header_separator) + ' |')
+                    # 数据行
+                    for row in rows[1:]:
+                        md_lines.append('| ' + ' | '.join(row) + ' |')
+
+                    text_lines.append('\n'.join(md_lines))
+                text_lines.append('')  # 空行分隔
+
+        result = '\n'.join(text_lines)
+        logger.info(f"Excel文件解析成功，工作表数: {len(wb.sheetnames)}，长度: {len(result)} 字符")
+        return result
+    except ImportError:
+        logger.warning("需要安装openpyxl库来解析Excel文件")
+        return "[需要安装openpyxl库来解析Excel文件]"
+    except Exception as e:
+        logger.error(f"读取Excel文件时出错: {str(e)}")
+        return f"[读取Excel文件时出错: {str(e)}]"
+
 
 def generate_stream_response(messages: list, max_tokens: int = None) -> Generator[str, None, None]:
     """

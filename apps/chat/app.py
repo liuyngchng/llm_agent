@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
-import json
-import tempfile
+
 import time
 
 from flask import Flask, request, Response, jsonify, send_from_directory, abort, redirect, url_for
@@ -14,8 +13,8 @@ from dotenv import load_dotenv
 import logging.config
 import logging
 
-from apps.chat.chat_util import LLMConfig, generate_stream_response, allowed_file, MAX_FILE_SIZE, ALLOWED_EXTENSIONS, \
-    extract_text_from_file
+from apps.chat.chat_util import LLMConfig, generate_stream_response, allowed_file, \
+    MAX_FILE_SIZE, ALLOWED_EXTENSIONS, extract_text_from_file
 from common import my_enums
 from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT
@@ -204,8 +203,6 @@ def upload_file():
     except Exception as e:
         logger.error(f"文件上传失败: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
-
 
 @app.route('/config', methods=['GET'])
 def get_config():
