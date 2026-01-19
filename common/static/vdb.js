@@ -7,6 +7,8 @@ let spinCounter = 0;
 let refreshInterval = null;
 let selectedFiles = []; // 存储选中的文件列表
 
+let currentKbInfo = null;  // 存储当前知识库的完整信息
+
 // 页面加载时初始化知识库管理
 document.addEventListener('DOMContentLoaded', async () => {
     const step2 = document.getElementById('step2');
@@ -34,21 +36,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     kbSelector.addEventListener('change', function() {
         if (this.value) {
             currentKB = this.value;
-            const kbName = this.options[this.selectedIndex].text;
-            statusDesc.textContent = `已选择: ${this.options[this.selectedIndex].text}`;
-            const isDefault = kbName.includes('(默认)');
+            const selectedOption = this.options[this.selectedIndex];
+            const kbName = selectedOption.text;
+
+            // 提取知识库信息
+            currentKbInfo = {
+                id: this.value,
+                name: kbName.replace(' (默认)', ''), // 移除默认标记
+                isDefault: kbName.includes('(默认)'),
+                isPublic: selectedOption.dataset.public === 'true'
+            };
+
+            // 更新状态显示
+            statusDesc.textContent = currentKbInfo.name;
+
+            // 显示/隐藏操作按钮
             deleteBtn.style.display = 'block';
-            setDefaultBtn.style.display = isDefault ? 'none' : 'block';
+            setDefaultBtn.style.display = currentKbInfo.isDefault ? 'none' : 'block';
+
+            // 更新徽章状态
+            updateKbBadges();
+
+            // 显示第二步
             step2.classList.remove('hidden');
             loadFileList(currentKB);
         } else {
-            // 彻底清理状态
-            currentKB = null;
-            step2.classList.add('hidden');
-            deleteBtn.style.display = 'none';
-            setDefaultBtn.style.display = 'none';
-            statusDesc.textContent = '未选择知识库';
-            document.getElementById('fileListContainer').style.display = 'none';
+            resetKbSelection();
+        }
+    });
+
+    // 刷新按钮事件
+    document.getElementById('kbRefreshBtn').addEventListener('click', async function() {
+        const btn = this;
+        const icon = btn.querySelector('i');
+
+        // 添加旋转动画
+        icon.classList.add('fa-spin');
+        btn.disabled = true;
+
+        try {
+            await loadKnowledgeBases();
+            showNotification('知识库列表已刷新', 'success');
+        } catch (error) {
+            console.error('刷新失败:', error);
+            showNotification('刷新失败: ' + error.message, 'error');
+        } finally {
+            // 移除旋转动画
+            setTimeout(() => {
+                icon.classList.remove('fa-spin');
+                btn.disabled = false;
+            }, 500);
         }
     });
 
@@ -56,35 +93,76 @@ document.addEventListener('DOMContentLoaded', async () => {
     createKB.addEventListener('click', async function() {
         const kbName = document.getElementById('kb_name').value.trim();
         if (!kbName) {
-            alert('请输入知识库名称');
+            showNotification('请输入知识库名称', 'error');
             return;
         }
-        // 创建知识库请求
+
+        // 检查知识库名称长度
+        if (kbName.length > 50) {
+            showNotification('知识库名称不能超过50个字符', 'error');
+            return;
+        }
+
+        const btn = this;
+        const originalText = btn.innerHTML;
         const uid = document.getElementById('uid').value;
         const t = document.getElementById('t').value;
         const isPublic = document.getElementById('public_checkbox').checked;
+
         try {
+            // 禁用按钮并显示加载状态
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> 创建中...';
+
             const response = await fetch('/vdb/create', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ kb_name: kbName, uid, is_public:isPublic, t })
+                body: JSON.stringify({
+                    kb_name: kbName,
+                    uid,
+                    is_public: isPublic,
+                    t
+                })
             });
+
             const result = await response.json();
             if (result.success) {
-                const kbStatus = document.getElementById('kb_status');
-                kbStatus.style.display = 'block';
-                kbStatus.querySelector('span').textContent = `知识库 "${kbName}" 创建成功`;
+                // 显示成功消息
+                showNotification(`知识库 "${kbName}" 创建成功`, 'success');
 
                 // 重新加载知识库列表
                 await loadKnowledgeBases();
+
+                // 自动选择新创建的知识库
+                const selector = document.getElementById('kb_selector');
+                for (let option of selector.options) {
+                    if (option.text.includes(kbName)) {
+                        selector.value = option.value;
+                        selector.dispatchEvent(new Event('change'));
+                        break;
+                    }
+                }
+
                 // 清空输入框
                 document.getElementById('kb_name').value = '';
+                document.getElementById('public_checkbox').checked = false;
+
+                // 显示成功状态
+                const kbStatus = document.getElementById('kb_status');
+                kbStatus.style.display = 'block';
+                setTimeout(() => {
+                    kbStatus.style.display = 'none';
+                }, 3000);
             } else {
                 throw new Error(result.message || '创建失败');
             }
         } catch (error) {
             console.error('创建失败:', error);
-            alert(`创建失败: ${error.message}`);
+            showNotification(`创建失败: ${error.message}`, 'error');
+        } finally {
+            // 恢复按钮状态
+            btn.disabled = false;
+            btn.innerHTML = originalText;
         }
     });
 
@@ -95,12 +173,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 修改文件选择处理 - 多文件（追加模式）
     document.getElementById('fileInput').addEventListener('change', function(e) {
-        const newFiles = Array.from(e.target.files);
-
+        let newFiles = Array.from(e.target.files);
         if (newFiles.length === 0) {
             return;
         }
-
         // 文件类型验证
         const allowedTypes = ['.pdf', '.docx', '.txt'];
         const invalidFiles = newFiles.filter(file => {
@@ -139,16 +215,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 添加新文件到选中列表
         selectedFiles = [...selectedFiles, ...uniqueNewFiles];
-
         // 文件数量限制
         const MAX_FILES = 20;
         if (selectedFiles.length > MAX_FILES) {
             alert(`最多只能选择 ${MAX_FILES} 个文件，已自动忽略超出的部分`);
             selectedFiles = selectedFiles.slice(0, MAX_FILES);
         }
-
         updateFileList(selectedFiles);
-
         // 清空文件输入，避免重复触发
         this.value = '';
     });
@@ -194,10 +267,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 删除知识库功能
     document.getElementById('deleteBtn').addEventListener('click', async () => {
-        if (!confirm('确定要删除整个知识库吗？此操作不可恢复！')) return;
+        if (!currentKbInfo) return;
+
+        const kbName = currentKbInfo.name;
+        const confirmMsg = `确定要删除知识库 "${kbName}" 吗？\n\n此操作将删除所有关联文件，且不可恢复！`;
+
+        if (!confirm(confirmMsg)) return;
+
         const deleteBtn = document.getElementById('deleteBtn');
-        const statusDesc = document.getElementById('vdb_status_desc');
-        const selector = document.getElementById('kb_selector');
         const originalText = deleteBtn.innerHTML;
         const uid = document.getElementById('uid').value;
         const t = document.getElementById('t').value;
@@ -216,28 +293,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             const result = await response.json();
 
             if (result.success) {
-                // 更新UI
-                statusDesc.textContent = "无知识库";
-                deleteBtn.style.display = 'none';
-                document.getElementById('step2').classList.add('hidden');
+                showNotification(`知识库 "${kbName}" 已删除`, 'success');
 
-                // 从选择器中移除
-                for (let i = 0; i < selector.options.length; i++) {
-                    if (selector.options[i].value === currentKB) {
-                        selector.remove(i);
-                        break;
-                    }
-                }
-                selector.value = "";
-                currentKB = null;
+                // 重置选择状态
+                resetKbSelection();
 
-                alert('知识库已成功删除！');
+                // 重新加载知识库列表
+                await loadKnowledgeBases();
+
+                // 重置选择器
+                document.getElementById('kb_selector').value = "";
             } else {
                 throw new Error(result.message || '删除失败');
             }
         } catch (error) {
             console.error('删除失败:', error);
-            alert(`删除失败: ${error.message}`);
+            showNotification(`删除失败: ${error.message}`, 'error');
         } finally {
             // 恢复按钮状态
             deleteBtn.disabled = false;
@@ -297,11 +368,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // 添加键盘快捷键
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+Enter 创建知识库
+        if (e.ctrlKey && e.key === 'Enter') {
+            const kbName = document.getElementById('kb_name').value.trim();
+            if (kbName) {
+                document.getElementById('createKB').click();
+                e.preventDefault();
+            }
+        }
+
+        // F5 刷新列表
+        if (e.key === 'F5') {
+            document.getElementById('kbRefreshBtn').click();
+            e.preventDefault();
+        }
+    });
+
     // 加载知识库列表
     loadKnowledgeBases();
 
     // 加载文件列表
-    loadFileList(currentKB);
+    if (currentKB) {
+        loadFileList(currentKB);
+    }
+
+
 });
 
 // 更新文件列表显示
@@ -465,12 +558,16 @@ async function loadKnowledgeBases() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ uid, t })
         });
-        // 添加状态码检查
+
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`API 错误 ${response.status}: ${errorText.slice(0, 100)}...`);
         }
+
         const result = await response.json();
+
+        // 保存当前选中的值
+        const currentValue = selector.value;
 
         // 清空选择器（保留第一个选项）
         while (selector.options.length > 1) {
@@ -482,13 +579,107 @@ async function loadKnowledgeBases() {
             result.kb_list.forEach(kb => {
                 const option = document.createElement('option');
                 option.value = kb.id;
-                option.textContent = kb.name;
+                option.textContent = kb.name + (kb.is_default ? ' (默认)' : '');
+                option.dataset.public = kb.is_public || false;
+                option.dataset.default = kb.is_default || false;
                 selector.appendChild(option);
             });
+
+            // 恢复之前的选择
+            if (currentValue) {
+                selector.value = currentValue;
+            }
+        }
+        // 在成功加载后，如果有当前选中的知识库，更新状态
+        if (currentKB && selector.value === currentKB) {
+            // 触发 change 事件以更新界面状态
+            selector.dispatchEvent(new Event('change'));
         }
     } catch (error) {
         console.error('加载知识库失败:', error);
+        showNotification('加载知识库失败: ' + error.message, 'error');
     }
+}
+
+function resetKbSelection() {
+    currentKB = null;
+    currentKbInfo = null;
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('deleteBtn').style.display = 'none';
+    document.getElementById('setDefaultBtn').style.display = 'none';
+    document.getElementById('vdb_status_desc').textContent = '未选择知识库';
+    document.getElementById('fileListContainer').style.display = 'none';
+
+    // 隐藏所有徽章
+    document.getElementById('public_badge').style.display = 'none';
+    document.getElementById('default_badge').style.display = 'none';
+}
+
+// 新增函数：更新知识库徽章
+function updateKbBadges() {
+    const publicBadge = document.getElementById('public_badge');
+    const defaultBadge = document.getElementById('default_badge');
+
+    if (currentKbInfo) {
+        // 更新公开徽章
+        if (currentKbInfo.isPublic) {
+            publicBadge.style.display = 'flex';
+        } else {
+            publicBadge.style.display = 'none';
+        }
+
+        // 更新默认徽章
+        if (currentKbInfo.isDefault) {
+            defaultBadge.style.display = 'flex';
+            document.getElementById('setDefaultBtn').style.display = 'none';
+        } else {
+            defaultBadge.style.display = 'none';
+            document.getElementById('setDefaultBtn').style.display = 'block';
+        }
+    }
+}
+
+// 新增函数：显示通知
+function showNotification(message, type = 'info') {
+    // 创建通知元素
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+
+    // 添加样式
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 6px;
+        background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+        color: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 500;
+    `;
+
+    // 添加到页面
+    document.body.appendChild(notification);
+
+    // 3秒后自动移除
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
 }
 
 // 获取进度
