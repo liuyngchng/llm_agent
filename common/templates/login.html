@@ -72,7 +72,7 @@
             <a href="/reg/usr?app_source={{app_source}}" class="login-link">
                 <i class="fas fa-user-plus"></i> 用户注册
             </a>
-            <a href="#" class="login-link">
+            <a href="#" class="login-link" id="forgot-password-link">
                 <i class="fas fa-question-circle"></i> 忘记密码?
             </a>
             <a href="/usr/mnl?app_source={{app_source}}" target="_blank" class="login-link">
@@ -96,6 +96,10 @@
             if (usernameInput && !usernameInput.value) {
                 usernameInput.focus();
             }
+            document.getElementById('forgot-password-link')?.addEventListener('click', function(e) {
+                e.preventDefault();
+                alert("请联系管理员");
+            });
         });
 
         // 加载验证码
