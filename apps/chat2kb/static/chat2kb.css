@@ -314,19 +314,43 @@ header h1 {
     color: #555;
 }
 
+.fa-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.kb-refresh-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 /* 工具栏的样式 */
 .toolbar {
     display: flex;
     gap: 10px;
     width: 100%; /* 占满整个宽度 */
     order: 2; /* 调整显示顺序 */
+    align-items: center; /* 添加垂直居中对齐 */
 }
 
 .kb-selector {
-    flex: 1;
-    border: none; /* 移除边框 */
+    flex: 1; /* 保持弹性但不会过宽 */
+    min-width: 150px; /* 设置最小宽度 */
+    max-width: 250px; /* 设置最大宽度 */
+    border: 1px solid #ddd; /* 添加边框 */
+    border-radius: 6px;
     background: #f8f9fa;
-    padding: 12px 15px;
+    padding: 10px 12px; /* 调整内边距 */
+    font-size: 0.9rem;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.3s;
 }
 
 .kb-selector:focus {
@@ -335,10 +359,51 @@ header h1 {
     box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
 }
 
+.kb-refresh-btn {
+    background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+}
+
+.kb-refresh-btn:hover {
+    background: linear-gradient(to right, #3a5a9e, #2c487e);
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(75, 108, 183, 0.3);
+}
+
+.kb-refresh-btn:active {
+    transform: translateY(0);
+}
+
+.kb-refresh-btn i {
+    font-size: 0.9rem;
+}
+
 .button-container {
     display: flex;
     gap: 10px;
-    order: 1; /* 调整显示顺序 */
+    order: 1;
+}
+
+#model_selector {
+    flex: 0.5;
+    min-width: 120px;
+    max-width: 200px;
+}
+
+/* 输入框样式微调 */
+.input-field {
+    flex: 2;
+    min-width: 300px;
 }
 
 /* 响应式设计 */
@@ -393,5 +458,43 @@ header h1 {
     .bot-message-header img {
         width: 28px;
         height: 28px;
+    }
+        .toolbar {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .kb-selector {
+        min-width: 120px;
+        max-width: 100%;
+        flex: 1 1 calc(50% - 10px);
+    }
+
+    #model_selector {
+        min-width: 100px;
+        flex: 1 1 calc(50% - 10px);
+    }
+
+    .kb-refresh-btn {
+        min-width: 35px;
+        height: 35px;
+        padding: 8px;
+    }
+
+    .input-field {
+        min-width: 100%;
+        order: -1;
+    }
+}
+
+@media (max-width: 480px) {
+    .kb-selector {
+        flex: 1 1 100%;
+        min-width: 100%;
+    }
+
+    #model_selector {
+        flex: 1 1 100%;
+        min-width: 100%;
     }
 }

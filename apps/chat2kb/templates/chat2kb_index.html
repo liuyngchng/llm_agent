@@ -38,6 +38,9 @@
                     <select id="kb_selector" class="kb-selector">
                         <option value="" disabled selected>-- 选择知识库 --</option>
                     </select>
+                    <button type="button" class="kb-refresh-btn" id="kbRefreshBtn" onclick="loadKnowledgeBases()" title="刷新知识库列表">
+                        <i class="fas fa-sync-alt" id="refreshIcon"></i>
+                    </button>
                     <select id="model_selector" class="kb-selector">
                         <option value="1">deepseek-v3</option>
                         <option value="2">通义千问</option>

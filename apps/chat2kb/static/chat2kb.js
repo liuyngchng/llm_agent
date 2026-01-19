@@ -145,8 +145,14 @@ async function fetchQueryData(query) {
 // 加载知识库列表
 async function loadKnowledgeBases() {
     const selector = document.getElementById('kb_selector');
+    const refreshBtn = document.getElementById('kbRefreshBtn');
+    const refreshIcon = document.getElementById('refreshIcon');
     const uid = document.getElementById('uid').value;
     const t = document.getElementById('t').value;
+
+    // 添加加载状态
+    refreshBtn.disabled = true;
+    refreshIcon.classList.add('fa-spin'); // 添加旋转动画
 
     try {
         const response = await fetch('/vdb/pub/list', {
@@ -154,13 +160,15 @@ async function loadKnowledgeBases() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ uid, t })
         });
-        // 添加状态码检查
+
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`API 错误 ${response.status}: ${errorText.slice(0, 100)}...`);
         }
+
         const result = await response.json();
         console.log('vdb_list=' + result);
+
         // 清空选择器（保留第一个选项）
         while (selector.options.length > 1) {
             selector.remove(1);
@@ -174,11 +182,75 @@ async function loadKnowledgeBases() {
                 option.textContent = kb.name;
                 selector.appendChild(option);
             });
+
+            // 显示成功提示（可选）
+            showNotification('知识库列表已刷新', 'success');
+        } else {
+            // 显示空提示
+            showNotification('没有可用的知识库', 'info');
         }
+
     } catch (error) {
         console.error('加载知识库失败:', error);
+        showNotification('刷新知识库失败: ' + error.message, 'error');
+    } finally {
+        // 移除加载状态
+        refreshBtn.disabled = false;
+        refreshIcon.classList.remove('fa-spin');
     }
 }
+
+function showNotification(message, type = 'info') {
+    // 创建通知元素
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+
+    // 添加样式
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 6px;
+        background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+        color: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+    `;
+
+    // 添加动画
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .notification {
+            transition: all 0.3s;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // 添加到页面
+    document.body.appendChild(notification);
+
+    // 3秒后自动移除
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+            if (style.parentNode) {
+                style.parentNode.removeChild(style);
+            }
+        }, 300);
+    }, 3000);
+}
+
 
 // 更新机器人消息
 function updateBotMessage(text) {
