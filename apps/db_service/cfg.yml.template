@@ -1,0 +1,27 @@
+# 文件格式必须严格遵循 yaml配置文件格式
+sys:
+    #  系统名称(title) 配置
+    name: 数据服务
+
+    # 配置可访问的域， 防止跨域攻击
+    allowed_origin: http://192,168.1.122
+    # 对数据进行加密的密钥，长度必须为16/32
+    cypher_key: abaababaabaababa
+    # 在 debug 模式下定时任务将关闭，在生产环境下， debug_mode 必须设置为 false
+    debug_mode: true
+
+db:
+    # 用于数据库部分内容的加解密
+    db_uri: sqlite:///cfg.db
+  #  数据库类型, mysql sqlite oracle, dm，最好使用MySQL
+    type: mysql
+  #  数据库（实例）名称，如果是sqlite，直接写文件名称，本地需存在相应的文件名
+    name: your_db_name
+  #  数据库连接的IP地址或者域名
+    host: your_db_host_IP_or_domain
+  #  数据库连接的端口
+    port: your_db_instance_port
+  #  连接数据库的用户名
+    user: your_db_user_name
+  #  读取数据库的用户密码
+    password: 12345

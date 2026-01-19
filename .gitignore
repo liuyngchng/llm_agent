@@ -10,7 +10,6 @@
 **/cpp/lib/*
 log/*
 cfg.db.template
-cfg.yml.template
 **/*.iml
 **/_*
 native-image/*
