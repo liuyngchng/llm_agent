@@ -58,10 +58,10 @@ class VdbMeta:
         public_dt = sqlite_output(CFG_DB_URI, sql, DataType.JSON.value)
         merged_dt = my_dt + public_dt
         for item in merged_dt:
-            if uid == item.get('uid', None):                    # 自己的知识库
-                item['name'] = '我的_' + item.get('name', '')
+            if uid == int(item.get('uid', -1)):                    # 自己的知识库
+                item['name'] = '我的_' + str(item.get('name', ''))
             else:  # 其他用户的知识库
-                uid = item.get("uid", None)
+                uid = int(item.get("uid", -1))
                 user_name = uid
                 try:
                     user_name = cfg_util.get_user_name_by_uid(uid)
@@ -69,7 +69,7 @@ class VdbMeta:
                         user_name = uid
                 except Exception as e:
                     logger.error(f"get_user_name_by_uid_err, {str(e)}")
-                item['name'] = f'用户[{user_name}]的_' + item.get('name', None)
+                item['name'] = f'[{user_name}]的_' + str(item.get('name', ''))
         logger.debug(f"get_vdb_info_by_uid_dt {merged_dt}")
         return merged_dt
 

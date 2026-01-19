@@ -102,7 +102,7 @@ def get_my_vdb_list():
     """
     data = request.get_json()
     logger.debug(f"get_my_vdb_list {data}")
-    uid = data.get("uid")
+    uid = int(data.get("uid", -1))
     t = data.get("t")
     my_vdb_list = VdbMeta.get_vdb_info_by_uid(uid, '', False)
     logger.debug(f"get_my_vdb_list {my_vdb_list}")
@@ -116,7 +116,7 @@ def get_public_vdb_list():
     """
     data = request.get_json()
     logger.info(f"get_public_vdb_list {data}")
-    uid = data.get("uid")
+    uid = int(data.get("uid", -1))
     t = data.get("t")
     my_vdb_list = VdbMeta.get_vdb_info_by_uid(uid)
     logger.info(f"get_public_vdb_list {my_vdb_list}")
@@ -169,7 +169,7 @@ def create_vdb():
     """
     data = request.get_json()
     logger.info(f"create_vdb {data}")
-    uid = data.get("uid")
+    uid = int(data.get("uid", -1))
     kb_name = data.get("kb_name")
     is_public = data.get("is_public")
     t = data.get("t")
