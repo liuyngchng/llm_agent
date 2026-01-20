@@ -39,8 +39,6 @@ class MsgType(Enum):
 
 class WriteDocType(Enum):
     """文档类型枚举（英文键，汉字值）"""
-    MEETING_REPORT = "会议纪要"
-    REVIEW_REPORT = "评审报告"
     STANDARD = "国家标准(GB/(GB/T))"
     PROPOSAL = "项目计划书"
     YEAR_SUMMARY = "年度工作总结"
@@ -49,7 +47,6 @@ class WriteDocType(Enum):
     DETAILED_DESIGN_DOCUMENT = "详细设计文档"
     PRELIMINARY_DESIGN_DOCUMENT = "概要设计文档"
     SOFTWARE_COPYRIGHT_REG = "软件著作权申报"
-    TEAM_BUILDING = "部门党建"
 
     @staticmethod
     def get_doc_type_desc(input_str: str) -> str:
