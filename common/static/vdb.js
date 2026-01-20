@@ -809,7 +809,7 @@ async function loadFileList(kb_id) {
         }
 
         // 填充文件列表
-        files.forEach((file, index)  => {
+        files.forEach((file, index) => {
             const row = document.createElement('tr');
             const displayName = truncateFileName(file.name, 20); // 20 个字符长度
             const shouldShowTooltip = file.name.length > 20 || displayName !== file.name;
@@ -828,7 +828,7 @@ async function loadFileList(kb_id) {
 
             row.innerHTML = `
                 <td>${sequenceNumber}</td>
-                <td class="filename-cell">
+                <td class="filename-cell" title="${file.name}">
                     ${displayName}
                     ${shouldShowTooltip ? `<div class="filename-tooltip">${file.name}</div>` : ''}
                 </td>
@@ -872,13 +872,14 @@ function truncateFileName(filename, maxLength) {
     // 获取文件扩展名
     const extensionIndex = filename.lastIndexOf('.');
     if (extensionIndex === -1) {
+        // 无扩展名的情况
         return filename.substring(0, maxLength - 3) + '...';
     }
 
     const name = filename.substring(0, extensionIndex);
     const extension = filename.substring(extensionIndex);
 
-    // 如果扩展名过长，直接截断
+    // 如果扩展名过长，直接截断整个文件名
     if (extension.length >= maxLength - 3) {
         return filename.substring(0, maxLength - 3) + '...';
     }

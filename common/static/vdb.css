@@ -489,17 +489,22 @@ footer {
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.8);
+    background: #333;
     color: white;
     padding: 8px 12px;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.9rem;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
+    max-width: 300px;
     z-index: 1000;
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.3s ease;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    text-align: left;
+    line-height: 1.4;
 }
 
 .filename-tooltip::after {
@@ -508,12 +513,22 @@ footer {
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-top-color: rgba(0, 0, 0, 0.8);
+    border: 6px solid transparent;
+    border-top-color: #333;
 }
 
 .filename-cell:hover .filename-tooltip {
     opacity: 1;
+    visibility: visible;
+}
+
+.filename-cell {
+    position: relative;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
 }
 
 .file-list-container {
