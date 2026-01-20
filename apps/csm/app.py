@@ -11,9 +11,10 @@ import json
 import logging.config
 import os
 import re
+from datetime import datetime
 
 from flask import (Flask, request, Response,
-                   send_from_directory, abort, make_response, redirect, url_for)
+                   send_from_directory, abort, make_response, redirect, url_for, jsonify)
 from common.cfg_util import get_user_role_by_uid
 from apps.csm.csm_service import CsmService
 from common.bp_auth import auth_bp
@@ -157,6 +158,102 @@ def submit_user_question():
             csm_svc.refresh_msg_history(answer)
     return Response(answer, content_type=content_type, status=200)
 
+
+@app.route('/door/srv', methods=['POST'])
+def submit_door_service():
+    """
+    处理上门服务预约表单提交
+    """
+    try:
+        # 获取表单数据
+        data = request.get_json() if request.is_json else request.form
+        logger.info(f"收到上门服务预约请求: {data}")
+
+        # 提取字段
+        service_type = data.get('serviceType', '').strip()
+        customer_name = data.get('customerName', '').strip()
+        contact_number = data.get('contactNumber', '').strip()
+        address = data.get('address', '').strip()
+        preferred_date = data.get('preferredDate', '').strip()
+        preferred_time = data.get('preferredTime', '').strip()
+        problem_description = data.get('problemDescription', '').strip()
+        customer_type = data.get('customerType', '居民客户').strip()
+        additional_notes = data.get('additionalNotes', '').strip()
+
+        # 验证必填字段
+        if not all([service_type, customer_name, contact_number, address, preferred_date, problem_description]):
+            return jsonify({
+                'success': False,
+                'message': '请填写所有必填字段'
+            }), 400
+
+        # 验证电话号码格式
+        if not re.match(r'^1[3-9]\d{9}$', contact_number):
+            return jsonify({
+                'success': False,
+                'message': '请输入正确的手机号码'
+            }), 400
+
+        # 验证日期格式
+        try:
+            preferred_date_obj = datetime.strptime(preferred_date, '%Y-%m-%d')
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            if preferred_date_obj < today:
+                return jsonify({
+                    'success': False,
+                    'message': '预约日期不能是过去的时间'
+                }), 400
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': '日期格式不正确'
+            }), 400
+
+        # 获取用户ID（如果有的话）
+        uid = data.get('uid')
+        if uid:
+            try:
+                uid = int(uid)
+            except (ValueError, TypeError):
+                uid = None
+
+        # 调用CSM服务处理预约
+        result = csm_svc.process_door_service_appointment(
+            uid=uid,
+            service_type=service_type,
+            customer_name=customer_name,
+            contact_number=contact_number,
+            address=address,
+            preferred_date=preferred_date,
+            preferred_time=preferred_time,
+            problem_description=problem_description,
+            customer_type=customer_type,
+            additional_notes=additional_notes
+        )
+
+        if result.get('success'):
+            # 如果用户在线，可以发送确认消息
+            if uid:
+                confirm_msg = f"您的上门服务预约已提交成功！\n\n预约信息：\n- 服务类型：{service_type}\n- 预约时间：{preferred_date} {preferred_time if preferred_time else '任意时间'}\n- 服务地址：{address}\n\n我们将尽快安排工作人员与您联系。"
+                csm_svc.snd_mail(uid, confirm_msg)
+
+            return jsonify({
+                'success': True,
+                'message': '预约成功，我们将尽快为您安排服务',
+                'appointment_id': result.get('appointment_id')
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': result.get('message', '预约失败，请稍后重试')
+            }), 500
+
+    except Exception as e:
+        logger.error(f"上门服务预约处理失败: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': '系统错误，请稍后重试'
+        }), 500
 
 if __name__ == '__main__':
     port = get_console_arg1()

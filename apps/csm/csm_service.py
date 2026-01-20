@@ -276,3 +276,127 @@ class CsmService:
         self.get_ai_service_status_dict()[uid] = AiServiceStatus.ClOSE.value  # transform AI service to human service
         logger.info(f"answer_for_classify {label}:\n{answer}")
         return answer
+
+    # 在 csm_service.py 的 CsmService 类中添加以下方法
+
+    def process_door_service_appointment(self, uid=None, **appointment_data):
+        """
+        处理上门服务预约
+
+        Args:
+            uid: 用户ID（可选）
+            appointment_data: 预约数据
+
+        Returns:
+            dict: 处理结果
+        """
+        try:
+            logger.info(f"处理上门服务预约: uid={uid}, data={appointment_data}")
+
+            # 1. 生成预约ID
+            import uuid
+            from datetime import datetime
+            appointment_id = str(uuid.uuid4())[:8].upper()
+
+            # 2. 记录预约信息（这里可以根据实际情况存到数据库、文件等）
+            appointment_info = {
+                'appointment_id': appointment_id,
+                'uid': uid,
+                'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                **appointment_data
+            }
+
+            # 3. 保存到数据库或文件（这里示例保存到JSON文件）
+            # 创建存储目录
+            import os
+            data_dir = 'data/appointments'
+            os.makedirs(data_dir, exist_ok=True)
+
+            # 保存预约信息
+            import json
+            file_path = os.path.join(data_dir, f'{appointment_id}.json')
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(appointment_info, f, ensure_ascii=False, indent=2)
+
+            # 4. 记录到日志文件（可选）
+            log_file = os.path.join(data_dir, 'appointments.log')
+            with open(log_file, 'a', encoding='utf-8') as f:
+                log_line = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {appointment_id} - {appointment_data.get('customer_name')} - {appointment_data.get('service_type')}\n"
+                f.write(log_line)
+
+            # 5. 如果有客服在线，通知客服
+            human_uid = self.get_human_being_uid()
+            if human_uid:
+                notification = f"【新预约通知】\n预约ID：{appointment_id}\n客户：{appointment_data.get('customer_name')}\n服务类型：{appointment_data.get('service_type')}\n联系电话：{appointment_data.get('contact_number')}\n地址：{appointment_data.get('address')}\n预约时间：{appointment_data.get('preferred_date')} {appointment_data.get('preferred_time', '任意时间')}\n问题描述：{appointment_data.get('problem_description')[:50]}..."
+                self.snd_mail(human_uid, notification)
+
+            # 6. 返回成功结果
+            return {
+                'success': True,
+                'appointment_id': appointment_id,
+                'message': '预约已成功提交'
+            }
+
+        except Exception as e:
+            logger.error(f"处理上门服务预约失败: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'message': f'预约处理失败: {str(e)}'
+            }
+
+    def get_door_service_stats(self):
+        """
+        获取上门服务统计信息
+        """
+        try:
+            import os
+            data_dir = 'data/appointments'
+
+            if not os.path.exists(data_dir):
+                return {
+                    'total': 0,
+                    'today': 0,
+                    'by_service_type': {}
+                }
+
+            import json
+            from datetime import datetime
+
+            total = 0
+            today = 0
+            by_service_type = {}
+            today_str = datetime.now().strftime('%Y-%m-%d')
+
+            # 遍历所有预约文件
+            for file_name in os.listdir(data_dir):
+                if file_name.endswith('.json'):
+                    file_path = os.path.join(data_dir, file_name)
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                            total += 1
+
+                            # 检查是否是今天的预约
+                            created_at = data.get('created_at', '')
+                            if today_str in created_at:
+                                today += 1
+
+                            # 按服务类型统计
+                            service_type = data.get('service_type', '其他')
+                            by_service_type[service_type] = by_service_type.get(service_type, 0) + 1
+                    except Exception as e:
+                        logger.error(f"读取预约文件失败 {file_name}: {str(e)}")
+
+            return {
+                'total': total,
+                'today': today,
+                'by_service_type': by_service_type
+            }
+
+        except Exception as e:
+            logger.error(f"获取服务统计失败: {str(e)}")
+            return {
+                'total': 0,
+                'today': 0,
+                'by_service_type': {}
+            }
