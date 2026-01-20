@@ -277,8 +277,6 @@ class CsmService:
         logger.info(f"answer_for_classify {label}:\n{answer}")
         return answer
 
-    # 在 csm_service.py 的 CsmService 类中添加以下方法
-
     def process_door_service_appointment(self, uid=None, **appointment_data):
         """
         处理上门服务预约
