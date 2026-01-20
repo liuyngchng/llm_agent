@@ -83,7 +83,7 @@ def get_msg(uid):
         return Response("", content_type=content_type, status=400)
 
     answer = csm_svc.rcv_mail(uid_int)
-    logger.info(f"rcv_mail for {uid_int}, {answer}")
+    # logger.info(f"rcv_mail for {uid_int}, {answer}")
     return Response(answer, content_type=content_type, status=200)
 
 
