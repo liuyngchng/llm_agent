@@ -68,7 +68,6 @@ class AppType(Enum):
     NL2SQL = "智能问数"
     DOCX = "文档生成"
     CSM = "智能客服"
-    ORD_GEN = "订单生成"
     CHAT2DB = "自然语言数据查询"
     OPEN = "开放平台"
     PAPER_REVIEW = "文档审核"
