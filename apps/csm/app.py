@@ -75,8 +75,15 @@ def get_msg(uid):
     if not uid:
         logger.error("illegal_uid")
         return Response("", content_type=content_type, status=502)
-    # logger.info(f"rcv_mail for {uid}")
-    answer = csm_svc.rcv_mail(uid)
+
+    try:
+        uid_int = int(uid)
+    except (ValueError, TypeError):
+        logger.error(f"非法uid格式: {uid}")
+        return Response("", content_type=content_type, status=400)
+
+    answer = csm_svc.rcv_mail(uid_int)
+    logger.info(f"rcv_mail for {uid_int}, {answer}")
     return Response(answer, content_type=content_type, status=200)
 
 
@@ -90,8 +97,12 @@ def submit_user_question():
     :return:
     """
     msg = request.form.get('msg')
-    uid = request.form.get('uid')
-    logger.info(f"rcv_msg: {msg}")
+    try:
+        uid = int(request.form.get('uid'))
+    except (ValueError, TypeError):
+        logger.error(f"非法uid格式: {request.form.get('uid')}")
+        return Response("用户ID格式错误", content_type='text/markdown; charset=utf-8', status=400)
+    logger.info(f"rcv_msg from uid {uid} (type: {type(uid)}): {msg}")
     content_type = 'text/markdown; charset=utf-8'
     usr_role = get_user_role_by_uid(uid)
     # human being customer service msg should be sent to the customer directly

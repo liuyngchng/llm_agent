@@ -33,8 +33,8 @@ class CsmService:
     A customer service
     """
     def __init__(self):
-        self.human_customer_service_target_uid = "332987902"
-        self.human_being_uid = "332987904"
+        self.human_customer_service_target_uid = 332987902
+        self.human_being_uid = 332987904
         self.mail_outbox_list = {
             self.human_customer_service_target_uid: [],
             self.human_being_uid: []
@@ -53,11 +53,11 @@ class CsmService:
         return self.const_dict
 
 
-    def get_human_being_uid(self) -> str:
+    def get_human_being_uid(self) -> int:
         return self.human_being_uid
 
 
-    def get_human_customer_service_target_uid(self) -> str:
+    def get_human_customer_service_target_uid(self) -> int:
         return self.human_customer_service_target_uid
 
 
@@ -77,10 +77,16 @@ class CsmService:
         return self.mail_outbox_list
 
 
-    def rcv_mail(self, uid: str) -> str:
+    def rcv_mail(self, uid: int) -> str:
         """
-        :param uid: receive the oldest mail for user msg_from_uid
+        :param uid: receive the oldest mail for user msg_sender_uid
         """
+        if not isinstance(uid, int):
+            try:
+                uid = int(uid)
+            except (ValueError, TypeError):
+                logger.error(f"rcv_mail: 非法uid类型: {uid}")
+                return ""
         my_msg_outbox = self.mail_outbox_list.get(uid)
         mail = ""
         if my_msg_outbox:
@@ -88,14 +94,24 @@ class CsmService:
         return mail
 
 
-    def snd_mail(self, to_uid: str, msg: str) -> None:
+    def snd_mail(self, msg_receiver_uid: int, msg: str) -> None:
         """
-        :param to_uid: mail receiver
+        :param msg_receiver_uid: mail receiver
         :param msg: the mail txt need to be sent
         """
-        target_msg_outbox = self.mail_outbox_list.get(to_uid, [])
+        # 确保uid是整数类型
+        if not isinstance(msg_receiver_uid, int):
+            try:
+                msg_receiver_uid = int(msg_receiver_uid)
+            except (ValueError, TypeError):
+                logger.error(f"snd_mail: 非法msg_receiver_uid类型: {msg_receiver_uid}")
+                return
+
+        if msg_receiver_uid not in self.mail_outbox_list:
+            self.mail_outbox_list[msg_receiver_uid] = []
+        target_msg_outbox = self.mail_outbox_list.get(msg_receiver_uid, [])
         target_msg_outbox.append(msg)
-        logger.info(f"mail_outbox_list.get({to_uid}): {self.mail_outbox_list.get(to_uid)}")
+        logger.info(f"mail_outbox_list.get({msg_receiver_uid}): {self.mail_outbox_list.get(msg_receiver_uid)}")
 
 
     def refresh_msg_history(self , msg: str, msg_type="机器人"):
@@ -121,7 +137,7 @@ class CsmService:
         logger.debug("msg_history_refreshed:\n%s", '\n'.join(map(str, usr_msg_list)))
 
 
-    def process_personal_info_msg(self, answer: str, label: str, uid: str):
+    def process_personal_info_msg(self, answer: str, label: str, uid: int):
         logger.info(f"session_dict[{uid}] = {self.get_session_info_dict().get(uid)} ")
         answer += self.get_const_dict().get("label2")
         logger.info(f"answer_for_classify {label}:\n{answer}")
@@ -139,49 +155,65 @@ class CsmService:
         return answer
 
 
-    def refresh_session_info(self, msg: str, msg_uid: str, sys_cfg: dict):
+    def refresh_session_info(self, msg: str, msg_sender_uid: int, sys_cfg: dict):
         """
         extract important entity from msg, and update the global info session info
         :param msg: msg which user send to system
-        :param msg_uid: the uid represent who send the msg to system
+        :param msg_sender_uid: the uid represent who send the msg to system
         :param sys_cfg: the system config information
         """
+        # 确保uid是整数
+        if not isinstance(msg_sender_uid, int):
+            try:
+                msg_sender_uid = int(msg_sender_uid)
+            except (ValueError, TypeError):
+                logger.error(f"refresh_session_info: 非法msg_sender_uid: {msg_sender_uid}")
+                return
         s_info = extract_session_info(msg, sys_cfg)
         if not s_info:
             return
-        if msg_uid not in self.get_session_info_dict():
-            logger.info(f"{msg_uid} uid_not_in_session_dict {self.get_session_info_dict()}")
-            self.get_session_info_dict()[msg_uid] = s_info
+        if msg_sender_uid not in self.get_session_info_dict():
+            logger.info(f"{msg_sender_uid} uid_not_in_session_dict {self.get_session_info_dict()}")
+            self.get_session_info_dict()[msg_sender_uid] = s_info
         else:
-            self.get_session_info_dict()[msg_uid] = update_session_info(
-                self.get_session_info_dict()[msg_uid],
+            self.get_session_info_dict()[msg_sender_uid] = update_session_info(
+                self.get_session_info_dict()[msg_sender_uid],
                 s_info,
                 sys_cfg
             )
 
 
-    def process_human_service_msg(self, msg: str, msg_from_uid: str) -> str:
+    def process_human_service_msg(self, msg: str, msg_sender_uid: int) -> str:
         """
         for human provided customer service instead of AI
             (1) send human made msg directly to customer
             (2) when service finished , switch service provider to AI
         :param msg: the msg sent by human customer service provider, which would be sent to customer
-        :param msg_from_uid: the uid from which the msg sent
+        :param msg_sender_uid: the uid from which the msg sent
         """
+        # 确保uid是整数
+        if not isinstance(msg_sender_uid, int):
+            try:
+                msg_sender_uid = int(msg_sender_uid)
+            except (ValueError, TypeError):
+                logger.error(f"process_human_service_msg: 非法msg_sender_uid: {msg_sender_uid}")
+                return "用户ID错误"
+        # 确保目标uid也是整数
+        target_uid = self.get_human_customer_service_target_uid()
         if self.get_const_dict().get("str2") in msg.upper():
-            logger.info(f"switch_service_provider_to_AI_for_uid {self.get_human_customer_service_target_uid()}")
-            self.get_ai_service_status_dict()[self.get_human_customer_service_target_uid()] = AiServiceStatus.OPEN
+            logger.info(f"switch_service_provider_to_AI_for_uid {target_uid}")
+            self.get_ai_service_status_dict()[target_uid] = AiServiceStatus.OPEN.value
             answer = self.get_const_dict().get("str3")
         else:
             logger.info(f"snd_msg_to_customer_directly, "
-                        f"from {msg_from_uid}, to {self.get_human_customer_service_target_uid()}, msg {msg}")
-            self.snd_mail(self.get_human_customer_service_target_uid(), f"[人工客服]{msg}")
+                        f"from {msg_sender_uid}, to {target_uid}, msg {msg}")
+            self.snd_mail(target_uid, f"[人工客服]{msg}")
             logger.info(f"msg_outbox_list: {self.get_mail_outbox_list()}")
-            answer = f"消息已经发至用户[{self.get_human_customer_service_target_uid()}]"
+            answer = f"消息已经发至用户[{target_uid}]"
         return answer
 
 
-    def process_door_to_door_service(self, uid: str, classify_label: str, sys_cfg: dict) -> str:
+    def process_door_to_door_service(self, uid: int, classify_label: str, sys_cfg: dict) -> str:
         """
         :param uid: user id of whom ask for door service
         :param classify_label: the service type label
@@ -200,7 +232,7 @@ class CsmService:
         return result
 
 
-    def retrieval_data(self, answer: str, label: str, msg: str, uid: str, sys_cfg: dict) -> str:
+    def retrieval_data(self, answer: str, label: str, msg: str, uid: int, sys_cfg: dict) -> str:
         """
         :param answer: the answer to user's question
         :param label: classify label for current question
@@ -220,10 +252,11 @@ class CsmService:
         # answer += const_dict.get("label3")
         logger.info(f"answer_for_classify {label}:\n{answer}")
         self.refresh_msg_history(answer)
+        answer = "目前无相关数据"
         return answer
 
 
-    def talk_with_human(self, answer: str, label: str, uid: str, sys_cfg: dict) -> str:
+    def talk_with_human(self, answer: str, label: str, uid: int, sys_cfg: dict) -> str:
         """
         user asked for talking with human directly, send the user msg to human being in back end directly
         :param answer: the msg response to user's request
