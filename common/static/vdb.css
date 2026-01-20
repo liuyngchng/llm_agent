@@ -363,6 +363,142 @@ footer {
     display: none;
 }
 
+/* 一行布局容器 */
+.kb-inline-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: nowrap;
+    width: 100%;
+}
+
+/* 知识库选择器区域 */
+.kb-select-section {
+    flex: 2;
+    min-width: 300px;
+}
+
+.kb-select-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+}
+
+.kb-select {
+    flex: 1;
+    min-width: 250px;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: white;
+    transition: all 0.3s;
+}
+
+/* 垂直分隔线 */
+.kb-divider-vertical {
+    display: flex;
+    align-items: center;
+    color: #666;
+    font-size: 0.9rem;
+    padding: 0 10px;
+    position: relative;
+}
+
+.kb-divider-vertical::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 40px;
+    width: 1px;
+    background: #e0e0e0;
+}
+
+.kb-divider-vertical span {
+    background: white;
+    padding: 0 8px;
+    z-index: 1;
+}
+
+/* 创建知识库区域 */
+.kb-create-section {
+    flex: 3;
+    min-width: 400px;
+}
+
+.kb-create-inputs {
+    display: flex;
+    gap: 10px;
+    align-items: stretch; /* 改为 stretch 让子元素拉伸到相同高度 */
+    width: 100%;
+}
+
+/* 确保输入框、复选框和按钮高度一致 */
+.kb-create-input,
+.visibility-toggle,
+.btn-create {
+    height: 52px; /* 与按钮高度一致 */
+    box-sizing: border-box;
+}
+
+.kb-create-input {
+    flex: 1;
+    min-width: 150px;
+    padding: 14px 15px; /* 增加内边距 */
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    height: 52px; /* 明确设置高度 */
+}
+
+/* 公开复选框容器 */
+.visibility-toggle {
+    display: flex;
+    align-items: stretch; /* 改为 stretch */
+}
+
+/* 公开标签样式调整 */
+.public-label {
+    padding: 14px 15px; /* 增加内边距与按钮一致 */
+    font-size: 0.9rem;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f8f9fa;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 100%; /* 填充容器高度 */
+}
+
+.public-checkbox:checked + .public-label {
+    background: #4b6cb7;
+    color: white;
+    border-color: #4b6cb7;
+}
+
+/* 调整创建按钮 */
+.btn-create {
+    padding: 14px 20px; /* 与主按钮保持一致的内边距 */
+    min-width: 100px;
+    font-size: 0.95rem;
+    height: 52px; /* 明确设置高度 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 垂直对齐图标 */
+.btn-create i,
+.public-label i {
+    vertical-align: -0.1em;
+}
+
 .knowledge-base-manager {
     background: #f8f9fa;
     border-radius: 10px;
@@ -1271,13 +1407,59 @@ h2 i.fas {
     transition: all 0.3s !important;
 }
 
-/* 移动端响应式调整 */
+@media (max-width: 1200px) {
+    .kb-inline-group {
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .kb-select-section,
+    .kb-create-section {
+        min-width: 100%;
+    }
+
+    .kb-divider-vertical {
+        width: 100%;
+        justify-content: center;
+        padding: 10px 0;
+    }
+
+    .kb-divider-vertical::before {
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 1px;
+        width: 100%;
+    }
+
+    .kb-divider-vertical span {
+        padding: 0 15px;
+    }
+}
+
 @media (max-width: 768px) {
-    .notification {
-        top: 10px;
-        right: 10px;
-        left: 10px;
-        max-width: calc(100% - 20px);
+    .kb-create-inputs {
+        flex-wrap: wrap;
+        align-items: stretch;
+    }
+
+    .kb-create-input,
+    .visibility-toggle,
+    .btn-create {
+        width: 100%;
+        height: 50px; /* 移动端稍小的高度 */
+        margin-bottom: 10px;
+    }
+
+    .public-label {
+        justify-content: center;
+        padding: 12px 10px;
+        height: 100%;
+    }
+
+    .btn-create {
+        width: 100%;
+        height: 50px;
     }
 }
 
@@ -1290,6 +1472,12 @@ h2 i.fas {
     background-position: right 12px center;
     background-size: 16px;
     padding-right: 40px !important;
+}
+
+.kb-select:focus {
+    outline: none;
+    border-color: #4b6cb7;
+    box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
 }
 
 /* 确保按钮图标对齐 */

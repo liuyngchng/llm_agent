@@ -6,54 +6,97 @@
     <meta id="vdb_index.html">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/font-awesome.all.min.css">
     <link rel="stylesheet" href="/static/vdb.css?t=2">
+    <link rel="stylesheet" href="/static/font-awesome.all.min.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1><i class="fas fa-database"></i> 知识库管理</h1>
-            <p>构建专业文档知识库，提升评审质量</p>
+            <p>构建专业文档知识库，提升大模型输出质量</p>
         </header>
-        <!-- 第一步：参考材料库管理 -->
+        <!-- 第一步：知识库管理 -->
         <div class="content-section">
             <h2><i class="fas fa-database"></i> 知识库管理</h2>
+
+            <div class="info-box">
+                <h3><i class="fas fa-info-circle"></i> 使用说明</h3>
+                <p>选择一个已有的知识库或创建新的知识库来管理您的文档，公开的知识库可以被其他用户访问。</p>
+            </div>
+
             <div class="knowledge-base-manager">
+                <!-- 合并为一行布局的知识库管理区域 -->
                 <div class="kb-controls">
-                    <div class="kb-select-container">
-                        <select id="kb_selector">
-                            <option value="">--选择知识库--</option>
-                            <!-- 知识库选项将通过JS动态加载 -->
-                        </select>
-                        <span class="or-divider">或</span>
-                        <input type="text" id="kb_name" class="search-input" placeholder="输入新建知识库名称">
-                        <!-- 新增公开选项 -->
-                        <div class="visibility-option">
-                            <input type="checkbox" id="public_checkbox">
-                            <label for="public_checkbox">公开</label>
+                    <div class="kb-combined-container">
+                        <div class="kb-inline-group">
+                            <!-- 知识库选择器 -->
+                            <div class="kb-select-section">
+                                <div class="kb-select-wrapper">
+                                    <select id="kb_selector" class="kb-select" aria-label="选择知识库">
+                                        <option value="">--选择已有知识库--</option>
+                                        <!-- 知识库选项将通过JS动态加载 -->
+                                    </select>
+                                    <div class="kb-select-actions">
+                                        <button class="kb-action-btn btn-refresh" id="kbRefreshBtn" title="刷新列表">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                        <button class="kb-action-btn btn-delete" id="deleteBtn" title="删除知识库" style="display:none;">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                        <button class="kb-action-btn btn-star" id="setDefaultBtn" title="设为默认" style="display:none;">
+                                            <i class="fas fa-star"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 分隔符 -->
+                            <div class="kb-divider-vertical">
+                                <span>或</span>
+                            </div>
+
+                            <!-- 创建新知识库 -->
+                            <div class="kb-create-section">
+                                <div class="kb-create-inputs">
+                                    <input type="text" id="kb_name" class="kb-create-input"
+                                           placeholder="输入新知识库名称">
+                                    <div class="visibility-toggle">
+                                        <input type="checkbox" id="public_checkbox" class="public-checkbox">
+                                        <label for="public_checkbox" class="public-label">
+                                            <i class="fas fa-globe"></i>
+                                            <span>公开</span>
+                                        </label>
+                                    </div>
+                                    <button class="btn btn-primary btn-create" id="createKB" aria-label="创建新的知识库">
+                                        <i class="fas fa-plus-circle"></i> 创建
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <button class="btn btn-primary" id="createKB">
-                            <i class="fas fa-plus-circle"></i> 创建知识库
-                        </button>
                     </div>
+
                     <div id="kb_status" class="status-container" style="display:none">
                         <i class="fas fa-check-circle"></i>
                         <span>知识库创建成功</span>
                     </div>
+
+                    <div class="kb-status-area">
+                        <div class="kb-status-info">
+                            <strong>当前知识库:</strong>
+                            <span id="vdb_status_desc">{{vdb_status}}</span>
+                        </div>
+                        <div class="kb-status-badges">
+                            <span id="public_badge" class="badge badge-public" style="display:none;">
+                                <i class="fas fa-globe"></i> 公开
+                            </span>
+                            <span id="default_badge" class="badge badge-default" style="display:none;">
+                                <i class="fas fa-star"></i> 默认
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="kb-status-area">
-                    <div class="kb-status-info">
-                        <strong>当前知识库状态:</strong>
-                        <span id="vdb_status_desc">{{vdb_status}}</span>
-                    </div>
-                    <button class="btn btn-activate" id="setDefaultBtn" style="display: none;">
-                        <i class="fas fa-star"></i> 设置为默认
-                    </button>
-                    <button class="btn btn-danger" id="deleteBtn" style="display: none;">
-                        <i class="fas fa-trash-alt"></i> 删除知识库
-                    </button>
-                </div>
+                <!-- 文件列表部分保持不变 -->
                 <div id="fileListContainer" style="margin-top: 20px; display: none;">
                     <h3><i class="fas fa-file-alt"></i> 知识库文件列表</h3>
                     <table id="fileListTable" class="result-table">
@@ -74,7 +117,8 @@
                 </div>
             </div>
         </div>
-        <!-- 第二步：文档上传（默认隐藏） -->
+
+        <!-- 第二步：文档上传 -->
         <div id="step2" class="hidden">
             <div class="content-section">
                 <h2><i class="fas fa-file-upload"></i> 文档上传</h2>
@@ -114,6 +158,7 @@
                 </div>
             </div>
         </div>
+
         <footer>
             <p>© 2025 知识库构建平台 | KLSZ</p>
         </footer>
@@ -121,6 +166,6 @@
 
     <input type="hidden" id="uid" name="uid" value="{{uid}}">
     <input type="hidden" id="t" name="t" value="{{t}}">
-    <script type="text/javascript" src="/static/vdb.js?a=111"></script>
+    <script type="text/javascript" src="/static/vdb.js?a=222"></script>
 </body>
 </html>
