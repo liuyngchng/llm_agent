@@ -63,18 +63,15 @@ class WriteDocType(Enum):
 
 class AppType(Enum):
     """应用类型枚举（英文键，汉字值）"""
-    CHAT = "AI 问答助手"
+    CHAT = "问答助手"
     CHAT2KB = "知识库问答"
-    NL2SQL = "智能问数 "
+    NL2SQL = "智能问数"
     DOCX = "文档生成"
-    PPTX = "PPT 校对"
     CSM = "智能客服"
     ORD_GEN = "订单生成"
     CHAT2DB = "自然语言数据查询"
     OPEN = "开放平台"
-    MT_REPORT = "会议纪要整理"
     PAPER_REVIEW = "文档审核"
-    TEAM_BUILDING = "AI 党建"
 
     @staticmethod
     def get_app_list() -> list:
