@@ -158,7 +158,8 @@ def start_http_server():
 
 if __name__ == "__main__":
     logger.info("start mcp_server server demo (backend only)")
-    start_https_server()
+    # start_https_server()
+    start_http_server()
 
 
 
