@@ -24,6 +24,12 @@ else:
     logging.basicConfig(level=logging.INFO,format= LOG_FORMATTER, force=True)
 logger = logging.getLogger(__name__)
 
+@app.custom_route("/", methods=["GET"])
+async def root(request: Request):
+    """根端点"""
+    logger.info(f"trigger_root, {request}")
+    return JSONResponse({"status": 200, "msg": "hello MCP world"})
+
 @app.custom_route("/health", methods=["GET"])
 async def health_check(request: Request):
     """健康检查端点"""
