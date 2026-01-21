@@ -7,6 +7,7 @@ AI 应用市场
 pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama \
  langchain_core langchain_community pandas tabulate pymysql cx_Oracle pycryptodome
 """
+import json
 import logging.config
 import os
 
@@ -42,6 +43,8 @@ def app_home():
         "host": my_cfg['sys']['host']
     }
     ip = get_client_ip()
+    if "INVALID_IP" == ip:
+        return json.dumps({"status":403, "msg":"illegal access"})
     logger.info(f"from_ip, {ip}")
 
     return render_template("portal_index.html", **ctx)

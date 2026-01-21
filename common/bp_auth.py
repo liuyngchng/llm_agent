@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import random
+import re
 import string
 import time
 import logging.config
@@ -420,14 +421,34 @@ def get_usr_manual():
     logger.debug(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
 
+
 def get_client_ip():
-    """获取客户端真实 IP"""
+    """获取客户端真实 IP，并清理潜在恶意输入"""
+    from flask import request
+
     x_forwarded_for = request.headers.get('X-Forwarded-For', '')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[0].strip()
     else:
         ip = request.remote_addr
-    return ip
+
+    ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+    ipv6_pattern = r'^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$'
+
+    if ip in ['127.0.0.1', 'localhost', '::1']:
+        return ip
+
+    if re.match(ipv4_pattern, ip):
+        parts = ip.split('.')
+        if all(0 <= int(part) <= 255 for part in parts):
+            return ip
+
+    if re.match(ipv6_pattern, ip):
+        return ip
+    waring_info = f"invalid_IP_format_detected: {repr(ip)[:50]}"
+    print(waring_info)
+    logger.warning(waring_info)
+    return "INVALID_IP"
 
 def get_cfg():
     """获取配置，优先从应用上下文获取，如果没有则直接初始化"""
