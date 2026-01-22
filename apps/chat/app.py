@@ -40,18 +40,13 @@ if not os.path.exists(TEMPLATE_DIR):
     os.makedirs(TEMPLATE_DIR, exist_ok=True)
     print(f"模板文件夹路径: {TEMPLATE_DIR}")
 
-# 配置日志
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
-    logging.config.fileConfig(log_config_path, encoding="utf-8", disable_existing_loggers=False)
-    print(f"使用日志配置文件: {log_config_path}")
+    logging.config.fileConfig(log_config_path, encoding="utf-8")
 else:
-    print("日志配置文件不存在，使用默认配置")
     from common.const import LOG_FORMATTER
-    logging.basicConfig(level=logging.INFO,format=LOG_FORMATTER,force=True,stream=sys.stdout)
-
+    logging.basicConfig(level=logging.INFO,format=LOG_FORMATTER,force=True)
 logger = logging.getLogger(__name__)
-logger.info("应用程序启动")
 
 @app.route('/static/<path:file_name>')
 def get_static_file(file_name):
