@@ -8,6 +8,7 @@ pip install "vllm[audio]"
 ubuntu 24.04
 apt install portaudio19-dev
 """
+import os
 
 import requests
 import logging.config
@@ -19,7 +20,7 @@ from threading import Thread, Event
 
 from pydantic import SecretStr
 
-from sys_init import init_yml_cfg
+from common.sys_init import init_yml_cfg
 
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
@@ -87,8 +88,10 @@ def transcribe_audio(audio_path):
 def test_transcribe_my_wav_audio_file() -> str:
     logger.info(f"ASR_ENDPOINT {ASR_ENDPOINT}, MODEL_NAME {MODEL_NAME}, API_KEY {API_KEY.get_secret_value()}")
     # 使用示例
-    audio_file = "common/static/asr_example_zh.wav"
-    result = transcribe_audio(audio_file)
+    audio_file = "../../../common/static/asr_example_zh.wav"
+    abs_path = os.path.abspath(audio_file)
+    logger.info(f"transcribe_audio({abs_path})")
+    result = transcribe_audio(abs_path)
     logger.info(f"demo识别结果:{result}")
     return result
 

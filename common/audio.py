@@ -18,7 +18,7 @@ import logging.config
 from common.sys_init import init_yml_cfg
 from pydub import AudioSegment
 
-log_config_path = 'logging.conf'
+log_config_path = '../apps/chat2db/logging.conf'
 if os.path.exists(log_config_path):
     logging.config.fileConfig(log_config_path, encoding="utf-8")
 else:

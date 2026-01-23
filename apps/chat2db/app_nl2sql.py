@@ -20,7 +20,7 @@ from common.const import SESSION_TIMEOUT
 from common.my_enums import DataType, DBType, AppType
 from sql_agent import SqlAgent
 from common.sys_init import init_yml_cfg
-from apps.chat2db.audio import transcribe_webm_audio_bytes
+from common.audio import transcribe_webm_audio_bytes
 from common.bp_auth import auth_bp, auth_info, get_client_ip
 from common.cm_utils import get_console_arg1
 
