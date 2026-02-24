@@ -11,6 +11,10 @@ import requests
 
 from common.docx_md_util import convert_docx_to_md, get_md_file_content
 
+import urllib3
+# 全局禁用不安全请求警告 InsecureRequestWarning
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 ALLOWED_EXTENSIONS = {
     'txt', 'md', 'py', 'js', 'html', 'css', 'json',
     'pdf', 'xlsx', 'docx',
