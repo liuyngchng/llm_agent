@@ -61,7 +61,7 @@ class WriteDocType(Enum):
 class AppType(Enum):
     """应用类型枚举（英文键，汉字值）"""
     CHAT = "问答助手"
-    CHAT2KB = "知识库问答"
+    CHAT2KB = "文档管理助手"
     NL2SQL = "智能问数"
     DOCX = "文档生成"
     CSM = "智能客服"

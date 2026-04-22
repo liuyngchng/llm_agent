@@ -3,7 +3,9 @@
 <head>
     <title>doc</title>
 <!--    本地已经启动 localhost:8080 的 onlyoffice/documentserver-->
+    {% if config.onlyoffice_status == 'available' %}
     <script type="text/javascript" src="http://localhost/web-apps/apps/api/documents/api.js"></script>
+    {% endif %}
     <link rel="stylesheet" href="/static/doc.css">
     <link rel="stylesheet" href="/static/font-awesome.6.0.0.all.min.css">
 </head>
@@ -21,9 +23,32 @@
         </div>
     </div>
 
+    {% if config.onlyoffice_status == 'unavailable' %}
+    <div style="margin: 20px; padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+        <h3 style="color: #856404; margin-bottom: 10px;"><i class="fas fa-exclamation-triangle"></i> OnlyOffice服务未运行</h3>
+        <p style="color: #856404; margin-bottom: 15px;">
+            文档编辑功能需要OnlyOffice服务。请确保OnlyOffice Document Server正在运行（localhost:8080）。
+        </p>
+        <p style="color: #856404; font-size: 14px;">
+            您仍然可以上传文档并使用AI分析功能，但无法进行在线编辑。
+        </p>
+    </div>
+    {% endif %}
+
     <div class="review-container">
         <div class="editor-panel">
-            <div class="panel-header">文档预览</div>
+            <div class="panel-header">
+                文档预览
+                {% if config.onlyoffice_status == 'available' %}
+                <span style="font-size: 12px; color: #27ae60; margin-left: 10px;">
+                    <i class="fas fa-check-circle"></i> 在线编辑可用
+                </span>
+                {% else %}
+                <span style="font-size: 12px; color: #e74c3c; margin-left: 10px;">
+                    <i class="fas fa-exclamation-circle"></i> 仅预览
+                </span>
+                {% endif %}
+            </div>
             <div id="editorContainer">
                 <div class="empty-state">
                     <div style="font-size: 48px; margin-bottom: 20px;">📄</div>

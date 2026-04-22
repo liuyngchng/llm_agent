@@ -3,3 +3,7 @@ flask
 concurrent-log-handler
 pyjwt
 python-dotenv
+python-docx
+pandas
+requests
+python-magic

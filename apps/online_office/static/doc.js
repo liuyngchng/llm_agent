@@ -240,62 +240,61 @@ async function saveDocument(data) {
 async function analyzeDocument() {
     const suggestionsList = document.getElementById('suggestionsList');
     suggestionsList.innerHTML = `
-        <div style="text-align: center; padding: 40px;">
-            <div class="loading" style="margin: 0 auto 20px;"></div>
-            <p>AI正在分析文档...</p>
+        <div class="empty-state">
+            <div class="loading" style="width: 40px; height: 40px; margin: 0 auto 20px;"></div>
+            <h3>AI正在分析文档...</h3>
+            <p>请稍候，我们正在仔细检查您的文档</p>
         </div>
     `;
 
     try {
-        // 模拟AI分析延迟
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (!currentDocument || !currentDocument.id) {
+            throw new Error('没有可分析的文档');
+        }
 
-        // 模拟AI返回的数据
-        const mockSuggestions = [
-            {
-                id: 1,
-                originalText: "本项目",
-                suggestion: "建议改为'本项目旨在'，使表达更完整",
-                reason: "语言不够规范",
-                position: "第1段",
-                severity: "低"
+        // 调用后端AI分析接口
+        const response = await fetch('/api/documents/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
             },
-            {
-                id: 2,
-                originalText: "非常重大",
-                suggestion: "建议改为'至关重要'或'极为重要'",
-                reason: "用词可以更专业",
-                position: "第2段",
-                severity: "中"
-            },
-            {
-                id: 3,
-                originalText: "等等",
-                suggestion: "建议列举具体项目，或删除'等等'",
-                reason: "避免使用模糊词汇",
-                position: "列举部分",
-                severity: "低"
-            },
-            {
-                id: 4,
-                originalText: "尽快完成",
-                suggestion: "建议明确具体时间，如'在本月底前完成'",
-                reason: "时间要求不够明确",
-                position: "时间安排部分",
-                severity: "高"
-            }
-        ];
+            body: JSON.stringify({
+                doc_id: currentDocument.id
+            })
+        });
 
-        // 显示AI意见
-        displaySuggestions(mockSuggestions);
+        const result = await response.json();
+
+        if (result.success && result.suggestions) {
+            // 转换格式为前端所需
+            const suggestions = result.suggestions.map(suggestion => ({
+                id: suggestion.id,
+                category: suggestion.category,
+                severity: suggestion.severity,
+                position: suggestion.position,
+                description: suggestion.description,
+                suggestion: suggestion.suggestion
+            }));
+            
+            displaySuggestions(suggestions);
+            
+            // 显示分析完成消息
+            showStatusMessage(`✅ 文档分析完成，发现 ${suggestions.length} 个建议`, 'success');
+        } else {
+            throw new Error(result.error || '分析失败');
+        }
 
     } catch (error) {
         console.error("AI分析失败:", error);
         suggestionsList.innerHTML = `
-            <div class="status-message status-error">
-                ❌ AI分析失败: ${error.message}
+            <div class="empty-state">
+                <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                <h3>AI分析暂时不可用</h3>
+                <p>${error.message}</p>
+                <p class="file-types">您可以继续编辑文档</p>
             </div>
         `;
+        showStatusMessage(`⚠️ AI分析失败: ${error.message}`, 'warning');
     }
 }
 
@@ -309,32 +308,42 @@ function displaySuggestions(suggestions) {
                 <div style="font-size: 48px; margin-bottom: 20px;">✅</div>
                 <h3>文档质量良好</h3>
                 <p>AI未发现需要修改的问题</p>
+                <p class="file-types">您的文档结构清晰，内容完整</p>
             </div>
         `;
         return;
     }
 
     suggestionsList.innerHTML = suggestions.map(suggestion => `
-        <div class="ai-suggestion" data-id="${suggestion.id}">
+        <div class="ai-suggestion" data-id="${suggestion.id}" data-severity="${suggestion.severity}">
+            <div class="suggestion-header">
+                <div class="suggestion-category">${suggestion.category}</div>
+                <div class="suggestion-severity ${suggestion.severity.toLowerCase()}">
+                    ${getSeverityIcon(suggestion.severity)} ${suggestion.severity}
+                </div>
+            </div>
             <div class="suggestion-title">
-                ${getSeverityIcon(suggestion.severity)}
                 问题 ${suggestion.id}: ${suggestion.position}
             </div>
-            <div class="suggestion-text">
-                <strong>原文：</strong>${suggestion.originalText}
-            </div>
-            <div class="suggestion-text">
-                <strong>建议：</strong>${suggestion.suggestion}
-            </div>
-            <div class="suggestion-text">
-                <strong>原因：</strong>${suggestion.reason}
+            <div class="suggestion-content">
+                <div class="suggestion-item">
+                    <span class="label">问题描述:</span>
+                    <span class="value">${suggestion.description}</span>
+                </div>
+                <div class="suggestion-item">
+                    <span class="label">修改建议:</span>
+                    <span class="value">${suggestion.suggestion}</span>
+                </div>
             </div>
             <div class="action-buttons">
                 <button class="accept-btn" onclick="acceptSuggestion(${suggestion.id})">
-                    接受建议
+                    <i class="fas fa-check"></i> 接受建议
                 </button>
-                <button class="skip-btn" onclick="skipSuggestion(${suggestion.id})">
-                    忽略
+                <button class="ignore-btn" onclick="ignoreSuggestion(${suggestion.id})">
+                    <i class="fas fa-times"></i> 忽略
+                </button>
+                <button class="info-btn" onclick="showSuggestionDetails(${suggestion.id})">
+                    <i class="fas fa-info-circle"></i> 详情
                 </button>
             </div>
         </div>
@@ -354,23 +363,151 @@ function getSeverityIcon(severity) {
 // 接受建议
 function acceptSuggestion(suggestionId) {
     const suggestionElement = document.querySelector(`[data-id="${suggestionId}"]`);
-    suggestionElement.style.opacity = '0.5';
-
-    // 这里应该调用API应用修改到文档
-    console.log(`接受建议 ${suggestionId}`);
-
-    // 模拟修改文档
-    if (currentDocEditor) {
-        // 在实际应用中，这里应该调用OnlyOffice API修改文档
-        alert(`建议 ${suggestionId} 已接受，将在文档中应用修改`);
-    }
+    if (!suggestionElement) return;
+    
+    // 标记为已接受
+    suggestionElement.classList.add('accepted');
+    suggestionElement.querySelector('.accept-btn').disabled = true;
+    suggestionElement.querySelector('.accept-btn').innerHTML = '<i class="fas fa-check-circle"></i> 已接受';
+    
+    // 显示成功消息
+    const position = suggestionElement.querySelector('.suggestion-title').textContent;
+    showStatusMessage(`✅ 已接受建议: ${position}`, 'success');
+    
+    // 在实际应用中，这里应该调用后端API应用修改
+    applySuggestionToDocument(suggestionId);
 }
 
 // 忽略建议
-function skipSuggestion(suggestionId) {
+function ignoreSuggestion(suggestionId) {
     const suggestionElement = document.querySelector(`[data-id="${suggestionId}"]`);
-    suggestionElement.style.display = 'none';
-    console.log(`忽略建议 ${suggestionId}`);
+    if (!suggestionElement) return;
+    
+    // 添加淡出动画
+    suggestionElement.style.opacity = '0.5';
+    suggestionElement.style.transform = 'translateX(-10px)';
+    
+    setTimeout(() => {
+        suggestionElement.style.display = 'none';
+        showStatusMessage(`📝 已忽略一条建议`, 'info');
+    }, 300);
+}
+
+// 显示建议详情
+function showSuggestionDetails(suggestionId) {
+    const suggestionElement = document.querySelector(`[data-id="${suggestionId}"]`);
+    if (!suggestionElement) return;
+    
+    const category = suggestionElement.querySelector('.suggestion-category').textContent;
+    const severity = suggestionElement.querySelector('.suggestion-severity').textContent;
+    const title = suggestionElement.querySelector('.suggestion-title').textContent;
+    const description = suggestionElement.querySelector('.suggestion-item:nth-child(1) .value').textContent;
+    const suggestion = suggestionElement.querySelector('.suggestion-item:nth-child(2) .value').textContent;
+    
+    const details = `
+        <div class="suggestion-details">
+            <h4>${title}</h4>
+            <div class="details-meta">
+                <span class="meta-item"><strong>类别:</strong> ${category}</span>
+                <span class="meta-item"><strong>严重性:</strong> ${severity}</span>
+            </div>
+            <div class="details-content">
+                <p><strong>问题:</strong> ${description}</p>
+                <p><strong>建议:</strong> ${suggestion}</p>
+            </div>
+            <div class="details-actions">
+                <button onclick="acceptSuggestion(${suggestionId})" class="accept-btn">
+                    <i class="fas fa-check"></i> 接受建议
+                </button>
+                <button onclick="closeDetails()" class="close-btn">
+                    关闭
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // 创建详情模态框
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content">
+            ${details}
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // 点击外部关闭
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeDetails();
+        }
+    });
+}
+
+function closeDetails() {
+    const modal = document.querySelector('.modal-overlay');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 应用建议到文档
+async function applySuggestionToDocument(suggestionId) {
+    try {
+        // 在实际应用中，这里应该调用后端API处理文档修改
+        // 目前只是记录日志
+        console.log(`应用建议 ${suggestionId} 到文档`);
+        
+        // 模拟API调用
+        // const response = await fetch('/api/documents/apply-suggestion', {
+        //     method: 'POST',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //     },
+        //     body: JSON.stringify({
+        //         doc_id: currentDocument.id,
+        //         suggestion_id: suggestionId
+        //     })
+        // });
+        
+    } catch (error) {
+        console.error('应用建议失败:', error);
+    }
+}
+
+// 显示状态消息
+function showStatusMessage(message, type = 'info') {
+    const statusDiv = document.getElementById('uploadStatus');
+    
+    // 移除旧消息
+    const oldMessages = statusDiv.querySelectorAll('.status-message');
+    oldMessages.forEach(msg => {
+        msg.style.opacity = '0';
+        setTimeout(() => {
+            if (msg.parentNode === statusDiv) {
+                statusDiv.removeChild(msg);
+            }
+        }, 300);
+    });
+    
+    // 添加新消息
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `status-message status-${type}`;
+    messageDiv.innerHTML = message;
+    
+    statusDiv.appendChild(messageDiv);
+    
+    // 自动隐藏（成功消息3秒，错误消息5秒）
+    const timeout = type === 'error' ? 5000 : 3000;
+    setTimeout(() => {
+        messageDiv.style.opacity = '0';
+        setTimeout(() => {
+            if (messageDiv.parentNode === statusDiv) {
+                statusDiv.removeChild(messageDiv);
+            }
+        }, 300);
+    }, timeout);
 }
 
 // 显示错误消息

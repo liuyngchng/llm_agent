@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>错误 - 文档审阅系统</title>
+    <link rel="stylesheet" href="/static/doc.css">
+    <link rel="stylesheet" href="/static/font-awesome.6.0.0.all.min.css">
+</head>
+<body>
+    <div class="header">
+        <div class="logo">文档审阅</div>
+    </div>
+    
+    <div style="max-width: 800px; margin: 100px auto; text-align: center; padding: 0 20px;">
+        <div style="font-size: 100px; color: #e74c3c; margin-bottom: 30px;">
+            {% if error_code == 404 %}
+                <i class="fas fa-map-signs"></i>
+            {% elif error_code == 500 %}
+                <i class="fas fa-server"></i>
+            {% elif error_code == 413 %}
+                <i class="fas fa-weight"></i>
+            {% else %}
+                <i class="fas fa-exclamation-triangle"></i>
+            {% endif %}
+        </div>
+        
+        <h1 style="color: #2c3e50; margin-bottom: 20px;">
+            {{ error_code }} - {{ error_message }}
+        </h1>
+        
+        <p style="color: #7f8c8d; font-size: 18px; margin-bottom: 30px; line-height: 1.6;">
+            {% if error_code == 404 %}
+                抱歉，您访问的页面不存在或已被移除。
+            {% elif error_code == 500 %}
+                服务器遇到了一个错误，请稍后再试。
+            {% elif error_code == 413 %}
+                上传的文件太大，最大支持50MB。
+            {% else %}
+                发生了一个错误，请检查您的请求。
+            {% endif %}
+        </p>
+        
+        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 40px;">
+            <button onclick="window.history.back()" style="padding: 12px 25px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
+                <i class="fas fa-arrow-left"></i> 返回上一页
+            </button>
+            <button onclick="window.location.href='/'" style="padding: 12px 25px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
+                <i class="fas fa-home"></i> 返回首页
+            </button>
+        </div>
+        
+        {% if error_code == 500 %}
+        <div style="margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px; text-align: left;">
+            <h3 style="color: #2c3e50; margin-bottom: 15px;"><i class="fas fa-info-circle"></i> 故障排除建议</h3>
+            <ul style="color: #7f8c8d; line-height: 1.8;">
+                <li>请检查您的网络连接</li>
+                <li>确保OnlyOffice服务正在运行（localhost:8080）</li>
+                <li>尝试刷新页面</li>
+                <li>如果问题持续存在，请联系系统管理员</li>
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
