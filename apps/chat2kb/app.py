@@ -39,7 +39,7 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 
-LLM_MODEL_DICT = {"1": "deepseek-v3", "2": "qwen2dot5-7b-chat"}
+LLM_MODEL_DICT = {"1": "deepseek-chat", "2": "qwen2dot5-7b-chat", "3": "glm-4.5v"}
 
 # 全局变量，用于存储后台任务状态
 background_tasks_started = False
