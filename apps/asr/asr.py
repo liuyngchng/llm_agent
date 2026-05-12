@@ -2,13 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import os
-import uuid
 import wave
 import requests
 import websockets
 import logging.config
 
-from typing import Optional
 import json
 
 log_config_path = 'logging.conf'
