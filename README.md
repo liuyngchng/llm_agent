@@ -20,6 +20,7 @@
 | 8 | apps/mcp_client     | HTTP/HTTPS | 19005 | MCP client，通过Web 界面           |
 | 9 | apps/mcp_server     | HTTP/HTTPS | 19006 | MCP server， 提供 MCP tools 查询服务 |
 | 10 | apps/paper_review   | HTTP/HTTPS | 19009 | 数字评委                          |
+| 11 | apps/asr | HTTP/HTTPS | 19010 | 语音转录 |
 | 11 | apps/llm            | HTTP/HTTPS | 16000 | 兼容 OpenAI 接口格式的大语言模型服务        |
 | 12 | apps/embedding      | HTTP/HTTPS | 17000 | 兼容 OpenAI 接口格式的文本嵌入模型服务       |
 | 13 | apps/portal         | HTTPS | 443   | 集成所有应用的入口地址，提供所有地址导航          |
