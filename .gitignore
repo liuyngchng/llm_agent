@@ -59,3 +59,6 @@ sqlite_vss
 apps/chat2db/db_schema/*.sql
 tests/**/*.md
 common/sh/cfg.db.backup*
+apps/asr/converted/*
+apps/asr/results/*
+apps/asr/uploads/*

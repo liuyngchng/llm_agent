@@ -79,7 +79,10 @@ def upload_audio():
     task_id = asr_tasks.create_task(original_filename, str(input_path), None)
 
     # 异步处理
-    thread = threading.Thread(target=process_audio_async, args=(task_id, input_path))
+    thread = threading.Thread(
+        target=process_audio_async,
+        args=(task_id, input_path, ASR_HOST, ASR_PORT)
+    )
     thread.daemon = True
     thread.start()
 

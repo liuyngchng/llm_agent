@@ -46,7 +46,7 @@ def run_asr_recognition(wav_path, output_dir, asr_host, asr_port):
     """运行 FunASR 识别"""
     # 使用与之前相同的命令
     cmd = [
-        'python', './wss_client.py',
+        'python', str(Path(__file__).parent / 'wss_client.py'),
         '--host', asr_host,
         '--port', str(asr_port),
         '--ssl', '0',
@@ -128,7 +128,7 @@ class ASRTask:
 asr_tasks = ASRTask()
 
 
-def process_audio_async(task_id, input_path):
+def process_audio_async(task_id, input_path, asr_host, asr_port):
     """异步处理音频文件"""
     try:
         # 更新状态：转换中
@@ -147,7 +147,7 @@ def process_audio_async(task_id, input_path):
         result_dir = RESULTS_DIR / task_id
         result_dir.mkdir(exist_ok=True)
 
-        run_asr_recognition(wav_path, result_dir)
+        run_asr_recognition(wav_path, result_dir, asr_host, asr_port)
 
         # 3. 获取识别结果
         result_content = get_recognition_result(result_dir)
