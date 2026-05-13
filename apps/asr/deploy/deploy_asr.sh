@@ -1,4 +1,5 @@
 #!/bin/bash
+
 APP='embedding'
 CONTAINER="${APP}_app"
 APP_DIR="apps/${APP}"
