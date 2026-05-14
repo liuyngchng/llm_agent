@@ -43,25 +43,20 @@ def convert_to_wav(input_path, output_path):
 
 
 def run_asr_recognition(wav_path, output_dir, asr_host, asr_port):
-    """运行 FunASR 识别"""
-    # 使用与之前相同的命令
-    cmd = [
-        'python', str(Path(__file__).parent / 'wss_client.py'),
-        '--host', asr_host,
-        '--port', str(asr_port),
-        '--ssl', '0',
-        '--mode', 'offline',
-        '--audio_in', str(wav_path),
-        '--output_dir', str(output_dir)
-    ]
-    logger.info(f"exec_cmd {cmd}")
+    """运行 FunASR 识别（直接调用 wss_client，不再通过子进程）"""
+    from apps.asr.wss_client import run_offline_asr
 
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path(__file__).parent)
-    logger.info(f"exec_cmd_result, {result}")
-    if result.returncode != 0:
-        raise Exception(f"ASR 识别失败: {result.stderr}")
-
-    return result
+    logger.info(f"call run_offline_asr: wav_path={wav_path}, output_dir={output_dir}")
+    run_offline_asr(
+        audio_in=str(wav_path),
+        output_dir=str(output_dir),
+        host=asr_host,
+        port=asr_port,
+        ssl=0,
+        mode='offline',
+        use_itn=1,
+    )
+    logger.info(f"run_offline_asr finished")
 
 
 def get_recognition_result(result_dir, file_prefix='text.0_0'):
