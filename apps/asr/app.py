@@ -16,7 +16,7 @@ from common.sys_init import init_yml_cfg
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max
 
 # 配置目录
 BASE_DIR = Path(__file__).parent
@@ -58,26 +58,34 @@ def index():
 def upload_audio():
     """上传音频文件"""
     if 'file' not in request.files:
-        return jsonify({'error': '没有文件'}), 400
+        info = {'error': '没有文件'}
+        logger.info(info)
+        return jsonify(info), 400
 
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'error': '文件名为空'}), 400
+        info = {'error': '文件名为空'}
+        logger.info(info)
+        return jsonify(info), 400
 
     # 检查文件格式
     file_ext = Path(file.filename).suffix.lower()
     if file_ext not in SUPPORTED_FORMATS:
-        return jsonify({'error': f'不支持的文件格式，支持: {", ".join(SUPPORTED_FORMATS)}'}), 400
+        info = {'error': f'不支持的文件格式，支持: {", ".join(SUPPORTED_FORMATS)}'}
+        logger.info(info)
+        return jsonify(info), 400
 
     # 保存原始文件
     original_filename = file.filename
     safe_filename = f"{uuid.uuid4().hex}{file_ext}"
     input_path = UPLOAD_DIR / safe_filename
-    file.save(str(input_path))
+    file_path = str(input_path)
+    file.save(file_path)
+    logger.info(f"upload_file_saved, {file_path}")
 
     # 创建任务
     task_id = asr_tasks.create_task(original_filename, str(input_path), None)
-
+    logger.info(f"create_task {task_id}")
     # 异步处理
     thread = threading.Thread(
         target=process_audio_async,
@@ -85,12 +93,13 @@ def upload_audio():
     )
     thread.daemon = True
     thread.start()
-
-    return jsonify({
+    info = {
         'task_id': task_id,
         'status': 'converting',
         'message': '文件已上传，开始处理...'
-    })
+    }
+    logger.info(info)
+    return jsonify(info)
 
 
 @app.route('/api/status/<task_id>')
@@ -165,4 +174,4 @@ def clear_completed_tasks():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=19010)
+    app.run(debug=True, host='0.0.0.0', port=19000)

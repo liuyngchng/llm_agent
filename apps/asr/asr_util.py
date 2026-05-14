@@ -54,9 +54,10 @@ def run_asr_recognition(wav_path, output_dir, asr_host, asr_port):
         '--audio_in', str(wav_path),
         '--output_dir', str(output_dir)
     ]
+    logger.info(f"exec_cmd {cmd}")
 
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path(__file__).parent)
-
+    logger.info(f"exec_cmd_result, {result}")
     if result.returncode != 0:
         raise Exception(f"ASR 识别失败: {result.stderr}")
 
@@ -133,20 +134,24 @@ def process_audio_async(task_id, input_path, asr_host, asr_port):
     try:
         # 更新状态：转换中
         asr_tasks.update_task(task_id, status='converting')
+        logger.info(f"{task_id}, start process audio file, {input_path}, {asr_host}, {asr_port}")
 
         # 生成输出路径
         original_filename = Path(input_path).stem
         wav_filename = f"{original_filename}_{uuid.uuid4().hex[:8]}.wav"
         wav_path = CONVERTED_DIR / wav_filename
+        abs_path = os.path.abspath(wav_path)
+        logger.info(f"{task_id}, output_file_path {abs_path}")
 
         # 1. 转换为 WAV
         convert_to_wav(input_path, wav_path)
+        logger.info(f"{task_id}, convert_file {input_path} to  {abs_path}")
         asr_tasks.update_task(task_id, converted_path=str(wav_path), status='processing')
 
         # 2. 执行 ASR 识别
         result_dir = RESULTS_DIR / task_id
         result_dir.mkdir(exist_ok=True)
-
+        logger.info(f"{task_id}, start_wav_asr_recognition, {wav_path}")
         run_asr_recognition(wav_path, result_dir, asr_host, asr_port)
 
         # 3. 获取识别结果
