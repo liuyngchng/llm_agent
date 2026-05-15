@@ -1,5 +1,6 @@
 let selectedFiles = [];
 let pollingIntervals = {};
+let waitStartTime = {};  // taskId → timestamp when progress first hit 100%
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
@@ -166,6 +167,7 @@ function startPolling(taskId, messageId, filename) {
                 // 识别完成
                 clearInterval(pollingIntervals[taskId]);
                 delete pollingIntervals[taskId];
+                delete waitStartTime[taskId];
 
                 const resultHtml = `
                     <div>✅ 转写完成！</div>
@@ -184,6 +186,7 @@ function startPolling(taskId, messageId, filename) {
             } else if (data.status === 'failed') {
                 clearInterval(pollingIntervals[taskId]);
                 delete pollingIntervals[taskId];
+                delete waitStartTime[taskId];
                 updateMessage(messageId, `❌ 转写失败: ${data.error}`, 'error');
             } else {
                 // 更新状态及进度
@@ -192,8 +195,20 @@ function startPolling(taskId, messageId, filename) {
                     statusHtml = `正在处理 ${filename}: 转换音频格式... <i class="fas fa-spinner spin"></i>`;
                 } else if (data.progress !== undefined && data.progress !== null) {
                     const pct = data.progress;
-                    statusHtml = `正在处理 ${filename}: ${pct}% <i class="fas fa-spinner spin"></i>`;
-                    if (pct > 0 && pct < 100) {
+                    if (pct >= 100) {
+                        // 数据已全部发送，等待服务端处理
+                        if (!waitStartTime[taskId]) {
+                            waitStartTime[taskId] = Date.now();
+                        }
+                        const elapsed = Math.floor((Date.now() - waitStartTime[taskId]) / 1000);
+                        const minutes = Math.floor(elapsed / 60);
+                        const seconds = elapsed % 60;
+                        const elapsedStr = minutes > 0
+                            ? `${minutes}分${seconds}秒`
+                            : `${seconds}秒`;
+                        statusHtml = `正在处理 ${filename}: 数据已发送，等待服务端处理中（${elapsedStr}）<i class="fas fa-spinner spin"></i>`;
+                    } else {
+                        statusHtml = `正在处理 ${filename}: ${pct}% <i class="fas fa-spinner spin"></i>`;
                         statusHtml += `
                             <div style="margin-top: 8px; background: #e9ecef; border-radius: 6px; height: 8px; overflow: hidden;">
                                 <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #4b6cb7, #6c8de0); border-radius: 6px; transition: width 1s ease;"></div>
