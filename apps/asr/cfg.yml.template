@@ -17,5 +17,7 @@ api:
     asr_model_name: funasr
 
 funasr:
-    http_api_uri: http://127.0.0.1:18010
-    ws_api_uri: ws://127.0.0.1:18010
+    host: 127.0.0.1
+    port: 10095
+    http_api_uri: http://127.0.0.1:10095
+    ws_api_uri: ws://127.0.0.1:10095

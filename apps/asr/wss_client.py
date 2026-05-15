@@ -4,18 +4,21 @@ import time
 import websockets, ssl
 import asyncio
 
-# import threading
 import argparse
 import json
-import traceback
+
 from multiprocessing import Process
 from threading import Lock
 
-# from funasr.fileio.datadir_writer import DatadirWriter
+import logging.config
 
-import logging
-
-logging.basicConfig(level=logging.ERROR)
+log_config_path = 'logging.conf'
+if os.path.exists(log_config_path):
+    logging.config.fileConfig(log_config_path, encoding="utf-8")
+else:
+    from common.const import LOG_FORMATTER
+    logging.basicConfig(level=logging.INFO,format= LOG_FORMATTER, force=True)
+logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -380,8 +383,7 @@ def run_offline_asr(audio_in, output_dir, host='localhost', port=10095, ssl=0,
             use_itn=use_itn,
             mode=mode,
         )
-        print(f"run_offline_asr: {args}")
-
+        logger.info(f"run_offline_asr: {args}")
         if args.output_dir is not None and not os.path.exists(args.output_dir):
             os.makedirs(args.output_dir)
 
@@ -396,7 +398,7 @@ def main():
     global args
     args = parser.parse_args()
     args.chunk_size = [int(x) for x in args.chunk_size.split(",")]
-    print(args)
+    logger.info(args)
 
     if args.output_dir is not None and not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -406,7 +408,7 @@ def main():
         p = Process(target=one_thread, args=(0, 0, 0))
         p.start()
         p.join()
-        print("end")
+        logger.info("end")
     else:
         # calculate the number of wavs for each preocess
         if args.audio_in.endswith(".scp"):
@@ -444,7 +446,7 @@ def main():
         for i in process_list:
             p.join()
 
-        print("end")
+        logger.info("end")
 
 
 if __name__ == "__main__":

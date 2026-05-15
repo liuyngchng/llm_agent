@@ -42,11 +42,11 @@ def convert_to_wav(input_path, output_path):
     return output_path
 
 
-def run_asr_recognition(wav_path, output_dir, asr_host, asr_port, task_id=None):
+def run_asr_transmit(wav_path, output_dir, asr_host, asr_port, task_id=None):
     """运行 FunASR 识别（直接调用 wss_client，不再通过子进程）"""
     from apps.asr.wss_client import run_offline_asr
 
-    logger.info(f"call run_offline_asr: wav_path={wav_path}, output_dir={output_dir}")
+    logger.info(f"call_offline_asr_server, {asr_host}:{asr_port}, wav_path={wav_path}, output_dir={output_dir}")
 
     def _progress(pct):
         if task_id:
@@ -135,7 +135,7 @@ def process_audio_async(task_id, input_path, asr_host, asr_port):
     try:
         # 更新状态：转换中
         asr_tasks.update_task(task_id, status='converting')
-        logger.info(f"{task_id}, start process audio file, {input_path}, {asr_host}, {asr_port}")
+        logger.info(f"{task_id}, start_convert_audio_file, {input_path}")
 
         # 生成输出路径
         original_filename = Path(input_path).stem
@@ -146,15 +146,15 @@ def process_audio_async(task_id, input_path, asr_host, asr_port):
 
         # 1. 转换为 WAV
         convert_to_wav(input_path, wav_path)
-        logger.info(f"{task_id}, convert_file {input_path} to  {abs_path}")
+        logger.info(f"{task_id}, convert_original_file_to_wav_file, {input_path}, {abs_path}")
         asr_tasks.update_task(task_id, converted_path=str(wav_path), status='processing')
 
         # 2. 执行 ASR 识别
         asr_tasks.update_task(task_id, progress=0)
         result_dir = RESULTS_DIR / task_id
         result_dir.mkdir(exist_ok=True)
-        logger.info(f"{task_id}, start_wav_asr_recognition, {wav_path}")
-        run_asr_recognition(wav_path, result_dir, asr_host, asr_port, task_id=task_id)
+        logger.info(f"{task_id}, start_wav_asr_transmit, {wav_path}, {asr_host}, {asr_port}")
+        run_asr_transmit(wav_path, result_dir, asr_host, asr_port, task_id=task_id)
 
         # 3. 获取识别结果
         result_content = get_recognition_result(result_dir)

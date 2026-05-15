@@ -39,8 +39,8 @@ logger = logging.getLogger(__name__)
 my_cfg = init_yml_cfg()
 
 # ASR 服务配置
-ASR_HOST = "127.0.0.1"
-ASR_PORT = 10095
+ASR_HOST = my_cfg['funasr']['host']
+ASR_PORT = my_cfg['funasr']['port']
 
 # 支持的文件格式
 SUPPORTED_FORMATS = {'.m4a', '.mp3', '.amr', '.wav', '.flac', '.ogg', '.aac'}
