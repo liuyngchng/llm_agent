@@ -114,6 +114,7 @@ def get_task_status(task_id):
         'status': task['status'],
         'result_text': task.get('result_text'),
         'error': task.get('error'),
+        'progress': task.get('progress'),
         'original_filename': task['original_filename'],
         'timestamp': task['timestamp'].isoformat()
     })

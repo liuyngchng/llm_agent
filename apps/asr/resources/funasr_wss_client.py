@@ -9,7 +9,6 @@ import argparse
 import json
 import traceback
 from multiprocessing import Process
-from threading import Lock
 
 # from funasr.fileio.datadir_writer import DatadirWriter
 
@@ -47,14 +46,21 @@ parser.add_argument("--ssl", type=int, default=1, help="1 for ssl connect, 0 for
 parser.add_argument("--use_itn", type=int, default=1, help="1 for using itn, 0 for not itn")
 parser.add_argument("--mode", type=str, default="2pass", help="offline, online, 2pass")
 
+args = parser.parse_args()
+args.chunk_size = [int(x) for x in args.chunk_size.split(",")]
+print(args)
+# voices = asyncio.Queue()
 from queue import Queue
 
-# Global state — set by run_offline_asr() or main() before any async function runs
-args = None
 voices = Queue()
 offline_msg_done = False
-_asr_lock = Lock()
-_progress_callback = None
+
+if args.output_dir is not None:
+    # if os.path.exists(args.output_dir):
+    #     os.remove(args.output_dir)
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
 
 
 async def record_microphone():
@@ -213,9 +219,6 @@ async def record_from_scp(chunk_begin, chunk_size):
             message = data
             # voices.put(message)
             await websocket.send(message)
-            global _progress_callback
-            if _progress_callback and (i % max(1, chunk_num // 50) == 0 or i == chunk_num - 1):
-                _progress_callback(int((i + 1) / chunk_num * 100))
             if i == chunk_num - 1:
                 is_speaking = False
                 message = json.dumps({"is_speaking": is_speaking})
@@ -304,7 +307,6 @@ async def message(id):
 
     except Exception as e:
         print("Exception:", e)
-        offline_msg_done = True
         # traceback.print_exc()
         # await websocket.close()
 
@@ -328,8 +330,7 @@ async def ws_client(id, chunk_begin, chunk_size):
             ssl_context = None
         print("connect to", uri)
         async with websockets.connect(
-            uri, subprotocols=["binary"], ping_interval=None, close_timeout=30,
-            ssl=ssl_context
+            uri, subprotocols=["binary"], ping_interval=None, ssl=ssl_context
         ) as websocket:
             if args.audio_in is not None:
                 task = asyncio.create_task(record_from_scp(i, 1))
@@ -337,70 +338,15 @@ async def ws_client(id, chunk_begin, chunk_size):
                 task = asyncio.create_task(record_microphone())
             task3 = asyncio.create_task(message(str(id) + "_" + str(i)))  # processid+fileid
             await asyncio.gather(task, task3)
+    exit(0)
 
 
 def one_thread(id, chunk_begin, chunk_size):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(ws_client(id, chunk_begin, chunk_size))
-    finally:
-        loop.close()
+    asyncio.get_event_loop().run_until_complete(ws_client(id, chunk_begin, chunk_size))
+    asyncio.get_event_loop().run_forever()
 
 
-def run_offline_asr(audio_in, output_dir, host='localhost', port=10095, ssl=0,
-                    mode='offline', use_itn=1, progress_callback=None):
-    """Programmatic entry point for offline ASR recognition.
-
-    Calls the FunASR WebSocket client directly (no subprocess or argparse).
-    Results are written to ``output_dir`` as text files.
-
-    Thread-safe: serialises concurrent calls via ``_asr_lock``.
-    If ``progress_callback`` is provided, it is called periodically with a
-    percentage (int 0-100) during the ASR processing phase.
-    """
-    import types
-    global args, _progress_callback
-    with _asr_lock:
-        args = types.SimpleNamespace(
-            host=host,
-            port=port,
-            chunk_size=[5, 10, 5],
-            encoder_chunk_look_back=4,
-            decoder_chunk_look_back=0,
-            chunk_interval=10,
-            hotword="",
-            audio_in=audio_in,
-            audio_fs=16000,
-            send_without_sleep=True,
-            thread_num=1,
-            words_max_print=10000,
-            output_dir=output_dir,
-            ssl=ssl,
-            use_itn=use_itn,
-            mode=mode,
-        )
-        print(f"run_offline_asr: {args}")
-
-        if args.output_dir is not None and not os.path.exists(args.output_dir):
-            os.makedirs(args.output_dir)
-
-        _progress_callback = progress_callback
-        try:
-            one_thread(0, 0, 1)
-        finally:
-            _progress_callback = None
-
-
-def main():
-    global args
-    args = parser.parse_args()
-    args.chunk_size = [int(x) for x in args.chunk_size.split(",")]
-    print(args)
-
-    if args.output_dir is not None and not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
-
+if __name__ == "__main__":
     # for microphone
     if args.audio_in is None:
         p = Process(target=one_thread, args=(0, 0, 0))
@@ -445,7 +391,3 @@ def main():
             p.join()
 
         print("end")
-
-
-if __name__ == "__main__":
-    main()

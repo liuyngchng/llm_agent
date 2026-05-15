@@ -104,10 +104,21 @@ function formatFileSize(bytes) {
 }
 
 async function uploadAllFiles() {
-    for (let file of selectedFiles) {
-        await uploadFile(file);
+    setUploadButtonEnabled(false);
+    try {
+        for (let file of selectedFiles) {
+            await uploadFile(file);
+        }
+        clearFileList();
+    } finally {
+        setUploadButtonEnabled(true);
     }
-    clearFileList();
+}
+
+function setUploadButtonEnabled(enabled) {
+    const btn = document.getElementById('uploadButton');
+    btn.disabled = !enabled;
+    btn.classList.toggle('disabled', !enabled);
 }
 
 async function uploadFile(file) {
@@ -175,9 +186,23 @@ function startPolling(taskId, messageId, filename) {
                 delete pollingIntervals[taskId];
                 updateMessage(messageId, `❌ 转写失败: ${data.error}`, 'error');
             } else {
-                // 更新状态
-                const statusText = data.status === 'converting' ? '转换音频格式...' : '语音识别中...';
-                updateMessage(messageId, `正在处理 ${filename}: ${statusText} <i class="fas fa-spinner spin"></i>`);
+                // 更新状态及进度
+                let statusHtml;
+                if (data.status === 'converting') {
+                    statusHtml = `正在处理 ${filename}: 转换音频格式... <i class="fas fa-spinner spin"></i>`;
+                } else if (data.progress !== undefined && data.progress !== null) {
+                    const pct = data.progress;
+                    statusHtml = `正在处理 ${filename}: ${pct}% <i class="fas fa-spinner spin"></i>`;
+                    if (pct > 0 && pct < 100) {
+                        statusHtml += `
+                            <div style="margin-top: 8px; background: #e9ecef; border-radius: 6px; height: 8px; overflow: hidden;">
+                                <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #4b6cb7, #6c8de0); border-radius: 6px; transition: width 1s ease;"></div>
+                            </div>`;
+                    }
+                } else {
+                    statusHtml = `正在处理 ${filename}: 语音识别中... <i class="fas fa-spinner spin"></i>`;
+                }
+                updateMessage(messageId, statusHtml);
             }
         } catch (error) {
             console.error('Polling error:', error);
