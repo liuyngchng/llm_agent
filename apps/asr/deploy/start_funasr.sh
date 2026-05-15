@@ -1,5 +1,7 @@
 #!/bin/bash
 
+docker pull registry.cn-hangzhou.aliyuncs.com/funasr_repo/funasr:runtime-sdk-cpu-0.4.7
+
 CONTAINER_NAME="funasr-server"
 IMAGE_NAME="funasr-with-ffmpeg"
 IMAGE_VERSION="runtime-sdk-cpu-0.4.7"
@@ -10,7 +12,7 @@ mkdir -p $(pwd)/funasr-runtime-resources/models
 # 如果容器不存在，先创建
 if [ ! "$(docker ps -a | grep $CONTAINER_NAME)" ]; then
     echo "Creating new container..."
-    docker run -d --name ${CONTAINER_NAME} \
+    docker run -dit --name ${CONTAINER_NAME} \
       -p 10095:10095 \
       -v $(pwd)/funasr-runtime-resources/models:/workspace/models \
       ${IMAGE_NAME}:${IMAGE_VERSION} \
