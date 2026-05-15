@@ -3,7 +3,6 @@
 FROM ubuntu_py:24.04 as builder
 
 WORKDIR /opt
-RUN mkdir -p /opt/dm8_client
 ARG PROXY=""
 ARG APP="asr"
 #ARG PROXY=" -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn"

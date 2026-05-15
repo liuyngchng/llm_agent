@@ -1,6 +1,6 @@
 #!/bin/bash
 
-APP='embedding'
+APP='asr'
 CONTAINER="${APP}_app"
 APP_DIR="apps/${APP}"
 CURRENT_DIR=$(pwd)
@@ -23,7 +23,7 @@ docker run -dit --name ${CONTAINER}  \
   -v ${CURRENT_DIR}:/opt/app \
   -p 19010:19000 \
   -e APP_NAME=${APP} \
-  llm_asr:1.1
+  llm_docx:1.1
 echo "容器 ${CONTAINER} 已启动"
 docker ps -a  | grep ${CONTAINER} --color=always
 echo "部署完成"
