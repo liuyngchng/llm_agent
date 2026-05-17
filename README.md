@@ -107,6 +107,8 @@ pip install -r ./apps/chat2db/requirements.txt
 ```text
 .
 ├── apps
+│   ├── asr
+│   ├── auth_service
 │   ├── chat
 │   ├── chat2db
 │   ├── chat2kb
