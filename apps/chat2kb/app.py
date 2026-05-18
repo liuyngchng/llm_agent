@@ -18,10 +18,11 @@ from flask import Flask, request, redirect, abort, url_for, send_from_directory,
 from apps.chat2kb.chat_agent import ChatAgent
 from common.const import SESSION_TIMEOUT
 from common.my_enums import AppType
+from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
 from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, auth_info, get_client_ip
 from common.bp_vdb import vdb_bp, VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task
-from common.cm_utils import get_console_arg1
+from common.cm_utils import get_console_arg1, estimate_tokens
 from common.vdb_meta_util import VdbMeta
 from common.vdb_util import search_txt
 from common import statistic_util, my_enums
@@ -167,7 +168,7 @@ def register_routes(app):
         """
         logger.info(f"chat_request {request.form}")
         msg = request.form.get('msg', "").strip()
-        uid = request.form.get('uid')
+        uid = int(request.form.get('uid'))
         kb_id = request.form.get('kb_id')
         model_id = request.form.get('model_id')
 
@@ -214,10 +215,16 @@ def register_routes(app):
             full_response = ""
             stream_input = {"context": context, "question": msg}
             logger.info(f"stream_input {stream_input}")
+            input_tokens = estimate_tokens(str(stream_input))
+            logger.info(f"{uid}, input_tokens, {input_tokens}")
+            add_input_token_by_uid(uid, input_tokens)
             for chunk in chat_agent.get_chain().stream(stream_input):
                 full_response += chunk
                 yield chunk
             logger.info(f"full_response: {full_response}")
+            output_tokens = estimate_tokens(json.dumps(full_response))
+            logger.info(f"{uid}, output_tokens, {output_tokens}")
+            add_output_token_by_uid(uid, output_tokens)
 
         return app.response_class(generate_stream(), mimetype='text/event-stream')
 
