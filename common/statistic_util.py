@@ -27,7 +27,7 @@ def get_statistics_list()-> list[dict]:
     获取用户的统计数据清单
     """
     sql = (f"select uid, nickname, date, access_count, input_token, output_token"
-           f" from statistics limit 100")
+           f" from statistics order by date desc limit 100")
     logger.info(f"get_statistics_list_sql, {sql}")
     my_dt = sqlite_output(STS_DB_URI, sql, DataType.JSON.value)
     logger.info(f"get_statistics_list_dt {my_dt}")
