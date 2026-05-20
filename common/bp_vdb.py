@@ -231,7 +231,7 @@ def upload_file():
         info = {"success": False, "message": f"缺少参数,文件名、知识库ID或用户ID为空, {upload_file_name}, {kb_id}, {uid}"}
         logger.error(info)
         return json.dumps(info, ensure_ascii=False), 400
-    logger.info(f"vdb_upload_file, {upload_file_name}, {kb_id}, {uid}")
+    logger.info(f"{uid}, vdb_upload_file, {upload_file_name}, {kb_id}, {uid}")
 
     try:
         # 安全检查和处理文件名
@@ -241,7 +241,7 @@ def upload_file():
             logger.error(info)
             return json.dumps(info, ensure_ascii=False), 400
         # 检查文件类型
-        logger.info(f"safe_filename: {safe_filename}")
+        logger.info(f"{uid}, filename_safe_check_finish: {safe_filename}")
         allowed_extensions = {'.docx', '.pdf', '.txt'}
         original_filename = upload_file_name
         file_ext = os.path.splitext(original_filename)[1].lower()  # 提取扩展名并转为小写
@@ -274,29 +274,29 @@ def upload_file():
         is_duplicate_file = False
         if file_info:
             old_file = file_info[0].get('file_path')
-            logger.info(f"duplicate_upload_file, {upload_file_name}, {disk_file_name}, "
+            logger.info(f"{uid}, duplicate_upload_file, {upload_file_name}, {disk_file_name}, "
                     f"{uid}, {kb_id}, previous_file_will_be_deleted, {old_file}")
             is_duplicate_file = True
             VdbMeta.delete_vdb_file_by_uid_vbd_id_file_id(file_info[0]['id'], uid, kb_id)
             old_file_full_path = os.path.join(UPLOAD_FOLDER, old_file)
             if os.path.exists(old_file_full_path):
                 os.remove(old_file_full_path)
-            logger.info(f"previous_file_deleted_from_disk, {old_file_full_path}")
+            logger.info(f"{uid}, previous_file_deleted_from_disk, {old_file_full_path}")
             vdb = f"{VDB_PREFIX}{uid}_{kb_id}"
             vdb_util.del_doc(str(old_file_full_path), vdb)
-            logger.info(f"previous_file_deleted_from_vdb, {old_file_full_path}, {vdb}")
+            logger.info(f"{uid}, previous_file_deleted_from_vdb, {old_file_full_path}, {vdb}")
         VdbMeta.save_vdb_file_info(upload_file_name, disk_file_name, uid, kb_id, vdb_task_id, file_md5)
-        logger.info(f"save_new_file_info_in_db, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
+        logger.info(f"{uid}, save_new_file_info_in_db, {upload_file_name}, {disk_file_name}, {uid}, {kb_id}")
         if is_duplicate_file:
             msg = "文件已存在，已更新"
         else:
             msg = "文件上传成功"
         info = {"success": True,"vdb_task_id": vdb_task_id,"file_name": disk_file_name,"message": msg}
-        logger.info(f"{msg}: {disk_file_name}, 大小: {os.path.getsize(disk_file_save_path)}字节, return {info}")
+        logger.info(f"{uid}, {msg}: {disk_file_name}, 大小: {os.path.getsize(disk_file_save_path)}字节, return {info}")
         return json.dumps(info, ensure_ascii=False), 200
 
     except Exception as e:
-        logger.error(f"文件上传处理失败: {str(e)}", exc_info=True)
+        logger.error(f"{uid}, 文件上传处理失败: {str(e)}", exc_info=True)
         info = {"success": False, "message": f"文件上传处理失败: {str(e)}"}
         logger.error(info)
         return json.dumps(info, ensure_ascii=False), 500
@@ -418,8 +418,8 @@ def process_doc():
                 continue
             info = "开始解析文档结构..."
             VdbMeta.update_vdb_file_process_info(file_id, info, 0)
-            vdb_util.vector_file(file_id, cur_file_path, output_vdb_dir,
-                 get_cfg()['api'], 300, 80)
+            vdb_util.vector_file(file_id, str(cur_file_path), output_vdb_dir,
+                 get_cfg()['api'], 300, 80, uid=uid)
 
             # 清理完成的任务
             with task_lock:
@@ -475,13 +475,13 @@ def delete_file_from_vdb():
 
     save_path = os.path.join(UPLOAD_FOLDER, disk_file_name)
     if os.path.exists(save_path):
-        logger.info(f"delete_file_from_disk, file_id_{file_id}, {save_path}")
+        logger.info(f"{uid}, delete_file_from_disk, file_id_{file_id}, {save_path}")
         os.remove(save_path)
     vdb_dir = f"{VDB_PREFIX}{uid}_{vdb_id}"
     if os.path.exists(vdb_dir):
-        logger.info(f"delete_file_from_vdb, file_save_path {save_path}")
+        logger.info(f"{uid}, delete_file_from_vdb, file_save_path {save_path}")
         vdb_util.del_doc(save_path, vdb_dir)
-    logger.info(f"delete_file_from_vdb_file_meta_info, {file_id}")
+    logger.info(f"{uid}, delete_file_from_vdb_file_meta_info, {file_id}")
     VdbMeta.delete_vdb_file_by_uid_vbd_id_file_id(file_id, uid, vdb_id)
     info = {"success": True, "message": f"文件{file_name}已从知识库中删除"}
     logger.info(info)

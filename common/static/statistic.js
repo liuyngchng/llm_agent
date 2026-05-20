@@ -69,6 +69,9 @@ function renderTasksTable(tasks) {
         // 输出 tokens
         const outputTokenCell = document.createElement('td');
         outputTokenCell.innerHTML = `<div>${task.output_token || 0}</div>`;
+        // embedding tokens
+        const embeddingTokenCell = document.createElement('td');
+        embeddingTokenCell.innerHTML = `<div>${task.embedding_token || 0}</div>`;
 
         row.appendChild(idCell);
         row.appendChild(uidCell);
@@ -77,6 +80,7 @@ function renderTasksTable(tasks) {
         row.appendChild(accessCountCell);
         row.appendChild(inputTokenCell);
         row.appendChild(outputTokenCell);
+        row.appendChild(embeddingTokenCell);
         tableBody.appendChild(row);
     });
 

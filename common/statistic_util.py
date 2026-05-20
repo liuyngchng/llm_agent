@@ -26,7 +26,7 @@ def get_statistics_list()-> list[dict]:
     """
     获取用户的统计数据清单
     """
-    sql = (f"select uid, nickname, date, access_count, input_token, output_token"
+    sql = (f"select uid, nickname, date, access_count, input_token, output_token, embedding_token"
            f" from statistics order by date desc limit 100")
     logger.info(f"get_statistics_list_sql, {sql}")
     my_dt = sqlite_output(STS_DB_URI, sql, DataType.JSON.value)
@@ -139,6 +139,54 @@ def add_input_token_by_uid(uid: int, input_token: int)-> bool:
             if result.get('result'):
                 save_result = True
                 logger.info("add_input_token_success")
+        except Exception as e:
+            logger.exception(f"err_in_exec_sql, {exec_sql}")
+    return save_result
+
+
+def get_embedding_token_by_uid(uid: int)-> int | None:
+    today = datetime.today().strftime('%Y-%m-%d')
+    with sqlite3.connect(STS_DB_FILE) as my_conn:
+        try:
+            sql = f"select embedding_token from statistics where uid={uid} and date='{today}' limit 1"
+            check_info = query_sqlite(my_conn, sql)
+            user_dt = check_info['data']
+            if user_dt:
+                logger.debug(f"get_embedding_token_by_uid, {user_dt[0][0]}")
+                return user_dt[0][0]
+        except Exception as e:
+            logger.error(f"get_embedding_token_by_uid_err, {uid}")
+    logger.error(f"no_embedding_token_found_for_uid, {uid}")
+    return -1
+
+def add_embedding_token_by_uid(uid: int, embedding_token: int)-> bool:
+    """
+    :param uid: user id
+    :param embedding_token: user embedding token count to add
+    """
+    save_result = False
+    if not embedding_token or not uid:
+        logger.error("user_embedding_token_or_uid_is_null")
+        return save_result
+    current_embedding_token = get_embedding_token_by_uid(uid)
+    today = datetime.today().strftime('%Y-%m-%d')
+    if current_embedding_token >= 0:
+        upt_count = embedding_token + current_embedding_token
+        exec_sql = f"update statistics set embedding_token ={upt_count} where uid = {uid} and date='{today}'"
+    else:
+        nickname_info = cfg_util.get_user_info_by_uid(uid)
+        if nickname_info:
+            exec_sql = f"""insert into statistics (uid, nickname, date, embedding_token)
+            values ({uid}, '{nickname_info['name']}', '{today}', '{embedding_token}')"""
+        else:
+            raise Exception(f"failed_get_nickname_info_for_uid, {uid}, {nickname_info}")
+    with sqlite3.connect(STS_DB_FILE) as my_conn:
+        try:
+            result = insert_del_sqlite(my_conn, exec_sql)
+            logger.debug(f"exec_sql_success {exec_sql}")
+            if result.get('result'):
+                save_result = True
+                logger.info("add_embedding_token_success")
         except Exception as e:
             logger.exception(f"err_in_exec_sql, {exec_sql}")
     return save_result

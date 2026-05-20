@@ -29,6 +29,8 @@ from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import QueryResult
 
 from common.vdb_meta_util import VdbMeta
+from common.statistic_util import add_embedding_token_by_uid
+from common.cm_utils import estimate_tokens
 
 # 配置日志
 log_config_path = 'logging.conf'
@@ -83,11 +85,12 @@ def get_chroma_client(vector_db_abs_path: str):
     )
 
 def process_doc(file_id: int, documents: list[Document], vector_db: str,
-                llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10, separators=None, max_workers=4) -> None:
+                llm_cfg: dict, chunk_size=300, chunk_overlap=80, batch_size=10,
+                separators=None, max_workers=4, uid: int = None) -> None:
     """多线程处理文档并构建向量数据库"""
     # 开始处理前检查任务是否被取消
     if check_task_cancelled(file_id):
-        info = f"任务已被用户取消"
+        info = f"{uid}, 任务已被用户取消"
         VdbMeta.update_vdb_file_process_info(file_id, info)
         return
     if separators is None:
@@ -100,7 +103,7 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
         VdbMeta.update_vdb_file_process_info(file_id, "开始切分文本")
         if not separators:
             separators = ['。', '！', '？', '；', '...', '、', '，']
-        logger.info(f"splitting_documents_with_separators {separators}...")
+        logger.info(f"{uid}, splitting_documents_with_separators {separators}...")
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
@@ -129,7 +132,7 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
             all_documents.append(chunk.page_content)
 
         total_chunks = len(all_doc_ids)
-        logger.info(f"开始向量化 {total_chunks} chunks (batch_size={batch_size}, max_workers={max_workers})")
+        logger.info(f"{uid}, 开始向量化 {total_chunks} chunks (batch_size={batch_size}, max_workers={max_workers})")
         VdbMeta.update_vdb_file_process_info(file_id, f"开始处理文本块，共 {total_chunks} 个")
         source_desc = f"[{file_id}]_{source_list} 向量化进度"
 
@@ -148,7 +151,7 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
                 info = f"任务已被用户取消"
                 with lock:
                     VdbMeta.update_vdb_file_process_info(file_id, info)
-                    logger.info(f"{file_id}, {info}")
+                    logger.info(f"{uid}, {file_id}, {info}")
                 return 0
             batch_ids = all_doc_ids[start_idx:end_idx]
             batch_metas = all_metadata[start_idx:end_idx]
@@ -159,7 +162,10 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
                     documents=batch_texts,
                     metadatas=batch_metas
                 )
-                # 返回处理的文本块数量
+                if uid:
+                    batch_embedding_tokens = estimate_tokens(''.join(batch_texts))
+                    add_embedding_token_by_uid(uid, batch_embedding_tokens)
+                    logger.debug(f"uid_{uid}_batch_{start_idx}-{end_idx}_embedding_tokens_{batch_embedding_tokens}")
                 return len(batch_ids)
             except Exception as e:
                 info = f"处理批次 {start_idx}-{end_idx} 时出错: {str(e)}"
@@ -207,10 +213,10 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
         process_info = f"已完成文档处理， 共处理 {total_chunks} 个文本块"
         if err_info:
             process_info += f", {err_info}"
-        logger.info(f"向量数据库构建完成，保存到 {vector_db}")
+        logger.info(f"{uid}, 向量数据库构建完成，保存到 {vector_db}")
         VdbMeta.update_vdb_file_process_info(file_id, process_info, 100)
     except Exception as e:
-        info = f"处理文档时发生错误: {str(e)}"
+        info = f"{uid}, 处理文档时发生错误: {str(e)}"
         VdbMeta.update_vdb_file_process_info(file_id, info)
         logger.error(info, exc_info=True)
         raise
@@ -230,7 +236,7 @@ def build_client(llm_cfg: dict) -> OpenAI:
     )
 
 def vector_file(file_id: int, file_name: str, vector_db: str, llm_cfg: dict, chunk_size=300, chunk_overlap=80,
-                batch_size=10, separators = None) -> None:
+                batch_size=10, separators = None, uid: int = None) -> None:
     """
     处理单个文档文件并添加到向量数据库
     :param file_id: 待处理文档在数据库中的唯一标识
@@ -280,7 +286,8 @@ def vector_file(file_id: int, file_name: str, vector_db: str, llm_cfg: dict, chu
                 doc.metadata['source'] = abs_path
         logger.info(f"load_success_txt_snippet: {len(documents)}")
         VdbMeta.update_vdb_file_process_info(file_id, f"已经检测到 {len(documents)} 个文本片段")
-        process_doc(file_id, documents, vector_db, llm_cfg, chunk_size, chunk_overlap, batch_size, separators)
+        process_doc(file_id, documents, vector_db, llm_cfg, chunk_size, chunk_overlap,
+            batch_size, separators, uid=uid)
 
     except Exception as e:
         logger.error(f"load_file_fail_err, {abs_path}, {e}", exc_info=True)

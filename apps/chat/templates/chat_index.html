@@ -19,6 +19,11 @@
                     <button id="clearChat" class="btn-clear">
                         <i class="fas fa-trash-alt"></i> 清空聊天
                     </button>
+                    {% if hack_admin =='1' %}
+                    <a href="/usr/statistic/index?uid={{uid}}&app_source={{app_source}}" class="btn-clear" target="_blank">
+                        <i class="fas fa-cog"></i>运营管理
+                    </a>
+                    {% endif %}
                     <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="btn-logout">
                         <i class="fas fa-sign-out-alt"></i> 退出
                     </a>
