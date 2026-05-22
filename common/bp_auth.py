@@ -36,7 +36,14 @@ auth_info = {}
 
 def _auth_api_base():
     """从配置获取 auth_service 的 API 基础地址"""
-    return get_cfg()['api']['auth_api'].rstrip('/')
+    cfg = get_cfg()
+    auth_api = cfg.get('api', {}).get('auth_api', '')
+    if not auth_api:
+        raise RuntimeError(
+            "配置缺失: cfg.yml 中未设置 api.auth_api，"
+            "请参考 cfg.yml.template 添加 auth_service 的 API 地址"
+        )
+    return auth_api.rstrip('/')
 
 
 @auth_bp.route('/captcha/generate', methods=['GET'])
@@ -49,6 +56,9 @@ def generate_captcha():
         logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
         resp.raise_for_status()
         return jsonify(resp.json())
+    except RuntimeError as e:
+        logger.error(f"配置错误: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
     except requests.RequestException as e:
         logger.error(f"生成图形验证码失败: {e}", exc_info=True)
         return jsonify({"success": False, "message": "生成验证码失败"}), 500
@@ -69,6 +79,9 @@ def get_captcha_image(captcha_token):
         response.headers['Content-Type'] = resp.headers.get('Content-Type', 'image/svg+xml')
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         return response
+    except RuntimeError as e:
+        logger.error(f"配置错误: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
     except requests.RequestException as e:
         logger.error(f"获取验证码图片失败: {e}", exc_info=True)
         return jsonify({"success": False, "message": "获取验证码失败"}), 500
@@ -91,6 +104,9 @@ def login_index():
         logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
         resp.raise_for_status()
         captcha_token = resp.json().get("captcha_token", "")
+    except RuntimeError as e:
+        logger.error(f"配置错误: {e}")
+        warning_info = str(e)
     except requests.RequestException as e:
         logger.error(f"获取验证码 token 失败: {e}")
 
@@ -132,6 +148,12 @@ def login():
         logger.debug(f"POST {url}, params {safe_params}")
         resp = requests.post(url, json=params, timeout=10)
         logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
+    except RuntimeError as e:
+        logger.error(f"配置错误: {e}")
+        return redirect(url_for('auth.login_index',
+                                app_source=app_source,
+                                warning_info=str(e),
+                                usr=user))
     except requests.RequestException as e:
         logger.error(f"auth_service 调用失败: {e}")
         return redirect(url_for('auth.login_index',
@@ -222,6 +244,15 @@ def reg_user_index():
         logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
         resp.raise_for_status()
         captcha_token = resp.json().get("captcha_token", "")
+    except RuntimeError as e:
+        logger.error(f"配置错误: {e}")
+        ctx = {
+            "sys_name": sys_name + "_新用户注册",
+            "warning_info": str(e),
+            "app_source": app_source,
+            "captcha_token": "",
+        }
+        return render_template("reg_usr_index.html", **ctx)
     except requests.RequestException as e:
         logger.error(f"获取验证码 token 失败: {e}")
 
@@ -273,6 +304,10 @@ def reg_user():
         logger.debug(f"POST {url}, params {safe_params}")
         resp = requests.post(url, json=params, timeout=10)
         logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
+    except RuntimeError as e:
+        logger.error(f"配置错误: {e}")
+        ctx["warning_info"] = str(e)
+        return render_template(dt_idx, **ctx)
     except requests.RequestException as e:
         logger.error(f"auth_service 调用失败: {e}")
         ctx["warning_info"] = "认证服务暂时不可用，请稍后重试"
