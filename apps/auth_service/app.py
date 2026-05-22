@@ -22,11 +22,12 @@ from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from apps.auth_service import auth_util
 from common.cm_utils import get_console_arg1
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
 
-from common import cfg_util, statistic_util
+from common import statistic_util
 from common.sys_init import init_yml_cfg
 from common.const import SESSION_TIMEOUT
 
@@ -116,13 +117,13 @@ def create_token(uid: int, role: int) -> str:
         "role": role,
         "exp": time.time() + SESSION_TIMEOUT,
     })
-    return cfg_util.encrypt(payload, my_cfg["sys"]["cypher_key"])
+    return auth_util.encrypt(payload, my_cfg["sys"]["cypher_key"])
 
 
 def decode_token(token: str) -> dict | None:
     """解密并校验 token"""
     try:
-        payload_str = cfg_util.decrypt(token, my_cfg["sys"]["cypher_key"])
+        payload_str = auth_util.decrypt(token, my_cfg["sys"]["cypher_key"])
         payload: dict = json.loads(payload_str)
         if time.time() > payload.get("exp", 0):
             return None
@@ -260,7 +261,7 @@ async def login(body: LoginRequest, request: Request):
         logger.warning(f"验证码错误 - 用户: {body.usr}")
         raise HTTPException(status_code=400, detail="验证码错误")
 
-    result = cfg_util.auth_user(body.usr, body.t, my_cfg)
+    result = auth_util.auth_user(body.usr, body.t, my_cfg)
     if not result["pass"]:
         logger.error(f"认证失败 - 用户: {body.usr}, 原因: {result.get('msg')}")
         raise HTTPException(status_code=401, detail=result.get("msg", "登录失败"))
@@ -293,14 +294,14 @@ async def register(body: RegisterRequest):
         logger.warning(f"注册验证码错误 - 用户: {body.usr}")
         raise HTTPException(status_code=400, detail="验证码错误")
 
-    if cfg_util.get_uid_by_user(body.usr):
+    if auth_util.get_uid_by_user(body.usr):
         logger.error(f"注册失败 - 用户已存在: {body.usr}")
         raise HTTPException(status_code=409, detail=f"用户 {body.usr} 已存在")
 
-    if not cfg_util.save_usr(body.usr, body.t):
+    if not auth_util.save_usr(body.usr, body.t):
         raise HTTPException(status_code=500, detail="用户创建失败")
 
-    uid = int(cfg_util.get_uid_by_user(body.usr))
+    uid = int(auth_util.get_uid_by_user(body.usr))
 
     if body.captcha_token in captcha_codes:
         del captcha_codes[body.captcha_token]
@@ -327,7 +328,7 @@ def verify(user: dict = Depends(require_user)):
 @app.get("/api/auth/me")
 def me(user: dict = Depends(require_user)):
     """获取当前登录用户的信息"""
-    info = cfg_util.get_user_info_by_uid(user["uid"])
+    info = auth_util.get_user_info_by_uid(user["uid"])
     if not info:
         raise HTTPException(status_code=404, detail="用户不存在")
     return info
@@ -336,7 +337,7 @@ def me(user: dict = Depends(require_user)):
 @app.get("/api/auth/user/{uid}")
 def get_user(uid: int, user: dict = Depends(require_user)):
     """根据 uid 查询用户信息"""
-    info = cfg_util.get_user_info_by_uid(uid)
+    info = auth_util.get_user_info_by_uid(uid)
     if not info:
         raise HTTPException(status_code=404, detail="用户不存在")
     return info
@@ -345,10 +346,10 @@ def get_user(uid: int, user: dict = Depends(require_user)):
 @app.get("/api/auth/user/search/{username}")
 def search_user(username: str, user: dict = Depends(require_user)):
     """根据用户名查询用户"""
-    uid = cfg_util.get_uid_by_user(username)
+    uid = auth_util.get_uid_by_user(username)
     if not uid:
         raise HTTPException(status_code=404, detail="用户不存在")
-    info = cfg_util.get_user_info_by_uid(uid)
+    info = auth_util.get_user_info_by_uid(uid)
     return info
 
 

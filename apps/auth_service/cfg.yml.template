@@ -12,15 +12,3 @@ sys:
     cypher_key: abaababaabaababa
     # 在 debug 模式下定时任务将关闭，在生产环境下， debug_mode 必须设置为 false
     debug_mode: true
-api:
-    # 认证服务 API
-    auth_api: http://127.0.0.1:19000
-    # 大语言模型 API 基地址
-    llm_api_uri: https://api.deepseek.com/v1
-    #  大语言模型 API key
-    llm_api_key: 45678
-    #  大语言模型 模型名称
-    llm_model_name: deepseek-chat
-
-    # 是否为远程模式，true 表示使用远程模式，false 表示使用本地模式 ollama 接口
-    is_remote: true

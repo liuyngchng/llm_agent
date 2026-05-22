@@ -77,14 +77,6 @@ def app_home():
     logger.info("redirect_auth_login_index")
     return redirect(url_for('auth.login_index', app_source=AppType.CHAT.name.lower()))
 
-# @app.route('/')
-# def index():
-#     """渲染主页面"""
-#     logger.info("访问首页")
-#     return render_template('index.html', config={
-#         'temperature': LLMConfig.TEMPERATURE
-#     })
-
 @app.route('/chat', methods=['POST'])
 def chat():
     """处理聊天请求"""
