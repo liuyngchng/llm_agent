@@ -440,6 +440,15 @@ textarea::placeholder {
     cursor: not-allowed;
 }
 
+.user-name {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 4px;
+}
+
 .btn-logout {
     background-color: #e74c3c;
     color: white;

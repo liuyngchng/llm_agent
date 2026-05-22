@@ -585,6 +585,17 @@ textarea {
     color: #777;
     margin-top: 5px;
 }
+.user-name {
+    padding: 8px 4px;
+    color: white;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
 .logout-btn {
     padding: 8px 16px;
     background: linear-gradient(to right, #4b6cb7, #3a5a9e);

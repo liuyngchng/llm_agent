@@ -102,6 +102,15 @@ body {
     margin-bottom: 25px;
 }
 
+.user-name {
+    color: #4b6cb7;
+    font-weight: 500;
+    padding: 8px 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .nav-link {
     color: #4b6cb7;
     text-decoration: none;

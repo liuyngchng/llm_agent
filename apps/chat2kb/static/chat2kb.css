@@ -51,6 +51,16 @@ header h1 {
     gap: 10px;
 }
 
+.user-name {
+    padding: 8px 4px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
 .system-settings-link {
     padding: 8px 16px;
     background: rgba(255, 255, 255, 0.15);

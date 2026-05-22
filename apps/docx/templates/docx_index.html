@@ -27,6 +27,7 @@
                     <i class="fas fa-cog"></i>运营管理
                 </a>
                 {% endif %}
+                <span class="user-name"><i class="fas fa-user"></i> {{ usr or '' }}</span>
                 <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i> 退出
                 </a>
