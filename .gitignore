@@ -9,7 +9,6 @@
 **/*.jar
 **/cpp/lib/*
 log/*
-cfg.db.template
 **/*.iml
 **/_*
 native-image/*

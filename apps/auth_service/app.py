@@ -339,8 +339,8 @@ def me(user: dict = Depends(require_user)):
 
 
 @app.get("/auth/user/{uid}")
-def get_user_info(uid: int, user: dict = Depends(require_user)):
-    """根据 uid 查询用户信息"""
+def get_user_info(uid: int):
+    """根据 uid 查询用户信息（内部调用，无需认证）"""
     info = auth_util.get_user_info_by_uid(uid)
     if not info:
         raise HTTPException(status_code=404, detail="用户不存在")
