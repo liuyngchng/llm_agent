@@ -228,7 +228,7 @@ def health():
 
 # ---- 验证码 ----
 
-@app.get("/api/captcha/generate")
+@app.get("/auth/captcha/generate")
 def api_generate_captcha():
     """生成验证码 token"""
     _cleanup_expired_captchas()
@@ -238,7 +238,7 @@ def api_generate_captcha():
     return {"success": True, "captcha_token": token}
 
 
-@app.get("/api/captcha/image/{captcha_token}")
+@app.get("/auth/captcha/image/{captcha_token}")
 def api_captcha_image(captcha_token: str):
     """获取验证码 SVG 图片"""
     info = captcha_codes.get(captcha_token)
@@ -251,7 +251,7 @@ def api_captcha_image(captcha_token: str):
 
 # ---- 登录 ----
 
-@app.post("/api/auth/login")
+@app.post("/auth/login")
 async def login(body: LoginRequest, request: Request):
     """用户登录，返回 token"""
     ip = get_client_ip(request)
@@ -285,7 +285,7 @@ async def login(body: LoginRequest, request: Request):
 
 # ---- 注册 ----
 
-@app.post("/api/auth/register")
+@app.post("/auth/register")
 async def register(body: RegisterRequest):
     """用户注册"""
     logger.info(f"用户注册: {body.usr}")
@@ -319,13 +319,13 @@ async def register(body: RegisterRequest):
 
 # ---- token 验证 & 用户信息 ----
 
-@app.post("/api/auth/verify")
+@app.post("/auth/verify")
 def verify(user: dict = Depends(require_user)):
     """验证 token 有效，返回用户身份"""
     return {"valid": True, "uid": user["uid"], "role": user["role"]}
 
 
-@app.get("/api/auth/me")
+@app.get("/auth/me")
 def me(user: dict = Depends(require_user)):
     """获取当前登录用户的信息"""
     info = auth_util.get_user_info_by_uid(user["uid"])
@@ -334,7 +334,7 @@ def me(user: dict = Depends(require_user)):
     return info
 
 
-@app.get("/api/auth/user/{uid}")
+@app.get("/auth/user/{uid}")
 def get_user(uid: int, user: dict = Depends(require_user)):
     """根据 uid 查询用户信息"""
     info = auth_util.get_user_info_by_uid(uid)
@@ -343,7 +343,7 @@ def get_user(uid: int, user: dict = Depends(require_user)):
     return info
 
 
-@app.get("/api/auth/user/search/{username}")
+@app.get("/auth/user/query/{username}")
 def search_user(username: str, user: dict = Depends(require_user)):
     """根据用户名查询用户"""
     uid = auth_util.get_uid_by_user(username)
