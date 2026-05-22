@@ -7,6 +7,8 @@ import os
 import sqlite3
 from datetime import datetime
 
+import requests
+
 from common import cfg_util
 from common.cfg_util import query_sqlite, insert_del_sqlite, output_data, sqlite_output
 from common.my_enums import DataType
@@ -21,6 +23,32 @@ else:
     from common.const import LOG_FORMATTER
     logging.basicConfig(level=logging.INFO,format= LOG_FORMATTER, force=True)
 logger = logging.getLogger(__name__)
+
+def _get_auth_api_base():
+    """获取 auth_service 的 API 基础地址"""
+    try:
+        from flask import current_app
+        cfg = current_app.config.get('CFG')
+    except RuntimeError:
+        from common.sys_init import init_yml_cfg
+        cfg = init_yml_cfg()
+    return cfg['api']['auth_api'].rstrip('/')
+
+
+def _get_user_info_by_uid(uid: int) -> dict | None:
+    """通过 auth_service HTTP API 获取用户信息"""
+    try:
+        url = f"{_get_auth_api_base()}/auth/user/{uid}"
+        logger.debug(f"request {url}")
+        resp = requests.get(url, timeout=10)
+        logger.debug(f"response {resp.json()}")
+        if resp.status_code == 200:
+            return resp.json()
+        logger.error(f"get_user_info_by_uid_api_err, uid={uid}, status={resp.status_code}")
+    except Exception as e:
+        logger.error(f"get_user_info_by_uid_api_err, uid={uid}, {e}")
+    return None
+
 
 def get_statistics_list()-> list[dict]:
     """
@@ -78,7 +106,7 @@ def add_access_count_by_uid(uid: int, access_count: int)-> bool:
         upt_count = access_count + current_access_count
         exec_sql = f"update statistics set access_count ={upt_count} where uid = {uid} and date='{today}'"
     else:
-        nickname_info = cfg_util.get_user_info_by_uid(uid)
+        nickname_info = _get_user_info_by_uid(uid)
         if nickname_info:
             exec_sql = f"""insert into statistics (uid, nickname, date, access_count) 
             values ({uid}, '{nickname_info['name']}', '{today}', '{access_count}')"""
@@ -126,7 +154,7 @@ def add_input_token_by_uid(uid: int, input_token: int)-> bool:
         upt_count = input_token + current_input_token
         exec_sql = f"update statistics set input_token ={upt_count} where uid = {uid} and date='{today}'"
     else:
-        nickname_info = cfg_util.get_user_info_by_uid(uid)
+        nickname_info = _get_user_info_by_uid(uid)
         if nickname_info:
             exec_sql = f"""insert into statistics (uid, nickname, date, input_token) 
             values ({uid}, '{nickname_info['name']}', '{today}', '{input_token}')"""
@@ -174,7 +202,7 @@ def add_embedding_token_by_uid(uid: int, embedding_token: int)-> bool:
         upt_count = embedding_token + current_embedding_token
         exec_sql = f"update statistics set embedding_token ={upt_count} where uid = {uid} and date='{today}'"
     else:
-        nickname_info = cfg_util.get_user_info_by_uid(uid)
+        nickname_info = _get_user_info_by_uid(uid)
         if nickname_info:
             exec_sql = f"""insert into statistics (uid, nickname, date, embedding_token)
             values ({uid}, '{nickname_info['name']}', '{today}', '{embedding_token}')"""
@@ -222,7 +250,7 @@ def add_output_token_by_uid(uid: int, output_token: int)-> bool:
         upt_count = output_token + current_output_token
         exec_sql = f"update statistics set output_token ={upt_count} where uid = {uid} and date='{today}'"
     else:
-        nickname_info = cfg_util.get_user_info_by_uid(uid)
+        nickname_info = _get_user_info_by_uid(uid)
         if nickname_info:
             exec_sql = f"""insert into statistics (uid, nickname, date, output_token) 
                 values ({uid}, '{nickname_info['name']}', '{today}', '{output_token}')"""

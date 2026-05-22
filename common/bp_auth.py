@@ -119,7 +119,7 @@ def login():
     logger.debug(f"request_form: {request.form}")
     user = request.form.get('usr').strip()
     t = request.form.get('t').strip()
-    app_source = request.form.get('app_source')
+    app_source = str(request.form.get('app_source'))
     captcha_code = request.form.get('captcha_code', '').strip()
     captcha_token = request.form.get('captcha_token', '').strip()
 
@@ -156,7 +156,6 @@ def login():
     sys_name = my_enums.AppType.get_app_type(app_source)
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")
-
     statistic_util.add_access_count_by_uid(uid, 1)
 
     if result["role"] == 2:

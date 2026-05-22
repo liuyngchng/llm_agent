@@ -27,7 +27,6 @@ from common.cm_utils import get_console_arg1
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
 
-from common import statistic_util
 from common.sys_init import init_yml_cfg
 from common.const import SESSION_TIMEOUT
 
@@ -232,7 +231,7 @@ def health():
 # ---- 验证码 ----
 
 @app.get("/auth/captcha/generate")
-def api_generate_captcha():
+def generate_captcha():
     """生成验证码 token"""
     _cleanup_expired_captchas()
     text = "".join(random.choices(string.digits, k=4))
@@ -242,11 +241,12 @@ def api_generate_captcha():
 
 
 @app.get("/auth/captcha/image/{captcha_token}")
-def api_captcha_image(captcha_token: str):
+def generate_captcha_image(captcha_token: str):
     """获取验证码 SVG 图片"""
     info = captcha_codes.get(captcha_token)
     if not info:
         raise HTTPException(status_code=404, detail="验证码不存在或已过期")
+    logger.debug(f"{captcha_token} info: {json.dumps(info)}")
     svg = _generate_captcha_svg(info["text"])
     return Response(content=svg, media_type="image/svg+xml",
                     headers={"Cache-Control": "no-cache"})
@@ -274,7 +274,6 @@ async def login(body: LoginRequest, request: Request):
         del captcha_codes[body.captcha_token]
 
     token = create_token(result["uid"], result["role"])
-    statistic_util.add_access_count_by_uid(result["uid"], 1)
     logger.info(f"登录成功 - 用户: {body.usr}, uid: {result['uid']}")
 
     return {
@@ -297,14 +296,16 @@ async def register(body: RegisterRequest):
         logger.warning(f"注册验证码错误 - 用户: {body.usr}")
         raise HTTPException(status_code=400, detail="验证码错误")
 
-    if auth_util.get_uid_by_user(body.usr):
+    if auth_util.get_uid_by_user(body.usr) is not None:
         logger.error(f"注册失败 - 用户已存在: {body.usr}")
         raise HTTPException(status_code=409, detail=f"用户 {body.usr} 已存在")
 
     if not auth_util.save_usr(body.usr, body.t):
         raise HTTPException(status_code=500, detail="用户创建失败")
 
-    uid = int(auth_util.get_uid_by_user(body.usr))
+    uid = auth_util.get_uid_by_user(body.usr)
+    if uid is None:
+        raise HTTPException(status_code=500, detail="用户创建后查询失败")
 
     if body.captcha_token in captcha_codes:
         del captcha_codes[body.captcha_token]
@@ -338,7 +339,7 @@ def me(user: dict = Depends(require_user)):
 
 
 @app.get("/auth/user/{uid}")
-def get_user(uid: int, user: dict = Depends(require_user)):
+def get_user_info(uid: int, user: dict = Depends(require_user)):
     """根据 uid 查询用户信息"""
     info = auth_util.get_user_info_by_uid(uid)
     if not info:

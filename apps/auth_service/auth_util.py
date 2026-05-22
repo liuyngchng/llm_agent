@@ -155,9 +155,9 @@ def get_user_info_by_uid(uid: int)-> dict:
     logger.error(f"no_user_info_found_for_uid, {uid}")
     return user_info
 
-def get_uid_by_user(usr_name:str) ->int:
+def get_uid_by_user(usr_name:str) -> int | None:
     check_sql = f"select id from user where name='{usr_name}' limit 1"
-    uid = -1
+    uid = None
     if not os.path.exists(AUTH_DB_FILE):
         raise FileNotFoundError(f"数据库文件 {os.path.abspath(AUTH_DB_FILE)} 不存在")
     with sqlite3.connect(AUTH_DB_FILE) as my_conn:
