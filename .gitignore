@@ -38,6 +38,7 @@ sqlite_vss
 **/*.wav
 **/cfg.yml
 **/cfg.db
+**/auth.db
 **/cfg.db-journal
 **/*.cer
 **/*.faiss

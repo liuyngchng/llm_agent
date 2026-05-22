@@ -7,8 +7,24 @@ import os
 import sqlite3
 import time
 
-CFG_DB_FILE = "user.db"
-CFG_DB_URI=f"sqlite:///{CFG_DB_FILE}"
+AUTH_DB_FILE = "auth.db"
+AUTH_DB_URI = f"sqlite:///{AUTH_DB_FILE}"
+
+
+def init_db():
+    """初始化数据库，如果表不存在则自动创建"""
+    import sqlite3
+    with sqlite3.connect(AUTH_DB_FILE) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS user (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                t TEXT NOT NULL,
+                role INTEGER DEFAULT 0,
+                area TEXT DEFAULT ''
+            )
+        """)
+        conn.commit()
 
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
@@ -47,9 +63,9 @@ def decrypt(dt: str, key: str) -> str:
 
 def auth_user(user:str, t: str, cfg: dict) -> dict:
     auth_result ={"pass": False, "uid": "", "msg":""}
-    if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
-    with sqlite3.connect(CFG_DB_FILE) as my_conn:
+    if not os.path.exists(AUTH_DB_FILE):
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(AUTH_DB_FILE)} 不存在")
+    with sqlite3.connect(AUTH_DB_FILE) as my_conn:
         sql = f"select id, role from user where name='{user}' limit 1"
         check_info = query_sqlite(my_conn, sql)
         user_dt = check_info.get('data', [])
@@ -91,9 +107,9 @@ def save_usr(user_name: str, token: str) -> bool:
     import re
     save_result = False
     exec_sql = f"INSERT INTO user (name, t) values ('{user_name}','{token}' )"
-    if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
-    with sqlite3.connect(CFG_DB_FILE) as my_conn:
+    if not os.path.exists(AUTH_DB_FILE):
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(AUTH_DB_FILE)} 不存在")
+    with sqlite3.connect(AUTH_DB_FILE) as my_conn:
         try:
             exec_sql = exec_sql.replace('\n', ' ')
             exec_sql = re.sub(r'\s+', ' ', exec_sql).strip()
@@ -120,9 +136,9 @@ def insert_del_sqlite(db_con, sql: str) -> dict:
 def get_user_info_by_uid(uid: int)-> dict:
     import json
     user_info = {}
-    if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
-    with sqlite3.connect(CFG_DB_FILE) as my_conn:
+    if not os.path.exists(AUTH_DB_FILE):
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(AUTH_DB_FILE)} 不存在")
+    with sqlite3.connect(AUTH_DB_FILE) as my_conn:
         try:
             sql = f"select id, name, role, area from user where id={uid} limit 1"
             check_info = query_sqlite(my_conn, sql)
@@ -142,9 +158,9 @@ def get_user_info_by_uid(uid: int)-> dict:
 def get_uid_by_user(usr_name:str) ->int:
     check_sql = f"select id from user where name='{usr_name}' limit 1"
     uid = -1
-    if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
-    with sqlite3.connect(CFG_DB_FILE) as my_conn:
+    if not os.path.exists(AUTH_DB_FILE):
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(AUTH_DB_FILE)} 不存在")
+    with sqlite3.connect(AUTH_DB_FILE) as my_conn:
         check_info = query_sqlite(my_conn, check_sql)
         logger.debug(f"check_info {check_info}")
         if check_info:
@@ -160,9 +176,9 @@ def get_uid_by_user(usr_name:str) ->int:
 
 def get_user_name_by_uid(uid: int)-> str | None:
     user = None
-    if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
-    with sqlite3.connect(CFG_DB_FILE) as my_conn:
+    if not os.path.exists(AUTH_DB_FILE):
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(AUTH_DB_FILE)} 不存在")
+    with sqlite3.connect(AUTH_DB_FILE) as my_conn:
         try:
             sql = f"select name from user where id={uid} limit 1"
             check_info = query_sqlite(my_conn, sql)
@@ -175,9 +191,9 @@ def get_user_name_by_uid(uid: int)-> str | None:
 
 def get_user_role_by_uid(uid:int)-> str | None:
     role = None
-    if not os.path.exists(CFG_DB_FILE):
-        raise FileNotFoundError(f"数据库文件 {os.path.abspath(CFG_DB_FILE)} 不存在")
-    with sqlite3.connect(CFG_DB_FILE) as my_conn:
+    if not os.path.exists(AUTH_DB_FILE):
+        raise FileNotFoundError(f"数据库文件 {os.path.abspath(AUTH_DB_FILE)} 不存在")
+    with sqlite3.connect(AUTH_DB_FILE) as my_conn:
         try:
             sql = f"select role from user where id={uid} limit 1"
             check_info = query_sqlite(my_conn, sql)

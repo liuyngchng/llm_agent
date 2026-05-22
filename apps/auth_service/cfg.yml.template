@@ -1,14 +1,6 @@
 # config.yaml，文件格式必须严格遵循 yaml配置文件格式
 sys:
     #  系统名称(title) 配置
-    name: 文档生成
-    #  是否启用认证， true， 登录后才能使用系统;false 无需登录
-    auth: true
-    #  自定义数据库配置时的权限认证 token
-    cfg_tkn: foobar
-    # 配置可访问的域， 防止跨域攻击
-    allowed_origin: http://192,168.1.122
+    name: 认证服务
     # 对配置信息进行加密的密钥，长度必须为16/32
     cypher_key: abaababaabaababa
-    # 在 debug 模式下定时任务将关闭，在生产环境下， debug_mode 必须设置为 false
-    debug_mode: true
