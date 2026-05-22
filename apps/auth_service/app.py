@@ -363,4 +363,4 @@ if __name__ == "__main__":
     logger.info(f"my_cfg {my_cfg.get('db')},\n{my_cfg.get('api')}")
     port = get_console_arg1()
     logger.info(f"listening_port {port}")
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=19011)

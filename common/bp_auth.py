@@ -2,24 +2,21 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 """
-用户权限认证 HTTP 服务
+用户权限认证 HTTP 服务 (代理到 auth_service API)
 """
-import hashlib
 import json
 import os
-import random
 import re
-import string
 import time
 import logging.config
-from io import BytesIO
+
+import requests
 from flask import Blueprint, jsonify, redirect, url_for, current_app, make_response
 from flask import (request, render_template)
-from common import cfg_util as cfg_utl, statistic_util
+from common import statistic_util
 from common import my_enums
 from common.const import get_const, SESSION_TIMEOUT
 from common.html_util import get_html_ctx_from_md
-import svgwrite
 
 
 log_config_path = 'logging.conf'
@@ -36,67 +33,44 @@ template_folder = os.path.join(common_dir, 'common', 'templates')
 auth_bp = Blueprint('auth', __name__,template_folder=template_folder)
 auth_info = {}
 
-# 图形验证码存储字典（存储验证码值和相关信息）
-captcha_codes = {}
+
+def _auth_api_base():
+    """从配置获取 auth_service 的 API 基础地址"""
+    return get_cfg()['api']['auth_api'].rstrip('/')
 
 
 @auth_bp.route('/captcha/generate', methods=['GET'])
 def generate_captcha():
-    """
-    生成图形验证码
-    """
+    """生成图形验证码（代理到 auth_service）"""
     try:
-        # 生成4位数字验证码
-        captcha_text = ''.join(random.choices(string.digits, k=4))
-        # 生成唯一token
-        captcha_token = hashlib.md5(f"{captcha_text}{time.time()}".encode()).hexdigest()[:16]
-        # 存储验证码信息（有效期5分钟）
-        captcha_codes[captcha_token] = {
-            'text': captcha_text,
-            'expires_at': time.time() + 300,  # 5分钟有效期
-            'attempts': 0  # 尝试次数
-        }
-
-        # 清理过期的验证码
-        cleanup_expired_captchas()
-
-        logger.debug(f"生成图形验证码 - Token: {captcha_token}, 验证码: {captcha_text}")
-
-        return jsonify({
-            "success": True,
-            "captcha_token": captcha_token
-        })
-
-    except Exception as e:
-        logger.error(f"生成图形验证码失败: {str(e)}", exc_info=True)
+        url = f"{_auth_api_base()}/auth/captcha/generate"
+        logger.debug(f"GET {url}")
+        resp = requests.get(url, timeout=10)
+        logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
+        resp.raise_for_status()
+        return jsonify(resp.json())
+    except requests.RequestException as e:
+        logger.error(f"生成图形验证码失败: {e}", exc_info=True)
         return jsonify({"success": False, "message": "生成验证码失败"}), 500
 
 
 @auth_bp.route('/captcha/image/<captcha_token>', methods=['GET'])
 def get_captcha_image(captcha_token):
-    """
-    获取验证码图片
-    """
+    """获取验证码图片（代理到 auth_service）"""
     try:
-        if captcha_token not in captcha_codes:
+        url = f"{_auth_api_base()}/auth/captcha/image/{captcha_token}"
+        logger.debug(f"GET {url}")
+        resp = requests.get(url, timeout=10)
+        logger.debug(f"response status={resp.status_code}, content_type={resp.headers.get('Content-Type', 'N/A')}")
+        if resp.status_code == 404:
             return jsonify({"success": False, "message": "验证码不存在或已过期"}), 404
-
-        captcha_info = captcha_codes[captcha_token]
-        captcha_text = captcha_info['text']
-
-        # 生成SVG图片
-        svg_content = generate_captcha_svg(captcha_text)
-
-        response = make_response(svg_content)
-        response.headers['Content-Type'] = 'image/svg+xml'
+        resp.raise_for_status()
+        response = make_response(resp.content)
+        response.headers['Content-Type'] = resp.headers.get('Content-Type', 'image/svg+xml')
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-
         return response
-
-    except Exception as e:
-        logger.error(f"获取验证码图片失败: {str(e)}", exc_info=True)
+    except requests.RequestException as e:
+        logger.error(f"获取验证码图片失败: {e}", exc_info=True)
         return jsonify({"success": False, "message": "获取验证码失败"}), 500
 
 
@@ -109,13 +83,16 @@ def login_index():
         raise RuntimeError("no_app_info_found")
     sys_name = my_enums.AppType.get_app_type(app_source)
 
-    captcha_text = ''.join(random.choices(string.digits, k=4))
-    captcha_token = hashlib.md5(f"{captcha_text}{time.time()}".encode()).hexdigest()[:16]
-    captcha_codes[captcha_token] = {
-        'text': captcha_text,  # 这里设置验证码文本
-        'expires_at': time.time() + 300,
-        'attempts': 0
-    }
+    captcha_token = ""
+    try:
+        url = f"{_auth_api_base()}/auth/captcha/generate"
+        logger.debug(f"GET {url}")
+        resp = requests.get(url, timeout=10)
+        logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
+        resp.raise_for_status()
+        captcha_token = resp.json().get("captcha_token", "")
+    except requests.RequestException as e:
+        logger.error(f"获取验证码 token 失败: {e}")
 
     ctx = {
         "uid": -1,
@@ -148,39 +125,41 @@ def login():
 
     logger.info(f"user_login: {user}, IP={get_client_ip()}")
 
-    # 先验证图形验证码
-    if not verify_captcha(captcha_code, captcha_token):
-        warning_info = "图形验证码错误"
-        logger.warning(f"图形验证码验证失败 - 用户: {user}, 验证码: {captcha_code}")
+    try:
+        url = f"{_auth_api_base()}/auth/login"
+        params = {"usr": user, "t": t, "captcha_code": captcha_code, "captcha_token": captcha_token}
+        safe_params = {**params, "t": "***"}
+        logger.debug(f"POST {url}, params {safe_params}")
+        resp = requests.post(url, json=params, timeout=10)
+        logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
+    except requests.RequestException as e:
+        logger.error(f"auth_service 调用失败: {e}")
         return redirect(url_for('auth.login_index',
                                 app_source=app_source,
-                                warning_info=warning_info,
+                                warning_info="认证服务暂时不可用，请稍后重试",
                                 usr=user))
 
-    # 然后验证用户密码
-    auth_result = cfg_utl.auth_user(user, t, current_app.config.get('CFG'))
-    logger.info(f"user_login_result: {user}, {auth_result}")
+    if resp.status_code != 200:
+        try:
+            detail = resp.json().get("detail", "登录失败")
+        except Exception:
+            detail = "登录失败"
+        logger.error(f"用户认证失败 {user}: {detail}")
+        return redirect(url_for('auth.login_index',
+                                app_source=app_source,
+                                warning_info=detail,
+                                usr=user))
+    result = resp.json()
+    uid = result["uid"]
+    access_token = result["access_token"]
 
     sys_name = my_enums.AppType.get_app_type(app_source)
-    if not auth_result["pass"]:
-        logger.error(f"用户认证失败 {user}")
-        warning_info = auth_result['msg']
-        return redirect(url_for('auth.login_index',
-                                app_source=app_source,
-                                warning_info=warning_info,
-                                usr=user))
-
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")
 
-    # 验证成功后清理验证码
-    if captcha_token in captcha_codes:
-        del captcha_codes[captcha_token]
-
-    uid = auth_result["uid"]
     statistic_util.add_access_count_by_uid(uid, 1)
 
-    if auth_result["role"] == 2:
+    if result["role"] == 2:
         hack_admin = "1"
     else:
         hack_admin = "0"
@@ -193,8 +172,8 @@ def login():
     ctx = {
         "uid": uid,
         "usr": user,
-        "role": auth_result["role"],
-        "t": auth_result["t"],
+        "role": result["role"],
+        "t": access_token,
         "sys_name": sys_name,
         "greeting": greeting,
         "app_source": app_source,
@@ -204,7 +183,7 @@ def login():
         "arg3": arg3,
     }
 
-    session_key = f"{auth_result['uid']}_{get_client_ip()}"
+    session_key = f"{uid}_{get_client_ip()}"
     auth_info[session_key] = time.time()
     logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
@@ -223,11 +202,9 @@ def logout():
     logger.info(f"user_logout, {uid}, {app_source}")
     session_key = f"{uid}_{get_client_ip()}"
     auth_info.pop(session_key, None)
-    usr_info = cfg_utl.get_user_info_by_uid(int(uid))
-    usr_name = usr_info.get('name', '')
     return redirect(url_for('auth.login_index',
                             app_source=app_source,
-                            warning_info=f"用户 {usr_name} 已退出"))
+                            warning_info="用户已退出"))
 
 @auth_bp.route('/reg/usr', methods=['GET'])
 def reg_user_index():
@@ -238,13 +215,16 @@ def reg_user_index():
     app_source = request.args.get('app_source')
     sys_name = my_enums.AppType.get_app_type(app_source)
 
-    captcha_text = ''.join(random.choices(string.digits, k=4))
-    captcha_token = hashlib.md5(f"{captcha_text}{time.time()}".encode()).hexdigest()[:16]
-    captcha_codes[captcha_token] = {
-        'text': captcha_text,  # 这里设置验证码文本
-        'expires_at': time.time() + 300,
-        'attempts': 0
-    }
+    captcha_token = ""
+    try:
+        url = f"{_auth_api_base()}/auth/captcha/generate"
+        logger.debug(f"GET {url}")
+        resp = requests.get(url, timeout=10)
+        logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
+        resp.raise_for_status()
+        captcha_token = resp.json().get("captcha_token", "")
+    except requests.RequestException as e:
+        logger.error(f"获取验证码 token 失败: {e}")
 
     ctx = {
         "sys_name": sys_name + "_新用户注册",
@@ -264,69 +244,58 @@ def reg_user():
     dt_idx = "reg_usr_index.html"
     logger.info(f"reg_user_req, {request.form}, from_IP {get_client_ip()}")
 
-    # 获取验证码信息
     captcha_code = request.form.get('captcha_code', '').strip()
     captcha_token = request.form.get('captcha_token', '').strip()
+    app_source = request.form.get('app_source')
+    usr = request.form.get('usr', '').strip()
+    t = request.form.get('t', '').strip()
 
+    sys_name = my_enums.AppType.get_app_type(app_source)
     ctx = {
-        "sys_name": current_app.config.get('CFG')['sys']['name'] + "_新用户注册",
-        "user": "",
+        "sys_name": sys_name + "_新用户注册",
+        "user": usr,
         "warning_info": "",
-        "app_source": request.form.get('app_source'),
+        "app_source": app_source,
         "captcha_token": captcha_token,
     }
 
+    if not usr:
+        ctx["warning_info"] = "用户名不能为空"
+        logger.error("reg_user_empty_username")
+        return render_template(dt_idx, **ctx)
+    if not t:
+        ctx["warning_info"] = "密码不能为空"
+        logger.error("reg_user_empty_password")
+        return render_template(dt_idx, **ctx)
     try:
-        # 先验证图形验证码
-        if not verify_captcha(captcha_code, captcha_token):
-            ctx["warning_info"] = "图形验证码错误"
-            logger.warning(f"注册页面图形验证码验证失败 - 验证码: {captcha_code}")
-            return render_template(dt_idx, **ctx)
+        url = f"{_auth_api_base()}/auth/register"
+        params = {"usr": usr, "t": t, "captcha_code": captcha_code, "captcha_token": captcha_token}
+        safe_params = {**params, "t": "***"}
+        logger.debug(f"POST {url}, params {safe_params}")
+        resp = requests.post(url, json=params, timeout=10)
+        logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
+    except requests.RequestException as e:
+        logger.error(f"auth_service 调用失败: {e}")
+        ctx["warning_info"] = "认证服务暂时不可用，请稍后重试"
+        return render_template(dt_idx, **ctx)
 
-        usr = request.form.get('usr').strip()
-        ctx["user"] = usr
-        sys_name = my_enums.AppType.get_app_type(ctx["app_source"])
+    if resp.status_code == 200:
+        result = resp.json()
+        uid = result["uid"]
+        ctx["uid"] = uid
         ctx["sys_name"] = sys_name
-        t = request.form.get('t').strip()
-
-        if not usr:
-            ctx["warning_info"] = "用户名不能为空"
-            logger.error("reg_user_empty_username")
-            return render_template(dt_idx, **ctx)
-        if not t:
-            ctx["warning_info"] = "密码不能为空"
-            logger.error("reg_user_empty_password")
-            return render_template(dt_idx, **ctx)
-
-        usr_info = cfg_utl.get_uid_by_user(usr)
-        if usr_info:
-            ctx["warning_info"] = f"用户 {usr} 已存在，请重新输入用户名"
-            logger.error(f"reg_user_exist_err {usr}")
-            return render_template(dt_idx, **ctx)
-
-        cfg_utl.save_usr(usr, t)
-        uid = cfg_utl.get_uid_by_user(usr)
-
-        if uid:
-            # 注册成功后清理验证码
-            if captcha_token in captcha_codes:
-                del captcha_codes[captcha_token]
-
-            ctx["uid"] = uid
-            ctx["sys_name"] = sys_name
-            ctx["warning_info"] = f"用户 {usr} 已成功创建，欢迎使用本系统"
-            dt_idx = "login.html"
-            logger.info(f"reg_user_success, {usr}")
-            return render_template(dt_idx, **ctx)
-        else:
-            ctx["warning_info"] = f"用户 {usr} 创建失败"
-            logger.error(f"reg_user_fail, {usr}")
-            return render_template(dt_idx, **ctx)
-
-    except Exception as e:
-        ctx["warning_info"] = "系统异常，创建用户失败"
-        logger.error(f"reg_user_exception, {ctx['warning_info']}, url: {request.url}", exc_info=True)
-        logger.info(f"return_page {dt_idx}, ctx {ctx}")
+        ctx["warning_info"] = f"用户 {usr} 已成功创建，欢迎使用本系统"
+        dt_idx = "login.html"
+        logger.info(f"reg_user_success, {usr}")
+        return render_template(dt_idx, **ctx)
+    else:
+        try:
+            detail = resp.json().get("detail", "用户创建失败")
+        except Exception:
+            detail = "用户创建失败"
+        ctx["warning_info"] = detail
+        ctx["captcha_token"] = captcha_token
+        logger.error(f"reg_user_fail, {usr}: {detail}")
         return render_template(dt_idx, **ctx)
 
 @auth_bp.route('/usr/statistic/index', methods=['GET'])
@@ -460,125 +429,3 @@ def get_cfg():
         pass
     from common.sys_init import init_yml_cfg
     return init_yml_cfg()
-
-
-def generate_captcha_svg(captcha_text):
-    """
-    生成SVG格式的验证码图片
-    """
-    try:
-        # 调整尺寸为100x44像素以匹配新样式
-        width = 100
-        height = 44
-
-        # 创建SVG画布
-        dwg = svgwrite.Drawing(size=(width, height))
-
-        # 添加背景矩形
-        dwg.add(dwg.rect(insert=(0, 0), size=(width, height), fill='#f8f9fa', stroke='#dee2e6', stroke_width=1))
-
-        # 添加干扰线（减少数量以适应更小的尺寸）
-        for i in range(3):
-            x1 = random.randint(0, width)
-            y1 = random.randint(0, height)
-            x2 = random.randint(0, width)
-            y2 = random.randint(0, height)
-            dwg.add(dwg.line(start=(x1, y1), end=(x2, y2),
-                             stroke=random.choice(['#adb5bd', '#6c757d', '#495057']),
-                             stroke_width=random.uniform(0.5, 1)))
-
-        # 添加干扰点（减少数量以适应更小的尺寸）
-        for i in range(15):
-            x = random.randint(0, width)
-            y = random.randint(0, height)
-            radius = random.uniform(0.3, 1)
-            dwg.add(dwg.circle(center=(x, y), r=radius,
-                               fill=random.choice(['#adb5bd', '#6c757d', '#495057'])))
-
-        # 添加验证码文本（调整字体大小和位置）
-        font_size = 20
-        text_x = 5  # 减少左边距
-
-        for i, char in enumerate(captcha_text):
-            # 每个字符稍微旋转和位移（减小旋转角度）
-            rotation = random.uniform(-8, 8)
-            y_offset = random.uniform(-2, 2)
-
-            # 添加字符阴影（轻微偏移）
-            dwg.add(dwg.text(char, insert=(text_x + 0.5, 28 + y_offset + 0.5),
-                             font_size=font_size,
-                             font_family="Arial, sans-serif",
-                             fill='#adb5bd',
-                             font_weight="bold"))
-
-            # 添加主字符
-            dwg.add(dwg.text(char, insert=(text_x, 28 + y_offset),
-                             font_size=font_size,
-                             font_family="Arial, sans-serif",
-                             fill='#212529',
-                             font_weight="bold",
-                             transform=f"rotate({rotation},{text_x},{28 + y_offset})"))
-
-            text_x += 18  # 减少字符间距
-
-        # 添加边框
-        dwg.add(dwg.rect(insert=(0, 0), size=(width, height),
-                         fill='none', stroke='#ced4da', stroke_width=1))
-
-        return dwg.tostring()
-
-    except Exception as e:
-        logger.error(f"生成SVG验证码失败: {str(e)}", exc_info=True)
-        # 返回简单的SVG作为后备（调整尺寸）
-        return f'''<svg width="100" height="44" xmlns="http://www.w3.org/2000/svg">
-            <rect width="100" height="44" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1"/>
-            <text x="50" y="28" font-family="Arial" font-size="18" text-anchor="middle" fill="#212529">{captcha_text}</text>
-        </svg>'''
-
-
-def verify_captcha(code, token):
-    """
-    验证图形验证码
-    """
-    if not token or token not in captcha_codes:
-        return False
-
-    captcha_info = captcha_codes.get(token)
-
-    # 检查是否过期
-    if time.time() > captcha_info['expires_at']:
-        del captcha_codes[token]
-        return False
-
-    # 如果验证码文本为空，说明还没生成，需要先生成
-    if not captcha_info['text']:
-        # 生成4位数字验证码
-        captcha_text = ''.join(random.choices(string.digits, k=4))
-        captcha_info['text'] = captcha_text
-        logger.debug(f"首次使用时生成验证码 - Token: {token}, 验证码: {captcha_text}")
-
-    # 检查验证码是否正确
-    if captcha_info['text'] != code:
-        # 增加尝试次数
-        captcha_info['attempts'] += 1
-        if captcha_info['attempts'] >= 3:
-            del captcha_codes[token]  # 超过3次尝试，删除验证码
-        return False
-
-    return True
-
-
-def cleanup_expired_captchas():
-    """清理过期的图形验证码"""
-    current_time = time.time()
-    expired_tokens = []
-
-    for token, captcha_info in captcha_codes.items():
-        if current_time > captcha_info['expires_at']:
-            expired_tokens.append(token)
-
-    for token in expired_tokens:
-        del captcha_codes[token]
-
-    if expired_tokens:
-        logger.debug(f"清理了 {len(expired_tokens)} 个过期的图形验证码")
