@@ -68,6 +68,7 @@ class AppType(Enum):
     CHAT2DB = "自然语言数据查询"
     OPEN = "开放平台"
     PAPER_REVIEW = "文档审核"
+    AI_AGENT = "AI 应用"
 
     @staticmethod
     def get_app_list() -> list:
@@ -75,8 +76,10 @@ class AppType(Enum):
         return [{"name":app_type.name, "value":app_type.value} for app_type in AppType]
 
     @staticmethod
-    def get_app_type(app_str: str) -> str:
+    def get_app_type(app_str: str | None) -> str:
         """根据输入字符串获取对应的应用类型"""
+        if not app_str:
+            return "AI 应用"
         app_upper = app_str.upper()  # 转换为大写匹配枚举键
         try:
             return AppType[app_upper].value

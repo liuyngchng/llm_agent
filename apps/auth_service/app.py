@@ -113,7 +113,9 @@ def get_client_ip(request: Request) -> str:
 
 
 def create_token(uid: int, role: int) -> str:
-    """使用项目已有的 encrypt 创建认证 token"""
+    """
+     创建认证 token，JSON体中含有用户ID， 用户角色， 以及登录信息过期时间
+    """
     payload = json.dumps({
         "uid": uid,
         "role": role,
@@ -123,7 +125,10 @@ def create_token(uid: int, role: int) -> str:
 
 
 def decode_token(token: str) -> dict | None:
-    """解密并校验 token"""
+    """
+    解密并校验 token
+    解密用户提交的token，确认其登录信息合法且未过期，若登录令牌(token) 不合法，或者已经过期，用户需重新登录
+    """
     try:
         payload_str = auth_util.decrypt(token, my_cfg["sys"]["cypher_key"])
         payload: dict = json.loads(payload_str)
@@ -197,7 +202,9 @@ def _generate_captcha_svg(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 async def require_user(authorization: str = Header("")) -> dict:
-    """从 Authorization header 解析当前用户，失败则 401"""
+    """
+    从 Authorization header 解析当前用户，失败则 401
+    """
     if not authorization:
         raise HTTPException(status_code=401, detail="缺少认证 token")
     token = authorization

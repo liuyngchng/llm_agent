@@ -62,6 +62,19 @@ def decrypt(dt: str, key: str) -> str:
 
 
 def auth_user(user:str, t: str, cfg: dict) -> dict:
+    """
+    通过用户提交的登录信息，认证用户
+    :param user 用户名
+    :param t 经过加密的用户密码
+    :param cfg 系统配置
+    return
+        {
+            "pass": True,       # 认证是否通过
+            "uid": 12345,       # 用户 ID
+            "role": 0,          # 用户角色
+            "t": 2de7zde98f     # 加密的过期时间
+        }
+    """
     auth_result ={"pass": False, "uid": "", "msg":""}
     if not os.path.exists(AUTH_DB_FILE):
         raise FileNotFoundError(f"数据库文件 {os.path.abspath(AUTH_DB_FILE)} 不存在")

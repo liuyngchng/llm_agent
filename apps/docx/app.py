@@ -13,6 +13,7 @@ import os
 import threading
 import time
 
+from docx import Document
 from flask import (Flask, request, jsonify, send_from_directory,
     abort, redirect, url_for, stream_with_context, Response, render_template)
 

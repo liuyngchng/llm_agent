@@ -133,8 +133,8 @@ def login():
     form submit, get data from form
     """
     logger.debug(f"request_form: {request.form}")
-    user = request.form.get('usr').strip()
-    t = request.form.get('t').strip()
+    user = request.form.get('usr', '').strip()
+    t = request.form.get('t', '').strip()
     app_source = str(request.form.get('app_source'))
     captcha_code = request.form.get('captcha_code', '').strip()
     captcha_token = request.form.get('captcha_token', '').strip()
@@ -217,7 +217,7 @@ def logout():
     """
     dt_idx = "login.html"
     logger.debug(f"request_form: {request.args}")
-    uid = request.args.get('uid').strip()
+    uid = request.args.get('uid')
     app_source = request.args.get('app_source')
     sys_name = my_enums.AppType.get_app_type(app_source)
     logger.info(f"user_logout, {uid}, {app_source}")
