@@ -12,7 +12,7 @@ import logging.config
 import os
 
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, render_template, send_from_directory, abort, redirect, url_for
+from flask import Flask, render_template, send_from_directory, abort, redirect, url_for, current_app, request
 
 from common import my_enums
 from common.bp_auth import get_client_ip, auth_bp
@@ -43,14 +43,42 @@ os.system(
 
 my_cfg = init_yml_cfg()
 
+
+def forward_to(endpoint, **kwargs):
+    """
+    手动实现 forward 功能（服务器内部转发）
+
+    Args:
+        endpoint: 目标端点名称，格式如 'auth.login_index'
+        **kwargs: 传递给目标视图函数的参数
+
+    Returns:
+        目标视图函数的响应对象
+    """
+    # 获取目标视图函数
+    view_func = current_app.view_functions.get(endpoint)
+    if not view_func:
+        logger.error(f"forward_to endpoint not found: {endpoint}")
+        abort(404)
+
+    # 可选：记录转发信息，方便调试
+    current_app.logger.debug(f"Forwarding from {request.endpoint} to {endpoint}")
+
+    # 执行目标视图函数，保持当前请求上下文
+    return view_func(**kwargs)
+
+
 @app.route('/')
 def app_home():
-    host = my_cfg['sys']['host']
+    app_base_uri = my_cfg['sys']['app_base_uri']
     ip = get_client_ip()
     if "INVALID_IP" == ip:
         return json.dumps({"status":403, "msg":"illegal access"})
     logger.info(f"redirect_auth_login_index, from_ip, {ip}")
-    return redirect(url_for('auth.login_index', app_source=my_enums.AppType.PORTAL.name.lower(),host = host))
+    return forward_to('auth.login_index',
+                      app_source=my_enums.AppType.PORTAL.name.lower(),
+                      app_base_uri=app_base_uri)
+    # return redirect(url_for('auth.login_index', app_source=my_enums.AppType.PORTAL.name.lower(),host = host))
     # ctx = {
     #     "host": host
     # }

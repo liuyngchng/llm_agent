@@ -2,8 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta id="portal_index.html">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大模型应用</title>
+    <title>AI应用</title>
     <link rel="stylesheet" href="/static/portal.css">
     <link rel="stylesheet" href="/static/font-awesome.all.min.css">
 </head>
@@ -18,7 +19,7 @@
             <!-- 应用-->
             <div class="category-section">
                 <h2 class="category-title">
-                    <i class="fas fa-cube"></i> AI 应用
+                    <i class="fas fa-cube"></i> 智能体
                 </h2>
                 <div class="app-grid">
                     <!-- 应用1 -->
@@ -37,7 +38,7 @@
                                 <span class="app-port">端口: 20000</span>
                                 <span>chat</span>
                             </div>
-                            <a href="{{host}}:20000?t={{t}}" class="app-link">进入应用</a>
+                            <a href="{{app_base_uri}}:20000?t={{t}}" class="app-link">进入应用</a>
                         </div>
                     </div>
                     <!-- 应用2 -->
@@ -56,7 +57,7 @@
                                 <span class="app-port">端口: 19002</span>
                                 <span>chat2kb</span>
                             </div>
-                            <a href="{{host}}:19002?t={{t}}" class="app-link">进入应用</a>
+                            <a href="{{app_base_uri}}:19002?t={{t}}" class="app-link">进入应用</a>
                         </div>
                     </div>
 
@@ -76,7 +77,7 @@
                                 <span class="app-port">端口: 19003</span>
                                 <span>docx</span>
                             </div>
-                            <a href="{{host}}:19003?t={{t}}" class="app-link">进入应用</a>
+                            <a href="{{app_base_uri}}:19003?t={{t}}" class="app-link">进入应用</a>
                         </div>
                     </div>
                     <div class="app-card">
@@ -94,7 +95,7 @@
                                 <span class="app-port">端口: 19009</span>
                                 <span>paper_review</span>
                             </div>
-                            <a href="{{host}}:19009?t={{t}}" class="app-link">进入应用</a>
+                            <a href="{{app_base_uri}}:19009?t={{t}}" class="app-link">进入应用</a>
                         </div>
                     </div>
                     <div class="app-card">
@@ -112,7 +113,7 @@
                                 <span class="app-port">端口: 19010</span>
                                 <span>asr</span>
                             </div>
-                            <a href="{{host}}:19010?t={{t}}" class="app-link">进入应用</a>
+                            <a href="{{app_base_uri}}:19010?t={{t}}" class="app-link">进入应用</a>
                         </div>
                     </div>
                 </div>
@@ -121,7 +122,7 @@
             <!-- 接口服务 -->
             <div class="category-section">
                 <h2 class="category-title">
-                    <i class="fas fa-plug"></i> 开发接口
+                    <i class="fas fa-plug"></i> 接口
                 </h2>
                 <div class="app-grid">
                     <!-- 应用1 -->
@@ -140,7 +141,7 @@
                                 <span class="app-port">端口: 18000</span>
                                 <span>gateway</span>
                             </div>
-                            <a href="{{host}}:18000" class="app-link">查看 API</a>
+                            <a href="{{app_base_uri}}:18000" class="app-link">查看 API</a>
                         </div>
                     </div>
                     <!-- 应用7 -->
@@ -159,7 +160,7 @@
                                 <span class="app-port">端口: 19006</span>
                                 <span>mcp_server</span>
                             </div>
-                            <a href="{{host}}:19006" class="app-link">查看 API</a>
+                            <a href="{{app_base_uri}}:19006" class="app-link">查看 API</a>
                         </div>
                     </div>
                 </div>
@@ -167,7 +168,7 @@
             <!-- 模型服务 -->
             <div class="category-section">
                 <h2 class="category-title">
-                    <i class="fas fa-server"></i> 模型服务
+                    <i class="fas fa-server"></i> 模型
                 </h2>
                 <div class="app-grid">
                     <!-- 应用10 -->
@@ -186,7 +187,7 @@
                                 <span class="app-port">端口: 16000</span>
                                 <span>llm</span>
                             </div>
-                            <a href="{{host}}:16000" class="app-link">查看模型 API</a>
+                            <a href="{{app_base_uri}}:16000" class="app-link">查看模型 API</a>
                         </div>
                     </div>
 
@@ -206,7 +207,7 @@
                                 <span class="app-port">端口: 17000</span>
                                 <span>embedding</span>
                             </div>
-                            <a href="{{host}}:17000" class="app-link">查看模型 API</a>
+                            <a href="{{app_base_uri}}:17000" class="app-link">查看模型 API</a>
                         </div>
                     </div>
                 </div>
@@ -215,6 +216,6 @@
     </div>
     <input type="hidden" id ="uid" name="uid" value="{{uid}}">
     <input type="hidden" id ="t" name="t" value="{{t}}">
-    <input type="hidden" id ="host" name="host" value="{{host}}">
+    <input type="hidden" id ="app_base_uri" name="app_base_uri" value="{{app_base_uri}}">
 </body>
 </html>
