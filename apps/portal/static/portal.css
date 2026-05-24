@@ -63,18 +63,25 @@ h1 {
     gap: 12px;
 }
 
-.header-buttons {
-    position: absolute;
-    top: 20px;
-    right: 20px;
+.header-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-bottom p {
+    margin: 0;
+}
+
+.header-actions {
     display: flex;
     gap: 15px;
     align-items: center;
 }
 
-.my-btn, .logout-btn {
+.btn-clear, .btn-logout {
     padding: 8px 16px;
-    background: linear-gradient(to right, #4b6cb7, #3a5a9e);
+    background: rgba(255, 255, 255, 0.15);
     color: white;
     border-radius: 5px;
     text-decoration: none;
@@ -87,8 +94,16 @@ h1 {
     font-weight: 600;
 }
 
-.my-btn:hover, .logout-btn:hover {
-    background: linear-gradient(to right, #3a5a9e, #2c487e);
+.user-name {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-clear:hover, .btn-logout:hover {
+    background: rgba(255, 255, 255, 0.25);
     transform: translateY(-2px);
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
 }

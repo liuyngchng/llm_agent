@@ -90,9 +90,12 @@ def get_captcha_image(captcha_token):
 @auth_bp.route('/login', methods=['GET'])
 def login_index(app_source=None, app_base_uri=None, warning_info=None):
     # logger.info("login_index")
-    # app_source = request.args.get('app_source', current_app.config.get('APP_SOURCE'))
-    # host = request.args.get('host','')
-    # warning_info = request.args.get('warning_info', "")
+    if not app_source:
+        app_source = request.args.get('app_source', current_app.config.get('APP_SOURCE'))
+    if not app_base_uri:
+        app_base_uri = request.args.get('app_base_uri','')
+    if not warning_info:
+        warning_info = request.args.get('warning_info', "")
     if not app_source:
         raise RuntimeError("no_app_info_found")
     sys_name = my_enums.AppType.get_app_type(app_source)
