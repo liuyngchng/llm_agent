@@ -68,7 +68,7 @@ class AppType(Enum):
     CHAT2DB = "自然语言数据查询"
     OPEN = "开放平台"
     PAPER_REVIEW = "文档审核"
-    AI_AGENT = "AI 应用"
+    PORTAL = "AI 应用"
 
     @staticmethod
     def get_app_list() -> list:

@@ -5,7 +5,12 @@ sys:
     #  是否启用认证， true， 登录后才能使用系统;false 无需登录
     # your host
     host: https://192.168.1.1
+    #  是否启用认证， true， 登录后才能使用系统;false 无需登录
+    auth: true
 
+api:
+    # 认证服务 API
+    auth_api: http://127.0.0.1:19011
 
 
 

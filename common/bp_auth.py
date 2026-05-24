@@ -91,6 +91,7 @@ def get_captcha_image(captcha_token):
 def login_index():
     # logger.info("login_index")
     app_source = request.args.get('app_source', current_app.config.get('APP_SOURCE'))
+    host = request.args.get('host','')
     warning_info = request.args.get('warning_info', "")
     if not app_source:
         raise RuntimeError("no_app_info_found")
@@ -114,6 +115,7 @@ def login_index():
         "uid": -1,
         "sys_name": sys_name,
         "app_source": app_source,
+        "host": host,
         "warning_info": warning_info,
         "captcha_token": captcha_token,
     }
@@ -135,7 +137,8 @@ def login():
     logger.debug(f"request_form: {request.form}")
     user = request.form.get('usr', '').strip()
     t = request.form.get('t', '').strip()
-    app_source = str(request.form.get('app_source'))
+    app_source = request.form.get('app_source', '').strip()
+    host = request.form.get('host', '').strip()
     captcha_code = request.form.get('captcha_code', '').strip()
     captcha_token = request.form.get('captcha_token', '').strip()
 
@@ -152,12 +155,14 @@ def login():
         logger.error(f"配置错误: {e}")
         return redirect(url_for('auth.login_index',
                                 app_source=app_source,
+                                host=host,
                                 warning_info=str(e),
                                 usr=user))
     except requests.RequestException as e:
         logger.error(f"auth_service 调用失败: {e}")
         return redirect(url_for('auth.login_index',
                                 app_source=app_source,
+                                host=host,
                                 warning_info="认证服务暂时不可用，请稍后重试",
                                 usr=user))
 
@@ -169,6 +174,7 @@ def login():
         logger.error(f"用户认证失败 {user}: {detail}")
         return redirect(url_for('auth.login_index',
                                 app_source=app_source,
+                                host=host,
                                 warning_info=detail,
                                 usr=user))
     result = resp.json()
@@ -196,6 +202,7 @@ def login():
         "role": result["role"],
         "t": access_token,
         "sys_name": sys_name,
+        "host":host,
         "greeting": greeting,
         "app_source": app_source,
         "hack_admin": hack_admin,

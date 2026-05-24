@@ -37,7 +37,7 @@
                                 <span class="app-port">端口: 20000</span>
                                 <span>chat</span>
                             </div>
-                            <a href="{{host}}:20000" class="app-link">进入应用</a>
+                            <a href="{{host}}:20000?t={{t}}" class="app-link">进入应用</a>
                         </div>
                     </div>
                     <!-- 应用2 -->
@@ -56,7 +56,7 @@
                                 <span class="app-port">端口: 19002</span>
                                 <span>chat2kb</span>
                             </div>
-                            <a href="{{host}}:19002" class="app-link">进入应用</a>
+                            <a href="{{host}}:19002?t={{t}}" class="app-link">进入应用</a>
                         </div>
                     </div>
 
@@ -76,7 +76,7 @@
                                 <span class="app-port">端口: 19003</span>
                                 <span>docx</span>
                             </div>
-                            <a href="{{host}}:19003" class="app-link">进入应用</a>
+                            <a href="{{host}}:19003?t={{t}}" class="app-link">进入应用</a>
                         </div>
                     </div>
                     <div class="app-card">
@@ -94,7 +94,7 @@
                                 <span class="app-port">端口: 19009</span>
                                 <span>paper_review</span>
                             </div>
-                            <a href="{{host}}:19009" class="app-link">进入应用</a>
+                            <a href="{{host}}:19009?t={{t}}" class="app-link">进入应用</a>
                         </div>
                     </div>
                     <div class="app-card">
@@ -112,7 +112,7 @@
                                 <span class="app-port">端口: 19010</span>
                                 <span>asr</span>
                             </div>
-                            <a href="{{host}}:19010" class="app-link">进入应用</a>
+                            <a href="{{host}}:19010?t={{t}}" class="app-link">进入应用</a>
                         </div>
                     </div>
                 </div>
@@ -213,5 +213,8 @@
             </div>
         </div>
     </div>
+    <input type="hidden" id ="uid" name="uid" value="{{uid}}">
+    <input type="hidden" id ="t" name="t" value="{{t}}">
+    <input type="hidden" id ="host" name="host" value="{{host}}">
 </body>
 </html>

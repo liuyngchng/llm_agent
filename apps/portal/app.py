@@ -12,9 +12,10 @@ import logging.config
 import os
 
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, render_template, send_from_directory, abort
+from flask import Flask, render_template, send_from_directory, abort, redirect, url_for
 
-from common.bp_auth import get_client_ip
+from common import my_enums
+from common.bp_auth import get_client_ip, auth_bp
 from common.cm_utils import get_console_arg1
 from common.sys_init import init_yml_cfg
 
@@ -25,9 +26,14 @@ else:
     from common.const import LOG_FORMATTER
     logging.basicConfig(level=logging.INFO,format= LOG_FORMATTER, force=True)
 logger = logging.getLogger(__name__)
+my_cfg = init_yml_cfg()
 
 app = Flask(__name__, static_folder=None)
+app.config['CFG'] = {}
+app.config['CFG'] = my_cfg
+app.config['APP_SOURCE'] = my_enums.AppType.PORTAL.name.lower()
 
+app.register_blueprint(auth_bp)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config['JSON_AS_ASCII'] = False
 
@@ -39,15 +45,16 @@ my_cfg = init_yml_cfg()
 
 @app.route('/')
 def app_home():
-    ctx = {
-        "host": my_cfg['sys']['host']
-    }
+    host = my_cfg['sys']['host']
     ip = get_client_ip()
     if "INVALID_IP" == ip:
         return json.dumps({"status":403, "msg":"illegal access"})
-    logger.info(f"from_ip, {ip}")
-
-    return render_template("portal_index.html", **ctx)
+    logger.info(f"redirect_auth_login_index, from_ip, {ip}")
+    return redirect(url_for('auth.login_index', app_source=my_enums.AppType.PORTAL.name.lower(),host = host))
+    # ctx = {
+    #     "host": host
+    # }
+    # return render_template("portal_index.html", **ctx)
 
 @app.route('/static/<path:file_name>')
 def get_static_file(file_name):
