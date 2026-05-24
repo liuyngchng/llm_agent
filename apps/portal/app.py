@@ -70,7 +70,7 @@ def forward_to(endpoint, **kwargs):
 
 @app.route('/')
 def app_home():
-    app_base_uri = my_cfg['sys']['app_base_uri']
+    app_base_uri = my_cfg['sys'].get('app_base_uri', '')
     ip = get_client_ip()
     if "INVALID_IP" == ip:
         return json.dumps({"status":403, "msg":"illegal access"})

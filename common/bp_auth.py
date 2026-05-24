@@ -162,7 +162,7 @@ def login():
         logger.error(f"auth_service 调用失败: {e}")
         return redirect(url_for('auth.login_index',
                                 app_source=app_source,
-                                app_base_uri=app_base_uriapp_base_uri,
+                                app_base_uri=app_base_uri,
                                 warning_info="认证服务暂时不可用，请稍后重试",
                                 usr=user))
 

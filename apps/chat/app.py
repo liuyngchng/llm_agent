@@ -4,18 +4,20 @@
 
 import time
 
-from flask import Flask, request, Response, jsonify, send_from_directory, abort, redirect, url_for
+import requests
+from flask import Flask, request, Response, jsonify, send_from_directory, abort, redirect, url_for, render_template
 
 import os
 import sys
 import logging.config
 import logging
 
+from apps.auth_service.app import verify_token
 from apps.chat.chat_util import LLMConfig, generate_stream_response, allowed_file, \
     MAX_FILE_SIZE, ALLOWED_EXTENSIONS, extract_text_from_file
-from common import my_enums
-from common.bp_auth import auth_bp, get_client_ip, auth_info
-from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT
+from common import my_enums, statistic_util
+from common.bp_auth import auth_bp, get_client_ip, auth_info, _auth_api_base
+from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT, get_const
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 
@@ -74,8 +76,92 @@ def get_webfonts_file(file_name):
 
 @app.route('/')
 def app_home():
-    logger.info("redirect_auth_login_index")
-    return redirect(url_for('auth.login_index', app_source=AppType.CHAT.name.lower()))
+    app_source = AppType.CHAT.name.lower()
+    sys_name = my_enums.AppType.get_app_type(app_source)
+    t = request.args.get("t")
+    if not t:
+        logger.info("redirect_auth_login_index")
+        return redirect(url_for('auth.login_index', app_source=app_source))
+    try:
+        url = f"{_auth_api_base()}/auth/token"
+        params = {"t": t}
+        safe_params = {**params, "t": "***"}
+        logger.debug(f"POST {url}, params {safe_params}")
+        resp = requests.post(url, json=params, timeout=10)
+        logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
+        session_info = resp.json()
+    except RuntimeError as e:
+        logger.error(f"配置错误: {e}")
+        return redirect(url_for('auth.login_index',
+                                app_source=app_source,
+                                warning_info=str(e),
+                                ))
+    except requests.RequestException as e:
+        logger.error(f"auth_service 调用失败: {e}")
+        return redirect(url_for('auth.login_index',
+                                app_source=app_source,
+                                warning_info="认证服务暂时不可用，请稍后重试",
+                                ))
+
+    if not session_info:
+        return redirect(url_for('auth.login_index',
+                                app_source=app_source,
+                                warning_info="会话信息过期，请重新登录",
+                                ))
+    access_token = t
+    uid = session_info['uid']
+    app_base_uri = my_cfg['sys'].get('app_base_uri', '')
+    user = ''
+    try:
+        url = f"{_auth_api_base()}/auth/token"
+        params = {"t": t}
+        safe_params = {**params, "t": "***"}
+        logger.debug(f"POST {url}, params {safe_params}")
+        resp = requests.post(url, json=params, timeout=10)
+        logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
+        session_info = resp.json()
+    except RuntimeError as e:
+        logger.error(f"配置错误: {e}")
+        return redirect(url_for('auth.login_index',
+                                app_source=app_source,
+                                warning_info=str(e),
+                                ))
+
+    dt_idx = f"{app_source}_index.html"
+    logger.info(f"return_page {dt_idx}")
+    statistic_util.add_access_count_by_uid(uid, 1)
+
+    if session_info["role"] == 2:
+        hack_admin = "1"
+    else:
+        hack_admin = "0"
+
+    greeting = get_const("greeting", app_source)
+    arg1 = get_const("arg1", app_source)
+    arg2 = get_const("arg2", app_source)
+    arg3 = get_const("arg3", app_source)
+
+    ctx = {
+        "uid": uid,
+        "usr": user,
+        "role": session_info["role"],
+        "t": access_token,
+        "sys_name": sys_name,
+        "app_base_uri": app_base_uri,
+        "greeting": greeting,
+        "app_source": app_source,
+        "hack_admin": hack_admin,
+        "arg1": arg1,
+        "arg2": arg2,
+        "arg3": arg3,
+    }
+
+    session_key = f"{uid}_{get_client_ip()}"
+    auth_info[session_key] = time.time()
+    logger.info(f"return_page {dt_idx}, ctx {ctx}")
+    return render_template(dt_idx, **ctx)
+
+
 
 @app.route('/chat', methods=['POST'])
 def chat():

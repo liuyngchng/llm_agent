@@ -87,6 +87,9 @@ class RegisterRequest(BaseModel):
     captcha_code: str = Field("", description="验证码")
     captcha_token: str = Field("", description="验证码 token")
 
+class SessionToken(BaseModel):
+    t: str = Field(..., min_length=1, description="会话token")
+
 
 # ---------------------------------------------------------------------------
 # 工具函数
@@ -317,7 +320,7 @@ async def register(body: RegisterRequest):
     if body.captcha_token in captcha_codes:
         del captcha_codes[body.captcha_token]
 
-    token = create_token(uid, 0)
+    token = create_token(uid, 0)        # 注册用户默认角色为 0
     logger.info(f"注册成功 - 用户: {body.usr}, uid: {uid}")
 
     return {
@@ -328,7 +331,21 @@ async def register(body: RegisterRequest):
     }
 
 
-# ---- token 验证 & 用户信息 ----
+# ---- token 验证 ----
+
+@app.post("/auth/token")
+def verify_token(token: SessionToken) -> dict | None:
+    if not token or not token.t:
+        logger.info(f"token is null, {token}")
+        return None
+    logger.debug(f"decode_token {token.t}")
+    session_info = decode_token(token.t)
+    logger.debug(f"decode_token {token.t}, {session_info}, now, {time.time()}")
+    return session_info
+
+
+
+
 
 @app.post("/auth/verify")
 def verify(user: dict = Depends(require_user)):
