@@ -12,7 +12,7 @@ import logging.config
 import os
 
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, render_template, send_from_directory, abort, redirect, url_for, current_app, request
+from flask import Flask, send_from_directory, abort, current_app, request
 
 from common import my_enums
 from common.bp_auth import get_client_ip, auth_bp
