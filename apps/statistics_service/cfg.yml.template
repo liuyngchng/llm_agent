@@ -1,0 +1,7 @@
+# config.yaml，文件格式必须严格遵循 yaml配置文件格式
+sys:
+    name: 数据统计服务
+    cypher_key: abaababaabaababa
+
+api:
+    auth_api: http://127.0.0.1:19011

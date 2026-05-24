@@ -7,5 +7,6 @@ CREATE TABLE "statistics" (
 	"access_count"	INTEGER NOT NULL DEFAULT 0,
 	"input_token"	INTEGER NOT NULL DEFAULT 0,
 	"output_token"	INTEGER NOT NULL DEFAULT 0,
+	"embedding_token"	INTEGER NOT NULL DEFAULT 0,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
