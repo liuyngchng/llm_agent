@@ -26,7 +26,7 @@ DORIS_HTTP_REQ_NOT_200_ERR = "http_request_to_doris_return_status_not_200_except
 # 输出文件的目录
 OUTPUT_DIR = "output_doc"
 
-#session 过期时间，default 2 hours
+#session 过期时间(单位为秒)，default 2 hours
 SESSION_TIMEOUT = 72000
 
 # 通过页面用户上传的文件存储的目录

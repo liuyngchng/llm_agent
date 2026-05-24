@@ -438,3 +438,82 @@ def get_time_str() -> str:
     获取当前本地时间字符串，格式 YYYY-mm-DD HH:MM:SS.fff
     """
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+
+def encrypt(dt: str, key:str) -> str:
+    """
+    密钥 key 需为16/24/32字节,密钥需为16/24/32字节，ECB模式不安全建议改用CBC+IV
+    """
+    from Crypto.Cipher import AES
+    from Crypto.Util.Padding import pad
+    import base64
+    cipher = AES.new(key.encode(), AES.MODE_ECB)
+    data = pad(dt.encode(), AES.block_size)
+    encrypted = cipher.encrypt(data)
+    dt_rt = base64.urlsafe_b64encode(encrypted).decode()
+    return dt_rt
+
+def decrypt(dt: str, key: str) -> str:
+    from Crypto.Cipher import AES
+    import base64
+    cipher = AES.new(key.encode(), AES.MODE_ECB)
+    encrypted_data = base64.urlsafe_b64decode(dt)
+    decrypted = cipher.decrypt(encrypted_data)
+    from Crypto.Util.Padding import unpad
+    pln_txt = unpad(decrypted, AES.block_size).decode()
+    # logger.info(f"get_pln_txt_for_cypher_txt, {pln_txt}, {dt}")
+    return pln_txt
+
+
+def create_token(uid: int, role: int, session_timeout: int, cypher_key: str) -> str:
+    """
+     创建用户认证 token，JSON体中含有用户ID， 用户角色， 以及登录信息过期时间
+     :param uid 用户ID
+     :param role 用户u角色
+     :param session_timeout 会话过期时间，单位为s
+     :param cypher_key 加密密钥
+    """
+    payload = json.dumps({
+        "uid": uid,
+        "role": role,
+        "exp": time.time() + session_timeout,
+    })
+
+    result = encrypt(payload, cypher_key)
+    logger.debug(f"encrypt_with_key, payload={payload}, key={cypher_key}, result={result}")
+    return result
+
+
+def decode_token(session_token: str, cypher_key: str) -> dict | None:
+    """
+    解密并校验 token
+    解密用户提交的token，确认其登录信息合法且未过期，若登录令牌(token) 不合法，或者已经过期，用户需重新登录
+    此处提供公共的轻量级用户认证方法，而没有将其放在 auth_service 中作为服务调用
+    :param session_token: 用户的会话token
+    :param cypher_key 用于解密 token 的密钥
+    :return
+        {
+            "uid": uid,
+            "role": role,
+            "exp": time.time() + session_timeout,
+        }
+    """
+    if not cypher_key:
+        raise RuntimeError("cypher_key_none_error_for_decode_token")
+    try:
+        logger.debug(f"decrypt_with_key, cyphper={session_token}, key={cypher_key}")
+        payload_str = decrypt(session_token, cypher_key)
+        payload: dict = json.loads(payload_str)
+        now = time.time()
+        session_exp = payload.get("exp", 0)
+        if now > session_exp:
+            logger.info(f"now {now} > session_expire_time {session_exp},session expired, return_none_for_decoded_token")
+            return None
+        return payload
+    except Exception as ex:
+        logger.exception("error_occurred, return_none_for_decoded_token", ex)
+        return None
+
+if __name__ == "__main__":
+
+    token = 'V15jDjM3RadDI7nkYHDwEEbP+zPy1yIXhhgnaORnwl8wNAmwj5g5OnBY6hiB/rotdNmLdZyNVjwx8OQX7UgAqg=='
+    decode_token("123", "456")

@@ -23,7 +23,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from apps.auth_service import auth_util
-from common.cm_utils import get_console_arg1
+from common import cm_utils
+from common.cm_utils import get_console_arg1, decode_token, create_token
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
 
@@ -115,32 +116,6 @@ def get_client_ip(request: Request) -> str:
     return "INVALID_IP"
 
 
-def create_token(uid: int, role: int) -> str:
-    """
-     创建认证 token，JSON体中含有用户ID， 用户角色， 以及登录信息过期时间
-    """
-    payload = json.dumps({
-        "uid": uid,
-        "role": role,
-        "exp": time.time() + SESSION_TIMEOUT,
-    })
-    return auth_util.encrypt(payload, my_cfg["sys"]["cypher_key"])
-
-
-def decode_token(token: str) -> dict | None:
-    """
-    解密并校验 token
-    解密用户提交的token，确认其登录信息合法且未过期，若登录令牌(token) 不合法，或者已经过期，用户需重新登录
-    """
-    try:
-        payload_str = auth_util.decrypt(token, my_cfg["sys"]["cypher_key"])
-        payload: dict = json.loads(payload_str)
-        if time.time() > payload.get("exp", 0):
-            return None
-        return payload
-    except Exception:
-        return None
-
 
 def verify_captcha(code: str, token: str) -> bool:
     """验证图形验证码"""
@@ -213,7 +188,7 @@ async def require_user(authorization: str = Header("")) -> dict:
     token = authorization
     if token.startswith("Bearer "):
         token = token[7:]
-    payload = decode_token(token)
+    payload = decode_token(token, my_cfg['sys']['cypher_key'])
     if not payload:
         raise HTTPException(status_code=401, detail="token 无效或已过期")
     return payload
@@ -226,7 +201,7 @@ async def optional_user(authorization: str = Header("")) -> dict | None:
     token = authorization
     if token.startswith("Bearer "):
         token = token[7:]
-    return decode_token(token)
+    return decode_token(token, my_cfg['sys']['cypher_key'])
 
 
 # ---------------------------------------------------------------------------
@@ -282,8 +257,7 @@ async def login(body: LoginRequest, request: Request):
     # 清理验证码
     if body.captcha_token in captcha_codes:
         del captcha_codes[body.captcha_token]
-
-    token = create_token(result["uid"], result["role"])
+    token = create_token(result["uid"], result["role"], SESSION_TIMEOUT, my_cfg['sys']['cypher_key'])
     logger.info(f"登录成功 - 用户: {body.usr}, uid: {result['uid']}")
 
     return {

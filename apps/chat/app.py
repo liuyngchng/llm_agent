@@ -15,7 +15,7 @@ import logging
 from apps.auth_service.app import verify_token
 from apps.chat.chat_util import LLMConfig, generate_stream_response, allowed_file, \
     MAX_FILE_SIZE, ALLOWED_EXTENSIONS, extract_text_from_file
-from common import my_enums, statistic_util
+from common import my_enums, statistic_util, cm_utils
 from common.bp_auth import auth_bp, get_client_ip, auth_info, _auth_api_base
 from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT, get_const
 from common.my_enums import AppType
@@ -80,53 +80,13 @@ def app_home():
     sys_name = my_enums.AppType.get_app_type(app_source)
     t = request.args.get("t")
     if not t:
-        logger.info("redirect_auth_login_index")
+        logger.info("no_token_redirect_auth_login_index")
         return redirect(url_for('auth.login_index', app_source=app_source))
-    try:
-        url = f"{_auth_api_base()}/auth/token"
-        params = {"t": t}
-        safe_params = {**params, "t": "***"}
-        logger.debug(f"POST {url}, params {safe_params}")
-        resp = requests.post(url, json=params, timeout=10)
-        logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
-        session_info = resp.json()
-    except RuntimeError as e:
-        logger.error(f"配置错误: {e}")
-        return redirect(url_for('auth.login_index',
-                                app_source=app_source,
-                                warning_info=str(e),
-                                ))
-    except requests.RequestException as e:
-        logger.error(f"auth_service 调用失败: {e}")
-        return redirect(url_for('auth.login_index',
-                                app_source=app_source,
-                                warning_info="认证服务暂时不可用，请稍后重试",
-                                ))
-
+    session_info = cm_utils.decode_token(t, my_cfg['sys']['cypher_key'])
     if not session_info:
-        return redirect(url_for('auth.login_index',
-                                app_source=app_source,
-                                warning_info="会话信息过期，请重新登录",
-                                ))
-    access_token = t
+        logger.info("no_session_info_redirect_auth_login_index")
+        return redirect(url_for('auth.login_index', app_source=app_source))
     uid = session_info['uid']
-    app_base_uri = my_cfg['sys'].get('app_base_uri', '')
-    user = ''
-    try:
-        url = f"{_auth_api_base()}/auth/token"
-        params = {"t": t}
-        safe_params = {**params, "t": "***"}
-        logger.debug(f"POST {url}, params {safe_params}")
-        resp = requests.post(url, json=params, timeout=10)
-        logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
-        session_info = resp.json()
-    except RuntimeError as e:
-        logger.error(f"配置错误: {e}")
-        return redirect(url_for('auth.login_index',
-                                app_source=app_source,
-                                warning_info=str(e),
-                                ))
-
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")
     statistic_util.add_access_count_by_uid(uid, 1)
@@ -143,11 +103,8 @@ def app_home():
 
     ctx = {
         "uid": uid,
-        "usr": user,
-        "role": session_info["role"],
-        "t": access_token,
+        "t": t,
         "sys_name": sys_name,
-        "app_base_uri": app_base_uri,
         "greeting": greeting,
         "app_source": app_source,
         "hack_admin": hack_admin,
@@ -334,6 +291,6 @@ if __name__ == '__main__':
     app.run(
         debug=True,
         host='0.0.0.0',
-        port=19000,
+        port=20000,
         threaded=True
     )

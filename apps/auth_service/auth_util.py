@@ -7,6 +7,8 @@ import os
 import sqlite3
 import time
 
+from common.cm_utils import encrypt
+
 AUTH_DB_FILE = "auth.db"
 AUTH_DB_URI = f"sqlite:///{AUTH_DB_FILE}"
 
@@ -33,32 +35,6 @@ else:
     from common.const import LOG_FORMATTER
     logging.basicConfig(level=logging.INFO,format= LOG_FORMATTER, force=True)
 logger = logging.getLogger(__name__)
-
-
-def encrypt(dt: str, key:str) -> str:
-    """
-    密钥 key 需为16/24/32字节,密钥需为16/24/32字节，ECB模式不安全建议改用CBC+IV
-    """
-    from Crypto.Cipher import AES
-    from Crypto.Util.Padding import pad
-    import base64
-    cipher = AES.new(key.encode(), AES.MODE_ECB)
-    data = pad(dt.encode(), AES.block_size)
-    encrypted = cipher.encrypt(data)
-    dt_rt = base64.b64encode(encrypted).decode()
-    # logger.info(f"return {dt_rt} for pln_txt {dt}")
-    return dt_rt
-
-def decrypt(dt: str, key: str) -> str:
-    from Crypto.Cipher import AES
-    import base64
-    cipher = AES.new(key.encode(), AES.MODE_ECB)
-    encrypted_data = base64.b64decode(dt)
-    decrypted = cipher.decrypt(encrypted_data)
-    from Crypto.Util.Padding import unpad
-    pln_txt = unpad(decrypted, AES.block_size).decode()
-    # logger.info(f"get_pln_txt_for_cypher_txt, {pln_txt}, {dt}")
-    return pln_txt
 
 
 def auth_user(user:str, t: str, cfg: dict) -> dict:

@@ -13,11 +13,10 @@ import sqlite3
 import logging.config
 from decimal import Decimal
 from typing import Any
-import base64
 import functools
 import platform
 
-from common.cm_utils import get_time_str
+from common.cm_utils import get_time_str, decrypt, encrypt
 from common.const import CFG_DB_FILE, USER_SAMPLE_DATA_DB, CFG_DB_URI
 from common.my_enums import DataType
 
@@ -285,29 +284,6 @@ def build_data_source_cfg_with_uid(uid: int, sys_cfg:dict)->dict:
     my_new_dict['db']['tables'] = source_cfg["tables"]
     return my_new_dict
 
-
-def encrypt(dt: str, key:str) -> str:
-    """
-    密钥 key 需为16/24/32字节,密钥需为16/24/32字节，ECB模式不安全建议改用CBC+IV
-    """
-    from Crypto.Cipher import AES
-    from Crypto.Util.Padding import pad
-    cipher = AES.new(key.encode(), AES.MODE_ECB)
-    data = pad(dt.encode(), AES.block_size)
-    encrypted = cipher.encrypt(data)
-    dt_rt = base64.b64encode(encrypted).decode()
-    # logger.info(f"return {dt_rt} for pln_txt {dt}")
-    return dt_rt
-
-def decrypt(dt: str, key: str) -> str:
-    from Crypto.Cipher import AES
-    cipher = AES.new(key.encode(), AES.MODE_ECB)
-    encrypted_data = base64.b64decode(dt)
-    decrypted = cipher.decrypt(encrypted_data)
-    from Crypto.Util.Padding import unpad
-    pln_txt = unpad(decrypted, AES.block_size).decode()
-    # logger.info(f"get_pln_txt_for_cypher_txt, {pln_txt}, {dt}")
-    return pln_txt
 
 
 
