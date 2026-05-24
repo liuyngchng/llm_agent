@@ -10,14 +10,17 @@ pip install gunicorn flask concurrent-log-handler langchain_openai langchain_oll
 import json
 import logging.config
 import os
+import time
 
+import requests
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, send_from_directory, abort, current_app, request
+from flask import Flask, send_from_directory, abort, request, render_template, redirect, url_for
 
-from common import my_enums
-from common.bp_auth import get_client_ip, auth_bp
+from common import my_enums, statistic_util, cm_utils
+from common.bp_auth import get_client_ip, auth_bp, auth_info
 from common.cm_utils import get_console_arg1
 from common.sys_init import init_yml_cfg
+from common.const import get_const
 
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
@@ -44,45 +47,58 @@ os.system(
 my_cfg = init_yml_cfg()
 
 
-def forward_to(endpoint, **kwargs):
-    """
-    手动实现 forward 功能（服务器内部转发）
-
-    Args:
-        endpoint: 目标端点名称，格式如 'auth.login_index'
-        **kwargs: 传递给目标视图函数的参数
-
-    Returns:
-        目标视图函数的响应对象
-    """
-    # 获取目标视图函数
-    view_func = current_app.view_functions.get(endpoint)
-    if not view_func:
-        logger.error(f"forward_to endpoint not found: {endpoint}")
-        abort(404)
-
-    # 可选：记录转发信息，方便调试
-    current_app.logger.debug(f"Forwarding from {request.endpoint} to {endpoint}")
-
-    # 执行目标视图函数，保持当前请求上下文
-    return view_func(**kwargs)
-
-
 @app.route('/')
 def app_home():
+    app_source = my_enums.AppType.PORTAL.name.lower()
     app_base_uri = my_cfg['sys'].get('app_base_uri', '')
     ip = get_client_ip()
     if "INVALID_IP" == ip:
         return json.dumps({"status":403, "msg":"illegal access"})
-    logger.info(f"redirect_auth_login_index, from_ip, {ip}")
-    return forward_to('auth.login_index',
-                      app_source=my_enums.AppType.PORTAL.name.lower(),
-                      app_base_uri=app_base_uri)
-    # return redirect(url_for('auth.login_index', app_source=my_enums.AppType.PORTAL.name.lower(),host = host))
-    # ctx = {
-    #     "host": host
-    # }
-    # return render_template("portal_index.html", **ctx)
+
+    t = request.args.get("t")
+    if t:
+        session_info = cm_utils.decode_token(t, my_cfg['sys']['cypher_key'])
+        if session_info:
+            uid = session_info['uid']
+            usr = ''
+            try:
+                auth_api = my_cfg['api'].get('auth_api', '')
+                resp = requests.get(f"{auth_api}/auth/user/{uid}", timeout=5)
+                if resp.status_code == 200:
+                    usr = resp.json().get('name', '')
+            except Exception as e:
+                logger.warning(f"get_user_name_from_auth_service_failed, uid={uid}, err={e}")
+            hack_admin = "1" if session_info['role'] == 2 else "0"
+
+            greeting = get_const("greeting", app_source)
+            arg1 = get_const("arg1", app_source)
+            arg2 = get_const("arg2", app_source)
+            arg3 = get_const("arg3", app_source)
+            sys_name = my_enums.AppType.get_app_type(app_source)
+
+            ctx = {
+                "uid": uid,
+                "usr": usr,
+                "role": session_info['role'],
+                "t": t,
+                "sys_name": sys_name,
+                "app_base_uri": app_base_uri,
+                "greeting": greeting,
+                "app_source": app_source,
+                "hack_admin": hack_admin,
+                "arg1": arg1,
+                "arg2": arg2,
+                "arg3": arg3,
+            }
+
+            session_key = f"{uid}_{ip}"
+            auth_info[session_key] = time.time()
+            statistic_util.add_access_count_by_uid(uid, 1)
+            logger.info(f"return_page_portal_index, uid={uid}")
+            return render_template("portal_index.html", **ctx)
+
+    logger.info(f"no_valid_token_redirect_auth_login_index, from_ip {ip}")
+    return redirect(url_for('auth.login_index', app_source=app_source, app_base_uri=app_base_uri))
 
 @app.route('/static/<path:file_name>')
 def get_static_file(file_name):

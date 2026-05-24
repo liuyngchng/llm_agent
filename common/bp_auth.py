@@ -15,7 +15,7 @@ from flask import Blueprint, jsonify, redirect, url_for, current_app, make_respo
 from flask import (request, render_template)
 from common import statistic_util
 from common import my_enums
-from common.const import get_const, SESSION_TIMEOUT
+from common.const import SESSION_TIMEOUT
 from common.html_util import get_html_ctx_from_md
 
 
@@ -184,40 +184,10 @@ def login():
     uid = result["uid"]
     access_token = result["access_token"]
 
-    sys_name = my_enums.AppType.get_app_type(app_source)
-    dt_idx = f"{app_source}_index.html"
-    logger.info(f"return_page {dt_idx}")
-    statistic_util.add_access_count_by_uid(uid, 1)
-
-    if result["role"] == 2:
-        hack_admin = "1"
-    else:
-        hack_admin = "0"
-
-    greeting = get_const("greeting", app_source)
-    arg1 = get_const("arg1", app_source)
-    arg2 = get_const("arg2", app_source)
-    arg3 = get_const("arg3", app_source)
-
-    ctx = {
-        "uid": uid,
-        "usr": user,
-        "role": result["role"],
-        "t": access_token,
-        "sys_name": sys_name,
-        "app_base_uri":app_base_uri,
-        "greeting": greeting,
-        "app_source": app_source,
-        "hack_admin": hack_admin,
-        "arg1": arg1,
-        "arg2": arg2,
-        "arg3": arg3,
-    }
-
+    logger.info(f"login_success, uid={uid}, app_source={app_source}")
     session_key = f"{uid}_{get_client_ip()}"
     auth_info[session_key] = time.time()
-    logger.info(f"return_page {dt_idx}, ctx {ctx}")
-    return render_template(dt_idx, **ctx)
+    return redirect(f"/?t={access_token}")
 
 
 @auth_bp.route('/logout', methods=['GET'])
