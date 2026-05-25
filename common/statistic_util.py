@@ -54,11 +54,9 @@ def _get(endpoint: str) -> list | dict | None:
     return None
 
 
-def get_statistics_list() -> list[dict]:
-    """获取用户的统计数据清单"""
+def get_statistics_list() -> list[dict] | None:
+    """获取用户的统计数据清单，服务不可用时返回 None"""
     result = _get("/statistics/list")
-    if result is None:
-        return []
     return result
 
 

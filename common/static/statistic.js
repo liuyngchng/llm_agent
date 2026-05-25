@@ -14,7 +14,13 @@ async function fetchTasks() {
             body: JSON.stringify({ uid: uid })
         });
 
-        if (!response.ok) throw new Error('任务获取失败');
+        if (!response.ok) {
+            if (response.status === 503) {
+                showErrorState();
+                return;
+            }
+            throw new Error('任务获取失败');
+        }
 
         const statisticData = await response.json();
         const tasks = Array.isArray(statisticData) ? statisticData : [statisticData];
@@ -28,6 +34,7 @@ async function fetchTasks() {
         renderTasksTable(tasks);
     } catch (error) {
         console.error('获取任务失败:', error);
+        showErrorState();
     }
 }
 
@@ -86,6 +93,13 @@ function renderTasksTable(tasks) {
 
     document.querySelector('table').style.display = 'table';
     emptyState.style.display = 'none';
+}
+
+// 显示错误状态
+function showErrorState() {
+    document.querySelector('table').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
 }
 
 // 格式化日期时间，确保月份、日期、小时、分钟、秒都是两位数

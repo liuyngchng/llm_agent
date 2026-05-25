@@ -365,6 +365,8 @@ def get_statistic_report():
 
         ))
     statistics_list = statistic_util.get_statistics_list()
+    if statistics_list is None:
+        return json.dumps({"error": "数据统计服务异常，请稍后重试"}, ensure_ascii=False), 503
     return json.dumps(statistics_list, ensure_ascii=False), 200
 
 @auth_bp.route('/health', methods=['GET'])

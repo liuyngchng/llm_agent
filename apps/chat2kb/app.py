@@ -176,27 +176,6 @@ def register_routes(app):
         logger.info(f"{uid}, return_statistics_page {dt_idx}")
         return render_template(dt_idx, **ctx)
 
-    @app.route('/chat/statistic/report', methods=['POST'])
-    def get_statistic_report():
-        """
-        统计用户的系统使用数据
-        """
-        data = request.json
-        uid = int(data.get('uid'))
-        logger.info(f"{uid}, get_statistic_report, {data}")
-        session_key = f"{uid}_{get_client_ip()}"
-        if (not auth_info.get(session_key, None)
-                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
-            logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.CHAT.name.lower(),
-                warning_info=warning_info
-            ))
-        statistics_list = statistic_util.get_statistics_list()
-        return json.dumps(statistics_list, ensure_ascii=False), 200
-
     @app.route('/chat', methods=['POST'])
     def chat(catch=None):
         """
