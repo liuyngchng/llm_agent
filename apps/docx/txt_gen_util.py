@@ -60,6 +60,9 @@ def gen_docx_outline_stream(uid:int, doc_type: str, doc_title: str, keywords: st
         # logger.info(f"{uid}, output_tokens, {output_tokens}")
         logger.info(f"{uid}, gen_doc_outline, {output_txt}")
         statistic_util.add_output_token_by_uid(uid, output_tokens)
+    except Exception as e:
+        logger.exception(f"{uid}, llm_connection_error, {e}")
+        yield f'{{"error": "大模型服务连接失败，请检查API地址配置。详情：{str(e)}"}}'
     finally:
         # 清理资源
         logger.info("gen_outline_finish, dispose resources")

@@ -22,7 +22,7 @@ api:
     #  大语言模型 API key
     llm_api_key: 45678
     #  大语言模型 模型名称
-    llm_model_name: deepseek-chat
+    llm_model_name: deepseek-v4-flash
 
     # embedding API 基地址
     embedding_api_uri: https://api.your_audio_service_provider.com/v1/

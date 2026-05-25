@@ -265,6 +265,16 @@ function generateOutline() {
                 // 解码数据块
                 const chunk = decoder.decode(value, { stream: true });
                 markdownContent += chunk;
+                // 检测服务端返回的 JSON 错误
+                if (markdownContent.startsWith('{"error"') && markdownContent.endsWith('"}')) {
+                    try {
+                        const err = JSON.parse(markdownContent);
+                        throw new Error(err.error || '生成失败，请重试');
+                    } catch (e) {
+                        // 不是 JSON 解析错误则继续抛出让 .catch() 处理
+                        if (!(e instanceof SyntaxError)) throw e;
+                    }
+                }
                 // 更新隐藏的Markdown内容
                 document.getElementById('outlineText').value = markdownContent;
                 // 将Markdown转换为HTML并实时渲染
