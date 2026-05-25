@@ -21,7 +21,7 @@ from common import docx_meta_util
 from common.bp_vdb import vdb_bp, clean_expired_vdb_file_task, process_vdb_file_task
 from common.cfg_util import save_file_info, get_file_info
 from common.docx_md_util import convert_docx_to_md, get_md_file_content, convert_md_to_docx
-from common import my_enums, statistic_util
+from common import my_enums, statistic_util, cm_utils
 from common.docx_meta_util import get_doc_info
 from common.html_util import convert_md_to_html_with_css, get_html_ctx_from_md, convert_markdown_to_html
 from common.my_enums import AppType, FileType
@@ -29,7 +29,7 @@ from common.sys_init import init_yml_cfg
 from common.bp_auth import auth_bp, get_client_ip, auth_info
 from common.cm_utils import get_console_arg1
 from common.xlsx_util import convert_xlsx_to_md
-from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR, TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE
+from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR, TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE, get_const
 
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
@@ -123,8 +123,47 @@ def register_routes(app):
 
     @app.route('/')
     def app_home():
-        logger.info("redirect_auth_login_index")
-        return redirect(url_for('auth.login_index', app_source=my_enums.AppType.PAPER_REVIEW.name.lower()))
+        app_source = AppType.PAPER_REVIEW.name.lower()
+        sys_name = my_enums.AppType.get_app_type(app_source)
+        t = request.args.get("t")
+        if not t:
+            logger.info("no_token_redirect_auth_login_index")
+            return redirect(url_for('auth.login_index', app_source=app_source))
+        session_info = cm_utils.decode_token(t, my_cfg['sys']['cypher_key'])
+        if not session_info:
+            logger.info("no_session_info_redirect_auth_login_index")
+            return redirect(url_for('auth.login_index', app_source=app_source))
+        uid = session_info['uid']
+        dt_idx = f"{app_source}_index.html"
+        logger.info(f"return_page {dt_idx}")
+        statistic_util.add_access_count_by_uid(uid, 1)
+
+        if session_info["role"] == 2:
+            hack_admin = "1"
+        else:
+            hack_admin = "0"
+
+        greeting = get_const("greeting", app_source)
+        arg1 = get_const("arg1", app_source)
+        arg2 = get_const("arg2", app_source)
+        arg3 = get_const("arg3", app_source)
+
+        ctx = {
+            "uid": uid,
+            "t": t,
+            "sys_name": sys_name,
+            "greeting": greeting,
+            "app_source": app_source,
+            "hack_admin": hack_admin,
+            "arg1": arg1,
+            "arg2": arg2,
+            "arg3": arg3,
+        }
+
+        session_key = f"{uid}_{get_client_ip()}"
+        auth_info[session_key] = time.time()
+        logger.info(f"return_page {dt_idx}, ctx {ctx}")
+        return render_template(dt_idx, **ctx)
 
     @app.route('/xlsx/upload', methods=['POST'])
     def upload_xlsx():
@@ -543,6 +582,7 @@ app = create_app()
 
 # 当直接运行脚本时，启动开发服务器
 if __name__ == '__main__':
-    port = get_console_arg1()
-    logger.info(f"listening_port {port}")
+    # port = get_console_arg1()
+    port = 19009
+    logger.info(f"paper_service_listen_on_port {port}")
     app.run(host='0.0.0.0', port=port)

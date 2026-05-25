@@ -5,18 +5,29 @@
 import os
 import logging.config
 import uuid
+import time
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, send_file, url_for
+from flask import Flask, render_template, request, jsonify, send_file, url_for, redirect
 
 import threading
 
 
 from apps.asr.asr_util import asr_tasks, process_audio_async
 from common.sys_init import init_yml_cfg
+from common.bp_auth import auth_bp, auth_info, get_client_ip
+from common import cm_utils, statistic_util, my_enums
+from common.const import SESSION_TIMEOUT, get_const
+from common.my_enums import AppType
+
+my_cfg = init_yml_cfg()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max
+app.config['CFG'] = my_cfg
+app.config['APP_SOURCE'] = my_enums.AppType.ASR.name.lower()
+
+app.register_blueprint(auth_bp)
 
 # 配置目录
 BASE_DIR = Path(__file__).parent
@@ -36,7 +47,7 @@ else:
 logger = logging.getLogger(__name__)
 
 
-my_cfg = init_yml_cfg()
+
 
 # ASR 服务配置
 ASR_HOST = my_cfg['funasr']['host']
@@ -49,9 +60,48 @@ SUPPORTED_FORMATS = {'.m4a', '.mp3', '.amr', '.wav', '.flac', '.ogg', '.aac'}
 
 
 @app.route('/')
-def index():
-    """主页"""
-    return render_template('index.html', sys_name="音频转文字助手")
+def app_home():
+    app_source = AppType.ASR.name.lower()
+    sys_name = my_enums.AppType.get_app_type(app_source)
+    t = request.args.get("t")
+    if not t:
+        logger.info("no_token_redirect_auth_login_index")
+        return redirect(url_for('auth.login_index', app_source=app_source))
+    session_info = cm_utils.decode_token(t, my_cfg['sys']['cypher_key'])
+    if not session_info:
+        logger.info("no_session_info_redirect_auth_login_index")
+        return redirect(url_for('auth.login_index', app_source=app_source))
+    uid = session_info['uid']
+    dt_idx = f"{app_source}_index.html"
+    logger.info(f"return_page {dt_idx}")
+    statistic_util.add_access_count_by_uid(uid, 1)
+
+    if session_info["role"] == 2:
+        hack_admin = "1"
+    else:
+        hack_admin = "0"
+
+    # greeting = get_const("greeting", app_source)
+    # arg1 = get_const("arg1", app_source)
+    # arg2 = get_const("arg2", app_source)
+    # arg3 = get_const("arg3", app_source)
+
+    ctx = {
+        "uid": uid,
+        "t": t,
+        "sys_name": sys_name,
+        "greeting": "",
+        "app_source": app_source,
+        "hack_admin": hack_admin,
+        "arg1": "",
+        "arg2": "",
+        "arg3": "",
+    }
+
+    session_key = f"{uid}_{get_client_ip()}"
+    auth_info[session_key] = time.time()
+    logger.info(f"return_page {dt_idx}, ctx {ctx}")
+    return render_template(dt_idx, **ctx)
 
 
 @app.route('/api/upload', methods=['POST'])
@@ -175,4 +225,6 @@ def clear_completed_tasks():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=19000)
+    port = 19010
+    logger.info(f"asr_service_listen_on_port {port}")
+    app.run(debug=True, host='0.0.0.0', port=port)

@@ -25,15 +25,6 @@
                 <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="my-btn" target="_blank">
                     <i class="fas fa-book"></i> 知识库管理
                 </a>
-                {% if hack_admin =='1' %}
-                <a href="/usr/statistic/index?uid={{uid}}&app_source={{app_source}}" class="my-btn" target="_blank">
-                    <i class="fas fa-cog"></i>运营管理
-                </a>
-                {% endif %}
-                <span class="user-name"><i class="fas fa-user"></i> {{ usr or '' }}</span>
-                <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i> 退出
-                </a>
             </div>
             <h1><i class="fas fa-user-tie"></i>{{sys_name}}</h1>
             <p>根据评审标准和评审材料，系统自动生成评审结果</p>

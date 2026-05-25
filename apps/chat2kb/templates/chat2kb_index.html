@@ -18,15 +18,6 @@
                 <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="system-settings-link" target="_blank">
                     <i class="fas fa-book"></i> 知识库配置
                 </a>
-                {% if hack_admin =='1' %}
-                <a href="/usr/statistic/index?uid={{uid}}&app_source={{app_source}}" class="system-settings-link" target="_blank">
-                    <i class="fas fa-cog"></i>运营管理
-                </a>
-                {% endif %}
-                <span class="user-name"><i class="fas fa-user"></i> {{ usr or '' }}</span>
-                <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="system-settings-link">
-                    <i class="fas fa-sign-out-alt"></i> 退出
-                </a>
             </div>
         </header>
 
