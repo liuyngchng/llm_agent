@@ -2,3 +2,7 @@
 sys:
     name: 数据统计服务
     cypher_key: abaababaabaababa
+
+api:
+    # 认证服务 API，统计数据时需要获取用户的相关信息
+    auth_api: http://127.0.0.1:19011
