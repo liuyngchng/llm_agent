@@ -1,4 +1,4 @@
-# config.yaml，文件格式必须严格遵循 yaml配置文件格式
+# cfg.yaml，文件格式必须严格遵循 yaml配置文件格式
 sys:
     #  系统名称(title) 配置
     name: 认证服务

@@ -247,6 +247,7 @@ def health():
 # ---------------------------------------------------------------------------
 if __name__ == '__main__':
     import uvicorn
-    port = get_console_arg1()
-    logger.info(f"statistics_service listening on port {port}")
+    # port = get_console_arg1()
+    port = 19012
+    logger.info(f"statistics_service_listen_on_port {port}")
     uvicorn.run(app, host='0.0.0.0', port=port)

@@ -12,6 +12,8 @@ sys:
 api:
     # 认证服务 API
     auth_api: http://127.0.0.1:19011
+    # 数据统计服务 API
+    stats_api: http://127.0.0.1:19012
 
 
 

@@ -294,8 +294,8 @@ async def register(body: RegisterRequest):
     if body.captcha_token in captcha_codes:
         del captcha_codes[body.captcha_token]
 
-    token = create_token(uid, 0)        # 注册用户默认角色为 0
-    logger.info(f"注册成功 - 用户: {body.usr}, uid: {uid}")
+    token = create_token(uid, 0, SESSION_TIMEOUT, my_cfg['sys']['cypher_key'])        # 注册用户默认角色为 0
+    logger.info(f"user_registry_success: {body.usr}, uid: {uid}")
 
     return {
         "access_token": token,
@@ -363,6 +363,7 @@ if __name__ == "__main__":
     import uvicorn
 
     logger.info(f"my_cfg {my_cfg.get('db')},\n{my_cfg.get('api')}")
-    port = get_console_arg1()
-    logger.info(f"listening_port {port}")
-    uvicorn.run(app, host="0.0.0.0", port=19011)
+    # port = get_console_arg1()
+    port = 19011
+    logger.info(f"auth_service_listen_on_port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port)

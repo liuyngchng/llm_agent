@@ -62,3 +62,4 @@ common/sh/cfg.db.backup*
 apps/asr/converted/*
 apps/asr/results/*
 apps/asr/uploads/*
+apps/statistics_service/statistics.db
