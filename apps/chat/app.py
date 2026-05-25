@@ -278,25 +278,25 @@ if __name__ == '__main__':
         logger.info(f"API密钥已配置，使用模型: {my_cfg['api']['llm_model_name']}")
 
     # 检查依赖库
-    logger.info("检查依赖库...")
+    logger.debug("检查依赖库...")
     try:
         import PyPDF2
 
-        logger.info("✓ PyPDF2 已安装")
+        logger.debug("✓ PyPDF2 已安装")
     except ImportError:
         logger.warning("⚠ PyPDF2 未安装，PDF文件解析将不可用")
 
     try:
         import docx
 
-        logger.info("✓ python-docx 已安装")
+        logger.debug("✓ python-docx 已安装")
     except ImportError:
         logger.warning("⚠ python-docx 未安装，Word文档解析将不可用")
 
     try:
         from openpyxl import load_workbook
 
-        logger.info("✓ openpyxl 已安装")
+        logger.debug("✓ openpyxl 已安装")
     except ImportError:
         logger.warning("⚠ openpyxl 未安装，Excel文件解析将不可用")
 
@@ -304,7 +304,7 @@ if __name__ == '__main__':
         from PIL import Image
         import pytesseract
 
-        logger.info("✓ PIL 和 pytesseract 已安装")
+        logger.debug("✓ PIL 和 pytesseract 已安装")
     except ImportError:
         logger.warning("⚠ PIL 或 pytesseract 未安装，图片文字识别将不可用")
     port = 20000
