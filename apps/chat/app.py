@@ -3,6 +3,7 @@
 # Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
 
 import time
+import json
 
 import requests
 from flask import Flask, request, Response, jsonify, send_from_directory, abort, redirect, url_for, render_template
@@ -17,8 +18,10 @@ from apps.chat.chat_util import LLMConfig, generate_stream_response, allowed_fil
     MAX_FILE_SIZE, ALLOWED_EXTENSIONS, extract_text_from_file
 from common import my_enums, statistic_util, cm_utils
 from common.bp_auth import auth_bp, get_client_ip, auth_info, _auth_api_base
+from common.cm_utils import estimate_tokens
 from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT, get_const
 from common.my_enums import AppType
+from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
 from common.sys_init import init_yml_cfg
 
 my_cfg = init_yml_cfg()
@@ -151,7 +154,10 @@ def chat():
 
         # 添加用户消息
         messages.append({"role": "user", "content": user_message})
-
+        logger.info(f"user_msg_input {messages}")
+        input_tokens = estimate_tokens(str(messages))
+        logger.info(f"{uid}, input_tokens, {input_tokens}")
+        add_input_token_by_uid(uid, input_tokens)
         # 记录发送的messages内容（脱敏）
         for i, msg in enumerate(messages):
             role = msg.get('role', 'unknown')
@@ -160,9 +166,24 @@ def chat():
                 preview = content[:100] + "..." if len(content) > 100 else content
                 logger.info(f"消息[{i}] role={role}, 内容预览: {preview}")
 
-        # 返回流式响应
+        # 包裹流式响应，统计 output tokens
+        def generate_and_count():
+            full_response = ""
+            for sse_chunk in generate_stream_response(messages, my_cfg['api'], max_tokens=custom_max_tokens):
+                yield sse_chunk
+                if sse_chunk.startswith('data: ') and sse_chunk != 'data: [DONE]\n\n':
+                    try:
+                        chunk_data = json.loads(sse_chunk[6:].strip())
+                        if 'content' in chunk_data:
+                            full_response += chunk_data['content']
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+            output_tokens = estimate_tokens(full_response)
+            logger.info(f"{uid}, output_tokens, {output_tokens}")
+            add_output_token_by_uid(uid, output_tokens)
+
         return Response(
-            generate_stream_response(messages, my_cfg['api'], max_tokens=custom_max_tokens),
+            generate_and_count(),
             mimetype='text/event-stream',
             headers={
                 'Cache-Control': 'no-cache',
