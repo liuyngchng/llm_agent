@@ -331,7 +331,6 @@ def get_statistic_report_index():
             warning_info=warning_info
 
         ))
-    statistic_util.add_access_count_by_uid(int(uid), 1)
     app_source = request.args.get('app_source')
     warning_info = request.args.get('warning_info', "")
     sys_name = my_enums.AppType.get_app_type(app_source)

@@ -286,11 +286,6 @@ if __name__ == '__main__':
         logger.info("✓ PIL 和 pytesseract 已安装")
     except ImportError:
         logger.warning("⚠ PIL 或 pytesseract 未安装，图片文字识别将不可用")
-
-    logger.info("启动Flask应用...")
-    app.run(
-        debug=True,
-        host='0.0.0.0',
-        port=20000,
-        threaded=True
-    )
+    port = 20000
+    logger.info(f"chat_service_listen_on_port {port}")
+    app.run(debug=False, host='0.0.0.0', port=port, threaded=True)

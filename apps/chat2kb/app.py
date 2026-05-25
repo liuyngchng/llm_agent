@@ -264,6 +264,7 @@ if __name__ == '__main__':
     """
     logger.info(f"my_cfg {my_cfg.get('db')},\n{my_cfg.get('api')}")
     app.config['ENV'] = 'dev'
-    port = get_console_arg1()
-    logger.info(f"listening_port {port}")
+    # port = get_console_arg1()
+    port = 19002
+    logger.info(f"chat2kb_listen_on_port {port}")
     app.run(host='0.0.0.0', port=port)
