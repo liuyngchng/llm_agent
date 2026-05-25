@@ -123,13 +123,21 @@ async function fetchQueryData(query) {
         const uid = document.getElementById('uid').value;
         const kbId = document.getElementById('kb_selector').value || '';
         const modelId = document.getElementById('model_selector').value || '';
+
+        // 构建历史消息（排除当前用户消息和"思考中"占位）
+        const historyMessages = messages.slice(0, -2).slice(-10);
+        const history = historyMessages.map(m => {
+            const role = m.type === 'user' ? '用户' : '助手';
+            return `${role}：${m.text}`;
+        }).join('\n');
+
         const response = await fetch('/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Accept': 'text/event-stream'
             },
-            body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&t=${t}&app_source=${appSource}&kb_id=${kbId}&model_id=${modelId}`,
+            body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&t=${t}&app_source=${appSource}&kb_id=${kbId}&model_id=${modelId}&history=${encodeURIComponent(history)}`,
             signal: abortController.signal,
             credentials: 'include'
         });
@@ -366,6 +374,21 @@ function addCopyButton(messageContainer, text) {
     messageContainer.appendChild(actionsContainer);
 }
 
+// 清空聊天
+function clearChat() {
+    if (isFetching && abortController) {
+        abortController.abort();
+    }
+    messages = [];
+    saveMessages();
+    chatContainer.innerHTML = '';
+    const greetingEl = document.getElementById('greeting');
+    if (greetingEl && greetingEl.value) {
+        addMessageToDOM(greetingEl.value, 'bot');
+    }
+    resetUI();
+}
+
 // 重置UI状态
 function resetUI() {
     isFetching = false;
@@ -373,6 +396,12 @@ function resetUI() {
     stopButton.style.display = 'none';
     currentResponse = null;
     abortController = null;
+}
+
+// 清空聊天按钮
+const clearChatBtn = document.getElementById('clearChat');
+if (clearChatBtn) {
+    clearChatBtn.addEventListener('click', clearChat);
 }
 
 // 键盘快捷键支持

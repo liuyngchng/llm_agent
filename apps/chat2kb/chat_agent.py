@@ -38,7 +38,7 @@ class ChatAgent:
         prompt = ChatPromptTemplate.from_template(template)
         model = self.get_llm()
         chain = (
-            {"context": RunnablePassthrough(), "question": RunnablePassthrough()}
+            {"context": RunnablePassthrough(), "question": RunnablePassthrough(), "history": RunnablePassthrough()}
             | prompt
             | model
             | StrOutputParser()

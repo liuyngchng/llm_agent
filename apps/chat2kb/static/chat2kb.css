@@ -81,6 +81,27 @@ header h1 {
     transform: translateY(-2px);
 }
 
+.btn-clear {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+    font-weight: 600;
+}
+
+.btn-clear:hover {
+    background: rgba(255, 80, 80, 0.4);
+    border-color: rgba(255, 100, 100, 0.6);
+    transform: translateY(-2px);
+}
+
 .chat-container {
     flex: 1;
     padding: 20px;

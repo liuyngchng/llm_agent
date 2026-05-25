@@ -158,6 +158,7 @@ def register_routes(app):
         uid = int(request.form.get('uid'))
         kb_id = request.form.get('kb_id')
         model_id = request.form.get('model_id')
+        history = request.form.get('history', '')
 
         if not msg or not uid or not kb_id:
             warning_info = f"缺少用户消息、用户身份信息、知识库信息中的一个或多个参数，请您检查后再试"
