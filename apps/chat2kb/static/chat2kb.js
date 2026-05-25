@@ -9,12 +9,45 @@ let currentResponse = null;
 let abortController = null;
 let currentBotMessage = null;
 
+const CHAT_STORAGE_KEY = 'chat2kb_messages';
+const MAX_MESSAGES = 19;  // 与 common/const.py:MAX_HISTORY_SIZE 保持一致
+let messages = [];
+
+function saveMessages() {
+    if (messages.length > MAX_MESSAGES) {
+        messages = messages.slice(-MAX_MESSAGES);
+    }
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+}
+
+function loadMessages() {
+    try {
+        const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+        if (raw) {
+            messages = JSON.parse(raw);
+            if (messages.length > MAX_MESSAGES) {
+                messages = messages.slice(-MAX_MESSAGES);
+            }
+        }
+    } catch (e) {
+        messages = [];
+    }
+}
+
+function restoreMessages() {
+    chatContainer.innerHTML = '';
+    messages.forEach(m => addMessageToDOM(m.text, m.type));
+}
+
 // 页面加载时显示欢迎信息
 window.onload = function() {
     loadKnowledgeBases();
+    loadMessages();
     const greetingEl = document.getElementById('greeting');
-    if (greetingEl && greetingEl.value) {
+    if (messages.length === 0 && greetingEl && greetingEl.value) {
         addMessage(greetingEl.value, 'bot');
+    } else if (messages.length > 0) {
+        restoreMessages();
     }
     queryInput.focus();
 };
@@ -258,34 +291,35 @@ function updateBotMessage(text) {
 
     const messageBubble = currentBotMessage.querySelector('.bot-message-bubble');
     if (messageBubble) {
-        // 使用DOMPurify和Marked解析Markdown
         const sanitizedContent = DOMPurify.sanitize(
             marked.parse(text),
             { ADD_TAGS: ['canvas'], ADD_ATTR: ['id'] }
         );
         messageBubble.innerHTML = sanitizedContent;
-
-        // 滚动到底部
         messageBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // 同步更新持久化的最后一条 bot 消息
+    if (messages.length > 0 && messages[messages.length - 1].type === 'bot') {
+        messages[messages.length - 1].text = text;
+        saveMessages();
     }
 }
 
-// 添加消息到聊天容器
-function addMessage(text, type) {
+// 添加消息到聊天容器（仅 DOM，不涉及持久化）
+function addMessageToDOM(text, type) {
     const messageContainer = document.createElement('div');
     messageContainer.classList.add('message-container');
 
-    let sanitizedContent = '';
-
     if (type === 'user') {
         messageContainer.classList.add('user-message-container');
-        sanitizedContent = DOMPurify.sanitize(text);
+        const sanitizedContent = DOMPurify.sanitize(text);
         messageContainer.innerHTML = `
             <div class="message-bubble user-message-bubble">${sanitizedContent}</div>
         `;
     } else {
         messageContainer.classList.add('bot-message-container');
-        sanitizedContent = DOMPurify.sanitize(
+        const sanitizedContent = DOMPurify.sanitize(
             marked.parse(text),
             { ADD_TAGS: ['canvas'], ADD_ATTR: ['id'] }
         );
@@ -301,6 +335,13 @@ function addMessage(text, type) {
     chatContainer.appendChild(messageContainer);
     messageContainer.scrollIntoView({ behavior: 'smooth' });
     return messageContainer;
+}
+
+// 添加消息（持久化 + DOM）
+function addMessage(text, type) {
+    messages.push({ text, type });
+    saveMessages();
+    return addMessageToDOM(text, type);
 }
 
 // 添加复制按钮

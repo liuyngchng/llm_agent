@@ -5,6 +5,45 @@ let uploadedFiles = [];
 let currentStreamController = null; // 用于停止流式响应
 let isStreaming = false; // 是否正在流式传输
 
+const CHAT_STORAGE_KEY = 'chat_messages';
+const MAX_MESSAGES = 19;  // 与 common/const.py:MAX_HISTORY_SIZE 保持一致
+let displayMessages = [];
+
+function saveChatHistory() {
+    if (displayMessages.length > MAX_MESSAGES) {
+        displayMessages = displayMessages.slice(-MAX_MESSAGES);
+    }
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(displayMessages));
+}
+
+function loadChatHistory() {
+    try {
+        const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+        if (raw) {
+            displayMessages = JSON.parse(raw);
+            if (displayMessages.length > MAX_MESSAGES) {
+                displayMessages = displayMessages.slice(-MAX_MESSAGES);
+            }
+        }
+    } catch (e) {
+        displayMessages = [];
+    }
+}
+
+function restoreChatHistory() {
+    const welcomeMsg = document.querySelector('.welcome-message');
+    chatHistoryEl.innerHTML = '';
+    displayMessages.forEach(msg => {
+        const id = msg.messageId || undefined;
+        addMessageToUI(msg.role, msg.content, id);
+        chatHistory.push({ role: msg.role, content: msg.content, messageId: id });
+    });
+    if (welcomeMsg && displayMessages.length === 0) {
+        chatHistoryEl.appendChild(welcomeMsg);
+    }
+    scrollToBottom();
+}
+
 // 配置 marked.js
 marked.setOptions({
     highlight: function(code, lang) {
@@ -42,6 +81,10 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         loadConfig();
         setupEventListeners();
+        loadChatHistory();
+        if (displayMessages.length > 0) {
+            restoreChatHistory();
+        }
         messageInput.focus();
     }, 100);
 });
@@ -329,6 +372,8 @@ async function sendMessage() {
 
     // 添加用户消息到界面
     addMessageToUI('user', displayMessage);
+    displayMessages.push({ role: 'user', content: displayMessage });
+    saveChatHistory();
 
     // 清空输入框和文件列表
     messageInput.value = '';
@@ -471,6 +516,8 @@ async function streamAIResponse(userMessage, messageId) {
                         messageId: messageId
                     };
                     chatHistory.push(completedMessage);
+                    displayMessages.push({ role: 'assistant', content: aiResponse, messageId: messageId });
+                    saveChatHistory();
 
                     // 更新消息对象的完整内容
                     messageObject.rawMarkdown = aiResponse;
@@ -741,6 +788,8 @@ function clearChat() {
 
         // 清空历史
         chatHistory = [];
+        displayMessages = [];
+        saveChatHistory();
         clearFileList();
 
         // 清空界面（保留欢迎消息）
