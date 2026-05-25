@@ -236,6 +236,7 @@ def register_routes(app):
             input_tokens = estimate_tokens(str(stream_input))
             logger.info(f"{uid}, input_tokens, {input_tokens}")
             add_input_token_by_uid(uid, input_tokens)
+            logger.info(f"")
             for chunk in chat_agent.get_chain().stream(stream_input):
                 full_response += chunk
                 yield chunk
