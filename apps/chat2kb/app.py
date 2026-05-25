@@ -201,7 +201,7 @@ def register_routes(app):
 
         def generate_stream():
             full_response = ""
-            stream_input = {"context": context, "question": msg}
+            stream_input = {"context": context, "question": msg, "history": history}
             logger.info(f"stream_input {stream_input}")
             input_tokens = estimate_tokens(str(stream_input))
             logger.info(f"{uid}, input_tokens, {input_tokens}")
