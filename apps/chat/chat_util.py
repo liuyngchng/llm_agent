@@ -17,7 +17,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 ALLOWED_EXTENSIONS = {
     'txt', 'md', 'py', 'js', 'html', 'css', 'json',
-    'pdf', 'xlsx', 'docx',
+    'pdf', 'xlsx', 'docx', 'ppt', 'pptx',
     'jpg', 'jpeg', 'png', 'gif'
 }
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -93,6 +93,33 @@ def extract_text_from_file(filepath, filename):
             except ImportError:
                 logger.warning("需要安装 pypandoc 库来解析Word文档")
                 return "[需要安装 pypandoc 库来解析Word文档]"
+
+        # PPT/PPTX文件（需要安装python-pptx）
+        elif ext in ['ppt', 'pptx']:
+            try:
+                from pptx import Presentation
+                prs = Presentation(filepath)
+                slides_text = []
+                for slide_num, slide in enumerate(prs.slides, 1):
+                    slide_lines = [f"## Slide {slide_num}"]
+                    for shape in slide.shapes:
+                        if hasattr(shape, "text") and shape.text.strip():
+                            slide_lines.append(shape.text.strip())
+                        if shape.has_table:
+                            table = shape.table
+                            rows_text = []
+                            for row in table.rows:
+                                cells = [cell.text.strip() for cell in row.cells]
+                                rows_text.append(" | ".join(cells))
+                            if rows_text:
+                                slide_lines.append("\n".join(rows_text))
+                    slides_text.append("\n".join(slide_lines))
+                result = "\n\n".join(slides_text)
+                logger.info(f"PPT文件解析成功，页数: {len(prs.slides)}，长度: {len(result)} 字符")
+                return result
+            except ImportError:
+                logger.warning("需要安装python-pptx库来解析PPT文件")
+                return "[需要安装python-pptx库来解析PPT文件]"
 
         # Excel文件（需要安装openpyxl）
         elif ext in ['xlsx']:

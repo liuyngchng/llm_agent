@@ -156,7 +156,8 @@ function processFiles(files) {
         'application/pdf',
         'text/plain', 'text/markdown', 'text/html',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation'
     ];
 
     let addedFiles = 0;
@@ -171,7 +172,7 @@ function processFiles(files) {
         }
 
         // 检查文件类型
-        if (!allowedTypes.includes(file.type) && !file.name.match(/\.(txt|md|pdf|xlsx|docx|jpg|jpeg|png|gif)$/i)) {
+        if (!allowedTypes.includes(file.type) && !file.name.match(/\.(txt|md|pdf|xlsx|docx|ppt|pptx|jpg|jpeg|png|gif)$/i)) {
             showError(`不支持的文件类型: ${file.name}`);
             continue;
         }
@@ -228,6 +229,7 @@ function getFileIcon(type, name) {
     if (type.startsWith('text/')) return 'fa-file-alt';
     if (name.match(/\.docx?$/i)) return 'fa-file-word';
     if (name.match(/\.xlsx?$/i)) return 'fa-file-excel';
+    if (name.match(/\.pptx?$/i)) return 'fa-file-powerpoint';
     return 'fa-file';
 }
 
@@ -409,6 +411,7 @@ function getFileEmoji(type, name) {
     if (type.startsWith('text/')) return '📝';
     if (name.match(/\.docx?$/i)) return '📋';
     if (name.match(/\.xlsx?$/i)) return '📊';
+    if (name.match(/\.pptx?$/i)) return '📽️';
     return '📎';
 }
 
