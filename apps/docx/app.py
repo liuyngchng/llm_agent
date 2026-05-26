@@ -124,7 +124,7 @@ def register_routes(app):
         uid = session_info['uid']
         dt_idx = f"{app_source}_index.html"
         logger.info(f"return_page {dt_idx}")
-        statistic_util.add_access_count_by_uid(uid, 1)
+        statistic_util.add_access_count_by_uid(uid, 1, app_source)
 
         if session_info["role"] == 2:
             hack_admin = "1"
@@ -171,7 +171,7 @@ def register_routes(app):
         uid = str(session_info['uid'])
         session_key = f"{uid}_{get_client_ip()}"
         auth_info[session_key] = time.time()
-        statistic_util.add_access_count_by_uid(int(uid), 1)
+        statistic_util.add_access_count_by_uid(int(uid), 1, app_source)
         warning_info = request.args.get('warning_info', "")
         sys_name = my_enums.AppType.get_app_type(app_source)
         ctx = {
@@ -364,7 +364,7 @@ def register_routes(app):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
-        statistic_util.add_access_count_by_uid(int(uid), 1)
+        statistic_util.add_access_count_by_uid(int(uid), 1, AppType.DOCX.name.lower())
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         absolute_path = os.path.abspath(file_path)
         logger.info(f"{uid}, 文件检查 - 绝对路径: {absolute_path}")
@@ -401,7 +401,7 @@ def register_routes(app):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
-        statistic_util.add_access_count_by_uid(int(uid), 1)
+        statistic_util.add_access_count_by_uid(int(uid), 1, AppType.DOCX.name.lower())
         file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
         absolute_path = file_path_info[0]['output_file_path']
@@ -441,7 +441,7 @@ def register_routes(app):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(app_source, warning_info)
-        statistic_util.add_access_count_by_uid(int(uid), 1)
+        statistic_util.add_access_count_by_uid(int(uid), 1, AppType.DOCX.name.lower())
         file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
         absolute_path = file_path_info[0]['output_file_path']

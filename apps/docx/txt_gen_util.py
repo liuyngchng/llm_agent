@@ -14,6 +14,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from common import cfg_util, agt_util, cm_utils, statistic_util
 from common.cm_utils import rmv_think_block, estimate_tokens
+from common.my_enums import AppType
 
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
@@ -42,7 +43,7 @@ def gen_docx_outline_stream(uid:int, doc_type: str, doc_title: str, keywords: st
     # logger.info(f"{uid}, start_calc_txt_token, {input_text}")
     input_tokens = estimate_tokens(input_text)
     logger.info(f"{uid}, input_tokens, {input_tokens}")
-    statistic_util.add_input_token_by_uid(uid, input_tokens)
+    statistic_util.add_input_token_by_uid(uid, input_tokens, AppType.DOCX.name.lower())
     logger.info(f"submit_to_llm, {cfg['api']['llm_api_uri'],}, {cfg['api']['llm_model_name']}, prompt {prompt}")
     try:
         # 流式调用模型
@@ -59,7 +60,7 @@ def gen_docx_outline_stream(uid:int, doc_type: str, doc_title: str, keywords: st
         output_tokens = estimate_tokens(output_txt[:-1])
         # logger.info(f"{uid}, output_tokens, {output_tokens}")
         logger.info(f"{uid}, gen_doc_outline, {output_txt}")
-        statistic_util.add_output_token_by_uid(uid, output_tokens)
+        statistic_util.add_output_token_by_uid(uid, output_tokens, AppType.DOCX.name.lower())
     except Exception as e:
         logger.exception(f"{uid}, llm_connection_error, {e}")
         yield f'{{"error": "大模型服务连接失败，请检查API地址配置。详情：{str(e)}"}}'
@@ -125,13 +126,13 @@ def gen_txt(uid: int, write_context: str, references: str, para_text: str, user_
             # logger.info(f"{uid}, start_calc_txt_token, {input_text}")
             input_tokens = estimate_tokens(input_text)
             logger.info(f"{uid}, input_tokens, {input_tokens}")
-            statistic_util.add_input_token_by_uid(uid, input_tokens)
+            statistic_util.add_input_token_by_uid(uid, input_tokens, AppType.DOCX.name.lower())
             logger.info(f"gen_txt_arg, {arg_dict}, {cfg['api']['llm_api_uri']}, {cfg['api']['llm_model_name']}")
             response = chain.invoke(arg_dict)
             output_txt = rmv_think_block(response.content)
             output_tokens = estimate_tokens(response.content)
             logger.info(f"{uid}, output_tokens, {output_tokens}")
-            statistic_util.add_output_token_by_uid(uid, output_tokens)
+            statistic_util.add_output_token_by_uid(uid, output_tokens, AppType.DOCX.name.lower())
             dispose(model)
             output_txt = output_txt.replace(current_sub_title, "").strip()
             return output_txt

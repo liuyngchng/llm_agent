@@ -64,6 +64,9 @@ function renderTasksTable(tasks) {
         // 用户名
         const nicknameCell = document.createElement('td');
         nicknameCell.innerHTML = `<div><strong>${task.nickname || '-'}</strong></div>`;
+        // 来源应用
+        const appCell = document.createElement('td');
+        appCell.textContent = task.app || '-';
         // 日期
         const dateCell = document.createElement('td');
         dateCell.textContent = task.date || '-';
@@ -83,6 +86,7 @@ function renderTasksTable(tasks) {
         row.appendChild(idCell);
         row.appendChild(uidCell);
         row.appendChild(nicknameCell);
+        row.appendChild(appCell);
         row.appendChild(dateCell);
         row.appendChild(accessCountCell);
         row.appendChild(inputTokenCell);

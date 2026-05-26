@@ -70,7 +70,7 @@ def app_home():
     uid = session_info['uid']
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")
-    statistic_util.add_access_count_by_uid(uid, 1)
+    statistic_util.add_access_count_by_uid(uid, 1, app_source)
 
     if session_info["role"] == 2:
         hack_admin = "1"

@@ -115,7 +115,7 @@ def register_routes(app):
         uid = session_info['uid']
         dt_idx = f"{app_source}_index.html"
         logger.info(f"return_page {dt_idx}")
-        statistic_util.add_access_count_by_uid(uid, 1)
+        statistic_util.add_access_count_by_uid(uid, 1, app_source)
 
         if session_info["role"] == 2:
             hack_admin = "1"
@@ -208,7 +208,7 @@ def register_routes(app):
             logger.info(f"stream_input {stream_input}")
             input_tokens = estimate_tokens(str(stream_input))
             logger.info(f"{uid}, input_tokens, {input_tokens}")
-            add_input_token_by_uid(uid, input_tokens)
+            add_input_token_by_uid(uid, input_tokens, AppType.CHAT2KB.name.lower())
             logger.info(f"{uid}, get_stream")
             for chunk in chat_agent.get_chain().stream(stream_input):
                 full_response += chunk
@@ -216,7 +216,7 @@ def register_routes(app):
             logger.info(f"full_response: {full_response}")
             output_tokens = estimate_tokens(json.dumps(full_response))
             logger.info(f"{uid}, output_tokens, {output_tokens}")
-            add_output_token_by_uid(uid, output_tokens)
+            add_output_token_by_uid(uid, output_tokens, AppType.CHAT2KB.name.lower())
 
         return app.response_class(generate_stream(), mimetype='text/event-stream')
 

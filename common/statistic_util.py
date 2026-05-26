@@ -73,9 +73,14 @@ def get_access_count_by_uid(uid: int) -> int:
     return -1
 
 
-def add_access_count_by_uid(uid: int, access_count: int) -> bool:
-    """更新用户的访问次数"""
-    return _post("/statistics/access", {"uid": uid, "count": access_count})
+def add_access_count_by_uid(uid: int, access_count: int, app_name: str = "") -> bool:
+    """
+    更新用户的访问次数
+    """
+    body = {"uid": uid, "count": access_count, "app":""}
+    if app_name:
+        body["app"] = app_name
+    return _post("/statistics/access", body)
 
 
 def get_input_token_by_uid(uid: int) -> int | None:
@@ -86,9 +91,12 @@ def get_input_token_by_uid(uid: int) -> int | None:
     return -1
 
 
-def add_input_token_by_uid(uid: int, input_token: int) -> bool:
+def add_input_token_by_uid(uid: int, input_token: int, app_name: str = "") -> bool:
     """更新用户输入 Token 用量"""
-    return _post("/statistics/input-token", {"uid": uid, "count": input_token})
+    body = {"uid": uid, "count": input_token, "app":""}
+    if app_name:
+        body["app"] = app_name
+    return _post("/statistics/input-token", body)
 
 
 def get_embedding_token_by_uid(uid: int) -> int | None:
@@ -99,9 +107,12 @@ def get_embedding_token_by_uid(uid: int) -> int | None:
     return -1
 
 
-def add_embedding_token_by_uid(uid: int, embedding_token: int) -> bool:
+def add_embedding_token_by_uid(uid: int, embedding_token: int, app_name: str = "") -> bool:
     """更新用户嵌入 Token 用量"""
-    return _post("/statistics/embedding-token", {"uid": uid, "count": embedding_token})
+    body = {"uid": uid, "count": embedding_token, "app":""}
+    if app_name:
+        body["app"] = app_name
+    return _post("/statistics/embedding-token", body)
 
 
 def get_output_token_by_uid(uid: int) -> int | None:
@@ -112,6 +123,9 @@ def get_output_token_by_uid(uid: int) -> int | None:
     return -1
 
 
-def add_output_token_by_uid(uid: int, output_token: int) -> bool:
+def add_output_token_by_uid(uid: int, output_token: int, app_name: str = "") -> bool:
     """更新用户输出 Token 用量"""
-    return _post("/statistics/output-token", {"uid": uid, "count": output_token})
+    body = {"uid": uid, "count": output_token, "app":""}
+    if app_name:
+        body["app"] = app_name
+    return _post("/statistics/output-token", body)

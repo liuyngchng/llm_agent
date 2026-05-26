@@ -93,7 +93,7 @@ def app_home():
 
             session_key = f"{uid}_{ip}"
             auth_info[session_key] = time.time()
-            statistic_util.add_access_count_by_uid(uid, 1)
+            statistic_util.add_access_count_by_uid(uid, 1, app_source)
             logger.info(f"return_page_portal_index, uid={uid}")
             return render_template("portal_index.html", **ctx)
 

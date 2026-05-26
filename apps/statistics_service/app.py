@@ -49,6 +49,7 @@ def init_db():
                 id INTEGER NOT NULL UNIQUE,
                 uid INTEGER NOT NULL,
                 nickname TEXT NOT NULL,
+                app TEXT NOT NULL DEFAULT '',
                 date TEXT NOT NULL,
                 access_count INTEGER NOT NULL DEFAULT 0,
                 input_token INTEGER NOT NULL DEFAULT 0,
@@ -58,6 +59,12 @@ def init_db():
             )
         """)
         conn.commit()
+        # 兼容旧表：如果旧表缺少 app 列，则自动添加
+        try:
+            conn.execute("ALTER TABLE statistics ADD COLUMN app TEXT NOT NULL DEFAULT ''")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass  # 列已存在，忽略
 
 init_db()
 
@@ -81,11 +88,13 @@ app.add_middleware(
 class AccessCountRequest(BaseModel):
     uid: int = Field(..., description="用户 ID")
     count: int = Field(1, description="访问次数增量")
+    app: str = Field("", description="来源应用名称")
 
 
 class TokenRequest(BaseModel):
     uid: int = Field(..., description="用户 ID")
     count: int = Field(..., description="Token 增量")
+    app: str = Field("", description="来源应用名称")
 
 
 # ---------------------------------------------------------------------------
@@ -110,25 +119,25 @@ def _get_user_name(uid: int) -> str:
     return ''
 
 
-def _ensure_row(conn, uid: int, nickname: str, date: str):
+def _ensure_row(conn, uid: int, nickname: str, date: str, app_name: str = ""):
     """确保当天该 uid 的记录存在，返回当前记录"""
     cur = conn.execute(
-        "SELECT access_count, input_token, output_token, embedding_token "
-        "FROM statistics WHERE uid=? AND date=?",
-        (uid, date)
+        "SELECT access_count, input_token, output_token, embedding_token, app "
+        "FROM statistics WHERE uid=? AND date=? AND app=?",
+        (uid, date, app_name)
     )
     row = cur.fetchone()
     if row:
         return row
     conn.execute(
-        "INSERT INTO statistics (uid, nickname, date) VALUES (?, ?, ?)",
-        (uid, nickname, date)
+        "INSERT INTO statistics (uid, nickname, date, app) VALUES (?, ?, ?, ?)",
+        (uid, nickname, date, app_name)
     )
     conn.commit()
-    return (0, 0, 0, 0)
+    return 0, 0, 0, 0, app_name
 
 
-def _add_field(uid: int, field: str, count: int) -> bool:
+def _add_field(uid: int, field: str, count: int, app_name: str = "") -> bool:
     """通用：给 uid 的当天记录累加某个字段"""
     if not count or not uid:
         return False
@@ -139,13 +148,13 @@ def _add_field(uid: int, field: str, count: int) -> bool:
     today = datetime.today().strftime('%Y-%m-%d')
     with sqlite3.connect(STS_DB_FILE) as conn:
         try:
-            _ensure_row(conn, uid, nickname, today)
+            _ensure_row(conn, uid, nickname, today, app_name)
             conn.execute(
-                f"UPDATE statistics SET {field}={field}+? WHERE uid=? AND date=?",
-                (count, uid, today)
+                f"UPDATE statistics SET {field}={field}+? WHERE uid=? AND date=? AND app=?",
+                (count, uid, today, app_name)
             )
             conn.commit()
-            logger.info(f"add_{field}_success, uid={uid}, count={count}")
+            logger.info(f"add_{field}_success, uid={uid}, count={count}, app={app_name}")
             return True
         except Exception as e:
             conn.rollback()
@@ -160,7 +169,7 @@ def _add_field(uid: int, field: str, count: int) -> bool:
 @app.post("/statistics/access")
 def add_access(req: AccessCountRequest):
     """记录用户访问次数"""
-    success = _add_field(req.uid, "access_count", req.count)
+    success = _add_field(req.uid, "access_count", req.count, req.app)
     if not success:
         raise HTTPException(status_code=500, detail="记录访问次数失败")
     return {"status": "ok"}
@@ -169,7 +178,7 @@ def add_access(req: AccessCountRequest):
 @app.post("/statistics/input-token")
 def add_input_token(req: TokenRequest):
     """记录用户输入 Token 用量"""
-    success = _add_field(req.uid, "input_token", req.count)
+    success = _add_field(req.uid, "input_token", req.count, req.app)
     if not success:
         raise HTTPException(status_code=500, detail="记录输入 Token 失败")
     return {"status": "ok"}
@@ -178,7 +187,7 @@ def add_input_token(req: TokenRequest):
 @app.post("/statistics/output-token")
 def add_output_token(req: TokenRequest):
     """记录用户输出 Token 用量"""
-    success = _add_field(req.uid, "output_token", req.count)
+    success = _add_field(req.uid, "output_token", req.count, req.app)
     if not success:
         raise HTTPException(status_code=500, detail="记录输出 Token 失败")
     return {"status": "ok"}
@@ -187,7 +196,7 @@ def add_output_token(req: TokenRequest):
 @app.post("/statistics/embedding-token")
 def add_embedding_token(req: TokenRequest):
     """记录用户嵌入 Token 用量"""
-    success = _add_field(req.uid, "embedding_token", req.count)
+    success = _add_field(req.uid, "embedding_token", req.count, req.app)
     if not success:
         raise HTTPException(status_code=500, detail="记录嵌入 Token 失败")
     return {"status": "ok"}
@@ -198,7 +207,7 @@ def get_list():
     """获取统计数据列表（最近100条）"""
     with sqlite3.connect(STS_DB_FILE) as conn:
         cur = conn.execute(
-            "SELECT uid, nickname, date, access_count, input_token, output_token, embedding_token "
+            "SELECT uid, nickname, app, date, access_count, input_token, output_token, embedding_token "
             "FROM statistics ORDER BY date DESC LIMIT 100"
         )
         rows = cur.fetchall()
@@ -207,11 +216,12 @@ def get_list():
         result.append({
             "uid": row[0],
             "nickname": row[1],
-            "date": row[2],
-            "access_count": row[3],
-            "input_token": row[4],
-            "output_token": row[5],
-            "embedding_token": row[6],
+            "app": row[2],
+            "date": row[3],
+            "access_count": row[4],
+            "input_token": row[5],
+            "output_token": row[6],
+            "embedding_token": row[7],
         })
     return result
 
@@ -221,7 +231,7 @@ def get_by_uid(uid: int):
     """获取指定用户的统计数据"""
     with sqlite3.connect(STS_DB_FILE) as conn:
         cur = conn.execute(
-            "SELECT uid, nickname, date, access_count, input_token, output_token "
+            "SELECT uid, nickname, app, date, access_count, input_token, output_token "
             "FROM statistics WHERE uid=? LIMIT 1", (uid,)
         )
         row = cur.fetchone()
@@ -230,10 +240,11 @@ def get_by_uid(uid: int):
     return {
         "uid": row[0],
         "nickname": row[1],
-        "date": row[2],
-        "access_count": row[3],
-        "input_token": row[4],
-        "output_token": row[5],
+        "app": row[2],
+        "date": row[3],
+        "access_count": row[4],
+        "input_token": row[5],
+        "output_token": row[6],
     }
 
 

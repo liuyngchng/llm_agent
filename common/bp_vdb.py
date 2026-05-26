@@ -69,7 +69,7 @@ def vdb_index():
         uid = str(session_info['uid'])
         session_key = f"{uid}_{get_client_ip()}"
         auth_info[session_key] = time.time()
-        statistic_util.add_access_count_by_uid(int(uid), 1)
+        statistic_util.add_access_count_by_uid(int(uid), 1, app_source)
     except Exception as e:
         logger.exception(f"err_in_vdb_index, {e}, url: {request.url}")
         raise jsonify("err_in_vdb_index")

@@ -88,7 +88,7 @@ def app_home():
     uid = session_info['uid']
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")
-    statistic_util.add_access_count_by_uid(uid, 1)
+    statistic_util.add_access_count_by_uid(uid, 1, app_source)
 
     if session_info["role"] == 2:
         hack_admin = "1"
@@ -153,7 +153,7 @@ def chat():
         logger.info(f"user_msg_input {messages}")
         input_tokens = estimate_tokens(str(messages))
         logger.info(f"{uid}, input_tokens, {input_tokens}")
-        add_input_token_by_uid(uid, input_tokens)
+        add_input_token_by_uid(uid, input_tokens, AppType.CHAT.name.lower())
         # 记录发送的messages内容（脱敏）
         for i, msg in enumerate(messages):
             role = msg.get('role', 'unknown')
@@ -176,7 +176,7 @@ def chat():
                         pass
             output_tokens = estimate_tokens(full_response)
             logger.info(f"{uid}, output_tokens, {output_tokens}")
-            add_output_token_by_uid(uid, output_tokens)
+            add_output_token_by_uid(uid, output_tokens, AppType.CHAT.name.lower())
 
         return Response(
             generate_and_count(),

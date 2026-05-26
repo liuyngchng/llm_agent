@@ -18,6 +18,7 @@ import logging.config
 from common.docx_meta_util import update_process_info, get_doc_info
 from common.my_enums import FileType
 from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
+from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.vdb_util import search_txt
 from common.xlsx_util import convert_md_to_xlsx, convert_xlsx_to_md
@@ -86,11 +87,11 @@ class PaperReviewer:
                 )
                 input_tokens = estimate_tokens(prompt)
                 logger.info(f"{self.uid}, input_tokens, {input_tokens}")
-                add_input_token_by_uid(self.uid, input_tokens)
+                add_input_token_by_uid(self.uid, input_tokens, AppType.PAPER_REVIEW.name.lower())
                 result = self.call_llm_api(prompt)
                 output_tokens = estimate_tokens(json.dumps(result))
                 logger.info(f"{self.uid}, output_tokens, {output_tokens}")
-                add_output_token_by_uid(self.uid, output_tokens)
+                add_output_token_by_uid(self.uid, output_tokens, AppType.PAPER_REVIEW.name.lower())
                 # 验证结果格式
                 PaperReviewer._validate_review_result(result)
                 if result.get('issues') and len(result['issues']) > 0:
@@ -262,11 +263,11 @@ class PaperReviewer:
             )
             input_tokens = estimate_tokens(prompt)
             logger.info(f"{self.uid}, input_tokens, {input_tokens}")
-            add_input_token_by_uid(self.uid, input_tokens)
+            add_input_token_by_uid(self.uid, input_tokens, AppType.PAPER_REVIEW.name.lower())
             overall_result = self.call_llm_api(prompt)
             output_tokens = estimate_tokens(json.dumps(overall_result))
             logger.info(f"{self.uid}, output_tokens, {output_tokens}")
-            add_output_token_by_uid(self.uid, output_tokens)
+            add_output_token_by_uid(self.uid, output_tokens, AppType.PAPER_REVIEW.name.lower())
             # 添加结果验证和降级处理
             if not overall_result or 'overall_score' not in overall_result:
                 logger.warning("整体评审返回结果格式异常，使用降级结果")
