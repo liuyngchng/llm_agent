@@ -359,19 +359,24 @@ def register_routes(app):
         获取当前在进行的写作任务，渲染页面
         """
         logger.info(f"paper_review_index, {request.args}")
-        uid = request.args.get('uid')
-        session_key = f"{uid}_{get_client_ip()}"
-        if (not auth_info.get(session_key, None)
-                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
-            logger.warning(f"{uid}, {warning_info}")
-            return redirect_to_portal_login(AppType.PAPER_REVIEW.name.lower(), warning_info)
-        statistic_util.add_access_count_by_uid(int(uid), 1)
+        t = request.args.get('t', '').strip()
         app_source = request.args.get('app_source')
+        if not t:
+            logger.warning("no_token_in_paper_review_task")
+            return redirect_to_portal_login(app_source)
+        session_info = cm_utils.decode_token(t, my_cfg['sys']['cypher_key'])
+        if not session_info:
+            logger.warning("invalid_token_in_paper_review_task")
+            return redirect_to_portal_login(app_source)
+        uid = str(session_info['uid'])
+        session_key = f"{uid}_{get_client_ip()}"
+        auth_info[session_key] = time.time()
+        statistic_util.add_access_count_by_uid(int(uid), 1)
         warning_info = request.args.get('warning_info', "")
         sys_name = my_enums.AppType.get_app_type(app_source)
         ctx = {
             "uid": uid,
+            "t": t,
             "sys_name": sys_name,
             "app_source": app_source,
             "warning_info": warning_info,
