@@ -5,7 +5,6 @@
 import time
 import json
 
-import requests
 from flask import Flask, request, Response, jsonify, send_from_directory, abort, render_template
 
 import os
