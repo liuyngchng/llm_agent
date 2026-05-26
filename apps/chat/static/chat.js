@@ -477,6 +477,15 @@ async function streamAIResponse(userMessage, messageId) {
     });
 
     if (!response.ok) {
+        if (response.status === 401) {
+            try {
+                const errData = await response.json();
+                if (errData.error === 'auth_expired' && errData.redirect) {
+                    window.location.href = errData.redirect;
+                    return;
+                }
+            } catch (e) { /* fall through */ }
+        }
         throw new Error(`HTTP错误: ${response.status}`);
     }
 

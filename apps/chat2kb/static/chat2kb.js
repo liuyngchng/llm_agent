@@ -143,7 +143,19 @@ async function fetchQueryData(query) {
         });
 
         // 检查响应是否正常
-        if (!response.ok || !response.body) {
+        if (!response.ok) {
+            if (response.status === 401) {
+                try {
+                    const errData = await response.json();
+                    if (errData.error === 'auth_expired' && errData.redirect) {
+                        window.location.href = errData.redirect;
+                        return;
+                    }
+                } catch (e) { /* fall through */ }
+            }
+            throw new Error('网络响应失败');
+        }
+        if (!response.body) {
             throw new Error('网络响应失败');
         }
 

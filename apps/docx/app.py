@@ -15,7 +15,7 @@ import time
 
 from docx import Document
 from flask import (Flask, request, jsonify, send_from_directory,
-    abort, redirect, url_for, stream_with_context, Response, render_template)
+    abort, stream_with_context, Response, render_template)
 
 from common.const import UPLOAD_FOLDER, JSON_MIME_TYPE, DOCX_MIME_TYPE, OUTPUT_DIR, TASK_EXPIRE_TIME_MS, SESSION_TIMEOUT, get_const
 from common.docx_cmt_util import get_comments_dict
@@ -28,7 +28,7 @@ from common import my_enums, statistic_util, docx_meta_util, cm_utils
 from common.html_util import get_html_ctx_from_md
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
-from common.bp_auth import auth_bp, get_client_ip, auth_info
+from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login
 from common.bp_vdb import vdb_bp, VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task
 from common.cm_utils import get_console_arg1
 from common.vdb_meta_util import VdbMeta
@@ -64,7 +64,6 @@ def create_app():
     app.config['APP_SOURCE'] = my_enums.AppType.DOCX.name.lower()
     logger.info("reg_blueprint")
     # 注册蓝图
-    app.register_blueprint(auth_bp)
     app.register_blueprint(vdb_bp)
 
     # 注册路由
@@ -117,11 +116,11 @@ def register_routes(app):
         t = request.args.get("t")
         if not t:
             logger.info("no_token_redirect_auth_login_index")
-            return redirect(url_for('auth.login_index', app_source=app_source))
+            return redirect_to_portal_login(app_source)
         session_info = cm_utils.decode_token(t, my_cfg['sys']['cypher_key'])
         if not session_info:
             logger.info("no_session_info_redirect_auth_login_index")
-            return redirect(url_for('auth.login_index', app_source=app_source))
+            return redirect_to_portal_login(app_source)
         uid = session_info['uid']
         dt_idx = f"{app_source}_index.html"
         logger.info(f"return_page {dt_idx}")
@@ -166,12 +165,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
-                warning_info=warning_info
-
-            ))
+            return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1)
         app_source = request.args.get('app_source')
         warning_info = request.args.get('warning_info', "")
@@ -198,12 +192,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             # logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
-                warning_info=warning_info
-
-            ))
+            return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
         # logger.info(f"{uid}, get_my_docx_task, {data}")
         task_list = docx_meta_util.get_user_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
@@ -260,12 +249,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
-                warning_info=warning_info
-
-            ))
+            return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
         if not doc_type or not doc_title:
             return json.dumps({"error": "缺少文件类型或文件标题参数"}, ensure_ascii=False), 400
         if file.filename == '':
@@ -374,11 +358,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
-                warning_info=warning_info
-            ))
+            return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1)
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         absolute_path = os.path.abspath(file_path)
@@ -415,12 +395,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
-                warning_info=warning_info
-
-            ))
+            return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1)
         file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
@@ -460,11 +435,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=app_source,
-                warning_info=warning_info
-            ))
+            return redirect_to_portal_login(app_source, warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1)
         file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
@@ -522,12 +493,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.DOCX.name.lower(),
-                warning_info=warning_info
-
-            ))
+            return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
         file_info = docx_meta_util.get_doc_info(task_id)
         logger.info(f"{uid}, get_docx_file_info, {file_info}")
         if not file_info or len(file_info) == 0:

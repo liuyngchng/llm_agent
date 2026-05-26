@@ -14,7 +14,7 @@ import threading
 import time
 
 from flask import (Flask, request, jsonify, send_from_directory,
-                   abort, redirect, url_for, render_template, Response)
+                   abort, render_template, Response)
 
 from apps.paper_review.paper_reviewer import generate_review_report
 from common import docx_meta_util
@@ -26,7 +26,7 @@ from common.docx_meta_util import get_doc_info
 from common.html_util import convert_md_to_html_with_css, get_html_ctx_from_md, convert_markdown_to_html
 from common.my_enums import AppType, FileType
 from common.sys_init import init_yml_cfg
-from common.bp_auth import auth_bp, get_client_ip, auth_info
+from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login
 from common.cm_utils import get_console_arg1
 from common.xlsx_util import convert_xlsx_to_md
 from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR, TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE, get_const
@@ -59,7 +59,6 @@ def create_app():
     app.config['CFG'] = my_cfg
     app.config['APP_SOURCE'] = my_enums.AppType.PAPER_REVIEW.name.lower()
     # 注册蓝图
-    app.register_blueprint(auth_bp)
     app.register_blueprint(vdb_bp)
     # 注册路由
     register_routes(app)
@@ -128,11 +127,11 @@ def register_routes(app):
         t = request.args.get("t")
         if not t:
             logger.info("no_token_redirect_auth_login_index")
-            return redirect(url_for('auth.login_index', app_source=app_source))
+            return redirect_to_portal_login(app_source)
         session_info = cm_utils.decode_token(t, my_cfg['sys']['cypher_key'])
         if not session_info:
             logger.info("no_session_info_redirect_auth_login_index")
-            return redirect(url_for('auth.login_index', app_source=app_source))
+            return redirect_to_portal_login(app_source)
         uid = session_info['uid']
         dt_idx = f"{app_source}_index.html"
         logger.info(f"return_page {dt_idx}")
@@ -181,11 +180,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.PAPER_REVIEW.name.lower(),
-                warning_info=warning_info
-            ))
+            return redirect_to_portal_login(AppType.PAPER_REVIEW.name.lower(), warning_info)
         if file.filename == '':
             return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
 
@@ -223,11 +218,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.PAPER_REVIEW.name.lower(),
-                warning_info=warning_info
-            ))
+            return redirect_to_portal_login(AppType.PAPER_REVIEW.name.lower(), warning_info)
         if file.filename == '':
             return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
 
@@ -265,11 +256,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.PAPER_REVIEW.name.lower(),
-                warning_info=warning_info
-            ))
+            return redirect_to_portal_login(AppType.PAPER_REVIEW.name.lower(), warning_info)
         if file.filename == '':
             return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
 
@@ -378,11 +365,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.PAPER_REVIEW.name.lower(),
-                warning_info=warning_info
-            ))
+            return redirect_to_portal_login(AppType.PAPER_REVIEW.name.lower(), warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1)
         app_source = request.args.get('app_source')
         warning_info = request.args.get('warning_info', "")
@@ -408,11 +391,7 @@ def register_routes(app):
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.PAPER_REVIEW.name.lower(),
-                warning_info=warning_info
-            ))
+            return redirect_to_portal_login(AppType.PAPER_REVIEW.name.lower(), warning_info)
         # logger.info(f"{uid}, get_my_paper_review_task, {data}")
         task_list = docx_meta_util.get_user_task_list(uid)
         return json.dumps(task_list, ensure_ascii=False), 200
@@ -430,11 +409,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=AppType.PAPER_REVIEW.name.lower(),
-                warning_info=warning_info
-            ))
+            return redirect_to_portal_login(AppType.PAPER_REVIEW.name.lower(), warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1)
         file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
@@ -480,11 +455,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=app_source,
-                warning_info=warning_info
-            ))
+            return redirect_to_portal_login(app_source, warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1)
         file_path_info = get_doc_info(task_id)
         logger.debug(f"{task_id}, {file_path_info}")
@@ -528,11 +499,7 @@ def register_routes(app):
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             warning_info = "用户会话信息已失效，请重新登录"
             logger.warning(f"{uid}, {warning_info}")
-            return redirect(url_for(
-                'auth.login_index',
-                app_source=app_source,
-                warning_info=warning_info
-            ))
+            return redirect_to_portal_login(app_source, warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1)
         file_path_info = get_file_info(int(uid), file_id)
         logger.debug(f"{uid}, {file_id}, {file_path_info}")

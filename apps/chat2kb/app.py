@@ -14,13 +14,13 @@ import time
 import threading
 
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, request, redirect, abort, url_for, send_from_directory, render_template
+from flask import Flask, request, abort, send_from_directory, render_template
 from apps.chat2kb.chat_agent import ChatAgent
 from common.const import SESSION_TIMEOUT, get_const
 from common.my_enums import AppType
 from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
 from common.sys_init import init_yml_cfg
-from common.bp_auth import auth_bp, auth_info, get_client_ip
+from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login, get_portal_login_url
 from common.bp_vdb import vdb_bp, VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task
 from common.cm_utils import get_console_arg1, estimate_tokens
 from common.vdb_meta_util import VdbMeta
@@ -56,7 +56,6 @@ def create_app():
     app.config['APP_SOURCE'] = my_enums.AppType.CHAT2KB.name.lower()
 
     # 注册蓝图
-    app.register_blueprint(auth_bp)
     app.register_blueprint(vdb_bp)
 
     # 注册路由
@@ -108,11 +107,11 @@ def register_routes(app):
         t = request.args.get("t")
         if not t:
             logger.info("no_token_redirect_auth_login_index")
-            return redirect(url_for('auth.login_index', app_source=app_source))
+            return redirect_to_portal_login(app_source)
         session_info = cm_utils.decode_token(t, my_cfg['sys']['cypher_key'])
         if not session_info:
             logger.info("no_session_info_redirect_auth_login_index")
-            return redirect(url_for('auth.login_index', app_source=app_source))
+            return redirect_to_portal_login(app_source)
         uid = session_info['uid']
         dt_idx = f"{app_source}_index.html"
         logger.info(f"return_page {dt_idx}")
@@ -168,9 +167,13 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户登录信息已失效，请重新登录后再使用本系统"
-            logger.error(f"{warning_info}, {uid}")
-            return warning_info
+            logger.error(f"auth_expired_for_uid, {uid}")
+            return app.response_class(
+                json.dumps({'error': 'auth_expired',
+                            'redirect': get_portal_login_url(AppType.CHAT2KB.name.lower())}),
+                status=401,
+                mimetype='application/json'
+            )
 
         logger.info(f"rcv_msg, {msg}, uid {uid}")
         auth_info[session_key] = time.time()

@@ -7,14 +7,14 @@ import logging.config
 import uuid
 import time
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, send_file, url_for, redirect
+from flask import Flask, render_template, request, jsonify, send_file
 
 import threading
 
 
 from apps.asr.asr_util import asr_tasks, process_audio_async
 from common.sys_init import init_yml_cfg
-from common.bp_auth import auth_bp, auth_info, get_client_ip
+from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login
 from common import cm_utils, statistic_util, my_enums
 from common.const import SESSION_TIMEOUT, get_const
 from common.my_enums import AppType
@@ -27,7 +27,7 @@ app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max
 app.config['CFG'] = my_cfg
 app.config['APP_SOURCE'] = my_enums.AppType.ASR.name.lower()
 
-app.register_blueprint(auth_bp)
+
 
 # 配置目录
 BASE_DIR = Path(__file__).parent
@@ -47,16 +47,12 @@ else:
 logger = logging.getLogger(__name__)
 
 
-
-
 # ASR 服务配置
 ASR_HOST = my_cfg['funasr']['host']
 ASR_PORT = my_cfg['funasr']['port']
 
 # 支持的文件格式
 SUPPORTED_FORMATS = {'.m4a', '.mp3', '.amr', '.wav', '.flac', '.ogg', '.aac'}
-
-
 
 
 @app.route('/')
@@ -66,11 +62,11 @@ def app_home():
     t = request.args.get("t")
     if not t:
         logger.info("no_token_redirect_auth_login_index")
-        return redirect(url_for('auth.login_index', app_source=app_source))
+        return redirect_to_portal_login(app_source)
     session_info = cm_utils.decode_token(t, my_cfg['sys']['cypher_key'])
     if not session_info:
         logger.info("no_session_info_redirect_auth_login_index")
-        return redirect(url_for('auth.login_index', app_source=app_source))
+        return redirect_to_portal_login(app_source)
     uid = session_info['uid']
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")

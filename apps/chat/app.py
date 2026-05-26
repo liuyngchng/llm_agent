@@ -6,18 +6,16 @@ import time
 import json
 
 import requests
-from flask import Flask, request, Response, jsonify, send_from_directory, abort, redirect, url_for, render_template
+from flask import Flask, request, Response, jsonify, send_from_directory, abort, render_template
 
 import os
-import sys
 import logging.config
 import logging
 
-from apps.auth_service.app import verify_token
 from apps.chat.chat_util import LLMConfig, generate_stream_response, allowed_file, \
     MAX_FILE_SIZE, ALLOWED_EXTENSIONS, extract_text_from_file
 from common import my_enums, statistic_util, cm_utils
-from common.bp_auth import auth_bp, get_client_ip, auth_info, _auth_api_base
+from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login, get_portal_login_url
 from common.cm_utils import estimate_tokens
 from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT, get_const
 from common.my_enums import AppType
@@ -35,8 +33,6 @@ app = Flask(__name__, static_folder=None)
 app.config['CFG'] = {}
 app.config['CFG'] = my_cfg
 app.config['APP_SOURCE'] = my_enums.AppType.CHAT.name.lower()
-
-app.register_blueprint(auth_bp)
 
 # 配置模板文件夹路径
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -84,11 +80,11 @@ def app_home():
     t = request.args.get("t")
     if not t:
         logger.info("no_token_redirect_auth_login_index")
-        return redirect(url_for('auth.login_index', app_source=app_source))
+        return redirect_to_portal_login(app_source)
     session_info = cm_utils.decode_token(t, my_cfg['sys']['cypher_key'])
     if not session_info:
         logger.info("no_session_info_redirect_auth_login_index")
-        return redirect(url_for('auth.login_index', app_source=app_source))
+        return redirect_to_portal_login(app_source)
     uid = session_info['uid']
     dt_idx = f"{app_source}_index.html"
     logger.info(f"return_page {dt_idx}")
@@ -135,7 +131,7 @@ def chat():
         uid = int(data.get('uid', ''))
         session_key = f"{uid}_{get_client_ip()}"
         if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
-            raise RuntimeError("illegal_access")
+            return jsonify({'error': 'auth_expired', 'redirect': get_portal_login_url(AppType.CHAT.name.lower())}), 401
         logger.info(f"收到聊天请求，消息长度: {len(user_message)}, 历史长度: {history_length}")
         logger.info(f"请求的max_tokens: {custom_max_tokens}")
         logger.info(f"默认MAX_TOKENS: {LLMConfig.MAX_TOKENS}")

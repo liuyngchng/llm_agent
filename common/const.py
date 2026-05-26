@@ -29,6 +29,9 @@ OUTPUT_DIR = "output_doc"
 #session 过期时间(单位为秒)，default 2 hours
 SESSION_TIMEOUT = 72000
 
+# portal 统一登录入口地址
+PORTAL_BASE_URL = "http://127.0.0.1:19000"
+
 # 通过页面用户上传的文件存储的目录
 UPLOAD_FOLDER = 'upload_doc'
 
