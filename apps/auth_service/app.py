@@ -210,6 +210,7 @@ async def optional_user(authorization: str = Header("")) -> dict | None:
 
 @app.get("/health")
 def health():
+    logger.info("health check")
     return {"status": "healthy", "service": "auth_service"}
 
 
