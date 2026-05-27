@@ -249,26 +249,30 @@ async def login(body: LoginRequest, request: Request):
     if not verify_captcha(body.captcha_code, body.captcha_token):
         logger.warning(f"验证码错误 - 用户: {body.usr}")
         raise HTTPException(status_code=400, detail="验证码错误")
-
-    result = auth_util.auth_user(body.usr, body.t, my_cfg)
+    cypher_key = my_cfg['sys']['cypher_key']
+    logger.debug(f"auth_user({body.usr}, {body.t}, {cypher_key})")
+    result = auth_util.auth_user(body.usr, body.t, cypher_key)
+    logger.debug(f"{result}")
     if not result["pass"]:
         logger.error(f"认证失败 - 用户: {body.usr}, 原因: {result.get('msg')}")
         raise HTTPException(status_code=401, detail=result.get("msg", "登录失败"))
 
     # 清理验证码
     if body.captcha_token in captcha_codes:
+        logger.debug("del_captcha_token")
         del captcha_codes[body.captcha_token]
-    token = create_token(result["uid"], result["role"], SESSION_TIMEOUT, my_cfg['sys']['cypher_key'])
-    logger.info(f"登录成功 - 用户: {body.usr}, uid: {result['uid']}")
-
-    return {
+    logger.debug(f"{result["uid"]}, create_session_token")
+    token = create_token(result["uid"], result["role"], SESSION_TIMEOUT, cypher_key)
+    logger.info(f"login_success, user: {body.usr}, uid: {result['uid']}")
+    info = {
         "access_token": token,
         "token_type": "bearer",
         "uid": result["uid"],
         "role": result["role"],
         "expires_in": SESSION_TIMEOUT,
     }
-
+    logger.debug(f"return_login_info, {info}")
+    return info
 
 # ---- 注册 ----
 
@@ -280,30 +284,33 @@ async def register(body: RegisterRequest):
     if not verify_captcha(body.captcha_code, body.captcha_token):
         logger.warning(f"注册验证码错误 - 用户: {body.usr}")
         raise HTTPException(status_code=400, detail="验证码错误")
-
+    logger.debug(f"get_uid_by_user, {body.usr}")
     if auth_util.get_uid_by_user(body.usr) is not None:
         logger.error(f"注册失败 - 用户已存在: {body.usr}")
         raise HTTPException(status_code=409, detail=f"用户 {body.usr} 已存在")
-
+    logger.debug(f"save_usr, {body.usr}")
     if not auth_util.save_usr(body.usr, body.t):
         raise HTTPException(status_code=500, detail="用户创建失败")
-
+    logger.debug(f"get_uid_by_user, {body.usr}")
     uid = auth_util.get_uid_by_user(body.usr)
+    logger.debug(f"get_user, {uid}")
     if uid is None:
         raise HTTPException(status_code=500, detail="用户创建后查询失败")
-
+    logger.debug("del_captcha_codes")
     if body.captcha_token in captcha_codes:
         del captcha_codes[body.captcha_token]
-
+    logger.debug(f"{uid}, create_session_token")
     token = create_token(uid, 0, SESSION_TIMEOUT, my_cfg['sys']['cypher_key'])        # 注册用户默认角色为 0
     logger.info(f"user_registry_success: {body.usr}, uid: {uid}")
 
-    return {
+    info = {
         "access_token": token,
         "token_type": "bearer",
         "uid": uid,
         "message": f"用户 {body.usr} 注册成功",
     }
+    logger.debug(f"return_reg_info {info}")
+    return info
 
 
 # ---- token 验证 ----
@@ -317,9 +324,6 @@ def verify_token(token: SessionToken) -> dict | None:
     session_info = decode_token(token.t)
     logger.debug(f"decode_token {token.t}, {session_info}, now, {time.time()}")
     return session_info
-
-
-
 
 
 @app.post("/auth/verify")

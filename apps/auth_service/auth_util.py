@@ -37,12 +37,12 @@ else:
 logger = logging.getLogger(__name__)
 
 
-def auth_user(user:str, t: str, cfg: dict) -> dict:
+def auth_user(user:str, t: str, cypher_key: str) -> dict:
     """
     通过用户提交的登录信息，认证用户
     :param user 用户名
     :param t 经过加密的用户密码
-    :param cfg 系统配置
+    :param cypher_key 加解密密钥
     return
         {
             "pass": True,       # 认证是否通过
@@ -68,7 +68,7 @@ def auth_user(user:str, t: str, cfg: dict) -> dict:
         auth_result["pass"] = True
         auth_result["uid"] = user_dt[0][0]
         auth_result["role"] = user_dt[0][1]
-        auth_result["t"] = encrypt(str(time.time() * 1000), cfg['sys']['cypher_key'])
+        auth_result["t"] = encrypt(str(time.time() * 1000), cypher_key)
     else:
         auth_result["msg"] = f"当前用户 {user} 的密码输入错误"
     return auth_result

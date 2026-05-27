@@ -42,7 +42,7 @@ if [[ $confirm == [Yy] ]]; then
 
     pip download gunicorn fastapi \
     concurrent_log_handler pydub uvicorn wheel tabulate \
-    websockets markdown  svgwrite requests pyyaml
+    websockets markdown  svgwrite requests pyyaml pycryptodome
 
     cd ..
 else
