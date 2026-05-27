@@ -13,6 +13,8 @@ import logging.config
 from datetime import datetime
 
 import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -111,7 +113,7 @@ def _get_user_name(uid: int) -> str:
     """通过 auth_service 获取用户名"""
     try:
         url = f"{_get_auth_api_base()}/auth/user/{uid}"
-        resp = requests.get(url, timeout=5)
+        resp = requests.get(url, timeout=5, verify=False)
         if resp.status_code == 200:
             return resp.json().get('name', '')
     except Exception as e:

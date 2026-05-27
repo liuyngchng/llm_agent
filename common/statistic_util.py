@@ -10,6 +10,8 @@ import logging.config
 import os
 
 import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
@@ -35,7 +37,7 @@ def _post(endpoint: str, body: dict) -> bool:
     """通用 POST 请求"""
     try:
         url = f"{_get_stats_api_base()}{endpoint}"
-        resp = requests.post(url, json=body, timeout=10)
+        resp = requests.post(url, json=body, timeout=10, verify=False)
         return resp.status_code == 200
     except Exception as e:
         logger.error(f"stats_api_post_failed, endpoint={endpoint}, err={e}")
@@ -46,7 +48,7 @@ def _get(endpoint: str) -> list | dict | None:
     """通用 GET 请求"""
     try:
         url = f"{_get_stats_api_base()}{endpoint}"
-        resp = requests.get(url, timeout=10)
+        resp = requests.get(url, timeout=10, verify=False)
         if resp.status_code == 200:
             return resp.json()
     except Exception as e:

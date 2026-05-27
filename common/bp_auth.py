@@ -11,6 +11,8 @@ import time
 import logging.config
 
 import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from flask import Blueprint, jsonify, redirect, url_for, current_app, make_response
 from flask import (request, render_template)
 from common import statistic_util
@@ -52,7 +54,7 @@ def generate_captcha():
     try:
         url = f"{_auth_api_base()}/auth/captcha/generate"
         logger.debug(f"GET {url}")
-        resp = requests.get(url, timeout=10)
+        resp = requests.get(url, timeout=10, verify=False)
         logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
         resp.raise_for_status()
         return jsonify(resp.json())
@@ -70,7 +72,7 @@ def get_captcha_image(captcha_token):
     try:
         url = f"{_auth_api_base()}/auth/captcha/image/{captcha_token}"
         logger.debug(f"GET {url}")
-        resp = requests.get(url, timeout=10)
+        resp = requests.get(url, timeout=10, verify=False)
         logger.debug(f"response status={resp.status_code}, content_type={resp.headers.get('Content-Type', 'N/A')}")
         if resp.status_code == 404:
             return jsonify({"success": False, "message": "验证码不存在或已过期"}), 404
@@ -104,7 +106,7 @@ def login_index(app_source=None, app_base_uri=None, warning_info=None):
     try:
         url = f"{_auth_api_base()}/auth/captcha/generate"
         logger.debug(f"GET {url}")
-        resp = requests.get(url, timeout=10)
+        resp = requests.get(url, timeout=10, verify=False)
         logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
         resp.raise_for_status()
         captcha_token = resp.json().get("captcha_token", "")
@@ -152,7 +154,7 @@ def login():
         params = {"usr": user, "t": t, "captcha_code": captcha_code, "captcha_token": captcha_token}
         safe_params = {**params, "t": "***"}
         logger.debug(f"POST {url}, params {safe_params}")
-        resp = requests.post(url, json=params, timeout=10)
+        resp = requests.post(url, json=params, timeout=10, verify=False)
         logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
     except RuntimeError as e:
         logger.error(f"配置错误: {e}")
@@ -220,7 +222,7 @@ def reg_user_index():
     try:
         url = f"{_auth_api_base()}/auth/captcha/generate"
         logger.debug(f"GET {url}")
-        resp = requests.get(url, timeout=10)
+        resp = requests.get(url, timeout=10, verify=False)
         logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
         resp.raise_for_status()
         captcha_token = resp.json().get("captcha_token", "")
@@ -282,7 +284,7 @@ def reg_user():
         params = {"usr": usr, "t": t, "captcha_code": captcha_code, "captcha_token": captcha_token}
         safe_params = {**params, "t": "***"}
         logger.debug(f"POST {url}, params {safe_params}")
-        resp = requests.post(url, json=params, timeout=10)
+        resp = requests.post(url, json=params, timeout=10, verify=False)
         logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
     except RuntimeError as e:
         logger.error(f"配置错误: {e}")

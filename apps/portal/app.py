@@ -13,6 +13,8 @@ import os
 import time
 
 import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, send_from_directory, abort, request, render_template, redirect, url_for
 
@@ -63,7 +65,7 @@ def app_home():
             usr = ''
             try:
                 auth_api = my_cfg['api'].get('auth_api', '')
-                resp = requests.get(f"{auth_api}/auth/user/{uid}", timeout=5)
+                resp = requests.get(f"{auth_api}/auth/user/{uid}", timeout=5,verify=False)
                 if resp.status_code == 200:
                     usr = resp.json().get('name', '')
             except Exception as e:
