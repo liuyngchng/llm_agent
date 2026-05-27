@@ -16,10 +16,12 @@ echo "正在部署 ${APP} 服务"
 docker stop ${CONTAINER}
 echo "正在删除 ${APP} 服务"
 docker rm ${CONTAINER}
+docker network create llm_net 2>/dev/null || true
 echo "正在创建 ${CONTAINER} 容器"
 #docker run -dit --name ${CONTAINER} --network host --rm \
 docker run -dit --name ${CONTAINER}  \
   --security-opt seccomp=unconfined \
+  --network llm_net \
   -v ${CURRENT_DIR}:/opt/app \
   -p 18000:19000 \
   -e APP_NAME=${APP} \
