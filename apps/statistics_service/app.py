@@ -113,11 +113,13 @@ def _get_user_name(uid: int) -> str:
     """通过 auth_service 获取用户名"""
     try:
         url = f"{_get_auth_api_base()}/auth/user/{uid}"
+        logger.info(f"request_auth_api, url={url}")
+
         resp = requests.get(url, timeout=5, verify=False)
         if resp.status_code == 200:
             return resp.json().get('name', '')
     except Exception as e:
-        logger.error(f"get_user_name_failed, uid={uid}, err={e}")
+        logger.exception(f"get_user_name_failed, uid={uid}, err={e}")
     return ''
 
 

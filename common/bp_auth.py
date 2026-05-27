@@ -84,8 +84,8 @@ def get_captcha_image(captcha_token):
     except RuntimeError as e:
         logger.error(f"配置错误: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
-    except requests.RequestException as e:
-        logger.error(f"获取验证码图片失败: {e}", exc_info=True)
+    except Exception as e:
+        logger.exception("获取验证码图片失败", exc_info=True)
         return jsonify({"success": False, "message": "获取验证码失败"}), 500
 
 
@@ -113,8 +113,8 @@ def login_index(app_source=None, app_base_uri=None, warning_info=None):
     except RuntimeError as e:
         logger.error(f"配置错误: {e}")
         warning_info = str(e)
-    except requests.RequestException as e:
-        logger.error(f"获取验证码 token 失败: {e}")
+    except Exception as e:
+        logger.exception(f"获取验证码 token 失败")
 
     ctx = {
         "uid": -1,
@@ -163,8 +163,8 @@ def login():
                                 app_base_uri=app_base_uri,
                                 warning_info=str(e),
                                 usr=user))
-    except requests.RequestException as e:
-        logger.error(f"auth_service 调用失败: {e}")
+    except Exception as e:
+        logger.exception(f"auth_service 调用失败")
         return redirect(url_for('auth.login_index',
                                 app_source=app_source,
                                 app_base_uri=app_base_uri,
@@ -235,8 +235,8 @@ def reg_user_index():
             "captcha_token": "",
         }
         return render_template("reg_usr_index.html", **ctx)
-    except requests.RequestException as e:
-        logger.error(f"获取验证码 token 失败: {e}")
+    except Exception as e:
+        logger.exception(f"获取验证码 token 失败")
 
     ctx = {
         "sys_name": sys_name + "_新用户注册",
@@ -290,8 +290,8 @@ def reg_user():
         logger.error(f"配置错误: {e}")
         ctx["warning_info"] = str(e)
         return render_template(dt_idx, **ctx)
-    except requests.RequestException as e:
-        logger.error(f"auth_service 调用失败: {e}")
+    except Exception as e:
+        logger.exception(f"auth_service 调用失败")
         ctx["warning_info"] = "认证服务暂时不可用，请稍后重试"
         return render_template(dt_idx, **ctx)
 
@@ -307,8 +307,9 @@ def reg_user():
     else:
         try:
             detail = resp.json().get("detail", "用户创建失败")
-        except Exception:
+        except Exception as e:
             detail = "用户创建失败"
+            logger.exception(detail)
         ctx["warning_info"] = detail
         ctx["captcha_token"] = captcha_token
         logger.error(f"reg_user_fail, {usr}: {detail}")
