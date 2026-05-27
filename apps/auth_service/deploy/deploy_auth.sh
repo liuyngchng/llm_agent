@@ -10,7 +10,7 @@ if [ ! -d ${APP_DIR} ]; then
     exit 1
 fi
 echo "当前目录为 ${CURRENT_DIR}, 正在复制 ${APP} 服务配置文件"
-cp ${APP_DIR}/cfg.db ./
+cp ${APP_DIR}/auth.db ./
 cp ${APP_DIR}/cfg.yml ./
 echo "正在部署 ${APP} 服务"
 docker stop ${CONTAINER}
@@ -23,7 +23,7 @@ docker run -dit --name ${CONTAINER}  \
   -v ${CURRENT_DIR}:/opt/app \
   -p 19011:19000 \
   -e APP_NAME=${APP} \
-  llm_docx:1.1
+  llm_service:1.1
 echo "容器 ${CONTAINER} 已启动"
 docker ps -a  | grep ${CONTAINER} --color=always
 echo "部署完成"

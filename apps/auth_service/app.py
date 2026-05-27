@@ -364,6 +364,6 @@ if __name__ == "__main__":
 
     logger.info(f"my_cfg {my_cfg.get('db')},\n{my_cfg.get('api')}")
     port = get_console_arg1()
-    # port = 19011
+    # port = 19011      # 生产环境服务端口
     logger.info(f"auth_service_listen_on_port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)

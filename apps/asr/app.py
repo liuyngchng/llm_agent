@@ -16,7 +16,6 @@ from apps.asr.asr_util import asr_tasks, process_audio_async
 from common.sys_init import init_yml_cfg
 from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login
 from common import cm_utils, statistic_util, my_enums
-from common.const import SESSION_TIMEOUT, get_const
 from common.my_enums import AppType
 
 my_cfg = init_yml_cfg()
