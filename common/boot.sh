@@ -15,8 +15,8 @@ echo "ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
 if [ "${APP}" = "mcp_server" ]; then
     echo "直接运行 mcp_server.py 文件..."
     CMD="/opt/llm_py_env/bin/python -m apps.mcp_server.app"
-elif [ "${APP}" = "embedding" ]; then
-    echo "检测到 embedding 应用，使用 uvicorn 启动..."
+elif [ "${APP}" = "embedding" ] || [ "${APP}" = "auth_service" ] || [ "${APP}" = "statistics_service" ]; then
+    echo "检测到 ${APP} 应用，使用 uvicorn 启动..."
     # 使用 Uvicorn 启动 FastAPI 应用
     CMD="/opt/llm_py_env/bin/uvicorn \
         --host 0.0.0.0 \
