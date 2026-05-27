@@ -12,7 +12,7 @@ function handleCriteriaUpload(input) {
     const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
 
     if (!allowedExtensions.includes(fileExtension)) {
-        alert('请上传 .xlsx、.docx 或 .md 格式的文件');
+        alert(__('paper_review.upload_criteria_format'));
         return;
     }
 
@@ -42,7 +42,7 @@ function handleDocxUpload(input) {
 
     // 验证文件类型
     if (!file.name.endsWith('.docx')) {
-        alert('请上传 .docx 格式的 Word 文档');
+        alert(__('paper_review.upload_docx_only'));
         return;
     }
 
@@ -84,7 +84,7 @@ async function uploadCriteriaFile(file) {
         } else if (fileExtension === '.md') {
             uploadUrl = '/md/upload';
         } else {
-            alert('不支持的文件格式');
+            alert(__('paper_review.unsupported_format'));
             return;
         }
 
@@ -94,7 +94,7 @@ async function uploadCriteriaFile(file) {
         });
 
         if (!response.ok) {
-            throw new Error('评审标准文件上传失败');
+            throw new Error(__('paper_review.criteria_upload_failed'));
         }
 
         const data = await response.json();
@@ -116,7 +116,7 @@ async function uploadCriteriaFile(file) {
         }
     } catch (error) {
         console.error('上传错误:', error);
-        alert('评审标准文件上传失败: ' + error.message);
+        alert(__('paper_review.criteria_upload_failed') + ': ' + error.message);
         // 重置文件选择
         document.getElementById('reviewCriteria').value = '';
         document.getElementById('criteriaFileInfo').style.display = 'none';
@@ -139,7 +139,7 @@ async function uploadDocxFile(file) {
         });
 
         if (!response.ok) {
-            throw new Error('评审材料文件上传失败');
+            throw new Error(__('paper_review.materials_upload_failed'));
         }
 
         const data = await response.json();
@@ -162,7 +162,7 @@ async function uploadDocxFile(file) {
         }
     } catch (error) {
         console.error('上传错误:', error);
-        alert('评审材料文件上传失败: ' + error.message);
+        alert(__('paper_review.materials_upload_failed') + ': ' + error.message);
         // 重置文件选择
         document.getElementById('reviewPaperFile').value = '';
         document.getElementById('docxFileInfo').style.display = 'none';
@@ -183,27 +183,27 @@ async function gen_review_report() {
 
     // 验证输入
     if (!review_topic.trim()) {
-        alert('请输入评审主题');
+        alert(__('paper_review.enter_topic'));
         return;
     }
     if (!review_type.trim()) {
-        alert('请输入评审类别');
+        alert(__('paper_review.enter_category'));
         return;
     }
 
     if (!review_criteria_file_name) {
-        alert('请上传评审标准文件');
+        alert(__('paper_review.upload_criteria_required'));
         return;
     }
 
     if (!review_paper_file_name) {
-        alert('请上传评审材料文件');
+        alert(__('paper_review.upload_materials_required'));
         return;
     }
 
     // 禁用按钮
     generateBtn.disabled = true;
-    generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+    generateBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${__('docx.submitting')}`;
 
     const apiUrl = '/review_report/gen';
     const postData = {
@@ -225,11 +225,11 @@ async function gen_review_report() {
             body: JSON.stringify(postData)
         });
 
-        if (!response.ok) throw new Error('评审报告生成任务提交失败');
+        if (!response.ok) throw new Error(__('paper_review.report_task_failed'));
 
         const result = await response.json();
         if (result.status === "started") {
-            alert('评审报告生成任务已提交，可在页面右上角"我的任务"中查看进度');
+            alert(__('paper_review.review_report_submitted'));
             resetForm();
         } else {
             throw new Error('任务提交失败');
@@ -304,7 +304,7 @@ function resetGenerateState() {
     const generateBtn = document.getElementById('generateBtn');
     if (generateBtn) {
         generateBtn.disabled = false;
-        generateBtn.innerHTML = '生成评审报告 <i class="fas fa-file-contract"></i>';
+        generateBtn.innerHTML = `${__('paper_review.generate_report')} <i class="fas fa-file-contract"></i>`;
     }
 }
 

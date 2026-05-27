@@ -15,6 +15,7 @@ from typing import Optional, List, Union
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from common.sys_init import init_yml_cfg
+from common.i18n import get_msg
 
 app = FastAPI()
 
@@ -78,7 +79,7 @@ async def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(sec
     if api_key not in VALID_API_KEYS:
         raise HTTPException(
             status_code=401,
-            detail="无效的 API Key",
+            detail=get_msg('llm.invalid_api_key'),
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -91,10 +92,10 @@ def process_input(input_data: Union[str, List[str]]) -> List[str]:
         return [input_data]
     elif isinstance(input_data, list):
         if not all(isinstance(item, str) for item in input_data):
-            raise HTTPException(status_code=400, detail="输入列表中的元素必须是字符串")
+            raise HTTPException(status_code=400, detail=get_msg('embedding.elements_must_be_strings'))
         return input_data
     else:
-        raise HTTPException(status_code=400, detail="输入必须是字符串或字符串列表")
+        raise HTTPException(status_code=400, detail=get_msg('embedding.input_must_be_string_or_list'))
 
 
 @app.post("/v1/embeddings")
@@ -108,17 +109,17 @@ async def create_embedding(
         input_texts = process_input(request.input)
 
         if not input_texts:
-            raise HTTPException(status_code=400, detail="输入不能为空")
+            raise HTTPException(status_code=400, detail=get_msg('embedding.input_cannot_be_empty'))
 
         if len(input_texts) > 100:  # 限制批量大小
-            raise HTTPException(status_code=400, detail="单次请求最多处理100个文本")
+            raise HTTPException(status_code=400, detail=get_msg('embedding.max_100_texts'))
 
         # 检查每个文本的长度
         for i, text in enumerate(input_texts):
             if len(text.strip()) == 0:
-                raise HTTPException(status_code=400, detail=f"第 {i + 1} 个文本为空")
+                raise HTTPException(status_code=400, detail=get_msg('embedding.text_n_empty', n=i + 1))
             if len(text) > 8192:  # 限制单个文本长度
-                raise HTTPException(status_code=400, detail=f"第 {i + 1} 个文本过长（最大8192字符）")
+                raise HTTPException(status_code=400, detail=get_msg('embedding.text_n_too_long', n=i + 1))
 
         # 计算嵌入
         embeddings = model.encode(input_texts).tolist()
@@ -151,7 +152,7 @@ async def create_embedding(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"处理请求时出错: {str(e)}")
+        raise HTTPException(status_code=500, detail=get_msg('embedding.process_error', msg=str(e)))
 
 
 @app.post("/v1/engines/{model_name}/embeddings")

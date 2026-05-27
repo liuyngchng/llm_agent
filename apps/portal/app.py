@@ -21,6 +21,7 @@ from flask import Flask, send_from_directory, abort, request, render_template, r
 from common import my_enums, statistic_util, cm_utils
 from common.bp_auth import get_client_ip, auth_bp, auth_info
 from common.cm_utils import get_console_arg1
+from common.i18n._hooks import register_i18n
 from common.sys_init import init_yml_cfg
 from common.const import get_const
 
@@ -39,6 +40,7 @@ app.config['CFG'] = my_cfg
 app.config['APP_SOURCE'] = my_enums.AppType.PORTAL.name.lower()
 
 app.register_blueprint(auth_bp)
+register_i18n(app, scope="portal")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config['JSON_AS_ASCII'] = False
 

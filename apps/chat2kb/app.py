@@ -23,6 +23,8 @@ from common.sys_init import init_yml_cfg
 from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login, get_portal_login_url
 from common.bp_vdb import vdb_bp, VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task
 from common.cm_utils import get_console_arg1, estimate_tokens
+from common.i18n._hooks import register_i18n
+from common.i18n import get_msg
 from common.vdb_meta_util import VdbMeta
 from common.vdb_util import search_txt
 from common import statistic_util, my_enums, cm_utils
@@ -57,6 +59,9 @@ def create_app():
 
     # 注册蓝图
     app.register_blueprint(vdb_bp)
+
+    # 注册 i18n
+    register_i18n(app, scope="chat2kb")
 
     # 注册路由
     register_routes(app)
@@ -160,7 +165,7 @@ def register_routes(app):
         history = request.form.get('history', '')
 
         if not msg or not uid or not kb_id:
-            warning_info = f"缺少用户消息、用户身份信息、知识库信息中的一个或多个参数，请您检查后再试"
+            warning_info = get_msg("chat2kb.missing_params")
             logger.error(f"{warning_info}, {msg}, {uid}, {kb_id}, {model_id}")
             return warning_info
 
@@ -180,13 +185,13 @@ def register_routes(app):
 
         vdb_info = VdbMeta.get_vdb_info_by_id(int(kb_id))
         if not vdb_info:
-            warning_info = f"所选择的知识库不存在，请您检查后再试"
+            warning_info = get_msg("chat2kb.kb_not_found")
             logger.error(f"{warning_info}, {kb_id}")
             return warning_info
 
         my_vector_db_dir = f"{VDB_PREFIX}{vdb_info[0]['uid']}_{kb_id}"
         if not os.path.exists(my_vector_db_dir):
-            answer = "暂时没有相关知识提供给您，请您先上传文档，创建知识库"
+            answer = get_msg("chat2kb.no_knowledge")
             logger.info(f"vector_db_dir_not_exists_return_none, {answer}, {my_vector_db_dir}")
             return answer
 
@@ -196,7 +201,7 @@ def register_routes(app):
 
         context = search_txt(msg, my_vector_db_dir, 0.1, my_cfg['api'], 3)
         if not context:
-            answer = "暂时没有相关内容提供给您，您可以尝试换一个问题试试"
+            answer = get_msg("chat2kb.no_relevant_content")
             logger.info(f"vector_db_search_return_none, {answer}, {my_vector_db_dir}")
             return answer
 

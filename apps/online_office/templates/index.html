@@ -1,22 +1,21 @@
 <!DOCTYPE html>
-<html>
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
-    <title>doc</title>
-<!--    本地已经启动 localhost:8080 的 onlyoffice/documentserver-->
+    <title>{{ _('online_office.title') }}</title>
     {% if config.onlyoffice_status == 'available' %}
     <script type="text/javascript" src="http://localhost/web-apps/apps/api/documents/api.js"></script>
     {% endif %}
     <link rel="stylesheet" href="/static/doc.css">
     <link rel="stylesheet" href="/static/font-awesome.6.0.0.all.min.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
 </head>
 <body>
     <div class="header">
-        <div class="logo">文档审阅</div>
+        <div class="logo">{{ _('online_office.title') }}</div>
         <div class="header-actions">
-            <!-- 简洁的上传按钮 -->
             <div class="file-upload-btn-container">
                 <input type="file" id="fileInput" accept=".docx,.doc,.txt,.pdf,.xlsx,.pptx" style="display: none;">
-                <button id="uploadButton" class="btn-attach" title="上传文档">
+                <button id="uploadButton" class="btn-attach" title="{{ _('online_office.upload_doc') }}">
                     <i class="fas fa-paperclip"></i>
                 </button>
             </div>
@@ -25,12 +24,12 @@
 
     {% if config.onlyoffice_status == 'unavailable' %}
     <div style="margin: 20px; padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
-        <h3 style="color: #856404; margin-bottom: 10px;"><i class="fas fa-exclamation-triangle"></i> OnlyOffice服务未运行</h3>
+        <h3 style="color: #856404; margin-bottom: 10px;"><i class="fas fa-exclamation-triangle"></i> {{ _('online_office.onlyoffice_down') }}</h3>
         <p style="color: #856404; margin-bottom: 15px;">
-            文档编辑功能需要OnlyOffice服务。请确保OnlyOffice Document Server正在运行（localhost:8080）。
+            {{ _('online_office.onlyoffice_down_desc') }}
         </p>
         <p style="color: #856404; font-size: 14px;">
-            您仍然可以上传文档并使用AI分析功能，但无法进行在线编辑。
+            {{ _('online_office.onlyoffice_down_note') }}
         </p>
     </div>
     {% endif %}
@@ -38,34 +37,34 @@
     <div class="review-container">
         <div class="editor-panel">
             <div class="panel-header">
-                文档预览
+                {{ _('online_office.doc_preview') }}
                 {% if config.onlyoffice_status == 'available' %}
                 <span style="font-size: 12px; color: #27ae60; margin-left: 10px;">
-                    <i class="fas fa-check-circle"></i> 在线编辑可用
+                    <i class="fas fa-check-circle"></i> {{ _('online_office.online_edit_available') }}
                 </span>
                 {% else %}
                 <span style="font-size: 12px; color: #e74c3c; margin-left: 10px;">
-                    <i class="fas fa-exclamation-circle"></i> 仅预览
+                    <i class="fas fa-exclamation-circle"></i> {{ _('online_office.preview_only') }}
                 </span>
                 {% endif %}
             </div>
             <div id="editorContainer">
                 <div class="empty-state">
-                    <div style="font-size: 48px; margin-bottom: 20px;">📄</div>
-                    <h3>请先上传文档</h3>
-                    <p>点击右上角回形针按钮上传文档</p>
-                    <p class="file-types">支持: Word, PDF, Excel, PowerPoint</p>
+                    <div style="font-size: 48px; margin-bottom: 20px;">&#128196;</div>
+                    <h3>{{ _('online_office.upload_first') }}</h3>
+                    <p>{{ _('online_office.upload_first_desc') }}</p>
+                    <p class="file-types">{{ _('online_office.supported_formats') }}</p>
                 </div>
             </div>
         </div>
 
         <div class="ai-panel">
-            <div class="panel-header">AI 修改意见</div>
+            <div class="panel-header">{{ _('online_office.ai_suggestions') }}</div>
             <div class="panel-content" id="suggestionsList">
                 <div class="empty-state">
-                    <div style="font-size: 48px; margin-bottom: 20px;">🤖</div>
-                    <h3>等待文档分析</h3>
-                    <p>上传文档后，AI将自动分析并显示修改意见</p>
+                    <div style="font-size: 48px; margin-bottom: 20px;">&#129302;</div>
+                    <h3>{{ _('online_office.waiting_analysis') }}</h3>
+                    <p>{{ _('online_office.waiting_analysis_desc') }}</p>
                 </div>
             </div>
         </div>
@@ -73,6 +72,8 @@
 
     <div id="uploadStatus" class="status-container"></div>
 
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
     <script type="text/javascript" src="/static/doc.js"></script>
 </body>
 </html>

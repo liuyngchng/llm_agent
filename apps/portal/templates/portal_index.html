@@ -1,28 +1,29 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
     <meta charset="UTF-8">
     <meta id="portal_index.html">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI应用</title>
+    <title>{{ _('portal.app_title') }}</title>
     <link rel="stylesheet" href="/static/portal.css">
     <link rel="stylesheet" href="/static/font-awesome.all.min.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-robot"></i> 大模型应用</h1>
+            <h1><i class="fas fa-robot"></i> {{ _('portal.app_title') }}</h1>
             <div class="header-bottom">
-                <p>AI 应用门户，一站式访问所有应用</p>
+                <p>{{ _('portal.subtitle') }}</p>
                 <div class="header-actions">
                     {% if hack_admin =='1' %}
                     <a href="/usr/statistic/index?uid={{uid}}&app_source={{app_source}}" class="btn-clear" target="_blank">
-                        <i class="fas fa-cog"></i>运营管理
+                        <i class="fas fa-cog"></i>{{ _('portal.operations') }}
                     </a>
                     {% endif %}
                     <span class="user-name"><i class="fas fa-user"></i> {{ usr or '' }}</span>
                     <a href="/logout?uid={{uid}}&app_source={{app_source}}" class="btn-logout">
-                        <i class="fas fa-sign-out-alt"></i> 退出
+                        <i class="fas fa-sign-out-alt"></i> {{ _('portal.logout') }}
                     </a>
                 </div>
             </div>
@@ -32,7 +33,7 @@
             <!-- 应用-->
             <div class="category-section">
                 <h2 class="category-title">
-                    <i class="fas fa-cube"></i> 智能体
+                    <i class="fas fa-cube"></i> {{ _('portal.category_agents') }}
                 </h2>
                 <div class="app-grid">
                     <!-- 应用1 -->
@@ -42,16 +43,16 @@
                         </div>
                         <div class="app-content">
                             <h3 class="app-title">
-                                <i class="fas fa-robot"></i> 问答助手
+                                <i class="fas fa-robot"></i> {{ _('portal.app_chat') }}
                             </h3>
                             <p class="app-description">
-                                通过对话的方式，解决用户提出的需求，支持读取上传的文档内容。
+                                {{ _('portal.app_chat_desc') }}
                             </p>
                             <div class="app-meta">
-                                <span class="app-port">端口: 20000</span>
+                                <span class="app-port">{{ _('portal.port_label', port=20000) }}</span>
                                 <span>chat</span>
                             </div>
-                            <a href="{{app_base_uri}}:20000?t={{t}}" class="app-link">进入应用</a>
+                            <a href="{{app_base_uri}}:20000?t={{t}}" class="app-link">{{ _('portal.enter_app') }}</a>
                         </div>
                     </div>
                     <!-- 应用2 -->
@@ -61,16 +62,16 @@
                         </div>
                         <div class="app-content">
                             <h3 class="app-title">
-                                <i class="fas fa-graduation-cap"></i> 知识库问答
+                                <i class="fas fa-graduation-cap"></i> {{ _('portal.app_chat2kb') }}
                             </h3>
                             <p class="app-description">
-                                提供基于知识库的问答能力，快速获取专业知识解答，提升信息检索效率。
+                                {{ _('portal.app_chat2kb_desc') }}
                             </p>
                             <div class="app-meta">
-                                <span class="app-port">端口: 19002</span>
+                                <span class="app-port">{{ _('portal.port_label', port=19002) }}</span>
                                 <span>chat2kb</span>
                             </div>
-                            <a href="{{app_base_uri}}:19002?t={{t}}" class="app-link">进入应用</a>
+                            <a href="{{app_base_uri}}:19002?t={{t}}" class="app-link">{{ _('portal.enter_app') }}</a>
                         </div>
                     </div>
 
@@ -81,16 +82,16 @@
                         </div>
                         <div class="app-content">
                             <h3 class="app-title">
-                                <i class="fas fa-file-word"></i>文档生成
+                                <i class="fas fa-file-word"></i>{{ _('portal.app_docx') }}
                             </h3>
                             <p class="app-description">
-                                支持在线生成 Word docx文档，智能排版和内容组织，提高文档创作效率。
+                                {{ _('portal.app_docx_desc') }}
                             </p>
                             <div class="app-meta">
-                                <span class="app-port">端口: 19003</span>
+                                <span class="app-port">{{ _('portal.port_label', port=19003) }}</span>
                                 <span>docx</span>
                             </div>
-                            <a href="{{app_base_uri}}:19003?t={{t}}" class="app-link">进入应用</a>
+                            <a href="{{app_base_uri}}:19003?t={{t}}" class="app-link">{{ _('portal.enter_app') }}</a>
                         </div>
                     </div>
                     <div class="app-card">
@@ -99,16 +100,16 @@
                         </div>
                         <div class="app-content">
                             <h3 class="app-title">
-                                <i class="fas fa-user-tie"></i>文档审核
+                                <i class="fas fa-user-tie"></i>{{ _('portal.app_paper_review') }}
                             </h3>
                             <p class="app-description">
-                                按照用户的审核要求，对大 Word 文档（多达100页）进行内容审核，输出审核结果。
+                                {{ _('portal.app_paper_review_desc') }}
                             </p>
                             <div class="app-meta">
-                                <span class="app-port">端口: 19009</span>
+                                <span class="app-port">{{ _('portal.port_label', port=19009) }}</span>
                                 <span>paper_review</span>
                             </div>
-                            <a href="{{app_base_uri}}:19009?t={{t}}" class="app-link">进入应用</a>
+                            <a href="{{app_base_uri}}:19009?t={{t}}" class="app-link">{{ _('portal.enter_app') }}</a>
                         </div>
                     </div>
                     <div class="app-card">
@@ -117,16 +118,16 @@
                         </div>
                         <div class="app-content">
                             <h3 class="app-title">
-                                <i class="fas fa-microphone-alt"></i> 语音识别
+                                <i class="fas fa-microphone-alt"></i> {{ _('portal.app_asr') }}
                             </h3>
                             <p class="app-description">
-                                将各种格式的语音(时长为数小时)文件转换为文本，支持 mp3,m4a,amr,wav,flac, ogg,aac等多种音频格式。
+                                {{ _('portal.app_asr_desc') }}
                             </p>
                             <div class="app-meta">
-                                <span class="app-port">端口: 19010</span>
+                                <span class="app-port">{{ _('portal.port_label', port=19010) }}</span>
                                 <span>asr</span>
                             </div>
-                            <a href="{{app_base_uri}}:19010?t={{t}}" class="app-link">进入应用</a>
+                            <a href="{{app_base_uri}}:19010?t={{t}}" class="app-link">{{ _('portal.enter_app') }}</a>
                         </div>
                     </div>
                 </div>
@@ -135,7 +136,7 @@
             <!-- 接口服务 -->
             <div class="category-section">
                 <h2 class="category-title">
-                    <i class="fas fa-plug"></i> 接口
+                    <i class="fas fa-plug"></i> {{ _('portal.category_apis') }}
                 </h2>
                 <div class="app-grid">
                     <!-- 应用1 -->
@@ -145,16 +146,16 @@
                         </div>
                         <div class="app-content">
                             <h3 class="app-title">
-                                <i class="fas fa-plug"></i> 开放平台
+                                <i class="fas fa-plug"></i> {{ _('portal.app_open') }}
                             </h3>
                             <p class="app-description">
-                                提供与其他平台进行集成的接口，支持HTTP/HTTPS协议，实现系统间的无缝对接。
+                                {{ _('portal.app_open_desc') }}
                             </p>
                             <div class="app-meta">
-                                <span class="app-port">端口: 18000</span>
+                                <span class="app-port">{{ _('portal.port_label', port=18000) }}</span>
                                 <span>gateway</span>
                             </div>
-                            <a href="{{app_base_uri}}:18000" class="app-link">查看 API</a>
+                            <a href="{{app_base_uri}}:18000" class="app-link">{{ _('portal.view_api') }}</a>
                         </div>
                     </div>
                     <!-- 应用7 -->
@@ -164,16 +165,16 @@
                         </div>
                         <div class="app-content">
                             <h3 class="app-title">
-                                <i class="fas fa-server"></i> MCP Server
+                                <i class="fas fa-server"></i> {{ _('portal.app_mcp_server') }}
                             </h3>
                             <p class="app-description">
-                                MCP 服务端，为MCP 客户端提供查询入口，支持多种工具调用和功能扩展。
+                                {{ _('portal.app_mcp_server_desc') }}
                             </p>
                             <div class="app-meta">
-                                <span class="app-port">端口: 19006</span>
+                                <span class="app-port">{{ _('portal.port_label', port=19006) }}</span>
                                 <span>mcp_server</span>
                             </div>
-                            <a href="{{app_base_uri}}:19006" class="app-link">查看 API</a>
+                            <a href="{{app_base_uri}}:19006" class="app-link">{{ _('portal.view_api') }}</a>
                         </div>
                     </div>
                 </div>
@@ -181,7 +182,7 @@
             <!-- 模型服务 -->
             <div class="category-section">
                 <h2 class="category-title">
-                    <i class="fas fa-server"></i> 模型
+                    <i class="fas fa-server"></i> {{ _('portal.category_models') }}
                 </h2>
                 <div class="app-grid">
                     <!-- 应用10 -->
@@ -191,16 +192,16 @@
                         </div>
                         <div class="app-content">
                             <h3 class="app-title">
-                                <i class="fas fa-brain"></i> 大语言模型服务
+                                <i class="fas fa-brain"></i> {{ _('portal.app_llm') }}
                             </h3>
                             <p class="app-description">
-                                兼容 OpenAI 接口格式的大语言模型服务，提供强大的自然语言处理能力。
+                                {{ _('portal.app_llm_desc') }}
                             </p>
                             <div class="app-meta">
-                                <span class="app-port">端口: 16000</span>
+                                <span class="app-port">{{ _('portal.port_label', port=16000) }}</span>
                                 <span>llm</span>
                             </div>
-                            <a href="{{app_base_uri}}:16000" class="app-link">查看模型 API</a>
+                            <a href="{{app_base_uri}}:16000" class="app-link">{{ _('portal.view_api') }}</a>
                         </div>
                     </div>
 
@@ -211,16 +212,16 @@
                         </div>
                         <div class="app-content">
                             <h3 class="app-title">
-                                <i class="fas fa-code"></i> 文本嵌入模型服务
+                                <i class="fas fa-code"></i> {{ _('portal.app_embedding') }}
                             </h3>
                             <p class="app-description">
-                                 兼容 OpenAI Embeddings API 接口格式的文本嵌入服务，支持文本向量化和语义分析。
+                                {{ _('portal.app_embedding_desc') }}
                             </p>
                             <div class="app-meta">
-                                <span class="app-port">端口: 17000</span>
+                                <span class="app-port">{{ _('portal.port_label', port=17000) }}</span>
                                 <span>embedding</span>
                             </div>
-                            <a href="{{app_base_uri}}:17000" class="app-link">查看模型 API</a>
+                            <a href="{{app_base_uri}}:17000" class="app-link">{{ _('portal.view_api') }}</a>
                         </div>
                     </div>
                 </div>

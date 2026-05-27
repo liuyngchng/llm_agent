@@ -104,7 +104,7 @@ async function loadConfig() {
         }
 
         if (!config.has_api_key) {
-            showError('未配置API密钥，请检查配置');
+            showError(__('chat.no_api_key'));
         }
     } catch (error) {
         console.error('加载配置失败:', error);
@@ -167,20 +167,20 @@ function processFiles(files) {
 
         // 检查文件大小
         if (file.size > maxSize) {
-            showError(`文件 ${file.name} 超过10MB限制`);
+            showError(__fmt_named('chat.file_too_large', {name: file.name}));
             continue;
         }
 
         // 检查文件类型
         if (!allowedTypes.includes(file.type) && !file.name.match(/\.(txt|md|pdf|xlsx|docx|ppt|pptx|jpg|jpeg|png|gif)$/i)) {
-            showError(`不支持的文件类型: ${file.name}`);
+            showError(__fmt_named('chat.error_unsupported_file', {name: file.name}));
             continue;
         }
 
         // 检查是否已存在同名文件
         const existingFile = uploadedFiles.find(f => f.name === file.name && f.size === file.size);
         if (existingFile) {
-            showError(`文件 ${file.name} 已添加`);
+            showError(__fmt_named('chat.file_already_added', {name: file.name}));
             continue;
         }
 
@@ -192,7 +192,7 @@ function processFiles(files) {
 
     if (addedFiles > 0) {
         updateFileListDisplay();
-        showSuccess(`已添加 ${addedFiles} 个文件`);
+        showSuccess(__fmt_named('chat.files_added', {n: addedFiles}));
     }
 
     fileInput.value = ''; // 重置input以便重新选择相同文件
@@ -279,7 +279,7 @@ function clearFileList(silent = false) {
     if (uploadedFiles.length > 0) {
         // 如果是静默模式（发送时自动清理），不弹确认框
         if (!silent) {
-            if (!confirm(`确定要移除 ${uploadedFiles.length} 个文件吗？`)) {
+            if (!confirm(__fmt_named('chat.remove_files_confirm', {n: uploadedFiles.length}))) {
                 return;
             }
         }
@@ -290,7 +290,7 @@ function clearFileList(silent = false) {
 
         // 如果不是静默模式，显示成功消息
         if (!silent) {
-            showSuccess('已移除所有文件');
+            showSuccess(__('chat.files_removed'));
         }
     }
 }
@@ -301,7 +301,7 @@ function stopStream() {
         currentStreamController.abort();
         currentStreamController = null;
         isStreaming = false;
-        showSuccess('已停止生成');
+        showSuccess(__('chat.generation_stopped'));
     }
 }
 
@@ -317,7 +317,7 @@ async function sendMessage() {
 
     // 如果没有消息和文件，直接返回
     if (!message && uploadedFiles.length === 0) {
-        showError('请输入消息或上传文件');
+        showError(__('chat.need_message_or_file'));
         return;
     }
 
@@ -330,7 +330,7 @@ async function sendMessage() {
 
     // 设置发送按钮为停止按钮
     sendButton.disabled = false; // 允许点击停止
-    sendButton.innerHTML = '<i class="fas fa-stop"></i> 停止';
+    sendButton.innerHTML = '<i class="fas fa-stop"></i> ' + __('chat.stop');
     sendButton.classList.add('btn-stop'); // 添加停止按钮样式
 
     // 如果有文件，先上传文件
@@ -340,7 +340,7 @@ async function sendMessage() {
             fileContents = await uploadFiles();
         } catch (error) {
             console.error('上传文件失败:', error);
-            showError('文件上传失败');
+            showError(__('chat.file_upload_failed'));
             resetInputState();
             return;
         }
@@ -393,7 +393,7 @@ async function sendMessage() {
         // 只在不是AbortError的情况下显示错误
         if (error.name !== 'AbortError') {
             console.error('发送消息失败:', error);
-            updateAIMessage(aiMessageId, `<span class="error">请求失败: ${error.message}</span>`);
+            updateAIMessage(aiMessageId, `<span class="error">${__('common.request_failed')} ${error.message}</span>`);
         } else {
             // AbortError是用户主动停止的，不显示为错误
             console.log('用户主动停止了请求');
@@ -450,7 +450,7 @@ function resetInputState() {
     messageInput.disabled = false;
     sendButton.disabled = false;
     uploadButton.disabled = false;
-    sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> 发送';
+    sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> ' + __('chat.send');
     sendButton.classList.remove('btn-stop'); // 移除停止按钮样式
     messageInput.focus();
 }
@@ -577,19 +577,19 @@ function addMessageToUI(role, content, messageId = null) {
             <div class="message-content markdown-content">${displayContent}</div>
             <div class="message-actions">
                 <div class="action-buttons">
-                    <button class="action-btn copy-btn" title="复制">
+                    <button class="action-btn copy-btn" title="${__('chat.copy')}">
                         <i class="fas fa-copy"></i>
                     </button>
-                    <button class="action-btn refresh-btn" title="重新生成">
+                    <button class="action-btn refresh-btn" title="${__('chat.regenerate')}">
                         <i class="fas fa-redo"></i>
                     </button>
-                    <button class="action-btn like-btn" title="赞">
+                    <button class="action-btn like-btn" title="${__('chat.like')}">
                         <i class="fas fa-thumbs-up"></i>
                     </button>
-                    <button class="action-btn dislike-btn" title="踩">
+                    <button class="action-btn dislike-btn" title="${__('chat.dislike')}">
                         <i class="fas fa-thumbs-down"></i>
                     </button>
-                    <button class="action-btn download-btn" title="下载">
+                    <button class="action-btn download-btn" title="${__('common.download')}">
                         <i class="fas fa-download"></i>
                     </button>
                 </div>
@@ -634,20 +634,20 @@ function setupMessageActions(messageDiv, messageId) {
         const textToCopy = contentDiv.textContent;
         try {
             await navigator.clipboard.writeText(textToCopy);
-            showSuccess('已复制到剪贴板');
+            showSuccess(__('chat.copied'));
             copyBtn.innerHTML = '<i class="fas fa-check"></i>';
             setTimeout(() => {
                 copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
             }, 2000);
         } catch (err) {
             console.error('复制失败:', err);
-            showError('复制失败');
+            showError(__('chat.copy_failed'));
         }
     });
 
     // 重新生成功能
     refreshBtn.addEventListener('click', () => {
-        if (confirm('确定要重新生成这条消息吗？')) {
+        if (confirm(__('chat.regenerate_confirm'))) {
             // 移除当前消息
             messageDiv.remove();
 
@@ -673,7 +673,7 @@ function setupMessageActions(messageDiv, messageId) {
             dislikeBtn.classList.remove('active');
             dislikeBtn.innerHTML = '<i class="fas fa-thumbs-down"></i>';
             console.log(`点赞消息: ${messageId}`);
-            showSuccess('已点赞');
+            showSuccess(__('chat.liked'));
         } else {
             likeBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
         }
@@ -687,7 +687,7 @@ function setupMessageActions(messageDiv, messageId) {
             likeBtn.classList.remove('active');
             likeBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
             console.log(`点踩消息: ${messageId}`);
-            showSuccess('已点踩');
+            showSuccess(__('chat.disliked'));
         } else {
             dislikeBtn.innerHTML = '<i class="fas fa-thumbs-down"></i>';
         }
@@ -733,14 +733,14 @@ function setupMessageActions(messageDiv, messageId) {
         const dateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
         const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '-'); // HH-MM-SS
 
-        a.download = `AI助手回复_${dateStr}_${timeStr}.md`;
+        a.download = `AI_Response_${dateStr}_${timeStr}.md`;
 
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showSuccess('已下载Markdown文件');
+        showSuccess(__('chat.download_md'));
     });
 }
 
@@ -792,7 +792,7 @@ function updateAIMessage(messageId, content) {
 
 // 清空聊天
 function clearChat() {
-    if (confirm('确定要清空聊天记录吗？')) {
+    if (confirm(__('chat.clear_chat_confirm'))) {
         // 中止当前流
         if (isStreaming) {
             stopStream();

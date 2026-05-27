@@ -26,6 +26,8 @@ from common.docx_meta_util import save_doc_info, get_doc_info, update_process_in
 from common.docx_para_util import gen_docx_template_with_outline_txt, get_outline_txt
 from common import my_enums, statistic_util, docx_meta_util, cm_utils
 from common.html_util import get_html_ctx_from_md
+from common.i18n._hooks import register_i18n
+from common.i18n import get_msg
 from common.my_enums import AppType
 from common.sys_init import init_yml_cfg
 from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login
@@ -62,6 +64,7 @@ def create_app():
     app.config['TASK_EXPIRE_TIME_MS'] = TASK_EXPIRE_TIME_MS
     app.config['CFG'] = my_cfg
     app.config['APP_SOURCE'] = my_enums.AppType.DOCX.name.lower()
+    register_i18n(app, scope="docx")
     logger.info("reg_blueprint")
     # 注册蓝图
     app.register_blueprint(vdb_bp)
@@ -195,7 +198,7 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             # logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
         # logger.info(f"{uid}, get_my_docx_task, {data}")
@@ -218,7 +221,7 @@ def register_routes(app):
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
             ctx = {
-                "error": "用户会话信息已失效，请重新登录",
+                "error": get_msg("common.session_expired"),
             }
             logger.warning(f"{uid}, {ctx}")
             return Response(json.dumps(ctx, ensure_ascii=False), 502, mimetype=JSON_MIME_TYPE)
@@ -226,7 +229,7 @@ def register_routes(app):
         doc_title = request.json.get("doc_title")
         keywords = request.json.get("keywords")
         if not doc_type or not doc_title:
-            ctx = {"error": "未提交待写作文档的标题或文档类型，请补充"}
+            ctx = {"error": get_msg("docx.missing_title_type_params")}
             logger.error(f"{uid}, gen_doc_outline_err, {ctx}")
             return Response(json.dumps(ctx, ensure_ascii=False), 502, mimetype=JSON_MIME_TYPE)
         return Response(
@@ -242,7 +245,7 @@ def register_routes(app):
         """
         logger.info(f"upload_docx_template_file, {request}")
         if 'file' not in request.files:
-            return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
+            return json.dumps({"error": get_msg("docx.upload_file_not_found")}, ensure_ascii=False), 400
         file = request.files['file']
         uid = int(request.form.get('uid'))
         doc_type = request.form.get('doc_type')
@@ -252,13 +255,13 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
         if not doc_type or not doc_title:
-            return json.dumps({"error": "缺少文件类型或文件标题参数"}, ensure_ascii=False), 400
+            return json.dumps({"error": get_msg("docx.missing_file_or_type")}, ensure_ascii=False), 400
         if file.filename == '':
-            return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
+            return json.dumps({"error": get_msg("docx.filename_empty")}, ensure_ascii=False), 400
         vbd_id_str = request.form.get('vbd_id')
         if vbd_id_str:
             vbd_id = int(vbd_id_str)
@@ -295,14 +298,14 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            err_info = {"error": "用户会话信息已失效，请重新登录"}
+            err_info = {"error": get_msg("common.session_expired")}
             logger.error(f"{uid}, err_occurred, {err_info}")
             return Response(json.dumps(err_info, ensure_ascii=False), 502, mimetype=JSON_MIME_TYPE)
         doc_title = data.get("doc_title")
         doc_outline = data.get("doc_outline")
         doc_type = data.get("doc_type")
         if not doc_type or not doc_title or not doc_outline:
-            err_info = {"error": "缺少文档类型、标题、目录参数中的一个或多个"}
+            err_info = {"error": get_msg("docx.missing_type_title")}
             logger.error(f"{uid}, err_occurred, {err_info}")
             return Response(json.dumps(err_info, ensure_ascii=False), 400, mimetype=JSON_MIME_TYPE)
         task_id = int(time.time() * 1000)  # 生成任务ID， 使用毫秒数
@@ -330,18 +333,18 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            err_info = {"error": "用户会话信息已失效，请重新登录"}
+            err_info = {"error": get_msg("common.session_expired")}
             logger.error(f"{uid}, err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
         task_id = int(data.get("task_id"))
         doc_type = data.get("doc_type")
         doc_title = data.get("doc_title")
         if not doc_type or not doc_title:
-            err_info = {"error": "文档类型或文档标题不能为空"}
+            err_info = {"error": get_msg("docx.type_title_required")}
             logger.error(f"{uid}, err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
         if not task_id or not uid:
-            err_info = {"error": "缺少任务ID、写作模板文件名称和用户ID中的一个或多个"}
+            err_info = {"error": get_msg("docx.missing_task_params")}
             logger.error(f"{uid}, err_occurred, {err_info}")
             return jsonify(err_info), 400
         threading.Thread(target=process_doc,args=(uid, task_id)).start()
@@ -361,7 +364,7 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1, AppType.DOCX.name.lower())
@@ -398,7 +401,7 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1, AppType.DOCX.name.lower())
@@ -438,7 +441,7 @@ def register_routes(app):
         app_source = AppType.DOCX.name.lower()
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(app_source, warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1, AppType.DOCX.name.lower())
@@ -484,7 +487,7 @@ def register_routes(app):
             logger.warning(f"文件 {filename} 不存在， 无需删除物理文件, 只需删除数据库记录")
         docx_meta_util.delete_task(task_id)
         docx_meta_util.delete_doc_para_task(task_id)
-        return json.dumps({"msg": "删除成功", "task_id": task_id}, ensure_ascii=False), 200
+        return json.dumps({"msg": get_msg("common.delete_success"), "task_id": task_id}, ensure_ascii=False), 200
 
     @app.route('/docx/process/info', methods=['POST'])
     def get_doc_process_info():
@@ -492,17 +495,17 @@ def register_routes(app):
         task_id = request.json.get("task_id")
         uid = request.json.get("uid")
         if not task_id or not uid:
-            return jsonify({"error": "缺少任务ID或用户ID"}), 400
+            return jsonify({"error": get_msg("docx.missing_task_params")}), 400
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(AppType.DOCX.name.lower(), warning_info)
         file_info = docx_meta_util.get_doc_info(task_id)
         logger.info(f"{uid}, get_docx_file_info, {file_info}")
         if not file_info or len(file_info) == 0:
-            return json.dumps({"error": "未找到任务ID对应的文档信息"}, ensure_ascii=False), 400
+            return json.dumps({"error": get_msg("docx.task_info_not_found")}, ensure_ascii=False), 400
         file_info[0]['elapsed_time'] = time.time() - task_id
         # logger.info(f"get_doc_process_info, {info}")
         return json.dumps(file_info, ensure_ascii=False), 200

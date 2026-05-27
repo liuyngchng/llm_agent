@@ -28,6 +28,8 @@ from common.my_enums import AppType, FileType
 from common.sys_init import init_yml_cfg
 from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login
 from common.cm_utils import get_console_arg1
+from common.i18n._hooks import register_i18n
+from common.i18n import get_msg
 from common.xlsx_util import convert_xlsx_to_md
 from common.const import SESSION_TIMEOUT, UPLOAD_FOLDER, OUTPUT_DIR, TASK_EXPIRE_TIME_MS, DOCX_MIME_TYPE, XLSX_MIME_TYPE, get_const
 
@@ -60,6 +62,8 @@ def create_app():
     app.config['APP_SOURCE'] = my_enums.AppType.PAPER_REVIEW.name.lower()
     # 注册蓝图
     app.register_blueprint(vdb_bp)
+    # 注册 i18n
+    register_i18n(app, scope="paper_review")
     # 注册路由
     register_routes(app)
     with app.app_context():
@@ -171,18 +175,18 @@ def register_routes(app):
         """
         logger.info(f"upload_xlsx_file, {request}")
         if 'file' not in request.files:
-            return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
+            return json.dumps({"error": get_msg("docx.upload_file_not_found")}, ensure_ascii=False), 400
         file = request.files['file']
         uid = int(request.form.get('uid'))
         logger.info(f"{uid}, upload_xlsx_criteria_file")
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(AppType.PAPER_REVIEW.name.lower(), warning_info)
         if file.filename == '':
-            return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
+            return json.dumps({"error": get_msg("docx.filename_empty")}, ensure_ascii=False), 400
 
         # 生成任务ID，使用毫秒数
         task_id = int(time.time() * 1000)
@@ -209,18 +213,18 @@ def register_routes(app):
         """
         logger.info(f"upload_docx, {request}")
         if 'file' not in request.files:
-            return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
+            return json.dumps({"error": get_msg("docx.upload_file_not_found")}, ensure_ascii=False), 400
         file = request.files['file']
         uid = int(request.form.get('uid'))
         logger.info(f"{uid}, upload_docx")
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(AppType.PAPER_REVIEW.name.lower(), warning_info)
         if file.filename == '':
-            return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
+            return json.dumps({"error": get_msg("docx.filename_empty")}, ensure_ascii=False), 400
 
         # 生成任务ID，使用毫秒数
         task_id = int(time.time() * 1000)
@@ -247,18 +251,18 @@ def register_routes(app):
         """
         logger.info(f"upload_markdown, {request}")
         if 'file' not in request.files:
-            return json.dumps({"error": "未找到上传的文件信息"}, ensure_ascii=False), 400
+            return json.dumps({"error": get_msg("docx.upload_file_not_found")}, ensure_ascii=False), 400
         file = request.files['file']
         uid = int(request.form.get('uid'))
         logger.info(f"{uid}, upload_docx")
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(AppType.PAPER_REVIEW.name.lower(), warning_info)
         if file.filename == '':
-            return json.dumps({"error": "上传文件的文件名为空"}, ensure_ascii=False), 400
+            return json.dumps({"error": get_msg("docx.filename_empty")}, ensure_ascii=False), 400
 
         # 生成任务ID，使用毫秒数
         task_id = int(time.time() * 1000)
@@ -290,7 +294,7 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             logger.warning(f"{uid}, {warning_info}")
             return jsonify(warning_info), 400
 
@@ -307,27 +311,27 @@ def register_routes(app):
 
         # 验证输入
         if not review_topic:
-            err_info = {"error": "评审主题不能为空"}
+            err_info = {"error": get_msg("paper_review.topic_required")}
             logger.error(f"err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
         if not review_type:
-            err_info = {"error": "评审类别不能为空"}
+            err_info = {"error": get_msg("paper_review.category_required")}
             logger.error(f"err_occurred, {err_info}")
             return json.dumps(err_info, ensure_ascii=False), 400
 
         if not task_id or not review_criteria_file_id or not review_paper_file_id or not uid:
-            err_info = {"error": "缺少任务ID、评审标准文件、评审材料文件或用户ID"}
+            err_info = {"error": get_msg("paper_review.missing_task_params")}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
         review_paper_file_info = get_file_info(uid, review_paper_file_id)
         if not review_paper_file_info:
-            err_info = {"error": f"未找到相应的评审文件信息 {review_paper_file_id}"}
+            err_info = {"error": get_msg("paper_review.criteria_file_not_found", id=str(review_paper_file_id))}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
 
         review_criteria_file_info = get_file_info(uid, review_criteria_file_id)
         if not review_criteria_file_info:
-            err_info = {"error": f"未找到相应的评审文件信息 {review_criteria_file_info}"}
+            err_info = {"error": get_msg("paper_review.criteria_file_not_found", id=str(review_criteria_file_info))}
             logger.error(f"err_occurred, {err_info}")
             return jsonify(err_info), 400
 
@@ -395,7 +399,7 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             return redirect_to_portal_login(AppType.PAPER_REVIEW.name.lower(), warning_info)
         # logger.info(f"{uid}, get_my_paper_review_task, {data}")
         task_list = docx_meta_util.get_user_task_list(uid)
@@ -412,7 +416,7 @@ def register_routes(app):
         session_key = f"{uid}_{get_client_ip()}"
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(AppType.PAPER_REVIEW.name.lower(), warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1, AppType.PAPER_REVIEW.name.lower())
@@ -458,7 +462,7 @@ def register_routes(app):
         app_source = AppType.PAPER_REVIEW.name.lower()
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(app_source, warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1, app_source)
@@ -502,7 +506,7 @@ def register_routes(app):
         app_source = AppType.PAPER_REVIEW.name.lower()
         if (not auth_info.get(session_key, None)
                 or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            warning_info = "用户会话信息已失效，请重新登录"
+            warning_info = get_msg("common.session_expired")
             logger.warning(f"{uid}, {warning_info}")
             return redirect_to_portal_login(app_source, warning_info)
         statistic_util.add_access_count_by_uid(int(uid), 1, app_source)
@@ -545,7 +549,7 @@ def register_routes(app):
             logger.warning(f"文件 {filename} 不存在， 无需删除物理文件, 只需删除数据库记录")
         docx_meta_util.delete_task(task_id)
 
-        return json.dumps({"msg": "删除成功", "task_id": task_id}, ensure_ascii=False), 200
+        return json.dumps({"msg": get_msg("common.delete_success"), "task_id": task_id}, ensure_ascii=False), 200
 
 
 

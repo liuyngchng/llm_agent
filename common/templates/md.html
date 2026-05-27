@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ sys_name }}</title>
     <link rel="stylesheet" href="/static/md.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
 </head>
 <body>
     <div class="container">
@@ -12,7 +13,7 @@
         {% if toc_content %}
         <div class="toc-sidebar">
             <div class="toc-header">
-                <h3>目录</h3>
+                <h3>{{ _('common.toc_title') }}</h3>
             </div>
             <div class="toc-content">
                 {{ toc_content | safe }}

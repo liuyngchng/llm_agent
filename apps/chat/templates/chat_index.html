@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/static/chat.css">
     <link rel="stylesheet" href="/static/font-awesome.6.0.0.all.min.css">
     <link rel="stylesheet" href="/static/highlight.11.8.0.github.min.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
 
 </head>
 <body>
@@ -14,10 +15,10 @@
         <header class="header">
             <h1><i class="fas fa-robot"></i>{{sys_name}}</h1>
             <div class="model-info">
-                <span id="modelName">正在加载模型信息...</span>
+                <span id="modelName">{{ _('chat.model_loading') }}</span>
                 <div class="model-info-actions">
                     <button id="clearChat" class="btn-clear">
-                        <i class="fas fa-trash-alt"></i> 清空聊天
+                        <i class="fas fa-trash-alt"></i> {{ _('chat.clear_chat') }}
                     </button>
                 </div>
             </div>
@@ -27,7 +28,7 @@
             <div class="chat-history" id="chatHistory">
                 <!-- 聊天消息会动态添加到这里 -->
                 <div class="welcome-message">
-                    <p>👋 你好！我是AI助手，有什么可以帮你的吗？</p>
+                    <p>👋 {{ _('chat.welcome') }}</p>
                 </div>
             </div>
 
@@ -37,14 +38,14 @@
                         <!-- 文件列表 - 显示已选择的文件 -->
                         <div class="file-list-container" id="fileListContainer" style="display: none;">
                             <div class="file-list-header">
-                                <span>已选择文件:</span>
+                                <span>{{ _('chat.selected_files') }}</span>
                                 <button class="clear-files-btn" onclick="clearFileList()">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
                             <div class="file-list" id="fileList"></div>
                         </div>
-                        <textarea id="messageInput" placeholder="输入你的消息..." rows="3"></textarea>
+                        <textarea id="messageInput" placeholder="{{ _('chat.input_placeholder') }}" rows="3"></textarea>
                     </div>
 
                     <div class="input-actions">
@@ -62,19 +63,19 @@
                             <!-- 简洁的文件上传按钮 -->
                             <div class="file-upload-btn-container">
                                 <input type="file" id="fileInput" multiple style="display: none;">
-                                <button id="uploadButton" class="btn-attach" title="上传文件">
+                                <button id="uploadButton" class="btn-attach" title="{{ _('chat.upload_file') }}">
                                     <i class="fas fa-paperclip"></i>
                                 </button>
                                 <div class="file-count-badge" id="fileCountBadge" style="display: none;">0</div>
                             </div>
                             <button id="sendButton" class="btn-send">
-                                <i class="fas fa-paper-plane"></i> 发送
+                                <i class="fas fa-paper-plane"></i> {{ _('chat.send') }}
                             </button>
                         </div>
                     </div>
                 </div>
                 <div class="input-hint">
-                    <small>按 Enter 发送，Shift + Enter 换行 • 支持上传文本、PDF、图片等文件</small>
+                    <small>{{ _('chat.input_hint') }}</small>
                 </div>
             </div>
         </div>
@@ -86,6 +87,8 @@
         </footer>
     </div>
 
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
     <script type="text/javascript" src="/static/highlight.11.8.0.min.js"></script>
     <script type="text/javascript" src="/static/marked.min.js"></script>
     <script type="text/javascript" src="/static/highlight.11.8.0.javascript.min.js"></script>

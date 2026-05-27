@@ -16,6 +16,8 @@ from flask import Flask, render_template, send_from_directory, abort, request, j
 from apps.online_office.office_util import generate_jwt_token, JWT_SECRET, get_content_type, generate_onlyoffice_config, \
     get_docker_host, get_file_type
 from common.const import UPLOAD_FOLDER
+from common.i18n._hooks import register_i18n
+from common.i18n import get_msg
 
 import uuid
 import shutil
@@ -106,35 +108,36 @@ ONLY_OFFICE_API = "http://localhost"
 
 # 创建 Flask 应用
 app = Flask(__name__, static_folder=None)
+register_i18n(app, scope="online_office")
 
 # 错误处理
 @app.errorhandler(404)
 def not_found_error(error):
     logger.error(f"404错误: {error}")
     if request.path.startswith('/api/'):
-        return jsonify({'success': False, 'error': '资源未找到'}), 404
-    return render_template('error.html', error_code=404, error_message="页面未找到"), 404
+        return jsonify({'success': False, 'error': get_msg('online_office.resource_not_found')}), 404
+    return render_template('error.html', error_code=404, error_message=get_msg('online_office.page_not_found')), 404
 
 @app.errorhandler(500)
 def internal_error(error):
     logger.error(f"500错误: {error}")
     if request.path.startswith('/api/'):
-        return jsonify({'success': False, 'error': '服务器内部错误'}), 500
-    return render_template('error.html', error_code=500, error_message="服务器内部错误"), 500
+        return jsonify({'success': False, 'error': get_msg('online_office.server_internal_error')}), 500
+    return render_template('error.html', error_code=500, error_message=get_msg('online_office.server_internal_error')), 500
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
     logger.error(f"413错误: 文件太大")
     if request.path.startswith('/api/'):
-        return jsonify({'success': False, 'error': '文件太大，最大支持50MB'}), 413
-    return render_template('error.html', error_code=413, error_message="文件太大"), 413
+        return jsonify({'success': False, 'error': get_msg('online_office.file_too_large_max', max=50)}), 413
+    return render_template('error.html', error_code=413, error_message=get_msg('online_office.file_too_large_short')), 413
 
 @app.errorhandler(400)
 def bad_request_error(error):
     logger.error(f"400错误: {error}")
     if request.path.startswith('/api/'):
-        return jsonify({'success': False, 'error': '请求格式错误'}), 400
-    return render_template('error.html', error_code=400, error_message="请求格式错误"), 400
+        return jsonify({'success': False, 'error': get_msg('online_office.bad_request_format')}), 400
+    return render_template('error.html', error_code=400, error_message=get_msg('online_office.bad_request_format')), 400
 
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
@@ -257,19 +260,19 @@ def upload_document():
     """上传文档并准备预览"""
     try:
         if 'file' not in request.files:
-            return jsonify({'success': False, 'error': '没有选择文件'}), 400
+            return jsonify({'success': False, 'error': get_msg('online_office.no_file')}), 400
 
         file = request.files['file']
 
         if file.filename == '':
-            return jsonify({'success': False, 'error': '没有选择文件'}), 400
+            return jsonify({'success': False, 'error': get_msg('online_office.no_file')}), 400
 
         # 检查文件扩展名
         file_ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
         if file_ext not in ALLOWED_DOC_EXTENSIONS:
             return jsonify({
                 'success': False,
-                'error': f'不支持的文件类型。支持: {", ".join(ALLOWED_DOC_EXTENSIONS)}'
+                'error': get_msg('online_office.unsupported_file_type', types=", ".join(ALLOWED_DOC_EXTENSIONS))
             }), 400
 
         # 检查文件大小
@@ -280,7 +283,7 @@ def upload_document():
         if file_size > DOC_MAX_FILE_SIZE:
             return jsonify({
                 'success': False,
-                'error': f'文件太大。最大支持 {DOC_MAX_FILE_SIZE // 1024 // 1024}MB'
+                'error': get_msg('online_office.file_too_large_max', max=DOC_MAX_FILE_SIZE // 1024 // 1024)
             }), 400
 
         # 生成唯一ID和文件名
@@ -353,13 +356,13 @@ def download_document(doc_id):
         doc_row = cursor.fetchone()
         
         if not doc_row:
-            abort(404, "文档不存在")
+            abort(404, get_msg('online_office.doc_not_found'))
             
         doc_info = dict(doc_row)
         file_path = doc_info['path']
 
         if not os.path.exists(file_path):
-            abort(404, "文件不存在")
+            abort(404, get_msg('online_office.file_not_found'))
 
         # 设置正确的Content-Type
         content_type = get_content_type(doc_info['file_ext'])
@@ -418,7 +421,7 @@ def get_document_info(doc_id):
     
     doc_row = cursor.fetchone()
     if not doc_row:
-        return jsonify({'success': False, 'error': '文档不存在'}), 404
+        return jsonify({'success': False, 'error': get_msg('online_office.doc_not_found')}), 404
     
     doc_info = dict(doc_row)
     return jsonify({'success': True, 'document': doc_info})
@@ -432,10 +435,10 @@ def analyze_document():
         doc_id = data.get('doc_id')
         
         if not doc_id:
-            return jsonify({'success': False, 'error': '缺少文档ID'}), 400
+            return jsonify({'success': False, 'error': get_msg('online_office.missing_doc_id')}), 400
         
         if doc_id not in documents_db:
-            return jsonify({'success': False, 'error': '文档不存在'}), 404
+            return jsonify({'success': False, 'error': get_msg('online_office.doc_not_found')}), 404
         
         doc_info = documents_db[doc_id]
         file_path = doc_info['path']
@@ -782,7 +785,7 @@ def delete_document(doc_id):
         doc_row = cursor.fetchone()
         
         if not doc_row:
-            return jsonify({'success': False, 'error': '文档不存在'}), 404
+            return jsonify({'success': False, 'error': get_msg('online_office.doc_not_found')}), 404
         
         # 软删除：标记为已删除
         cursor.execute('''
@@ -793,7 +796,7 @@ def delete_document(doc_id):
         
         db.commit()
         
-        return jsonify({'success': True, 'message': '文档已删除'})
+        return jsonify({'success': True, 'message': get_msg('online_office.doc_deleted')})
         
     except Exception as e:
         logger.error(f"删除文档失败: {str(e)}")
@@ -809,7 +812,7 @@ def update_suggestion_status():
         status = data.get('status')  # accepted, ignored
         
         if not suggestion_id or status not in ['accepted', 'ignored']:
-            return jsonify({'success': False, 'error': '参数错误'}), 400
+            return jsonify({'success': False, 'error': get_msg('online_office.param_error')}), 400
         
         db = get_db()
         cursor = db.cursor()
@@ -823,7 +826,7 @@ def update_suggestion_status():
         
         db.commit()
         
-        return jsonify({'success': True, 'message': f'建议状态已更新为{status}'})
+        return jsonify({'success': True, 'message': get_msg('online_office.suggestion_status_updated', status=status)})
         
     except Exception as e:
         logger.error(f"更新建议状态失败: {str(e)}")
@@ -975,13 +978,13 @@ def save_document(doc_id):
     """保存文档（从OnlyOffice下载）"""
     try:
         if doc_id not in documents_db:
-            return jsonify({'success': False, 'error': '文档不存在'}), 404
+            return jsonify({'success': False, 'error': get_msg('online_office.doc_not_found')}), 404
 
         # 从请求中获取文档数据
         file_data = request.data
 
         if not file_data:
-            return jsonify({'success': False, 'error': '没有文档数据'}), 400
+            return jsonify({'success': False, 'error': get_msg('online_office.no_document_data')}), 400
 
         # 保存文档到服务器
         doc_info = documents_db[doc_id]
@@ -1000,7 +1003,7 @@ def save_document(doc_id):
 
         return jsonify({
             'success': True,
-            'message': '文档保存成功'
+            'message': get_msg('online_office.doc_saved')
         })
 
     except Exception as e:

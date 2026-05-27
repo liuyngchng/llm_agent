@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
     <title>{{sys_name}}</title>
     <meta charset="utf-8">
@@ -8,6 +8,7 @@
     <script type="text/javascript" src="/static/crypto.js"></script>
     <link rel="stylesheet" href="/static/font-awesome.all.min.css">
     <link rel="stylesheet" href="/static/login.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
 </head>
 <body>
     <div class="login-container">
@@ -18,7 +19,7 @@
                 </div>
                 <div>{{sys_name}}</div>
             </div>
-            <p class="login-subtitle">安全登录您的账户</p>
+            <p class="login-subtitle">{{ _('auth.login_subtitle') }}</p>
         </div>
 
         <form id="my_form" method="post" action="/login">
@@ -26,14 +27,14 @@
                 <div class="input-icon">
                     <i class="fas fa-user"></i>
                 </div>
-                <input id="usr" name="usr" type="text" value="{{usr}}" placeholder="请输入用户名" autocomplete="off">
+                <input id="usr" name="usr" type="text" value="{{usr}}" placeholder="{{ _('auth.please_enter_username') }}" autocomplete="off">
             </div>
 
             <div class="form-group">
                 <div class="input-icon">
                     <i class="fas fa-key"></i>
                 </div>
-                <input id="psw" type="password" placeholder="请输入密码" value="{{psw}}" autocomplete="off">
+                <input id="psw" type="password" placeholder="{{ _('auth.please_enter_password') }}" value="{{psw}}" autocomplete="off">
             </div>
 
             <div class="captcha-group">
@@ -42,9 +43,9 @@
                         <div class="captcha-icon">
                             <i class="fas fa-shield-alt"></i>
                         </div>
-                        <label class="captcha-label">验证码</label>
+                        <label class="captcha-label">{{ _('auth.captcha_label') }}</label>
                         <input id="captcha_code" name="captcha_code" type="text"
-                               placeholder="输入4位数字" maxlength="4" autocomplete="off">
+                               placeholder="{{ _('auth.captcha_placeholder') }}" maxlength="4" autocomplete="off">
                     </div>
                     <div class="captcha-image-container" id="captcha-image-container">
                         <div id="captcha-placeholder" class="captcha-placeholder">
@@ -52,7 +53,7 @@
                         </div>
                     </div>
                     <button type="button" class="btn-refresh" id="refresh-captcha-btn">
-                        <i class="fas fa-redo-alt"></i> 换一张
+                        <i class="fas fa-redo-alt"></i> {{ _('auth.refresh_captcha') }}
                     </button>
                 </div>
             </div>
@@ -64,24 +65,26 @@
 
             <div class="btn-container">
                 <button type="button" class="btn btn-primary" id="login-button">
-                    <i class="fas fa-sign-in-alt"></i> 登 录
+                    <i class="fas fa-sign-in-alt"></i> {{ _('auth.login_button') }}
                 </button>
             </div>
         </form>
 
         <div class="login-links">
             <a href="/reg/usr?app_source={{app_source}}" class="login-link">
-                <i class="fas fa-user-plus"></i> 用户注册
+                <i class="fas fa-user-plus"></i> {{ _('auth.register_link') }}
             </a>
             <a href="#" class="login-link" id="forgot-password-link">
-                <i class="fas fa-question-circle"></i> 忘记密码?
+                <i class="fas fa-question-circle"></i> {{ _('auth.forgot_password') }}
             </a>
             <a href="/usr/mnl?app_source={{app_source}}" target="_blank" class="login-link">
-                <i class="fas fa-question-circle"></i> 帮助中心
+                <i class="fas fa-question-circle"></i> {{ _('auth.help_center') }}
             </a>
         </div>
         <div class="warning-message">{{warning_info}}</div>
     </div>
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
     <script type="text/javascript" src="/static/login.js"></script>
     <!-- 图形验证码相关脚本 -->
     <script type="text/javascript">
@@ -99,7 +102,7 @@
             }
             document.getElementById('forgot-password-link')?.addEventListener('click', function(e) {
                 e.preventDefault();
-                alert("请联系管理员");
+                alert(__('auth.contact_admin'));
             });
         });
 
@@ -107,7 +110,7 @@
         function loadCaptcha() {
             const captchaToken = document.getElementById("captcha_token").value;
             if (!captchaToken) {
-                console.error("验证码token不存在");
+                console.error(__('auth.captcha_token_missing'));
                 return;
             }
 
@@ -124,7 +127,7 @@
             fetch(`/captcha/image/${captchaToken}`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('获取验证码失败');
+                        throw new Error(__('auth.captcha_fetch_failed'));
                     }
                     return response.text();
                 })
@@ -181,7 +184,7 @@
                         document.getElementById("captcha_code").value = '';
                         document.getElementById("captcha_code").focus();
                     } else {
-                        alert('刷新验证码失败: ' + data.message);
+                        alert(__('auth.refresh_captcha_failed') + ': ' + data.message);
                         if (placeholder) {
                             placeholder.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
                         }
@@ -189,7 +192,7 @@
                 })
                 .catch(error => {
                     console.error('刷新验证码失败:', error);
-                    alert('刷新验证码失败，请稍后重试');
+                    alert(__('auth.refresh_captcha_failed'));
                     if (placeholder) {
                         placeholder.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
                     }

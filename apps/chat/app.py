@@ -17,6 +17,8 @@ from common import my_enums, statistic_util, cm_utils
 from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login, get_portal_login_url
 from common.cm_utils import estimate_tokens
 from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT, get_const
+from common.i18n._hooks import register_i18n
+from common.i18n import get_msg
 from common.my_enums import AppType
 from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
 from common.sys_init import init_yml_cfg
@@ -32,6 +34,8 @@ app = Flask(__name__, static_folder=None)
 app.config['CFG'] = {}
 app.config['CFG'] = my_cfg
 app.config['APP_SOURCE'] = my_enums.AppType.CHAT.name.lower()
+
+register_i18n(app, scope="chat")
 
 # 配置模板文件夹路径
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -137,7 +141,7 @@ def chat():
 
         if not user_message:
             logger.warning("消息为空")
-            return jsonify({'error': '消息不能为空'}), 400
+            return jsonify({'error': get_msg('chat.error_empty_message')}), 400
 
         # 构建消息历史
         messages = [{"role": "system", "content": LLMConfig.SYSTEM_PROMPT}]
@@ -188,7 +192,7 @@ def chat():
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
-        return jsonify({'error': f'服务器错误: {str(e)}'}), 500
+        return jsonify({'error': get_msg('common.server_error', msg=str(e))}), 500
 
 
 @app.route('/upload', methods=['POST'])
@@ -197,19 +201,19 @@ def upload_file():
     try:
         if 'file' not in request.files:
             logger.warning("没有选择文件")
-            return jsonify({'success': False, 'error': '没有选择文件'}), 400
+            return jsonify({'success': False, 'error': get_msg('chat.error_no_file')}), 400
 
         file = request.files['file']
 
         if file.filename == '':
             logger.warning("文件名为空")
-            return jsonify({'success': False, 'error': '没有选择文件'}), 400
+            return jsonify({'success': False, 'error': get_msg('chat.error_no_file')}), 400
 
         if not allowed_file(file.filename):
             logger.warning(f"不支持的文件类型: {file.filename}")
             return jsonify({
                 'success': False,
-                'error': f'不支持的文件类型。支持的类型: {", ".join(ALLOWED_EXTENSIONS)}'
+                'error': get_msg('chat.error_unsupported_file', name=file.filename)
             }), 400
 
         # 检查文件大小

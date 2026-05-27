@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const kbName = selectedOption.text;
 
             const originalName = selectedOption.dataset.originalName ||
-                   kbName.replace('(默认)', '').trim();
+                   kbName.replace('(' + __('vdb.default_tag').replace(/[()]/g, '') + ')', '').trim();
 
             // 提取知识库信息
             currentKbInfo = {
@@ -88,10 +88,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     selector.dispatchEvent(event);
                 }
             }
-            showNotification('知识库列表已刷新', 'success');
+            showNotification(__('vdb.kb_refreshed'), 'success');
         } catch (error) {
             console.error('刷新失败:', error);
-            showNotification('刷新失败: ' + error.message, 'error');
+            showNotification(__('vdb.refresh_failed') + error.message, 'error');
         } finally {
             // 移除旋转动画
             setTimeout(() => {
@@ -105,13 +105,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     createKB.addEventListener('click', async function() {
         const kbName = document.getElementById('kb_name').value.trim();
         if (!kbName) {
-            showNotification('请输入知识库名称', 'error');
+            showNotification(__('vdb.enter_kb_name'), 'error');
             return;
         }
 
         // 检查知识库名称长度
         if (kbName.length > 50) {
-            showNotification('知识库名称不能超过50个字符', 'error');
+            showNotification(__('vdb.kb_name_too_long'), 'error');
             return;
         }
 
@@ -126,13 +126,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             .filter(name => name && name.toLowerCase() === kbName.toLowerCase());
 
         if (existingNames.length > 0) {
-            showNotification(`知识库名称 "${kbName}" 已存在，请使用其他名称`, 'error');
+            showNotification(__fmt_named('vdb.kb_name_exists', {name: kbName}), 'error');
             return;
         }
         try {
             // 禁用按钮并显示加载状态
             btn.disabled = true;
-            btn.innerHTML = '<div class="spinner"></div> 创建中...';
+            btn.innerHTML = '<div class="spinner"></div> ' + __('vdb.creating');
 
             const response = await fetch('/vdb/create', {
                 method: 'POST',
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const result = await response.json();
             if (result.success) {
                 // 显示成功消息
-                showNotification(`知识库 "${kbName}" 创建成功`, 'success');
+                showNotification(__fmt_named('vdb.kb_created', {name: kbName}), 'success');
 
                 // 重新加载知识库列表
                 await loadKnowledgeBases();
@@ -176,11 +176,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     kbStatus.style.display = 'none';
                 }, 3000);
             } else {
-                throw new Error(result.message || '创建失败');
+                throw new Error(result.message || __('vdb.create_failed'));
             }
         } catch (error) {
             console.error('创建失败:', error);
-            showNotification(`创建失败: ${error.message}`, 'error');
+            showNotification(__fmt_named('vdb.create_failed_msg', {msg: error.message}), 'error');
         } finally {
             // 恢复按钮状态
             btn.disabled = false;
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (invalidFiles.length > 0) {
             const invalidNames = invalidFiles.map(f => f.name).join(', ');
-            alert(`以下文件类型不支持：${invalidNames}\n\n仅支持 PDF、DOCX、TXT 文件`);
+            alert(__fmt_named('vdb.invalid_file_types', {names: invalidNames}));
             // 移除不支持的文件
             const validNewFiles = newFiles.filter(file => {
                 const fileName = file.name.toLowerCase();
@@ -232,7 +232,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const duplicateFiles = newFiles.filter(file => existingFileNames.includes(file.name));
         if (duplicateFiles.length > 0) {
             const duplicateNames = duplicateFiles.map(f => f.name).join(', ');
-            alert(`以下文件已存在，将跳过添加：${duplicateNames}`);
+            alert(__fmt_named('vdb.duplicate_files', {names: duplicateNames}));
         }
 
         // 添加新文件到选中列表
@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 文件数量限制
         const MAX_FILES = 20;
         if (selectedFiles.length > MAX_FILES) {
-            alert(`最多只能选择 ${MAX_FILES} 个文件，已自动忽略超出的部分`);
+            alert(__fmt_named('vdb.max_files_exceeded', {max: MAX_FILES}));
             selectedFiles = selectedFiles.slice(0, MAX_FILES);
         }
         updateFileList(selectedFiles);
@@ -255,11 +255,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 批量上传文档处理
     document.getElementById('startBtn').addEventListener('click', async () => {
         if (!currentKB) {
-            alert('请先选择知识库');
+            alert(__('vdb.select_kb_first'));
             return;
         }
         if (selectedFiles.length === 0) {
-            alert('请先选择 Word/PDF/TXT 文档');
+            alert(__('vdb.select_files_first'));
             return;
         }
 
@@ -267,10 +267,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const startBtn = document.getElementById('startBtn');
         const originalBtnText = startBtn.innerHTML;
         startBtn.disabled = true;
-        startBtn.innerHTML = '<div class="spinner"></div> 上传中...';
+        startBtn.innerHTML = '<div class="spinner"></div> ' + __('vdb.uploading');
 
         // 重置界面
-        document.getElementById('fileUploadResult').textContent = "开始批量处理...";
+        document.getElementById('fileUploadResult').textContent = __('vdb.batch_upload_start');
         const uploadProgress = document.getElementById('uploadProgress');
         uploadProgress.style.display = 'block';
 
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             await uploadFilesSequentially(selectedFiles, currentKB, uid);
         } catch (error) {
             console.error('批量上传失败:', error);
-            document.getElementById('fileUploadResult').textContent = "批量上传失败";
+            document.getElementById('fileUploadResult').textContent = __('vdb.batch_upload_failed');
             // 恢复按钮状态
             startBtn.disabled = false;
             startBtn.innerHTML = originalBtnText;
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!currentKbInfo) return;
 
         const kbName = currentKbInfo.name;
-        const confirmMsg = `确定要删除知识库 "${kbName}" 吗？\n\n此操作将删除所有关联文件，且不可恢复！`;
+        const confirmMsg = __fmt_named('vdb.delete_kb_confirm', {name: kbName});
 
         if (!confirm(confirmMsg)) return;
 
@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             // 禁用按钮并显示加载状态
             deleteBtn.disabled = true;
-            deleteBtn.innerHTML = '<div class="spinner"></div> 删除中...';
+            deleteBtn.innerHTML = '<div class="spinner"></div> ' + __('vdb.deleting');
 
             const response = await fetch('/vdb/delete', {
                 method: 'POST',
@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const result = await response.json();
 
             if (result.success) {
-                showNotification(`知识库 "${kbName}" 已删除`, 'success');
+                showNotification(__fmt_named('vdb.kb_deleted', {name: kbName}), 'success');
 
                 // 重置选择状态
                 resetKbSelection();
@@ -326,11 +326,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 重置选择器
                 document.getElementById('kb_selector').value = "";
             } else {
-                throw new Error(result.message || '删除失败');
+                throw new Error(result.message || __('vdb.delete_failed'));
             }
         } catch (error) {
             console.error('删除失败:', error);
-            showNotification(`删除失败: ${error.message}`, 'error');
+            showNotification(__fmt_named('vdb.delete_failed_msg', {msg: error.message}), 'error');
         } finally {
             // 恢复按钮状态
             deleteBtn.disabled = false;
@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 设置为默认知识库功能
     document.getElementById('setDefaultBtn').addEventListener('click', async () => {
         if (!currentKB) {
-            alert('请先选择知识库');
+            alert(__('vdb.select_kb_first'));
             return;
         }
 
@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             // 禁用按钮并显示加载状态
             setDefaultBtn.disabled = true;
-            setDefaultBtn.innerHTML = '<div class="spinner"></div> 设置中...';
+            setDefaultBtn.innerHTML = '<div class="spinner"></div> ' + __('vdb.set_default');
 
             const response = await fetch('/vdb/set/default', {
                 method: 'POST',
@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const result = await response.json();
 
             if (result.success) {
-                showNotification('已设置为默认知识库！', 'success');
+                showNotification(__('vdb.default_set'), 'success');
                 //更新当前知识库信息
                 if (currentKbInfo) {
                     currentKbInfo.isDefault = true;
@@ -380,11 +380,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const event = new Event('change');
                 selector.dispatchEvent(event);
             } else {
-                throw new Error(result.message || '设置失败');
+                throw new Error(result.message || __('vdb.set_default_failed'));
             }
         } catch (error) {
             console.error('设置默认知识库失败:', error);
-            showNotification(`设置失败: ${error.message}`, 'error');
+            showNotification(__fmt_named('vdb.set_default_failed_msg', {msg: error.message}), 'error');
         } finally {
             // 恢复按钮状态
             setDefaultBtn.disabled = false;
@@ -480,7 +480,7 @@ async function uploadFilesSequentially(files, kbId, uid) {
         const percent = Math.round((completedCount / totalFiles) * 100);
         document.getElementById('overallProgressFill').style.width = `${percent}%`;
         document.getElementById('progressText').textContent =
-            `上传中: ${completedCount}/${totalFiles} (成功: ${successCount}, 失败: ${failCount})`;
+            __fmt_named('vdb.upload_progress', {done: completedCount, total: totalFiles, ok: successCount, fail: failCount});
         document.getElementById('progressPercent').textContent = `${percent}%`;
     };
 
@@ -516,7 +516,7 @@ async function uploadFilesSequentially(files, kbId, uid) {
                 failCount++;
                 failedFiles.push({
                     name: file.name,
-                    error: responseData.message || '未知错误'
+                    error: responseData.message || __('common.unknown_error')
                 });
                 console.error(`文件 "${file.name}" 上传失败:`, responseData.message);
             }
@@ -524,7 +524,7 @@ async function uploadFilesSequentially(files, kbId, uid) {
             failCount++;
             failedFiles.push({
                 name: file.name,
-                error: error.message || '网络错误'
+                error: error.message || __('common.network_error')
             });
             console.error(`文件 "${file.name}" 上传异常:`, error);
         } finally {
@@ -534,9 +534,9 @@ async function uploadFilesSequentially(files, kbId, uid) {
     }
 
     // 上传完成
-    let resultMessage = `批量上传完成！成功: ${successCount}, 失败: ${failCount}`;
+    let resultMessage = __fmt_named('vdb.batch_complete', {ok: successCount, fail: failCount});
     if (failedFiles.length > 0) {
-        resultMessage += `\n失败文件: ${failedFiles.map(f => f.name).join(', ')}`;
+        resultMessage += '\n' + __fmt_named('vdb.failed_files', {files: failedFiles.map(f => f.name).join(', ')});
     }
 
     document.getElementById('fileUploadResult').textContent = resultMessage;
@@ -544,7 +544,7 @@ async function uploadFilesSequentially(files, kbId, uid) {
     // 恢复按钮状态
     const startBtn = document.getElementById('startBtn');
     startBtn.disabled = false;
-    startBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> 上传';
+    startBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> ' + __('vdb.upload_btn');
 
     // 清空文件列表
     clearFileList();
@@ -560,9 +560,9 @@ async function uploadFilesSequentially(files, kbId, uid) {
     // 如果有失败的文件，显示详细信息
     if (failedFiles.length > 0) {
         setTimeout(() => {
-            const failedDetails = failedFiles.map(f => `${f.name}: ${f.error}`).join('\n');
+            const failedDetails = failedFiles.map(f => f.name + ': ' + f.error).join('\n');
             if (failedFiles.length <= 3) {
-                alert(`以下文件上传失败：\n\n${failedDetails}`);
+                alert(__fmt_named('vdb.file_upload_failed_list', {details: failedDetails}));
             } else {
                 console.log('失败文件详情:', failedDetails);
             }
@@ -585,7 +585,7 @@ async function loadKnowledgeBases() {
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`API 错误 ${response.status}: ${errorText.slice(0, 100)}...`);
+            throw new Error(__fmt_named('common.api_error', {status: response.status, msg: errorText.slice(0, 100)}));
         }
 
         const result = await response.json();
@@ -606,7 +606,7 @@ async function loadKnowledgeBases() {
                 option.textContent = kb.name;
                 option.dataset.public = kb.is_public || false;
                 option.dataset.default = kb.is_default || false;
-                option.dataset.originalName = kb.name.replace('(默认)', '').trim();
+                option.dataset.originalName = kb.name.replace('(' + __('vdb.default_tag').replace(/[()]/g, '') + ')', '').trim();
                 selector.appendChild(option);
             });
 
@@ -633,7 +633,7 @@ async function loadKnowledgeBases() {
         }
     } catch (error) {
         console.error('加载知识库失败:', error);
-        showNotification('加载知识库失败: ' + error.message, 'error');
+        showNotification(__('vdb.refresh_failed') + error.message, 'error');
     }
 }
 
@@ -643,7 +643,7 @@ function resetKbSelection() {
     document.getElementById('step2').classList.add('hidden');
     document.getElementById('deleteBtn').style.display = 'none';
     document.getElementById('setDefaultBtn').style.display = 'none';
-    document.getElementById('vdb_status_desc').textContent = '未选择知识库';
+    document.getElementById('vdb_status_desc').textContent = __('vdb.not_selected');
     document.getElementById('fileListContainer').style.display = 'none';
 
     // 隐藏所有徽章
@@ -747,7 +747,7 @@ async function fetchProgress() {
         // 完成检测
         if (data.progress.includes("完成") || data.progress.includes("成功")) {
             clearInterval(progressInterval);
-            document.getElementById('fileUploadResult').textContent = "知识库构建完成!";
+            document.getElementById('fileUploadResult').textContent = __('vdb.kb_build_complete');
             document.getElementById('progressFill').style.width = '100%';
             document.getElementById('stream_output').innerHTML =
                 `<div class="status-container"><i class="fas fa-check-circle"></i> ${data.progress}</div>`;
@@ -761,7 +761,7 @@ async function fetchProgress() {
         }
     } catch (error) {
         console.error('进度获取失败:', error);
-        document.getElementById('fileUploadResult').textContent = "进度获取失败";
+        document.getElementById('fileUploadResult').textContent = __('vdb.progress_failed');
     }
 }
 
@@ -794,11 +794,11 @@ async function loadFileList(kb_id) {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP错误 ${response.status}: ${response.statusText}`);
+            throw new Error(__fmt_named('common.http_error', {status: response.status, msg: response.statusText}));
         }
         const result = await response.json();
         if (!result.files) {
-            throw new Error('返回数据格式错误，缺少 files 属性');
+            throw new Error(__('common.data_format_error'));
         }
         const files = result.files;
         tbody.innerHTML = '';
@@ -816,7 +816,7 @@ async function loadFileList(kb_id) {
             const sequenceNumber = formatSequenceNumber(index, files.length);
 
             // 处理创建时间
-            let createTime = '未知时间';
+            let createTime = __('common.unknown_time');
             if (file.create_time) {
                 try {
                     createTime = new Date(file.create_time).toLocaleString('zh-CN').replace(/\//g, '-');
@@ -838,7 +838,7 @@ async function loadFileList(kb_id) {
                 <td>
                     <button class="btn btn-danger delete-file-btn"
                             data-file-id="${file.id}">
-                        <i class="fas fa-trash"></i> 删除
+                        <i class="fas fa-trash"></i> ${__('vdb.delete_btn')}
                     </button>
                 </td>
             `;
@@ -896,7 +896,7 @@ function truncateFileName(filename, maxLength) {
 // 处理文件删除
 async function handleFileDelete(e) {
     const fileId = e.target.closest('button').dataset.fileId;
-    if (!confirm(`确定要删除这个文件吗？此操作不可恢复！`)) return;
+    if (!confirm(__('vdb.delete_file_confirm'))) return;
 
     const uid = document.getElementById('uid').value;
     const t = document.getElementById('t').value;
@@ -905,7 +905,7 @@ async function handleFileDelete(e) {
 
     try {
         // 显示加载状态
-        btn.innerHTML = '<div class="spinner"></div> 删除中...';
+        btn.innerHTML = '<div class="spinner"></div> ' + __('vdb.deleting');
         btn.disabled = true;
 
         const response = await fetch('/vdb/file/delete', {
@@ -920,15 +920,15 @@ async function handleFileDelete(e) {
         });
 
         const result = await response.json();
-        if (!result.success) throw new Error(result.message || '删除失败');
+        if (!result.success) throw new Error(result.message || __('vdb.delete_failed'));
 
         // 刷新文件列表
         await loadFileList(currentKB);
-        alert('文件已成功删除！');
+        alert(__('vdb.file_deleted'));
 
     } catch (error) {
         console.error('文件删除失败:', error);
-        alert(`删除失败: ${error.message}`);
+        alert(__fmt_named('vdb.delete_failed_msg', {msg: error.message}));
     } finally {
         // 恢复按钮状态
         btn.disabled = false;

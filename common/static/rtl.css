@@ -1,0 +1,99 @@
+/* rtl.css — Arabic RTL layout overrides */
+
+[dir="rtl"] body {
+    direction: rtl;
+    text-align: right;
+    font-family: 'Segoe UI', 'Arabic Typesetting', Tahoma, Arial, sans-serif;
+}
+
+[dir="rtl"] .header,
+[dir="rtl"] header {
+    direction: rtl;
+}
+
+[dir="rtl"] .header-actions,
+[dir="rtl"] .header-bottom {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .input-icon {
+    left: auto;
+    right: 0;
+}
+
+[dir="rtl"] .form-group input {
+    padding-left: 15px;
+    padding-right: 45px;
+}
+
+[dir="rtl"] .chat-history,
+[dir="rtl"] .chat-container {
+    direction: rtl;
+}
+
+[dir="rtl"] .message {
+    text-align: right;
+}
+
+[dir="rtl"] .input-area,
+[dir="rtl"] .input-container {
+    direction: rtl;
+}
+
+[dir="rtl"] .app-grid {
+    direction: rtl;
+}
+
+[dir="rtl"] .app-card {
+    direction: rtl;
+}
+
+[dir="rtl"] .btn,
+[dir="rtl"] button {
+    direction: rtl;
+}
+
+[dir="rtl"] .login-links {
+    direction: rtl;
+}
+
+[dir="rtl"] .toolbar {
+    direction: rtl;
+}
+
+[dir="rtl"] .category-title,
+[dir="rtl"] h1,
+[dir="rtl"] h2,
+[dir="rtl"] h3 {
+    direction: rtl;
+}
+
+[dir="rtl"] .input-wrapper textarea,
+[dir="rtl"] .input-field {
+    direction: rtl;
+    text-align: right;
+}
+
+[dir="rtl"] .review-container,
+[dir="rtl"] .content-area {
+    direction: rtl;
+    text-align: right;
+}
+
+[dir="rtl"] table {
+    direction: rtl;
+}
+
+[dir="rtl"] th,
+[dir="rtl"] td {
+    text-align: right;
+}
+
+[dir="rtl"] .captcha-group,
+[dir="rtl"] .captcha-container {
+    direction: rtl;
+}
+
+[dir="rtl"] .captcha-input-group {
+    flex-direction: row-reverse;
+}

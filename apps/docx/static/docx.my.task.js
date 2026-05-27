@@ -16,7 +16,7 @@ async function fetchTasks() {
             body: JSON.stringify({ uid: uid })
         });
 
-        if (!response.ok) throw new Error('任务获取失败');
+        if (!response.ok) throw new Error(__('common.task_fetch_failed'));
 
         const tasksData = await response.json();
         const tasks = Array.isArray(tasksData) ? tasksData : [tasksData];
@@ -58,8 +58,8 @@ function renderTasksTable(tasks) {
         // 文档标题
         const infoCell = document.createElement('td');
         infoCell.innerHTML = `
-            <div><strong>${task.doc_title || '无标题'}</strong></div>
-            <div style="color: #666; font-size: 0.9rem;">${task.doc_type || '未知类型'}</div>
+            <div><strong>${task.doc_title || __('common.no_title')}</strong></div>
+            <div style="color: #666; font-size: 0.9rem;">${task.doc_type || __('common.unknown_type')}</div>
         `;
 
         // 创建时间
@@ -95,10 +95,10 @@ function renderTasksTable(tasks) {
             downloadCell.innerHTML = `
                 <div class="download-actions">
                     <a href="/docx/preview/task/${task.task_id}?uid=${uid}" class="download-link" target="_blank">
-                        <i class="fas fa-eye"></i> 预览
+                        <i class="fas fa-eye"></i> ${__('common.preview')}
                     </a>
                     <a href="/docx/download/task/${task.task_id}?uid=${uid}" class="download-link">
-                        <i class="fas fa-download"></i> 下载
+                        <i class="fas fa-download"></i> ${__('common.download')}
                     </a>
                 </div>
             `;
@@ -117,27 +117,27 @@ function renderTasksTable(tasks) {
         if (task.status === 'in-progress' || task.status === 'pending') {
             statusButton = `
                 <button class="action-btn action-refresh" onclick="refreshTask('${task.id}')">
-                    <i class="fas fa-sync-alt"></i> 刷新
+                    <i class="fas fa-sync-alt"></i> ${__('common.refresh')}
                 </button>
             `;
         } else if (task.status === 'failed') {
             statusButton = `
                 <button class="action-btn action-refresh" onclick="retryTask('${task.id}')">
-                    <i class="fas fa-redo"></i> 重试
+                    <i class="fas fa-redo"></i> ${__('common.retry')}
                 </button>
             `;
         } else {
             statusButton = `
                 <button class="action-btn" disabled>
-                    <i class="fas fa-check"></i> 完成
+                    <i class="fas fa-check"></i> ${__('common.done')}
                 </button>
             `;
         }
 
         // 删除按钮
         const deleteButton = `
-            <button class="action-btn action-delete" onclick="deleteTask('${task.task_id}', '${task.doc_title || '无标题'}')">
-                <i class="fas fa-trash"></i> 删除
+            <button class="action-btn action-delete" onclick="deleteTask('${task.task_id}', '${task.doc_title || __('common.no_title')}')">
+                <i class="fas fa-trash"></i> ${__('common.delete')}
             </button>
         `;
         actionCell.innerHTML = statusButton + deleteButton;
@@ -158,13 +158,13 @@ function renderTasksTable(tasks) {
 
 // 格式化日期时间，确保月份、日期、小时、分钟、秒都是两位数
 function formatDateTime(dateString, useLocalTime = true) {
-    if (!dateString) return '未知时间';
+    if (!dateString) return __('common.unknown_time');
 
     try {
         const date = new Date(dateString);
 
         if (isNaN(date.getTime())) {
-            return '未知时间';
+            return __('common.unknown_time');
         }
 
         let year, month, day, hours, minutes, seconds;
@@ -190,7 +190,7 @@ function formatDateTime(dateString, useLocalTime = true) {
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     } catch (error) {
         console.error('日期格式化错误:', error);
-        return '未知时间';
+        return __('common.unknown_time');
     }
 }
 
@@ -213,11 +213,11 @@ async function refreshTask(taskId) {
             })
         });
 
-        if (!response.ok) throw new Error('刷新失败');
+        if (!response.ok) throw new Error(__('common.refresh_failed'));
         await fetchTasks();
     } catch (error) {
-        console.error('刷新失败:', error);
-        alert('刷新失败，请重试');
+        console.error('Refresh failed:', error);
+        alert(__('common.refresh_failed'));
     } finally {
         hideLoading();
     }
@@ -242,12 +242,12 @@ async function retryTask(taskId) {
             })
         });
 
-        if (!response.ok) throw new Error('重试失败');
+        if (!response.ok) throw new Error(__('common.retry_failed'));
         await fetchTasks();
-        alert(`任务 ${taskId} 已重新提交`);
+        alert(__fmt_named('docx.retry_submitted', {id: taskId}));
     } catch (error) {
-        console.error('重试失败:', error);
-        alert('重试失败，请重试');
+        console.error('Retry failed:', error);
+        alert(__('common.retry_failed'));
     } finally {
         hideLoading();
     }
@@ -255,7 +255,7 @@ async function retryTask(taskId) {
 
 // 删除任务
 async function deleteTask(taskId, docTitle) {
-    if (!confirm(`确定要删除任务 "${docTitle}" 吗？此操作将删除任务记录和生成的文档，且不可恢复。`)) {
+    if (!confirm(__fmt_named('docx.delete_confirm', {title: docTitle}))) {
         return;
     }
 
@@ -270,14 +270,13 @@ async function deleteTask(taskId, docTitle) {
             }
         });
 
-        if (!response.ok) throw new Error('删除失败');
+        if (!response.ok) throw new Error(__('common.delete_failed'));
 
         const result = await response.json();
-        // 刷新任务列表
         await fetchTasks();
     } catch (error) {
-        console.error('删除失败:', error);
-        alert('删除失败，请重试');
+        console.error('Delete failed:', error);
+        alert(__('common.delete_failed_retry'));
     } finally {
         hideLoading();
     }

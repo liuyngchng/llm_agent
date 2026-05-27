@@ -59,7 +59,7 @@ queryForm.addEventListener('submit', async function(e) {
 
     const query = queryInput.value.trim();
     if (!query) {
-        addMessage("请填写您想问的问题", 'bot');
+        addMessage(__('chat2kb.question_required'), 'bot');
         return;
     }
 
@@ -74,7 +74,7 @@ queryForm.addEventListener('submit', async function(e) {
     } catch (error) {
         console.error("请求出错:", error);
         if (currentBotMessage) {
-            updateBotMessage("回答生成中断或出错，请重试");
+            updateBotMessage(__('chat2kb.generation_error'));
         }
         resetUI();
     }
@@ -97,7 +97,7 @@ stopButton.addEventListener('click', function() {
                 // 添加停止提示（不覆盖已有内容）
                 const stopNotice = document.createElement('div');
                 stopNotice.className = 'stop-notice';
-                stopNotice.textContent = '（生成已停止）';
+                stopNotice.textContent = __('chat2kb.stopped_note');
                 messageBubble.appendChild(stopNotice);
             }
         }
@@ -115,7 +115,7 @@ async function fetchQueryData(query) {
     abortController = new AbortController();
 
     // 添加加载中的消息
-    currentBotMessage = addMessage('<div class="typing-indicator"><span></span><span></span><span></span> 思考中...</div>', 'bot');
+    currentBotMessage = addMessage(`<div class="typing-indicator"><span></span><span></span><span></span> ${__('chat2kb.thinking')}</div>`, 'bot');
 
     try {
         const t = document.getElementById('t').value;
@@ -127,7 +127,7 @@ async function fetchQueryData(query) {
         // 构建历史消息（排除当前用户消息和"思考中"占位）
         const historyMessages = messages.slice(0, -2).slice(-10);
         const history = historyMessages.map(m => {
-            const role = m.type === 'user' ? '用户' : '助手';
+            const role = m.type === 'user' ? __('chat2kb.user_role') : __('chat2kb.assistant_role');
             return `${role}：${m.text}`;
         }).join('\n');
 
@@ -153,10 +153,10 @@ async function fetchQueryData(query) {
                     }
                 } catch (e) { /* fall through */ }
             }
-            throw new Error('网络响应失败');
+            throw new Error(__('chat2kb.network_failed'));
         }
         if (!response.body) {
-            throw new Error('网络响应失败');
+            throw new Error(__('chat2kb.network_failed'));
         }
 
         // 设置当前响应对象
@@ -187,7 +187,7 @@ async function fetchQueryData(query) {
         } else {
             console.error('请求出错:', error);
             if (currentBotMessage) {
-                updateBotMessage("回答生成出错，请重试");
+                updateBotMessage(__('chat2kb.generation_retry'));
             }
         }
     } finally {
@@ -216,7 +216,7 @@ async function loadKnowledgeBases() {
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`API 错误 ${response.status}: ${errorText.slice(0, 100)}...`);
+            throw new Error(`API error ${response.status}: ${errorText.slice(0, 100)}...`);
         }
 
         const result = await response.json();
@@ -237,15 +237,15 @@ async function loadKnowledgeBases() {
             });
 
             // 显示成功提示（可选）
-            showNotification('知识库列表已刷新', 'success');
+            showNotification(__('chat2kb.kb_refreshed'), 'success');
         } else {
             // 显示空提示
-            showNotification('没有可用的知识库', 'info');
+            showNotification(__('chat2kb.no_kb'), 'info');
         }
 
     } catch (error) {
-        console.error('加载知识库失败:', error);
-        showNotification('刷新知识库失败: ' + error.message, 'error');
+        console.error('Load KB failed:', error);
+        showNotification(__('chat2kb.refresh_kb_failed') + error.message, 'error');
     } finally {
         // 移除加载状态
         refreshBtn.disabled = false;
@@ -346,7 +346,7 @@ function addMessageToDOM(text, type) {
         messageContainer.innerHTML = `
             <div class="bot-message-header">
                 <img src="/static/bot.png" alt="AI Assistant">
-                <span>智能助手</span>
+                <span>${__('chat2kb.ai_assistant')}</span>
             </div>
             <div class="message-bubble bot-message-bubble">${sanitizedContent}</div>
         `;
@@ -371,11 +371,11 @@ function addCopyButton(messageContainer, text) {
 
     const copyButton = document.createElement('button');
     copyButton.classList.add('copy-button');
-    copyButton.innerHTML = '<i class="fas fa-copy"></i> 复制';
+    copyButton.innerHTML = `<i class="fas fa-copy"></i> ${__('common.copy')}`;
     copyButton.onclick = function() {
         navigator.clipboard.writeText(text).then(() => {
             const originalText = copyButton.innerHTML;
-            copyButton.innerHTML = '<i class="fas fa-check"></i> 已复制!';
+            copyButton.innerHTML = `<i class="fas fa-check"></i> ${__('chat2kb.copied_state')}`;
             setTimeout(() => {
                 copyButton.innerHTML = originalText;
             }, 2000);

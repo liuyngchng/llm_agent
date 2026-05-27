@@ -26,7 +26,7 @@ function submitQuestion() {
     const streamToggle = document.getElementById('stream-toggle').checked;
 
     if (!question) {
-        resultArea.innerHTML = '<div class="error">请输入问题</div>';
+        resultArea.innerHTML = `<div class="error">${__('mcp_client.question_required')}</div>`;
         return;
     }
 
@@ -150,7 +150,7 @@ function useStreamResponse(question, resultArea, loading, loadingOverlay, submit
             console.log('请求已被取消');
         } else {
             console.error('请求失败:', error);
-            resultArea.innerHTML += `<div class="error">请求失败: ${error.message}</div>`;
+            resultArea.innerHTML += `<div class="error">${__fmt_named('mcp_client.request_failed', {msg: error.message})}</div>`;
         }
 
         // 隐藏加载动画和遮罩
@@ -175,20 +175,20 @@ function useNormalResponse(question, resultArea, loading, loadingOverlay, submit
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            resultArea.innerHTML = `<h3>问题: ${data.question}</h3>
+            resultArea.innerHTML = `<h3>${__('mcp_client.question_prefix')}${data.question}</h3>
                 <hr>
                 <div class="final-result">${renderMarkdown(data.answer)}</div>
             `;
         } else {
             resultArea.innerHTML = `<div class="error">
-                    <strong>错误:</strong> ${renderMarkdown(data.error || '未知错误')}        </div>
+                    <strong>${__('mcp_client.error_label')}</strong> ${renderMarkdown(data.error || __('common.unknown_error'))}        </div>
             `;
         }
     })
     .catch(error => {
         resultArea.innerHTML = `
             <div class="error">
-                <strong>请求失败:</strong> ${error.message}
+                <strong>${__fmt_named('mcp_client.request_failed', {msg: error.message})}</strong>
             </div>
         `;
     })

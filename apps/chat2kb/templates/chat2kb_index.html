@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
     <meta charset="UTF-8">
     <meta id="chat_index.html">
@@ -8,6 +8,7 @@
     <script type="text/javascript" src="/static/marked.min.js"></script>
     <link rel="stylesheet" href="/static/chat2kb.css">
     <link rel="stylesheet" href="/static/font-awesome.all.min.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
     <title>{{sys_name}}</title>
 </head>
 <body>
@@ -15,11 +16,11 @@
         <header>
             <h1><i class="fas fa-comments"></i>{{sys_name}}</h1>
             <div class="system-settings-link-container">
-                <button id="clearChat" class="btn-clear" title="清空聊天">
-                    <i class="fas fa-trash-alt"></i> 清空聊天
+                <button id="clearChat" class="btn-clear" title="{{ _('chat2kb.clear_chat') }}">
+                    <i class="fas fa-trash-alt"></i> {{ _('chat2kb.clear_chat') }}
                 </button>
                 <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="system-settings-link" target="_blank">
-                    <i class="fas fa-book"></i> 知识库配置
+                    <i class="fas fa-book"></i> {{ _('chat2kb.kb_config') }}
                 </a>
             </div>
         </header>
@@ -33,12 +34,12 @@
         <form id="query-form">
             <div class="input-container">
                 <input type="text" class="input-field" id="query-input" name="msg"
-                       placeholder="输入你的问题，帮你深度解答..." required autocomplete="off">
+                       placeholder="{{ _('chat2kb.input_placeholder') }}" required autocomplete="off">
                 <div class="toolbar">
                     <select id="kb_selector" class="kb-selector">
-                        <option value="" disabled selected>-- 选择知识库 --</option>
+                        <option value="" disabled selected>{{ _('chat2kb.select_kb') }}</option>
                     </select>
-                    <button type="button" class="kb-refresh-btn" id="kbRefreshBtn" onclick="loadKnowledgeBases()" title="刷新知识库列表">
+                    <button type="button" class="kb-refresh-btn" id="kbRefreshBtn" onclick="loadKnowledgeBases()" title="{{ _('common.refresh') }}">
                         <i class="fas fa-sync-alt" id="refreshIcon"></i>
                     </button>
                     <select id="model_selector" class="kb-selector">
@@ -49,10 +50,10 @@
                 </div>
                 <div class="button-container">
                     <button type="submit" class="send-button" id="send-button">
-                        <i class="fas fa-paper-plane"></i> 发送
+                        <i class="fas fa-paper-plane"></i> {{ _('chat2kb.send') }}
                     </button>
                     <button type="button" class="stop-button" id="stop-button" style="display:none;">
-                        <i class="fas fa-stop"></i> 停止
+                        <i class="fas fa-stop"></i> {{ _('chat2kb.stop') }}
                     </button>
                 </div>
             </div>
@@ -63,6 +64,8 @@
             <input type="hidden" id ="greeting" name="greeting" value="{{greeting}}">
         </form>
     </div>
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
     <script type="text/javascript" src="/static/chat2kb.js"></script>
 </body>
 </html>

@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 from apps.auth_service import auth_util
 from common import cm_utils
 from common.cm_utils import get_console_arg1, decode_token, create_token
+from common.i18n import get_msg
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
 
@@ -184,13 +185,13 @@ async def require_user(authorization: str = Header("")) -> dict:
     从 Authorization header 解析当前用户，失败则 401
     """
     if not authorization:
-        raise HTTPException(status_code=401, detail="缺少认证 token")
+        raise HTTPException(status_code=401, detail=get_msg('backend.auth_token_missing'))
     token = authorization
     if token.startswith("Bearer "):
         token = token[7:]
     payload = decode_token(token, my_cfg['sys']['cypher_key'])
     if not payload:
-        raise HTTPException(status_code=401, detail="token 无效或已过期")
+        raise HTTPException(status_code=401, detail=get_msg('backend.token_invalid_expired'))
     return payload
 
 
@@ -231,7 +232,7 @@ def generate_captcha_image(captcha_token: str):
     """获取验证码 SVG 图片"""
     info = captcha_codes.get(captcha_token)
     if not info:
-        raise HTTPException(status_code=404, detail="验证码不存在或已过期")
+        raise HTTPException(status_code=404, detail=get_msg('backend.captcha_expired'))
     logger.debug(f"{captcha_token} info: {json.dumps(info)}")
     svg = _generate_captcha_svg(info["text"])
     return Response(content=svg, media_type="image/svg+xml",
@@ -248,14 +249,14 @@ async def login(body: LoginRequest, request: Request):
 
     if not verify_captcha(body.captcha_code, body.captcha_token):
         logger.warning(f"验证码错误 - 用户: {body.usr}")
-        raise HTTPException(status_code=400, detail="验证码错误")
+        raise HTTPException(status_code=400, detail=get_msg('backend.captcha_incorrect'))
     cypher_key = my_cfg['sys']['cypher_key']
     logger.debug(f"auth_user({body.usr}, {body.t}, {cypher_key})")
     result = auth_util.auth_user(body.usr, body.t, cypher_key)
     logger.debug(f"{result}")
     if not result["pass"]:
         logger.error(f"认证失败 - 用户: {body.usr}, 原因: {result.get('msg')}")
-        raise HTTPException(status_code=401, detail=result.get("msg", "登录失败"))
+        raise HTTPException(status_code=401, detail=result.get("msg", get_msg('backend.login_failed')))
 
     # 清理验证码
     if body.captcha_token in captcha_codes:
@@ -283,19 +284,19 @@ async def register(body: RegisterRequest):
 
     if not verify_captcha(body.captcha_code, body.captcha_token):
         logger.warning(f"注册验证码错误 - 用户: {body.usr}")
-        raise HTTPException(status_code=400, detail="验证码错误")
+        raise HTTPException(status_code=400, detail=get_msg('backend.captcha_incorrect'))
     logger.debug(f"get_uid_by_user, {body.usr}")
     if auth_util.get_uid_by_user(body.usr) is not None:
         logger.error(f"注册失败 - 用户已存在: {body.usr}")
-        raise HTTPException(status_code=409, detail=f"用户 {body.usr} 已存在")
+        raise HTTPException(status_code=409, detail=get_msg('backend.user_exists', usr=body.usr))
     logger.debug(f"save_usr, {body.usr}")
     if not auth_util.save_usr(body.usr, body.t):
-        raise HTTPException(status_code=500, detail="用户创建失败")
+        raise HTTPException(status_code=500, detail=get_msg('backend.user_creation_failed'))
     logger.debug(f"get_uid_by_user, {body.usr}")
     uid = auth_util.get_uid_by_user(body.usr)
     logger.debug(f"get_user, {uid}")
     if uid is None:
-        raise HTTPException(status_code=500, detail="用户创建后查询失败")
+        raise HTTPException(status_code=500, detail=get_msg('backend.user_query_failed'))
     logger.debug("del_captcha_codes")
     if body.captcha_token in captcha_codes:
         del captcha_codes[body.captcha_token]
@@ -307,7 +308,7 @@ async def register(body: RegisterRequest):
         "access_token": token,
         "token_type": "bearer",
         "uid": uid,
-        "message": f"用户 {body.usr} 注册成功",
+        "message": get_msg('backend.user_register_success', usr=body.usr),
     }
     logger.debug(f"return_reg_info {info}")
     return info
@@ -337,7 +338,7 @@ def me(user: dict = Depends(require_user)):
     """获取当前登录用户的信息"""
     info = auth_util.get_user_info_by_uid(user["uid"])
     if not info:
-        raise HTTPException(status_code=404, detail="用户不存在")
+        raise HTTPException(status_code=404, detail=get_msg('backend.user_not_found'))
     return info
 
 
@@ -346,7 +347,7 @@ def get_user_info(uid: int):
     """根据 uid 查询用户信息（内部调用，无需认证）"""
     info = auth_util.get_user_info_by_uid(uid)
     if not info:
-        raise HTTPException(status_code=404, detail="用户不存在")
+        raise HTTPException(status_code=404, detail=get_msg('backend.user_not_found'))
     return info
 
 
@@ -355,7 +356,7 @@ def search_user(username: str, user: dict = Depends(require_user)):
     """根据用户名查询用户"""
     uid = auth_util.get_uid_by_user(username)
     if not uid:
-        raise HTTPException(status_code=404, detail="用户不存在")
+        raise HTTPException(status_code=404, detail=get_msg('backend.user_not_found'))
     info = auth_util.get_user_info_by_uid(uid)
     return info
 

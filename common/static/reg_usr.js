@@ -15,19 +15,19 @@ document.getElementById("register-button").onclick = function () {
     warningMessage.style.display = 'none';
 
     if (username === '') {
-        alert("请输入用户名");
+        alert(__('auth.please_enter_username'));
         return;
     }
     if (password === '') {
-        alert("请输入密码");
+        alert(__('auth.please_enter_password'));
         return;
     }
     if (captchaCode === '') {
-        alert("请输入图形验证码");
+        alert(__('auth.please_enter_captcha'));
         return;
     }
     if (captchaCode.length !== 4) {
-        alert("图形验证码必须是4位数字");
+        alert(__('auth.captcha_must_be_4_digits'));
         return;
     }
 

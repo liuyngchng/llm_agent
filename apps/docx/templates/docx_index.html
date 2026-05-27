@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
     <meta charset="UTF-8">
     <meta id="docx_index.html">
@@ -7,6 +7,9 @@
     <title>{{sys_name}}</title>
     <link rel="stylesheet" href="/static/docx.css">
     <link rel="stylesheet" href="/static/font-awesome.all.min.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
     <script type="text/javascript" src="/static/marked.min.js"></script>
     <script type="text/javascript" src="/static/purify.min.js"></script>
     <script type="text/javascript" src="/static/docx.js"></script>
@@ -17,14 +20,14 @@
         <header>
             <div class="header-buttons">
                 <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="knowledge-btn" target="_blank">
-                    <i class="fas fa-book"></i> 资料管理
+                    <i class="fas fa-book"></i> {{ _('docx.material_management') }}
                 </a>
                 <a href="/docx/task?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="my-btn" target="_blank">
-                    <i class="fas fa-user"></i> 写作任务
+                    <i class="fas fa-user"></i> {{ _('docx.writing_tasks') }}
                 </a>
             </div>
             <h1><i class="fas fa-file-word"></i> {{sys_name}}</h1>
-            <p>四步创建专业文档，智能生成，高效便捷</p>
+            <p>{{ _('docx.subtitle') }}</p>
         </header>
 
         <div class="progress-container">
@@ -32,19 +35,19 @@
                 <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
                 <div class="step active">
                     <span>1</span>
-                    <div class="step-label">制订写作计划</div>
+                    <div class="step-label">{{ _('docx.step1_label') }}</div>
                 </div>
                 <div class="step">
                     <span>2</span>
-                    <div class="step-label">生成文档目录</div>
+                    <div class="step-label">{{ _('docx.step2_label') }}</div>
                 </div>
                 <div class="step">
                     <span>3</span>
-                    <div class="step-label">编辑文档目录</div>
+                    <div class="step-label">{{ _('docx.step3_label') }}</div>
                 </div>
                 <div class="step">
                     <span>4</span>
-                    <div class="step-label">提交写作任务</div>
+                    <div class="step-label">{{ _('docx.step4_label') }}</div>
                 </div>
             </div>
         </div>
@@ -52,17 +55,16 @@
         <div class="step-content">
             <!-- 步骤1: 制定写作计划 -->
             <div class="step-panel active" id="step1">
-                <h2><i class="fas fa-clipboard-list"></i> 制订写作计划</h2>
-                <p>请按需制订写作计划，系统将自动生成相应文档；若提前建立
-                    <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="knowledge-btn" target="_blank">参考材料库</a>
-                    ，写作时可以提高文档写作质量
+                <h2><i class="fas fa-clipboard-list"></i> {{ _('docx.step1_label') }}</h2>
+                <p>{{ _('docx.step1_desc') }}
+                    <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="knowledge-btn" target="_blank">{{ _('docx.material_management') }}</a>
                 </p>
 
                 <div class="form-group">
-                    <label for="docTypeInput">【1】文档类型</label>
-                    <input type="text" id="docTypeInput" list="docTypes" name="doc_type" placeholder="可以直接输入，也可以从下拉菜单中选取">
+                    <label for="docTypeInput">{{ _('docx.doc_type_label') }}</label>
+                    <input type="text" id="docTypeInput" list="docTypes" name="doc_type" placeholder="{{ _('docx.doc_type_hint') }}">
                     <datalist id="docTypes">
-                        <option value="">-- 请选择文档类型 --</option>
+                        <option value="">{{ _('docx.select_doc_type') }}</option>
                         <option value="会议纪要"></option>
                         <option value="国家标准"></option>
                         <option value="可行性研究报告"></option>
@@ -73,59 +75,59 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="docTitle">【2】文档标题</label>
-                    <input type="text" id="docTitle" placeholder="请输入文档标题">
+                    <label for="docTitle">{{ _('docx.doc_title_label') }}</label>
+                    <input type="text" id="docTitle" placeholder="{{ _('docx.doc_title_placeholder') }}">
                 </div>
 
                 <div class="form-group">
-                    <label for="keywords">【3】其他要求 (可选项)</label>
-                    <textarea cols="100" rows="3" id="keywords" placeholder="例如每个章节的写作字数等（目前默认800字）"></textarea>
+                    <label for="keywords">{{ _('docx.other_requirements_label') }}</label>
+                    <textarea cols="100" rows="3" id="keywords" placeholder="{{ _('docx.other_requirements_hint') }}"></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label for="knowledgeBase">【4】参考材料 (可选项)</label>
+                    <label for="knowledgeBase">{{ _('docx.reference_label') }}</label>
                     <select id="knowledgeBase">
-                        <option value="">-- 选择参考材料库 --</option>
+                        <option value="">{{ _('docx.select_reference') }}</option>
                     </select>
                 </div>
 
                 <div class="btn-container">
                     <div></div> <!-- 占位元素 -->
                     <button class="btn btn-primary" onclick="nextStep(1)">
-                        下一步 <i class="fas fa-arrow-right"></i>
+                        {{ _('docx.next_step') }} <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
             </div>
 
             <!-- 步骤2: 显示生成文档目录 -->
             <div class="step-panel" id="step2">
-                <h2><i class="fas fa-sitemap"></i> 生成文档目录</h2>
-                <p>可以选择通过系统自动生成目录，也可以上传自定义Word模板，还可以上传含批注修改意见的文档</p>
+                <h2><i class="fas fa-sitemap"></i> {{ _('docx.step2_label') }}</h2>
+                <p>{{ _('docx.step2_desc') }}</p>
 
                 <div class="template-selector">
-                    <h3>选择目录来源</h3>
+                    <h3>{{ _('docx.outline_source_label') }}</h3>
                     <div class="template-options">
                         <div class="template-option active" id="systemTemplate" onclick="selectTemplate('system')">
                             <i class="fas fa-robot"></i>
-                            <h3>系统智能生成</h3>
-                            <p>基于文档类型自动生成专业目录结构</p>
+                            <h3>{{ _('docx.auto_generate') }}</h3>
+                            <p>{{ _('docx.auto_generate_desc') }}</p>
                         </div>
                         <div class="template-option" id="customTemplate" onclick="selectTemplate('custom')">
                             <i class="fas fa-file-upload"></i>
-                            <h3>上传Word模板/含批注修改意见文档</h3>
-                            <p>使用自定义模板提取三级目录结构</p>
-                            <p>支持按照批注修改文档</p>
+                            <h3>{{ _('docx.upload_template') }}</h3>
+                            <p>{{ _('docx.upload_template_desc') }}</p>
+                            <p>{{ _('docx.upload_template_desc2') }}</p>
                         </div>
                     </div>
 
                     <div class="upload-container" id="uploadContainer">
                         <i class="fas fa-cloud-upload-alt"></i>
-                        <h3>上传Word文档模板</h3>
-                        <p>支持.docx格式文件，系统将自动提取三级目录结构</p>
+                        <h3>{{ _('docx.upload_word_title') }}</h3>
+                        <p>{{ _('docx.upload_word_hint') }}</p>
 
                         <div class="upload-btn">
                             <button class="btn btn-primary">
-                                <i class="fas fa-file-word"></i> 选择Word文件
+                                <i class="fas fa-file-word"></i> {{ _('docx.choose_file') }}
                             </button>
                             <input type="file" class="file-input" id="templateFile" accept=".docx" onchange="handleFileUpload(this)">
                         </div>
@@ -133,7 +135,7 @@
                         <div class="file-info" id="fileInfo">
                             <div class="file-name">
                                 <i class="fas fa-file-word"></i>
-                                <span id="fileName">未选择文件</span>
+                                <span id="fileName">{{ _('docx.no_file_selected') }}</span>
                             </div>
                             <div class="file-size" id="fileSize">-</div>
                         </div>
@@ -143,29 +145,29 @@
                 <div class="outline-container" id="outlineContainer">
                     <div class="info-message">
                         <i class="fas fa-info-circle"></i>
-                        <p>请选择目录来源，系统将自动生成或提取目录结构</p>
+                        <p>{{ _('docx.choose_outline_source') }}</p>
                     </div>
                 </div>
 
                 <div class="btn-container">
                     <button class="btn btn-secondary" onclick="prevStep(2)">
-                        <i class="fas fa-arrow-left"></i> 上一步
+                        <i class="fas fa-arrow-left"></i> {{ _('docx.prev_step') }}
                     </button>
                     <button class="btn btn-primary" id="confirmOutlineBtn" disabled onclick="nextStep(2)">
-                        确认并编辑 <i class="fas fa-edit"></i>
+                        {{ _('docx.confirm_edit') }} <i class="fas fa-edit"></i>
                     </button>
                 </div>
             </div>
 
             <!-- 步骤3: 编辑目录 -->
-            <div class="step-panel" id="step3">
-                <h2><i class="fas fa-edit"></i> 编辑文档目录</h2>
-                <p>请确认以下文档目录（须保持正确的缩进），完成后点击“提交任务”按钮</p>
+            <div class=”step-panel” id=”step3”>
+                <h2><i class=”fas fa-edit”></i> {{ _('docx.step3_label') }}</h2>
+                <p>{{ _('docx.step3_desc') }}</p>
 
                 <div class="progress-display" id="progressDisplay">
                     <div class="progress-text">
                         <i class="fas fa-sync-alt fa-spin"></i>
-                        <span id="progressText">文档生成中，请稍候...</span>
+                        <span id="progressText">{{ _('docx.generating') }}</span>
                     </div>
                     <div class="progress-bar-container">
                         <div class="progress-bar-fill" id="progressBarFill"></div>
@@ -173,15 +175,15 @@
                 </div>
 
                 <div class="form-group">
-                    <textarea id="modifiedOutline" rows="20" placeholder="在此编辑您的文档结构..."></textarea>
+                    <textarea id="modifiedOutline" rows="20" placeholder="{{ _('docx.edit_outline_placeholder') }}"></textarea>
                 </div>
 
                 <div class="btn-container">
                     <button class="btn btn-secondary" onclick="prevStep(3)">
-                        <i class="fas fa-arrow-left"></i> 上一步
+                        <i class="fas fa-arrow-left"></i> {{ _('docx.prev_step') }}
                     </button>
                     <button class="btn btn-primary" id="generateBtn" onclick="gen_doc()">
-                        提交任务 <i class="fas fa-file-word"></i>
+                        {{ _('docx.submit_task') }} <i class="fas fa-file-word"></i>
                     </button>
                 </div>
             </div>

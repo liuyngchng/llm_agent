@@ -19,7 +19,7 @@ async function fetchTasks() {
                 showErrorState();
                 return;
             }
-            throw new Error('任务获取失败');
+            throw new Error(__('common.task_fetch_failed'));
         }
 
         const statisticData = await response.json();
@@ -108,13 +108,13 @@ function showErrorState() {
 
 // 格式化日期时间，确保月份、日期、小时、分钟、秒都是两位数
 function formatDateTime(dateString, useLocalTime = true) {
-    if (!dateString) return '未知时间';
+    if (!dateString) return __('common.unknown_time');
 
     try {
         const date = new Date(dateString);
 
         if (isNaN(date.getTime())) {
-            return '未知时间';
+            return __('common.unknown_time');
         }
 
         let year, month, day, hours, minutes, seconds;
@@ -140,7 +140,7 @@ function formatDateTime(dateString, useLocalTime = true) {
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     } catch (error) {
         console.error('日期格式化错误:', error);
-        return '未知时间';
+        return __('common.unknown_time');
     }
 }
 

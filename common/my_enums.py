@@ -74,18 +74,20 @@ class AppType(Enum):
     @staticmethod
     def get_app_list() -> list:
         """获取应用类型列表"""
-        return [{"name":app_type.name, "value":app_type.value} for app_type in AppType]
+        from common.i18n import get_msg
+        return [{"name": app_type.name, "value": get_msg(f"app_type.{app_type.name}")} for app_type in AppType]
 
     @staticmethod
     def get_app_type(app_str: str | None) -> str:
         """根据输入字符串获取对应的应用类型"""
+        from common.i18n import get_msg
         if not app_str:
-            return "AI 应用"
-        app_upper = app_str.upper()  # 转换为大写匹配枚举键
+            return get_msg("app_type.PORTAL")
+        app_upper = app_str.upper()
         try:
-            return AppType[app_upper].value
+            return get_msg(f"app_type.{AppType[app_upper].name}")
         except KeyError:
-            return "AI 应用"  # 或抛出异常
+            return get_msg("app_type.PORTAL")
 
 class ActorRole(Enum):
     """

@@ -16,6 +16,7 @@ import requests
 
 from common.const import get_const
 from common.my_enums import AppType
+from common.i18n import get_msg
 
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
@@ -385,7 +386,7 @@ def llm_health_check(llm_api_uri: str, llm_api_key: str, llm_model_name: str) ->
         if response.status_code != 200:
             logger.info(f"HTTP_ERR: {response.status_code} - {response.text}")
             check_result['status'] = response.status_code
-            check_result['msg'] = "大语言模型服务状态异常"
+            check_result['msg'] = get_msg('backend.llm_status_abnormal')
             return check_result
 
         # 解析响应
@@ -401,34 +402,34 @@ def llm_health_check(llm_api_uri: str, llm_api_key: str, llm_model_name: str) ->
             check_result['status'] = 200
             return check_result
         else:
-            msg = "大语言模型服务响应格式异常"
+            msg = get_msg('backend.llm_response_format_error')
             logger.info(msg)
             check_result['status'] = 302
             check_result['msg'] = msg
             return check_result
 
     except requests.exceptions.Timeout:
-        msg = "大语言模型服务请求超时"
+        msg = get_msg('backend.llm_timeout')
         logger.error(msg)
         check_result['msg'] = msg
         return check_result
     except requests.exceptions.ConnectionError:
-        msg = "大语言模型服务连接错误"
+        msg = get_msg('backend.llm_connection_error')
         logger.error(msg)
         check_result['msg'] = msg
         return check_result
     except requests.exceptions.RequestException as e:
-        msg = "大语言模型服务请求异常"
+        msg = get_msg('backend.llm_request_error')
         logger.error(f"{msg}: {e}")
         check_result['msg'] = msg
         return check_result
     except json.JSONDecodeError:
-        msg ="大语言模型服务返回 JSON 解析错误"
+        msg =get_msg('backend.llm_json_parse_error')
         logger.error(msg)
         check_result['msg'] = msg
         return check_result
     except Exception as e:
-        msg = "大语言模型服务请求未知错误"
+        msg = get_msg('backend.llm_unknown_error')
         logger.error(f"{msg}: {e}")
         check_result['msg'] = msg
         return check_result

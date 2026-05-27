@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
     <meta charset="UTF-8">
     <meta id="paper_review_index.html">
@@ -7,6 +7,9 @@
     <title>{{sys_name}}</title>
     <link rel="stylesheet" href="/static/paper_review.css">
     <link rel="stylesheet" href="/static/font-awesome.all.min.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
     <script type="text/javascript" src="/static/paper_review.js"></script>
 </head>
 <body>
@@ -20,33 +23,33 @@
 
             <div class="header-buttons">
                 <a href="/paper_review/task?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="my-btn" target="_blank">
-                    <i class="fas fa-user"></i> 我的任务
+                    <i class="fas fa-user"></i> {{ _('paper_review.my_tasks') }}
                 </a>
                 <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="my-btn" target="_blank">
-                    <i class="fas fa-book"></i> 知识库管理
+                    <i class="fas fa-book"></i> {{ _('paper_review.kb_management') }}
                 </a>
             </div>
             <h1><i class="fas fa-user-tie"></i>{{sys_name}}</h1>
-            <p>根据评审标准和评审材料，系统自动生成评审结果</p>
+            <p>{{ _('paper_review.subtitle') }}</p>
         </header>
 
         <div class="step-panel active" id="step1">
-            <h2><i class="fas fa-edit"></i> 提交评审材料</h2>
+            <h2><i class="fas fa-edit"></i> {{ _('paper_review.submit_materials') }}</h2>
             <div class="form-group">
-                <label for="reviewTopic">【1】材料名称/题目</label>
-                <input type="text" id="reviewTopic" list="topicList" name="doc_title" placeholder="可以直接输入，也可以从下拉菜单中选取">
+                <label for="reviewTopic">{{ _('paper_review.topic_name_label') }}</label>
+                <input type="text" id="reviewTopic" list="topicList" name="doc_title" placeholder="{{ _('paper_review.topic_hint') }}">
                 <datalist id="topicList">
-                    <option value="">-- 请选择评审主题 --</option>
+                    <option value="">{{ _('paper_review.select_topic') }}</option>
                     {% for topic in arg1 %}
                     <option value="{{ topic }}">{{ topic }}</option>
                     {% endfor %}
                 </datalist>
             </div>
             <div class="form-group">
-                <label for="reviewTopic">【2】评审类别</label>
-                <input type="text" id="reviewType" list="typeList" name="doc_type" placeholder="可以直接输入，也可以从下拉菜单中选取">
+                <label for="reviewTopic">{{ _('paper_review.category_label') }}</label>
+                <input type="text" id="reviewType" list="typeList" name="doc_type" placeholder="{{ _('paper_review.topic_hint') }}">
                 <datalist id="typeList">
-                    <option value="">-- 请选择评审类别 --</option>
+                    <option value="">{{ _('paper_review.select_category') }}</option>
                     {% for topic in arg2 %}
                     <option value="{{ topic }}">{{ topic }}</option>
                     {% endfor %}
@@ -54,10 +57,10 @@
             </div>
 
             <div class="form-group">
-                <label for="reviewTopic">【3】知识库</label>
+                <label for="reviewTopic">{{ _('paper_review.kb_label') }}</label>
                 <div class="kb-selector-container">
                     <select id="kb_selector" class="kb-selector">
-                        <option value="" disabled selected>-- 选择知识库 --</option>
+                        <option value="" disabled selected>{{ _('paper_review.select_kb') }}</option>
                     </select>
                     <button type="button" class="kb-refresh-btn" id="kbRefreshBtn" onclick="loadKnowledgeBases()" title="刷新知识库列表">
                         <i class="fas fa-sync-alt"></i>
@@ -66,23 +69,23 @@
             </div>
 
             <div class="form-group">
-                <label for="reviewCriteria">【4】评审标准</label>
+                <label for="reviewCriteria">{{ _('paper_review.criteria_label') }}</label>
                 <div class="upload-container">
                     <i class="fas fa-file-alt"></i>
-                    <h3>上传评审标准</h3>
-                    <p>支持上传 Excel (.xlsx) 、Word (.docx) 或 Markdown（.md）格式的评审标准文件</p>
+                    <h3>{{ _('paper_review.upload_criteria') }}</h3>
+                    <p>{{ _('paper_review.criteria_desc') }}</p>
 
                     <div class="upload-section">
                         <div class="upload-btn">
                             <button class="btn btn-primary">
-                                <i class="fas fa-file-alt"></i> 选择评审标准
+                                <i class="fas fa-file-alt"></i> {{ _('paper_review.choose_criteria') }}
                             </button>
                             <input type="file" class="file-input" id="reviewCriteria" accept=".xlsx,.docx, .md" onchange="handleCriteriaUpload(this)">
                         </div>
                         <!-- 移动预览按钮到这里 -->
                         <div class="preview-action" id="criteriaPreviewAction" style="display: none;">
                             <a href="#" id="criteriaPreviewLink" class="preview-link" target="_blank">
-                                <i class="fas fa-eye"></i> 预览
+                                <i class="fas fa-eye"></i> {{ _('paper_review.preview_btn') }}
                             </a>
                         </div>
                     </div>
@@ -91,7 +94,7 @@
                         <div class="file-name-container">
                             <div class="file-name">
                                 <i class="fas fa-file-alt" id="criteriaFileIcon"></i>
-                                <span id="criteriaFileName">未选择文件</span>
+                                <span id="criteriaFileName">{{ _('paper_review.no_file') }}</span>
                             </div>
                             <div class="file-size" id="criteriaFileSize">-</div>
                         </div>
@@ -100,24 +103,24 @@
             </div>
 
             <div class="form-group">
-                <label for="reviewPaperFile">【5】评审材料</label>
+                <label for="reviewPaperFile">{{ _('paper_review.materials_label') }}</label>
                 <div class="upload-container active" id="uploadContainer">
                     <i class="fas fa-cloud-upload-alt"></i>
-                    <h3>上传评审材料</h3>
-                    <p>支持上传Word docx 格式的评审材料，系统将基于评审标准生成标准化的评审结果</p>
-                    <p>** Word 文档需要至少包含二级标题</p>
+                    <h3>{{ _('paper_review.upload_materials') }}</h3>
+                    <p>{{ _('paper_review.materials_desc') }}</p>
+                    <p>{{ _('paper_review.materials_note') }}</p>
 
                     <div class="upload-section">
                         <div class="upload-btn">
                             <button class="btn btn-primary">
-                                <i class="fas fa-file-word"></i> 选择评审材料
+                                <i class="fas fa-file-word"></i> {{ _('paper_review.choose_materials') }}
                             </button>
                             <input type="file" class="file-input" id="reviewPaperFile" accept=".docx" onchange="handleDocxUpload(this)">
                         </div>
                         <!-- 移动预览按钮到这里 -->
                         <div class="preview-action" id="docxPreviewAction" style="display: none;">
                             <a href="#" id="docxPreviewLink" class="preview-link" target="_blank">
-                                <i class="fas fa-eye"></i> 预览
+                                <i class="fas fa-eye"></i> {{ _('paper_review.preview_btn') }}
                             </a>
                         </div>
                     </div>
@@ -126,7 +129,7 @@
                         <div class="file-name-container">
                             <div class="file-name">
                                 <i class="fas fa-file-word"></i>
-                                <span id="docxFileName">未选择文件</span>
+                                <span id="docxFileName">{{ _('paper_review.no_file') }}</span>
                             </div>
                             <div class="file-size" id="docxFileSize">-</div>
                         </div>
@@ -136,7 +139,7 @@
 
             <div class="generate-btn-container">
                 <button class="btn btn-primary generate-btn" id="generateBtn" onclick="gen_review_report()">
-                    生成评审报告 <i class="fas fa-file-contract"></i>
+                    {{ _('paper_review.generate_report') }} <i class="fas fa-file-contract"></i>
                 </button>
             </div>
         </div>

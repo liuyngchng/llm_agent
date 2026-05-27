@@ -28,9 +28,9 @@ function selectTemplate(type) {
     // 更新按钮文本
     const confirmBtn = document.getElementById('confirmOutlineBtn');
     if (type === 'custom') {
-        confirmBtn.innerHTML = '下一步 <i class="fas fa-arrow-right"></i>';
+        confirmBtn.innerHTML = `${__('docx.next_step')} <i class="fas fa-arrow-right"></i>`;
     } else {
-        confirmBtn.innerHTML = '确认并编辑 <i class="fas fa-edit"></i>';
+        confirmBtn.innerHTML = `${__('docx.confirm_edit')} <i class="fas fa-edit"></i>`;
     }
     // 更新UI
     document.getElementById('systemTemplate').classList.toggle('active', type === 'system');
@@ -52,9 +52,9 @@ function selectTemplate(type) {
             outlineContainer.innerHTML = `
                 <div class="info-message" style="text-align: center; padding: 30px;">
                     <i class="fas fa-robot" style="font-size: 3rem; color: #4b6cb7; margin-bottom: 15px;"></i>
-                    <p>已选择系统智能生成模式，点击下方按钮生成目录</p>
+                    <p>${__('docx.auto_generate_selected')}</p>
                     <button class="btn btn-primary" onclick="generateOutline()" style="margin-top: 20px;">
-                    <i class="fas fa-sync-alt"></i> 生成目录
+                    <i class="fas fa-sync-alt"></i> ${__('docx.generate_outline_btn')}
                     </button>
                 </div>
             `;
@@ -63,7 +63,7 @@ function selectTemplate(type) {
         outlineContainer.innerHTML = `
             <div class="info-message" style="text-align: center; padding: 30px;">
                 <i class="fas fa-file-upload" style="font-size: 3rem; color: #4b6cb7; margin-bottom: 15px;"></i>
-                <p>请上传Word文档模板，系统将自动提取三级目录</p>
+                <p>${__('docx.upload_template_selected')}</p>
             </div>
         `;
     }
@@ -76,11 +76,11 @@ function nextStep(step) {
         const docType = document.getElementById('docTypeInput').value;
         const docTitle = document.getElementById('docTitle').value;
         if (!docType) {
-            alert('请选择文档类型');
+            alert(__('docx.select_doc_type_alert'));
             return;
         }
         if (!docTitle.trim()) {
-            alert('请输入文档标题');
+            alert(__('docx.enter_doc_title_alert'));
             return;
         }
     }
@@ -134,7 +134,7 @@ function handleFileUpload(input) {
     if (!file) return;
     // 验证文件类型
     if (!file.name.endsWith('.docx')) {
-        alert('请上传 .docx 格式的Word文档');
+        alert(__('docx.upload_docx_alert'));
         return;
     }
     // 显示文件信息
@@ -165,7 +165,7 @@ async function uploadTemplateFile(file) {
     outlineContainer.innerHTML = `
         <div class="loading">
             <div class="snake-loader"></div>
-            <p>正在解析Word模板，提取目录结构<span class="loading-dots"></span></p>
+            <p>${__('docx.parsing_template')}<span class="loading-dots"></span></p>
         </div>
     `;
     const formData = new FormData();
@@ -181,12 +181,12 @@ async function uploadTemplateFile(file) {
             body: formData
         });
         if (!response.ok) {
-            throw new Error('文件上传失败');
+            throw new Error(__('common.submit_failed'));
         }
         const data = await response.json();
         // 检查目录是否为空
         if (!data.outline || data.outline.length === 0) {
-            throw new Error('请上传含有三级目录的 Word docx模板');
+            throw new Error(__('docx.need_three_level_alert'));
         }
         // 记录上传的文件模板的名称
         document.getElementById('file_name').value = data.file_name;
@@ -203,9 +203,9 @@ async function uploadTemplateFile(file) {
         outlineContainer.innerHTML = `
         <div class="error-message" style="color: #e74c3c; text-align: center; padding: 30px;">
             <i class="fas fa-exclamation-triangle" style="font-size: 3rem;"></i>
-            <p>文件解析失败: ${error.message}</p>
+            <p>${__('docx.parsing_failed')}${error.message}</p>
             <button class="btn btn-secondary" onclick="selectTemplate('custom')" style="margin-top: 20px;">
-                重新上传
+                ${__('docx.reupload')}
             </button>
         </div>
         `;
@@ -227,7 +227,7 @@ function generateOutline() {
     outlineContainer.innerHTML = `
         <div class="loading">
             <div class="snake-loader"></div>
-            <p>正在生成文档目录结构<span class="loading-dots"></span></p>
+            <p>${__('docx.generating_outline')}<span class="loading-dots"></span></p>
         </div>
     `;
     // 清空之前的Markdown内容
@@ -249,7 +249,7 @@ function generateOutline() {
     .then(response => {
         if (!response.ok) {
             return response.json().then(errorData => {
-                throw new Error(errorData.error || '生成失败，请重试');
+                throw new Error(errorData.error || __('docx.gen_failed'));
             });
         }
         const reader = response.body.getReader();
@@ -269,7 +269,7 @@ function generateOutline() {
                 if (markdownContent.startsWith('{"error"') && markdownContent.endsWith('"}')) {
                     try {
                         const err = JSON.parse(markdownContent);
-                        throw new Error(err.error || '生成失败，请重试');
+                        throw new Error(err.error || __('docx.gen_failed'));
                     } catch (e) {
                         // 不是 JSON 解析错误则继续抛出让 .catch() 处理
                         if (!(e instanceof SyntaxError)) throw e;
@@ -292,7 +292,7 @@ function generateOutline() {
             <i class="fas fa-exclamation-triangle" style="font-size: 3rem;"></i>
             <p style="margin-top: 15px; font-size: 1.1rem;">${error.message}</p>
             <button class="btn btn-secondary" onclick="generateOutline()" style="margin-top: 20px;">
-              <i class="fas fa-redo"></i> 重新生成
+              <i class="fas fa-redo"></i> ${__('docx.regenerate_btn')}
             </button>
          </div>
        `;
@@ -439,7 +439,7 @@ async function gen_doc() {
 
     // 禁用按钮
     generateBtn.disabled = true;
-    generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+    generateBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${__('docx.submitting')}`;
 
     let apiUrl, postData;
     if (outlineSource === 'system') {
@@ -477,19 +477,19 @@ async function gen_doc() {
 
         if (!response.ok) {
             return response.json().then(errorData => {
-                throw new Error(errorData.error || '文档生成任务提交失败');
+                throw new Error(errorData.error || __('docx.task_submit_failed'));
             });
         }
 
         const result = await response.json();
         if (result.status === "started") {
-            alert('文档生成任务已提交，可在页面右上角"我的写作任务"中查看写作进度');
+            alert(__('docx.task_submitted'));
             resetForm(); // 重置表单
         } else {
-            throw new Error('任务提交失败');
+            throw new Error(__('docx.task_submit_failed'));
         }
     } catch (error) {
-        alert(`错误: ${error.message}`);
+        alert(__fmt_named('docx.error_occurred', {msg: error.message}));
         resetGenerateState();
     }
 }
@@ -524,7 +524,7 @@ function resetGenerateState() {
     const generateBtn = document.getElementById('generateBtn');
     if (generateBtn) {
         generateBtn.disabled = false;
-        generateBtn.innerHTML = '提交任务 <i class="fas fa-paper-plane"></i>';
+        generateBtn.innerHTML = `${__('docx.submit_task')} <i class="fas fa-paper-plane"></i>`;
     }
     document.getElementById('modifiedOutline').readOnly = false;
 }
@@ -544,7 +544,7 @@ async function loadKnowledgeBases() {
         });
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`API 错误 ${response.status}: ${errorText.slice(0, 100)}...`);
+            throw new Error(`API error ${response.status}: ${errorText.slice(0, 100)}...`);
         }
 
         const result = await response.json();

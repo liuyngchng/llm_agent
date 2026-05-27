@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
 
 from common.sys_init import init_yml_cfg
 from common.cm_utils import get_console_arg1
+from common.i18n import get_msg
 
 # ---------------------------------------------------------------------------
 # 日志
@@ -175,7 +176,7 @@ def add_access(req: AccessCountRequest):
     """记录用户访问次数"""
     success = _add_field(req.uid, "access_count", req.count, req.app)
     if not success:
-        raise HTTPException(status_code=500, detail="记录访问次数失败")
+        raise HTTPException(status_code=500, detail=get_msg('backend.record_access_failed'))
     return {"status": "ok"}
 
 
@@ -184,7 +185,7 @@ def add_input_token(req: TokenRequest):
     """记录用户输入 Token 用量"""
     success = _add_field(req.uid, "input_token", req.count, req.app)
     if not success:
-        raise HTTPException(status_code=500, detail="记录输入 Token 失败")
+        raise HTTPException(status_code=500, detail=get_msg('backend.record_input_token_failed'))
     return {"status": "ok"}
 
 
@@ -193,7 +194,7 @@ def add_output_token(req: TokenRequest):
     """记录用户输出 Token 用量"""
     success = _add_field(req.uid, "output_token", req.count, req.app)
     if not success:
-        raise HTTPException(status_code=500, detail="记录输出 Token 失败")
+        raise HTTPException(status_code=500, detail=get_msg('backend.record_output_token_failed'))
     return {"status": "ok"}
 
 
@@ -202,7 +203,7 @@ def add_embedding_token(req: TokenRequest):
     """记录用户嵌入 Token 用量"""
     success = _add_field(req.uid, "embedding_token", req.count, req.app)
     if not success:
-        raise HTTPException(status_code=500, detail="记录嵌入 Token 失败")
+        raise HTTPException(status_code=500, detail=get_msg('backend.record_embedding_token_failed'))
     return {"status": "ok"}
 
 
@@ -240,7 +241,7 @@ def get_by_uid(uid: int):
         )
         row = cur.fetchone()
     if not row:
-        raise HTTPException(status_code=404, detail="未找到该用户的统计数据")
+        raise HTTPException(status_code=404, detail=get_msg('backend.user_stats_not_found'))
     return {
         "uid": row[0],
         "nickname": row[1],

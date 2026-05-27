@@ -1,17 +1,20 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>材料评审任务</title>
+    <title>{{ _('paper_review.task_page_title') }}</title>
     <link rel="stylesheet" href="/static/font-awesome.all.min.css">
     <link rel="stylesheet" href="/static/paper_review.my.task.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-tasks"></i> 材料评审任务</h1>
-            <p>查看和管理您的材料评审任务</p>
+            <h1><i class="fas fa-tasks"></i> {{ _('paper_review.task_page_title') }}</h1>
+            <p>{{ _('paper_review.task_page_desc') }}</p>
         </header>
 
         <div class="tasks-container">
@@ -21,13 +24,13 @@
             <table id="tasksTable">
                 <thead>
                     <tr>
-                        <th>No.</th>
-                        <th>评审任务</th>
-                        <th>创建时间</th>
-                        <th>处理信息</th>
-                        <th>处理进度</th>
-                        <th>结果查看</th>
-                        <th>操作</th>
+                        <th>{{ _('common.no') }}</th>
+                        <th>{{ _('paper_review.col_task') }}</th>
+                        <th>{{ _('paper_review.col_create_time') }}</th>
+                        <th>{{ _('paper_review.col_process_info') }}</th>
+                        <th>{{ _('paper_review.col_progress') }}</th>
+                        <th>{{ _('paper_review.col_result') }}</th>
+                        <th>{{ _('paper_review.col_actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -37,14 +40,14 @@
 
             <div class="empty-state" id="emptyState" style="display: none;">
                 <i class="fas fa-inbox"></i>
-                <h3>暂无材料评审任务</h3>
-                <p>您还没有创建任何材料评审任务</p>
+                <h3>{{ _('common.empty_task_list') }}</h3>
+                <p>{{ _('common.empty_task_desc') }}</p>
             </div>
         </div>
     </div>
 
     <div class="auto-refresh-indicator" id="refreshIndicator">
-        <i class="fas fa-sync-alt"></i> 自动刷新已启用
+        <i class="fas fa-sync-alt"></i> {{ _('common.auto_refresh_on') }}
     </div>
     <input type="hidden" id ="uid" name="uid" value="{{uid}}">
     <input type="hidden" id ="t" name="t" value="{{t}}">

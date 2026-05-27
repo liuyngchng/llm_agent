@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
     <title>{{sys_name}}</title>
     <meta charset="utf-8">
@@ -8,6 +8,7 @@
     <script type="text/javascript" src="/static/crypto.js"></script>
     <link rel="stylesheet" href="/static/font-awesome.all.min.css">
     <link rel="stylesheet" href="/static/reg_usr.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
 </head>
 <body>
     <div class="register-container">
@@ -18,7 +19,7 @@
                 </div>
                 <div>{{sys_name}}</div>
             </div>
-            <p class="register-subtitle">创建您的账户</p>
+            <p class="register-subtitle">{{ _('auth.register_title') }}</p>
         </div>
 
         <form id="my_form" method="post" action="/reg/usr">
@@ -26,14 +27,14 @@
                 <div class="input-icon">
                     <i class="fas fa-user"></i>
                 </div>
-                <input id="usr" name="usr" type="text" value="{{user}}" placeholder="设置用户名" autocomplete="off">
+                <input id="usr" name="usr" type="text" value="{{user}}" placeholder="{{ _('auth.set_username_placeholder') }}" autocomplete="off">
             </div>
 
             <div class="form-group">
                 <div class="input-icon">
                     <i class="fas fa-key"></i>
                 </div>
-                <input id="psw" name="psw" type="password" placeholder="设置登录密码" value="{{password}}" autocomplete="off">
+                <input id="psw" name="psw" type="password" placeholder="{{ _('auth.set_password_placeholder') }}" value="{{password}}" autocomplete="off">
             </div>
 
             <!-- 图形验证码区域 -->
@@ -44,7 +45,7 @@
                             <i class="fas fa-shield-alt"></i>
                         </div>
                         <input id="captcha_code" name="captcha_code" type="text"
-                               placeholder="输入4位数字" maxlength="4" autocomplete="off">
+                               placeholder="{{ _('auth.captcha_placeholder') }}" maxlength="4" autocomplete="off">
                     </div>
                     <div class="captcha-image-container" id="captcha-image-container">
                         <div id="captcha-placeholder" class="captcha-placeholder">
@@ -52,7 +53,7 @@
                         </div>
                     </div>
                     <button type="button" class="btn-refresh" id="refresh-captcha-btn">
-                        <i class="fas fa-redo-alt"></i> 换一张
+                        <i class="fas fa-redo-alt"></i> {{ _('auth.refresh_captcha') }}
                     </button>
                 </div>
             </div>
@@ -63,15 +64,17 @@
 
             <div class="btn-container">
                 <button type="button" class="btn btn-primary" id="register-button">
-                    <i class="fas fa-user-plus"></i> 注册账户
+                    <i class="fas fa-user-plus"></i> {{ _('auth.register_button') }}
                 </button>
             </div>
         </form>
         <a href="#" class="back-link" onclick="history.back()">
-            <i class="fas fa-arrow-left"></i> 返回登录
+            <i class="fas fa-arrow-left"></i> {{ _('auth.back_to_login') }}
         </a>
         <div class="warning-message" id="warning-message">{{warning_info}}</div>
     </div>
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
      <script type="text/javascript" src="/static/reg_usr.js"></script>
 
      <!-- 图形验证码相关脚本 -->
@@ -94,7 +97,7 @@
         function loadCaptcha() {
             const captchaToken = document.getElementById("captcha_token").value;
             if (!captchaToken) {
-                console.error("验证码token不存在");
+                console.error(__('auth.captcha_token_missing'));
                 return;
             }
 
@@ -111,7 +114,7 @@
             fetch(`/captcha/image/${captchaToken}`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('获取验证码失败');
+                        throw new Error(__('auth.captcha_fetch_failed'));
                     }
                     return response.text();
                 })
@@ -168,7 +171,7 @@
                         document.getElementById("captcha_code").value = '';
                         document.getElementById("captcha_code").focus();
                     } else {
-                        alert('刷新验证码失败: ' + data.message);
+                        alert(__('auth.refresh_captcha_failed') + ': ' + data.message);
                         if (placeholder) {
                             placeholder.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
                         }
@@ -176,7 +179,7 @@
                 })
                 .catch(error => {
                     console.error('刷新验证码失败:', error);
-                    alert('刷新验证码失败，请稍后重试');
+                    alert(__('auth.refresh_captcha_failed'));
                     if (placeholder) {
                         placeholder.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
                     }

@@ -11,6 +11,8 @@ import os
 
 from flask import (Flask, render_template, request, jsonify, Response,
                    stream_with_context, send_from_directory, abort)
+from common.i18n._hooks import register_i18n
+from common.i18n import get_msg
 from common.mcp_util import auto_call_mcp, auto_call_mcp_yield
 from common.sys_init import init_yml_cfg
 
@@ -26,6 +28,7 @@ logger = logging.getLogger(__name__)
 # 创建 Flask 应用
 app = Flask(__name__, static_folder=None)
 app.config['JSON_AS_ASCII'] = False
+register_i18n(app, scope="mcp_client")
 os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
@@ -65,7 +68,7 @@ def process_query():
         # 获取用户输入
         data = request.get_json()
         if not data or 'question' not in data:
-            return jsonify({'error': '缺少问题参数'}), 400
+            return jsonify({'error': get_msg('mcp_client.missing_question')}), 400
 
         question = data['question']
         logger.info(f"收到用户查询: {question}")
@@ -83,7 +86,7 @@ def process_query():
                 except Exception as e:
                     error_msg = json.dumps({
                         "type": "error",
-                        "content": f"处理过程中发生错误: {str(e)}"
+                        "content": get_msg('mcp_client.process_error', msg=str(e))
                     }, ensure_ascii=False)
                     yield f"data: {error_msg}\n\n"
                     yield "data: [DONE]\n\n"

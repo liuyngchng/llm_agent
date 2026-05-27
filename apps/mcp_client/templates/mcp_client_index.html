@@ -1,29 +1,32 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP 演示</title>
+    <title>{{ _('mcp_client.title') }}</title>
     <script type="text/javascript"  src="/static/marked.min.js"></script>
     <script type="text/javascript" src="/static/purify.min.js?a=111"></script>
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
     <link rel="stylesheet" href="/static/font-awesome.all.min.css">
     <link rel="stylesheet" href="/static/mcp_client.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-robot"></i> MCP 演示</h1>
+            <h1><i class="fas fa-robot"></i> {{ _('mcp_client.title') }}</h1>
         </header>
 
         <div class="input-area">
             <div class="form-group">
-                <label for="question-input"><i class="fas fa-question-circle"></i> 请输入您的问题</label>
-                <textarea id="question-input" placeholder="请输入您的问题...">都有哪些工具？</textarea>
+                <label for="question-input"><i class="fas fa-question-circle"></i> {{ _('mcp_client.question_label') }}</label>
+                <textarea id="question-input" placeholder="{{ _('mcp_client.question_placeholder') }}">{{ _('mcp_client.default_question') }}</textarea>
             </div>
 
             <div class="stream-toggle">
                 <input type="checkbox" id="stream-toggle" checked>
-                <label for="stream-toggle">启用流式响应</label>
+                <label for="stream-toggle">{{ _('mcp_client.stream_enable') }}</label>
             </div>
 
             <div class="btn-container">
@@ -36,14 +39,14 @@
         </div>
 
         <div class="form-group">
-            <label for="result-area"><i class="fas fa-results"></i> 处理结果</label>
+            <label for="result-area"><i class="fas fa-results"></i> {{ _('mcp_client.result_title') }}</label>
             <div id="result-area" class="result-area">
-                <p style="color: #777; text-align: center;">结果将显示在这里...</p>
+                <p style="color: #777; text-align: center;">{{ _('mcp_client.result_placeholder') }}</p>
             </div>
         </div>
         <div id="loading-overlay" class="loading-overlay"></div>
         <div id="loading" class="loading">
-            <i class="fas fa-sync-alt fa-spin"></i>处理中，请稍候...
+            <i class="fas fa-sync-alt fa-spin"></i>{{ _('mcp_client.processing') }}
         </div>
     </div>
 

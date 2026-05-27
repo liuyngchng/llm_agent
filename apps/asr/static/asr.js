@@ -24,7 +24,7 @@ function initEventListeners() {
 
     // 清空历史按钮
     document.getElementById('clearHistoryBtn').addEventListener('click', () => {
-        if (confirm('确定要清空所有历史记录吗？')) {
+        if (confirm(__('asr.clear_confirm'))) {
             clearHistory();
         }
     });
@@ -39,7 +39,7 @@ function handleFiles(files) {
         if (validExtensions.includes(ext)) {
             selectedFiles.push(file);
         } else {
-            showMessage('系统', `不支持的文件格式: ${file.name}`, 'error');
+            showMessage(__('asr.system_role'), __fmt_named('asr.unsupported_format', {name: file.name}), 'error');
         }
     }
 
@@ -125,8 +125,8 @@ function setUploadButtonEnabled(enabled) {
 async function uploadFile(file) {
     // 显示上传中的消息
     const tempId = 'temp_' + Date.now() + '_' + Math.random();
-    showMessage('用户', file.name, 'user', tempId);
-    showMessage('系统', `正在处理 ${file.name}... <i class="fas fa-spinner spin"></i>`, 'processing', null, tempId);
+    showMessage(__('asr.user_role'), file.name, 'user', tempId);
+    showMessage(__('asr.system_role'), __fmt_named('asr.processing', {name: file.name}) + ` <i class="fas fa-spinner spin"></i>`, 'processing', null, tempId);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -141,15 +141,15 @@ async function uploadFile(file) {
 
         if (response.ok) {
             // 替换处理中的消息
-            updateMessage(tempId, `文件 ${file.name} 已上传，正在转写中... <i class="fas fa-spinner spin"></i>`);
+            updateMessage(tempId, __fmt_named('asr.uploaded_processing', {name: file.name}) + ` <i class="fas fa-spinner spin"></i>`);
             // 开始轮询任务状态
             startPolling(data.task_id, tempId, file.name);
         } else {
-            updateMessage(tempId, `处理失败: ${data.error}`, 'error');
+            updateMessage(tempId, __fmt_named('asr.process_failed', {msg: data.error}), 'error');
         }
     } catch (error) {
         console.error('Upload error:', error);
-        updateMessage(tempId, `上传失败: ${error.message}`, 'error');
+        updateMessage(tempId, __fmt_named('asr.upload_failed', {msg: error.message}), 'error');
     }
 }
 
@@ -170,12 +170,12 @@ function startPolling(taskId, messageId, filename) {
                 delete waitStartTime[taskId];
 
                 const resultHtml = `
-                    <div>✅ 转写完成！</div>
+                    <div>✅ ${__('asr.transcription_done')}</div>
                     <div style="margin-top: 10px; padding: 10px; background: #f0f2f5; border-radius: 8px;">
-                        ${escapeHtml(data.result_text || '无识别结果')}
+                        ${escapeHtml(data.result_text || __('asr.no_result'))}
                     </div>
                     <button class="download-btn" onclick="downloadResult('${taskId}', '${filename}')">
-                        <i class="fas fa-download"></i> 下载结果
+                        <i class="fas fa-download"></i> ${__('asr.download_result')}
                     </button>
                 `;
                 updateMessage(messageId, resultHtml, 'completed');
@@ -187,12 +187,12 @@ function startPolling(taskId, messageId, filename) {
                 clearInterval(pollingIntervals[taskId]);
                 delete pollingIntervals[taskId];
                 delete waitStartTime[taskId];
-                updateMessage(messageId, `❌ 转写失败: ${data.error}`, 'error');
+                updateMessage(messageId, `❌ ${__fmt_named('asr.transcribe_failed', {msg: data.error})}`, 'error');
             } else {
                 // 更新状态及进度
                 let statusHtml;
                 if (data.status === 'converting') {
-                    statusHtml = `正在处理 ${filename}: 转换音频格式... <i class="fas fa-spinner spin"></i>`;
+                    statusHtml = __fmt_named('asr.converting_format', {name: filename}) + ` <i class="fas fa-spinner spin"></i>`;
                 } else if (data.progress !== undefined && data.progress !== null) {
                     const pct = data.progress;
                     if (pct >= 100) {
@@ -204,18 +204,18 @@ function startPolling(taskId, messageId, filename) {
                         const minutes = Math.floor(elapsed / 60);
                         const seconds = elapsed % 60;
                         const elapsedStr = minutes > 0
-                            ? `${minutes}分${seconds}秒`
-                            : `${seconds}秒`;
-                        statusHtml = `正在处理 ${filename}: 数据已发送，等待服务端处理中（${elapsedStr}）<i class="fas fa-spinner spin"></i>`;
+                            ? __fmt_named('asr.elapsed_format', {m: minutes, s: seconds})
+                            : __fmt_named('asr.elapsed_format', {m: 0, s: seconds});
+                        statusHtml = __fmt_named('asr.waiting_server', {name: filename, elapsed: elapsedStr}) + ` <i class="fas fa-spinner spin"></i>`;
                     } else {
-                        statusHtml = `正在处理 ${filename}: ${pct}% <i class="fas fa-spinner spin"></i>`;
+                        statusHtml = __fmt_named('asr.processing_pct', {name: filename, pct: pct}) + ` <i class="fas fa-spinner spin"></i>`;
                         statusHtml += `
                             <div style="margin-top: 8px; background: #e9ecef; border-radius: 6px; height: 8px; overflow: hidden;">
                                 <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #4b6cb7, #6c8de0); border-radius: 6px; transition: width 1s ease;"></div>
                             </div>`;
                     }
                 } else {
-                    statusHtml = `正在处理 ${filename}: 语音识别中... <i class="fas fa-spinner spin"></i>`;
+                    statusHtml = __fmt_named('asr.recognizing', {name: filename}) + ` <i class="fas fa-spinner spin"></i>`;
                 }
                 updateMessage(messageId, statusHtml);
             }
@@ -245,11 +245,11 @@ async function downloadResult(taskId, filename) {
             URL.revokeObjectURL(url);
         } else {
             const error = await response.json();
-            alert('下载失败: ' + error.error);
+            alert(__('asr.download_failed') + error.error);
         }
     } catch (error) {
         console.error('Download error:', error);
-        alert('下载失败: ' + error.message);
+        alert(__('asr.download_failed') + error.message);
     }
 }
 
@@ -281,7 +281,7 @@ function showMessage(sender, content, type = 'text', senderType = 'user', existi
     messageDiv.id = messageId;
 
     const headerIcon = senderType === 'user' ? 'fa-user' : 'fa-robot';
-    const headerText = senderType === 'user' ? '用户' : '系统';
+    const headerText = senderType === 'user' ? __('asr.user_role') : __('asr.system_role');
 
     messageDiv.innerHTML = `
         <div class="message-header">
@@ -352,13 +352,13 @@ function addToTaskHistory(taskId, filename, resultText) {
     historyDiv.innerHTML = `
         <div class="message-header">
             <i class="fas fa-history"></i>
-            <span>历史记录</span>
+            <span>${__('asr.history_title')}</span>
         </div>
         <div class="message-content">
             <div><strong>📁 ${escapeHtml(filename)}</strong></div>
-            <div style="margin-top: 8px;">✅ 已转写完成</div>
+            <div style="margin-top: 8px;">✅ ${__('asr.transcription_done')}</div>
             <button class="download-btn" style="margin-top: 8px;" onclick="downloadResult('${taskId}', '${filename}')">
-                <i class="fas fa-download"></i> 重新下载
+                <i class="fas fa-download"></i> ${__('asr.download_result')}
             </button>
         </div>
     `;
@@ -385,7 +385,7 @@ async function clearHistory() {
             }
         });
 
-        showMessage('系统', '历史记录已清空', 'text');
+        showMessage(__('asr.system_role'), __('asr.history_cleared'), 'text');
     } catch (error) {
         console.error('Clear history error:', error);
     }
