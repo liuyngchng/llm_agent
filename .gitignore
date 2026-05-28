@@ -10,7 +10,6 @@
 **/cpp/lib/*
 log/*
 **/*.iml
-**/_*
 native-image/*
 **/*.log
 **/*.log.*
