@@ -70,19 +70,19 @@ def extract_text_from_file(filepath, filename):
         # PDF文件（需要安装PyPDF2或pdfplumber）
         elif ext == 'pdf':
             try:
-                import PyPDF2
+                import pdfplumber
                 text = []
-                with open(filepath, 'rb') as f:
-                    pdf = PyPDF2.PdfReader(f)
-                    for page_num, page in enumerate(pdf.pages):
+                with pdfplumber.open(filepath) as pdf:
+                    for page in pdf.pages:
                         page_text = page.extract_text()
-                        text.append(page_text)
+                        if page_text:  # 添加判断，避免None值
+                            text.append(page_text)
                 result = '\n'.join(text)
-                logger.info(f"PDF文件解析成功，页数: {len(pdf.pages)}，长度: {len(result)} 字符")
+                logger.info(f"pdf_file_parse_success, {filepath}，page_count: {len(pdf.pages)}，file_len: {len(result)}")
                 return result
             except ImportError:
-                logger.warning("需要安装PyPDF2库来解析PDF文件")
-                return "[需要安装PyPDF2库来解析PDF文件]"
+                logger.warning("需要安装 pdfplumber 库来解析PDF文件")
+                return "[需要安装 pdfplumber 库来解析PDF文件]"
 
         # Word文档（需要安装python-docx）
         elif ext in ['docx']:

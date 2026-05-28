@@ -10,9 +10,10 @@
 
 | No. | 名称                  | 服务类型 | 端口    | 描述                            |
 |-----|---------------------|------------|-------|-------------------------------|
-| 1 | apps/db_service     | HTTP/HTTPS | 17000 | 数据访问服务                        |
+| 1 | apps/db_service     | HTTP/HTTPS | 18001 | 数据访问服务                        |
 | 2  | apps/gateway        | HTTP/HTTPS | 18000 | 开放平台，提供与其他平台进行集成的接口           |
 | 3 | apps/chat           | HTTP/HTTPS | 20000     | 问答助手                  |
+| 4 | apps/claw | HTTP/HTTPS | 19001 | Claw 助手 |
 | 4 | apps/chat2kb        | HTTP/HTTPS | 19002 | 知识库问答, 提供基于知识库的问答能力           |
 | 5 | apps/docx           | HTTP/HTTPS | 19003 | 文档生成，支持在线生成 Word docx文档       |
 | 6 | apps/mcp_client     | HTTP/HTTPS | 19005 | MCP client，通过Web 界面           |

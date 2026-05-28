@@ -279,11 +279,11 @@ if __name__ == '__main__':
     # 检查依赖库
     logger.debug("检查依赖库...")
     try:
-        import PyPDF2
+        import pdfplumber
 
-        logger.debug("✓ PyPDF2 已安装")
+        logger.debug("✓ pdfplumber 已安装")
     except ImportError:
-        logger.warning("⚠ PyPDF2 未安装，PDF文件解析将不可用")
+        logger.warning("⚠ pdfplumber 未安装，PDF文件解析将不可用")
 
     try:
         import docx
