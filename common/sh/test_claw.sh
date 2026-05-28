@@ -10,7 +10,7 @@ docker run -dit \
 	--security-opt apparmor=unconfined 	\
 	--privileged \
   --name my_claw \
-  -p 18789:18789 \
+  -p 19001:18789 \
   -v /data/claw:/root/.openclaw \
   openclaw:1.0
 
