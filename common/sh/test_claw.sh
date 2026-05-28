@@ -1,6 +1,6 @@
 #!/bin/bash
 
-mkdir -p /data/claw/workspace
+mkdir -p /data/claw
 docker stop my_claw
 docker rm my_claw
 
