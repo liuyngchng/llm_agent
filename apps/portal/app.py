@@ -56,6 +56,7 @@ def app_home():
     app_source = my_enums.AppType.PORTAL.name.lower()
     app_base_uri = my_cfg['sys'].get('app_base_uri', '')
     ip = get_client_ip()
+    logger.info(f"access_from_ip, {ip}")
     if "INVALID_IP" == ip:
         return json.dumps({"status":403, "msg":"illegal access"})
 

@@ -146,9 +146,8 @@ def login():
     app_base_uri = request.form.get('app_base_uri', '').strip()
     captcha_code = request.form.get('captcha_code', '').strip()
     captcha_token = request.form.get('captcha_token', '').strip()
-
-    logger.info(f"user_login: {user}, IP={get_client_ip()}")
-
+    ip = get_client_ip()
+    logger.info(f"user_login: {user}, from_ip,{ip}")
     try:
         url = f"{_auth_api_base()}/auth/login"
         params = {"usr": user, "t": t, "captcha_code": captcha_code, "captcha_token": captcha_token}
@@ -156,6 +155,7 @@ def login():
         logger.debug(f"POST {url}, params {safe_params}")
         resp = requests.post(url, json=params, timeout=10, verify=False)
         logger.debug(f"response status={resp.status_code}, body={resp.text[:200]}")
+        logger.info(f"user_login_success: {user}, from_ip,{ip}")
     except RuntimeError as e:
         logger.error(f"配置错误: {e}")
         return redirect(url_for('auth.login_index',

@@ -93,31 +93,6 @@ class SessionToken(BaseModel):
     t: str = Field(..., min_length=1, description="会话token")
 
 
-# ---------------------------------------------------------------------------
-# 工具函数
-# ---------------------------------------------------------------------------
-
-def get_client_ip(request: Request) -> str:
-    """获取客户端真实 IP"""
-    x_forwarded_for = request.headers.get("X-Forwarded-For", "")
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(",")[0].strip()
-    else:
-        ip = request.client.host if request.client else "127.0.0.1"
-
-    ipv4 = r"^(\d{1,3}\.){3}\d{1,3}$"
-    ipv6 = r"^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$"
-
-    if ip in ("127.0.0.1", "localhost", "::1"):
-        return ip
-    if re.match(ipv4, ip) and all(0 <= int(p) <= 255 for p in ip.split(".")):
-        return ip
-    if re.match(ipv6, ip):
-        return ip
-    return "INVALID_IP"
-
-
-
 def verify_captcha(code: str, token: str) -> bool:
     """验证图形验证码"""
     if not token or token not in captcha_codes:
@@ -244,8 +219,7 @@ def generate_captcha_image(captcha_token: str):
 @app.post("/auth/login")
 async def login(body: LoginRequest, request: Request):
     """用户登录，返回 token"""
-    ip = get_client_ip(request)
-    logger.info(f"用户登录: {body.usr}, IP={ip}")
+    logger.info(f"login: {body.usr}")
 
     if not verify_captcha(body.captcha_code, body.captcha_token):
         logger.warning(f"验证码错误 - 用户: {body.usr}")
