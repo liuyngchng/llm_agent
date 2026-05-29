@@ -119,6 +119,8 @@ def get_js_translations(lang: str, scope: str | None = None) -> dict:
         sections.append(scope)
     # Always include auth for login/register pages
     sections.append("auth")
+    # Always include vdb — shared vector-db UI used by multiple apps
+    sections.append("vdb")
 
     for section in sections:
         section_dict = TRANSLATIONS.get(section, {})

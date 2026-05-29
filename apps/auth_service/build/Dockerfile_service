@@ -10,7 +10,7 @@ ARG APP="service"
 COPY ./whl_py_dir_${APP} /tmp/whl
 RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl gunicorn fastapi \
     concurrent_log_handler pydub uvicorn wheel tabulate \
-    websockets markdown  svgwrite requests pyyaml pycryptodome $PROXY && \
+    websockets markdown  svgwrite requests pyyaml pycryptodome flask $PROXY && \
     rm -rf /tmp/whl && \
     rm -rf ~/.cache/pip
 
