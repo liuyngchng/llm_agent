@@ -16,6 +16,7 @@ import time
 from docx import Document
 from flask import (Flask, request, jsonify, send_from_directory,
     abort, stream_with_context, Response, render_template)
+from jinja2 import ChoiceLoader, FileSystemLoader
 
 from common.const import UPLOAD_FOLDER, JSON_MIME_TYPE, DOCX_MIME_TYPE, OUTPUT_DIR, TASK_EXPIRE_TIME_MS, SESSION_TIMEOUT, get_const
 from common.docx_cmt_util import get_comments_dict
@@ -59,6 +60,12 @@ def create_app():
     logger.info("init")
     """应用工厂函数"""
     app = Flask(__name__, static_folder=None)
+    # 将 common/templates 加入模板搜索路径
+    common_templates = os.path.join(os.path.dirname(__file__), '../../common/templates')
+    app.jinja_loader = ChoiceLoader([
+        app.jinja_loader,
+        FileSystemLoader(common_templates)
+    ])
     app.config['JSON_AS_ASCII'] = False
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     app.config['TASK_EXPIRE_TIME_MS'] = TASK_EXPIRE_TIME_MS

@@ -15,6 +15,7 @@ import time
 
 from flask import (Flask, request, jsonify, send_from_directory,
                    abort, render_template, Response)
+from jinja2 import ChoiceLoader, FileSystemLoader
 
 from apps.paper_review.paper_reviewer import generate_review_report
 from common import docx_meta_util
@@ -55,6 +56,12 @@ background_tasks_lock = threading.Lock()
 def create_app():
     """应用工厂函数"""
     app = Flask(__name__, static_folder=None)
+    # 将 common/templates 加入模板搜索路径
+    common_templates = os.path.join(os.path.dirname(__file__), '../../common/templates')
+    app.jinja_loader = ChoiceLoader([
+        app.jinja_loader,
+        FileSystemLoader(common_templates)
+    ])
     app.config['JSON_AS_ASCII'] = False
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     app.config['TASK_EXPIRE_TIME_MS'] = TASK_EXPIRE_TIME_MS
