@@ -194,52 +194,54 @@ input:focus {
     padding-left: 0;
 }
 
-/* 验证码标签*/
-.captcha-label {
-    position: absolute;
-    left: 40px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-weight: 500;
-    color: #444;
-    font-size: 1.05rem;
-    white-space: nowrap;
-    margin: 0;
-    pointer-events: none;
-}
-
-/* 验证码输入框样式 */
+/* 验证码输入框 flex 容器 — icon + label + input 自然排列，避免重叠 */
 .captcha-input-group {
     flex: 1;
-    position: relative;
+    display: flex;
+    align-items: center;
     min-width: 120px;
-}
-
-/* captcha label moved to HTML <label> for i18n support */
-
-#captcha_code {
-    width: 100%;
-    padding: 12px 12px 12px 85px;
-    letter-spacing: 5px;
-    font-family: monospace;
-    font-size: 1.1rem;
-    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: white;
     height: 44px;
+    padding: 0 8px;
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
-
-#captcha_code {
-    padding: 12px 12px 12px 90px;
+.captcha-input-group:focus-within {
+    border-color: #4b6cb7;
+    box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.1);
 }
 
 /* 验证码图标 */
 .captcha-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
+    flex-shrink: 0;
     color: #4b6cb7;
     font-size: 1.1rem;
-    z-index: 1;
+    margin-right: 6px;
+}
+
+/* 验证码标签 */
+.captcha-label {
+    flex-shrink: 0;
+    font-weight: 500;
+    color: #444;
+    font-size: 1.05rem;
+    white-space: nowrap;
+    margin: 0 4px 0 0;
+    pointer-events: none;
+}
+
+#captcha_code {
+    flex: 1;
+    min-width: 50px;
+    border: none;
+    padding: 6px 4px;
+    letter-spacing: 5px;
+    font-family: monospace;
+    font-size: 1.1rem;
+    text-align: center;
+    outline: none;
+    background: transparent;
 }
 
 /* 验证码图片容器 */
@@ -327,19 +329,13 @@ input:focus {
     }
 
     .captcha-label {
-        position: static;
-        transform: none;
         flex: 1 0 100%;
         order: 1;
-        width: auto;
         text-align: left;
-        margin-bottom: 8px;
-        margin-left: 0;
-        left: auto;
-        top: auto;
+        margin: 0 0 8px 0;
     }
     #captcha_code {
-        padding: 12px 12px 12px 40px;
+        padding: 6px 4px;
     }
 
     .captcha-input-group {
@@ -370,13 +366,11 @@ input:focus {
     }
 
     #captcha_code {
-        padding: 10px 10px 10px 36px;
         height: 40px;
         font-size: 1rem;
     }
 
     .captcha-icon {
-        left: 10px;
         font-size: 1rem;
     }
 

@@ -137,9 +137,9 @@ def _generate_captcha_svg(text: str) -> str:
             fill=random.choice(["#adb5bd", "#6c757d", "#495057"])))
     # 文字
     font_size = 20
-    text_x = 5
+    text_x = 10
     for ch in text:
-        rot = random.uniform(-8, 8)
+        rot = random.uniform(-6, 6)
         y_off = random.uniform(-2, 2)
         dwg.add(dwg.text(ch, insert=(text_x, 28 + y_off),
                          font_size=font_size, font_family="Arial, sans-serif",
