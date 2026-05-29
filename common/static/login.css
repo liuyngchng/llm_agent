@@ -215,18 +215,7 @@ input:focus {
     min-width: 120px;
 }
 
-.captcha-input-group::before {
-    content: "验证码";
-    position: absolute;
-    left: 40px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-weight: 500;
-    color: #444;
-    font-size: 1.05rem;
-    white-space: nowrap;
-    pointer-events: none;
-}
+/* captcha label moved to HTML <label> for i18n support */
 
 #captcha_code {
     width: 100%;
