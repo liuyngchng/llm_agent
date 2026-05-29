@@ -81,6 +81,8 @@ def app_home():
             arg3 = get_const("arg3", app_source)
             sys_name = my_enums.AppType.get_app_type(app_source)
 
+            claw_url = my_cfg['sys'].get('claw_url', '')
+
             ctx = {
                 "uid": uid,
                 "usr": usr,
@@ -88,6 +90,7 @@ def app_home():
                 "t": t,
                 "sys_name": sys_name,
                 "app_base_uri": app_base_uri,
+                "claw_url": claw_url,
                 "greeting": greeting,
                 "app_source": app_source,
                 "hack_admin": hack_admin,

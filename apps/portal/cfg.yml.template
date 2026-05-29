@@ -9,6 +9,9 @@ sys:
     auth: true
     cypher_key: abaababaabaababa
 
+    # 用于开启claw的 remote access后进行鉴权的可访问的URL，带token认证
+    claw_url: http://123.456.789:23456/chat?token=7ad0419365d5&session=main
+
 api:
     # 认证服务 API
     auth_api: http://127.0.0.1:19011
