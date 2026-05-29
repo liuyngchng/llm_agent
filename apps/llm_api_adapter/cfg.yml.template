@@ -1,0 +1,11 @@
+# config.yaml，文件格式必须严格遵循 yaml配置文件格式
+sys:
+    #  系统名称(title) 配置
+    name: LLM API转换工具
+api:
+    # 兼容OpenAI的大语言模型 API 基地址
+    llm_api_uri: https://api.deepseek.com/v1
+    #  兼容OpenAI的大语言模型 API key
+    llm_api_key: sk-123456
+    #  兼容OpenAI的大语言模型 模型名称
+    llm_model_name: deepseek-chat
