@@ -24,6 +24,33 @@ body {
     padding: 40px;
 }
 
+/* 语言选择器 */
+.lang-selector {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+.lang-option {
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    user-select: none;
+    white-space: nowrap;
+}
+.lang-option:hover {
+    background: #f0f4ff;
+    border-color: #c5d0f0;
+}
+.lang-option.active {
+    background: #e8f0fe;
+    border-color: #4a6cf7;
+    font-weight: 600;
+}
+
 .login-header {
     text-align: center;
     margin-bottom: 30px;

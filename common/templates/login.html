@@ -12,6 +12,12 @@
 </head>
 <body>
     <div class="login-container">
+        <div class="lang-selector">
+            <span class="lang-option {% if lang == 'zh' %}active{% endif %}" data-lang="zh" title="中文">&#x1f1e8;&#x1f1f3; 中文</span>
+            <span class="lang-option {% if lang == 'en' %}active{% endif %}" data-lang="en" title="English">&#x1f1fa;&#x1f1f8; English</span>
+            <span class="lang-option {% if lang == 'fr' %}active{% endif %}" data-lang="fr" title="Français">&#x1f1eb;&#x1f1f7; Français</span>
+            <span class="lang-option {% if lang == 'ar' %}active{% endif %}" data-lang="ar" title="العربية">&#x1f1f8;&#x1f1e6; العربية</span>
+        </div>
         <div class="login-header">
             <div class="login-title">
                 <div class="login-icon">
@@ -88,6 +94,16 @@
     <script type="text/javascript" src="/static/login.js"></script>
     <!-- 图形验证码相关脚本 -->
     <script type="text/javascript">
+        // 语言切换
+        document.querySelectorAll('.lang-option').forEach(function(el) {
+            el.addEventListener('click', function() {
+                var lang = this.getAttribute('data-lang');
+                var url = new URL(window.location.href);
+                url.searchParams.set('lang', lang);
+                window.location.href = url.toString();
+            });
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             // 页面加载时加载验证码
             loadCaptcha();
