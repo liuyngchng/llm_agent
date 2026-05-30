@@ -422,6 +422,30 @@ TRANSLATIONS = {
             "fr": "Informations d'application manquantes",
             "ar": "معلومات التطبيق مفقودة",
         },
+        "registration_page_title": {
+            "zh": "{sys_name}_新用户注册",
+            "en": "{sys_name} - Register",
+            "fr": "{sys_name} - Inscription",
+            "ar": "{sys_name} - تسجيل",
+        },
+        "session_expired": {
+            "zh": "用户会话信息已失效，请重新登录",
+            "en": "Session expired, please login again",
+            "fr": "Session expiree, veuillez vous reconnecter",
+            "ar": "انتهت صلاحية الجلسة، يرجى اعادة تسجيل الدخول",
+        },
+        "user_manual_title": {
+            "zh": "{sys_name}_用户使用说明",
+            "en": "{sys_name} - User Manual",
+            "fr": "{sys_name} - Manuel utilisateur",
+            "ar": "{sys_name} - دليل المستخدم",
+        },
+        "statistics_service_error": {
+            "zh": "数据统计服务异常，请稍后重试",
+            "en": "Statistics service error, please try later",
+            "fr": "Erreur du service statistique, veuillez reessayer",
+            "ar": "خطا في خدمة الاحصاءات، يرجى المحاولة لاحقا",
+        },
     },
 
     # ============================================================
@@ -3002,6 +3026,42 @@ TRANSLATIONS = {
             "en": "No statistics found for this user",
             "fr": "Aucune statistique trouvee pour cet utilisateur",
             "ar": "لم يتم العثور على احصائيات لهذا المستخدم",
+        },
+        "password_incorrect": {
+            "zh": "当前用户 {usr} 的密码输入错误",
+            "en": "Incorrect password for user {usr}",
+            "fr": "Mot de passe incorrect pour l'utilisateur {usr}",
+            "ar": "كلمة المرور غير صحيحة للمستخدم {usr}",
+        },
+        "user_not_found_login": {
+            "zh": "当前用户名 {usr} 不存在，请注册后再尝试登录",
+            "en": "Username {usr} does not exist, please register first",
+            "fr": "Le nom d'utilisateur {usr} n'existe pas, veuillez vous inscrire",
+            "ar": "اسم المستخدم {usr} غير موجود، يرجى التسجيل اولا",
+        },
+        "session_expired": {
+            "zh": "用户会话信息已失效，请重新登录",
+            "en": "Session expired, please login again",
+            "fr": "Session expiree, veuillez vous reconnecter",
+            "ar": "انتهت صلاحية الجلسة، يرجى اعادة تسجيل الدخول",
+        },
+        "captcha_generate_failed": {
+            "zh": "生成验证码失败",
+            "en": "Failed to generate captcha",
+            "fr": "Echec de generation du captcha",
+            "ar": "فشل انشاء رمز التحقق",
+        },
+        "captcha_fetch_failed": {
+            "zh": "获取验证码失败",
+            "en": "Failed to load captcha",
+            "fr": "Echec du chargement du captcha",
+            "ar": "فشل تحميل رمز التحقق",
+        },
+        "service_unavailable": {
+            "zh": "认证服务暂时不可用，请稍后重试",
+            "en": "Auth service unavailable, please try later",
+            "fr": "Service d'authentification indisponible, veuillez reessayer",
+            "ar": "خدمة المصادقة غير متاحة، يرجى المحاولة لاحقا",
         },
     },
 }

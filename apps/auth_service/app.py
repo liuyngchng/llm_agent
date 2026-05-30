@@ -81,6 +81,7 @@ class LoginRequest(BaseModel):
     t: str = Field(..., description="加密后的密码")
     captcha_code: str = Field("", description="验证码")
     captcha_token: str = Field("", description="验证码 token")
+    lang: str = Field("zh", description="语言代码")
 
 
 class RegisterRequest(BaseModel):
@@ -88,6 +89,7 @@ class RegisterRequest(BaseModel):
     t: str = Field(..., min_length=1, description="加密后的密码")
     captcha_code: str = Field("", description="验证码")
     captcha_token: str = Field("", description="验证码 token")
+    lang: str = Field("zh", description="语言代码")
 
 class SessionToken(BaseModel):
     t: str = Field(..., min_length=1, description="会话token")
@@ -221,22 +223,26 @@ async def login(body: LoginRequest, request: Request):
     """用户登录，返回 token"""
     logger.info(f"login: {body.usr}")
 
+    lang = body.lang
+
     if not verify_captcha(body.captcha_code, body.captcha_token):
         logger.warning(f"验证码错误 - 用户: {body.usr}")
-        raise HTTPException(status_code=400, detail=get_msg('backend.captcha_incorrect'))
+        raise HTTPException(status_code=400, detail=get_msg('backend.captcha_incorrect', lang=lang))
     cypher_key = my_cfg['sys']['cypher_key']
     logger.debug(f"auth_user({body.usr}, {body.t}, {cypher_key})")
     result = auth_util.auth_user(body.usr, body.t, cypher_key)
     logger.debug(f"{result}")
     if not result["pass"]:
-        logger.error(f"认证失败 - 用户: {body.usr}, 原因: {result.get('msg')}")
-        raise HTTPException(status_code=401, detail=result.get("msg", get_msg('backend.login_failed')))
+        msg_key = result.get("msg_key", "backend.login_failed")
+        usr = result.get("usr", body.usr)
+        logger.error(f"认证失败 - 用户: {body.usr}, 原因: {msg_key}")
+        raise HTTPException(status_code=401, detail=get_msg(msg_key, lang=lang, usr=usr))
 
     # 清理验证码
     if body.captcha_token in captcha_codes:
         logger.debug("del_captcha_token")
         del captcha_codes[body.captcha_token]
-    logger.debug(f"{result["uid"]}, create_session_token")
+    logger.debug(f"{result['uid']}, create_session_token")
     token = create_token(result["uid"], result["role"], SESSION_TIMEOUT, cypher_key)
     logger.info(f"login_success, user: {body.usr}, uid: {result['uid']}")
     info = {
@@ -256,21 +262,23 @@ async def register(body: RegisterRequest):
     """用户注册"""
     logger.info(f"用户注册: {body.usr}")
 
+    lang = body.lang
+
     if not verify_captcha(body.captcha_code, body.captcha_token):
         logger.warning(f"注册验证码错误 - 用户: {body.usr}")
-        raise HTTPException(status_code=400, detail=get_msg('backend.captcha_incorrect'))
+        raise HTTPException(status_code=400, detail=get_msg('backend.captcha_incorrect', lang=lang))
     logger.debug(f"get_uid_by_user, {body.usr}")
     if auth_util.get_uid_by_user(body.usr) is not None:
         logger.error(f"注册失败 - 用户已存在: {body.usr}")
-        raise HTTPException(status_code=409, detail=get_msg('backend.user_exists', usr=body.usr))
+        raise HTTPException(status_code=409, detail=get_msg('backend.user_exists', lang=lang, usr=body.usr))
     logger.debug(f"save_usr, {body.usr}")
     if not auth_util.save_usr(body.usr, body.t):
-        raise HTTPException(status_code=500, detail=get_msg('backend.user_creation_failed'))
+        raise HTTPException(status_code=500, detail=get_msg('backend.user_creation_failed', lang=lang))
     logger.debug(f"get_uid_by_user, {body.usr}")
     uid = auth_util.get_uid_by_user(body.usr)
     logger.debug(f"get_user, {uid}")
     if uid is None:
-        raise HTTPException(status_code=500, detail=get_msg('backend.user_query_failed'))
+        raise HTTPException(status_code=500, detail=get_msg('backend.user_query_failed', lang=lang))
     logger.debug("del_captcha_codes")
     if body.captcha_token in captcha_codes:
         del captcha_codes[body.captcha_token]
@@ -282,7 +290,7 @@ async def register(body: RegisterRequest):
         "access_token": token,
         "token_type": "bearer",
         "uid": uid,
-        "message": get_msg('backend.user_register_success', usr=body.usr),
+        "message": get_msg('backend.user_register_success', lang=lang, usr=body.usr),
     }
     logger.debug(f"return_reg_info {info}")
     return info

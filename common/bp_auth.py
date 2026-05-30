@@ -13,13 +13,14 @@ import logging.config
 import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-from flask import Blueprint, jsonify, redirect, url_for, current_app, make_response
+from flask import Blueprint, g, jsonify, redirect, url_for, current_app, make_response
 from flask import (request, render_template)
 from common import statistic_util
 from common import my_enums
 from common.const import SESSION_TIMEOUT
 from common.html_util import get_html_ctx_from_md
 from common.auth_util import auth_info, get_client_ip, get_portal_login_url, redirect_to_portal_login
+from common.i18n import get_msg, get_current_lang
 
 
 log_config_path = 'logging.conf'
@@ -63,7 +64,7 @@ def generate_captcha():
         return jsonify({"success": False, "message": str(e)}), 500
     except requests.RequestException as e:
         logger.error(f"生成图形验证码失败: {e}", exc_info=True)
-        return jsonify({"success": False, "message": "生成验证码失败"}), 500
+        return jsonify({"success": False, "message": get_msg('auth.captcha_generate_failed')}), 500
 
 
 @auth_bp.route('/captcha/image/<captcha_token>', methods=['GET'])
@@ -75,7 +76,7 @@ def get_captcha_image(captcha_token):
         resp = requests.get(url, timeout=10, verify=False)
         logger.debug(f"response status={resp.status_code}, content_type={resp.headers.get('Content-Type', 'N/A')}")
         if resp.status_code == 404:
-            return jsonify({"success": False, "message": "验证码不存在或已过期"}), 404
+            return jsonify({"success": False, "message": get_msg('auth.captcha_expired')}), 404
         resp.raise_for_status()
         response = make_response(resp.content)
         response.headers['Content-Type'] = resp.headers.get('Content-Type', 'image/svg+xml')
@@ -86,7 +87,7 @@ def get_captcha_image(captcha_token):
         return jsonify({"success": False, "message": str(e)}), 500
     except Exception as e:
         logger.exception("获取验证码图片失败", exc_info=True)
-        return jsonify({"success": False, "message": "获取验证码失败"}), 500
+        return jsonify({"success": False, "message": get_msg('auth.captcha_fetch_failed')}), 500
 
 
 @auth_bp.route('/login', methods=['GET'])
@@ -147,10 +148,11 @@ def login():
     captcha_code = request.form.get('captcha_code', '').strip()
     captcha_token = request.form.get('captcha_token', '').strip()
     ip = get_client_ip()
+    lang = get_current_lang()
     logger.info(f"user_login: {user}, from_ip,{ip}")
     try:
         url = f"{_auth_api_base()}/auth/login"
-        params = {"usr": user, "t": t, "captcha_code": captcha_code, "captcha_token": captcha_token}
+        params = {"usr": user, "t": t, "captcha_code": captcha_code, "captcha_token": captcha_token, "lang": lang}
         safe_params = {**params, "t": "***"}
         logger.debug(f"POST {url}, params {safe_params}")
         resp = requests.post(url, json=params, timeout=10, verify=False)
@@ -168,14 +170,14 @@ def login():
         return redirect(url_for('auth.login_index',
                                 app_source=app_source,
                                 app_base_uri=app_base_uri,
-                                warning_info="认证服务暂时不可用，请稍后重试",
+                                warning_info=get_msg('auth.service_unavailable'),
                                 usr=user))
 
     if resp.status_code != 200:
         try:
-            detail = resp.json().get("detail", "登录失败")
+            detail = resp.json().get("detail", get_msg('auth.login_failed'))
         except Exception:
-            detail = "登录失败"
+            detail = get_msg('auth.login_failed')
         logger.error(f"用户认证失败 {user}: {detail}")
         return redirect(url_for('auth.login_index',
                                 app_source=app_source,
@@ -207,7 +209,7 @@ def logout():
     auth_info.pop(session_key, None)
     return redirect(url_for('auth.login_index',
                             app_source=app_source,
-                            warning_info="用户已退出"))
+                            warning_info=get_msg('auth.user_logged_out')))
 
 @auth_bp.route('/reg/usr', methods=['GET'])
 def reg_user_index():
@@ -229,7 +231,7 @@ def reg_user_index():
     except RuntimeError as e:
         logger.error(f"配置错误: {e}")
         ctx = {
-            "sys_name": sys_name + "_新用户注册",
+            "sys_name": get_msg('auth.registration_page_title', sys_name=sys_name),
             "warning_info": str(e),
             "app_source": app_source,
             "captcha_token": "",
@@ -239,7 +241,7 @@ def reg_user_index():
         logger.exception(f"获取验证码 token 失败")
 
     ctx = {
-        "sys_name": sys_name + "_新用户注册",
+        "sys_name": get_msg('auth.registration_page_title', sys_name=sys_name),
         "warning_info": "",
         "app_source": app_source,
         "captcha_token": captcha_token,
@@ -263,8 +265,9 @@ def reg_user():
     t = request.form.get('t', '').strip()
 
     sys_name = my_enums.AppType.get_app_type(app_source)
+    lang = get_current_lang()
     ctx = {
-        "sys_name": sys_name + "_新用户注册",
+        "sys_name": get_msg('auth.registration_page_title', sys_name=sys_name),
         "user": usr,
         "warning_info": "",
         "app_source": app_source,
@@ -272,16 +275,16 @@ def reg_user():
     }
 
     if not usr:
-        ctx["warning_info"] = "用户名不能为空"
+        ctx["warning_info"] = get_msg('auth.username_required')
         logger.error("reg_user_empty_username")
         return render_template(dt_idx, **ctx)
     if not t:
-        ctx["warning_info"] = "密码不能为空"
+        ctx["warning_info"] = get_msg('auth.password_required')
         logger.error("reg_user_empty_password")
         return render_template(dt_idx, **ctx)
     try:
         url = f"{_auth_api_base()}/auth/register"
-        params = {"usr": usr, "t": t, "captcha_code": captcha_code, "captcha_token": captcha_token}
+        params = {"usr": usr, "t": t, "captcha_code": captcha_code, "captcha_token": captcha_token, "lang": lang}
         safe_params = {**params, "t": "***"}
         logger.debug(f"POST {url}, params {safe_params}")
         resp = requests.post(url, json=params, timeout=10, verify=False)
@@ -292,7 +295,7 @@ def reg_user():
         return render_template(dt_idx, **ctx)
     except Exception as e:
         logger.exception(f"auth_service 调用失败")
-        ctx["warning_info"] = "认证服务暂时不可用，请稍后重试"
+        ctx["warning_info"] = get_msg('auth.service_unavailable')
         return render_template(dt_idx, **ctx)
 
     if resp.status_code == 200:
@@ -300,15 +303,15 @@ def reg_user():
         uid = result["uid"]
         ctx["uid"] = uid
         ctx["sys_name"] = sys_name
-        ctx["warning_info"] = f"用户 {usr} 已成功创建，欢迎使用本系统"
+        ctx["warning_info"] = get_msg('auth.user_registered', usr=usr)
         dt_idx = "login.html"
         logger.info(f"reg_user_success, {usr}")
         return render_template(dt_idx, **ctx)
     else:
         try:
-            detail = resp.json().get("detail", "用户创建失败")
+            detail = resp.json().get("detail", get_msg('auth.registration_failed'))
         except Exception as e:
-            detail = "用户创建失败"
+            detail = get_msg('auth.registration_failed')
             logger.exception(detail)
         ctx["warning_info"] = detail
         ctx["captcha_token"] = captcha_token
@@ -326,7 +329,7 @@ def get_statistic_report_index():
     session_key = f"{uid}_{get_client_ip()}"
     if (not auth_info.get(session_key, None)
             or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-        warning_info = "用户会话信息已失效，请重新登录"
+        warning_info = get_msg('auth.session_expired')
         logger.warning(f"{uid}, {warning_info}")
         return redirect(url_for(
             'auth.login_index',
@@ -359,7 +362,7 @@ def get_statistic_report():
     session_key = f"{uid}_{get_client_ip()}"
     if (not auth_info.get(session_key, None)
             or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-        warning_info = "用户会话信息已失效，请重新登录"
+        warning_info = get_msg('auth.session_expired')
         logger.warning(f"{uid}, {warning_info}")
         return redirect(url_for(
             'auth.login_index',
@@ -369,7 +372,7 @@ def get_statistic_report():
         ))
     statistics_list = statistic_util.get_statistics_list()
     if statistics_list is None:
-        return json.dumps({"error": "数据统计服务异常，请稍后重试"}, ensure_ascii=False), 503
+        return json.dumps({"error": get_msg('auth.statistics_service_error')}, ensure_ascii=False), 503
     return json.dumps(statistics_list, ensure_ascii=False), 200
 
 @auth_bp.route('/health', methods=['GET'])
@@ -398,7 +401,7 @@ def get_usr_manual():
         logger.info(f"file_exist, {abs_path}")
     html_content, toc_content = get_html_ctx_from_md(abs_path)
     ctx = {
-        "sys_name": sys_name + "_用户使用说明",
+        "sys_name": get_msg('auth.user_manual_title', sys_name=sys_name),
         "warning_info": "",
         "app_source": app_source,
         "html_content": html_content,

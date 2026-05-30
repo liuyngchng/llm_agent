@@ -51,7 +51,7 @@ def auth_user(user:str, t: str, cypher_key: str) -> dict:
             "t": 2de7zde98f     # 加密的过期时间
         }
     """
-    auth_result ={"pass": False, "uid": "", "msg":""}
+    auth_result = {"pass": False, "uid": "", "msg_key": "", "usr": user}
     if not os.path.exists(AUTH_DB_FILE):
         raise FileNotFoundError(f"数据库文件 {os.path.abspath(AUTH_DB_FILE)} 不存在")
     with sqlite3.connect(AUTH_DB_FILE) as my_conn:
@@ -59,7 +59,7 @@ def auth_user(user:str, t: str, cypher_key: str) -> dict:
         check_info = query_sqlite(my_conn, sql)
         user_dt = check_info.get('data', [])
         if not user_dt:
-            auth_result["msg"] = f"当前用户名 {user} 不存在，请注册后再尝试登录"
+            auth_result["msg_key"] = "backend.user_not_found_login"
             return auth_result
         sql = f"select id, role from user where name='{user}' and t = '{t}' limit 1"
         check_info = query_sqlite(my_conn, sql)
@@ -70,7 +70,7 @@ def auth_user(user:str, t: str, cypher_key: str) -> dict:
         auth_result["role"] = user_dt[0][1]
         auth_result["t"] = encrypt(str(time.time() * 1000), cypher_key)
     else:
-        auth_result["msg"] = f"当前用户 {user} 的密码输入错误"
+        auth_result["msg_key"] = "backend.password_incorrect"
     return auth_result
 
 def query_sqlite(db_con, query: str) -> dict:
