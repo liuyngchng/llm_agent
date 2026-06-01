@@ -568,6 +568,7 @@ def welcome():
 
 
 if __name__ == '__main__':
+    logger.info("init")
     port = 16001
     if len(__import__('sys').argv) > 1:
         try:
