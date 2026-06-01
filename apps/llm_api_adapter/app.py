@@ -42,6 +42,25 @@ FINISH_REASON_MAP = {
 }
 
 
+def make_json_response(data, status=200, headers=None):
+    """统一创建 JSON 响应，正确处理 UTF-8 编码"""
+    response_data = json.dumps(data, ensure_ascii=False, indent=None, separators=(',', ':'))
+    logger.info(f"json_response_data_first_500_chars: {response_data[:500]}")
+    logger.info(f"json_response_data_repr_first_200: {repr(response_data[:200])}")
+    response_headers = {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-cache'
+    }
+    if headers:
+        response_headers.update(headers)
+
+    return Response(
+        response_data.encode('utf-8'),  # 显式编码为 UTF-8 字节
+        status=status,
+        headers=response_headers
+    )
+
+
 def anthropic_to_openai_messages(anthropic_messages, system_prompt=None):
     """将 Anthropic messages 转换为 OpenAI messages 格式"""
     openai_messages = []
@@ -190,6 +209,9 @@ def openai_to_anthropic_response(openai_response, anthropic_model, request_id=No
     choice = openai_response.get("choices", [{}])[0]
     message = choice.get("message", {})
     content_text = message.get("content", "")
+    logger.info(f"raw_content_from_upstream: {content_text}")
+    logger.info(f"raw_content_type: {type(content_text)}")
+    logger.info(f"raw_content_repr: {repr(content_text)}")
     finish_reason = choice.get("finish_reason", "stop")
     stop_reason = FINISH_REASON_MAP.get(finish_reason, "end_turn")
 
@@ -256,7 +278,7 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
             "usage": {"input_tokens": 0, "output_tokens": 0}
         }
     }
-    yield f"event: message_start\ndata: {json.dumps(start_event)}\n\n"
+    yield (f"event: message_start\ndata: {json.dumps(start_event, ensure_ascii=False)}\n\n").encode('utf-8')
 
     for line in openai_stream_response.iter_lines(decode_unicode=True):
         if not line or not line.startswith("data: "):
@@ -291,6 +313,7 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
 
         text = delta.get("content", "")
         if text:
+            logger.debug(f"SSE text chunk: {repr(text)}")
             if not content_block_started:
                 content_block_started = True
                 # content_block_start
@@ -299,7 +322,7 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
                     "index": content_index,
                     "content_block": {"type": "text", "text": ""}
                 }
-                yield f"event: content_block_start\ndata: {json.dumps(cbs_event)}\n\n"
+                yield (f"event: content_block_start\ndata: {json.dumps(cbs_event, ensure_ascii=False)}\n\n").encode('utf-8')
 
             accumulated_text += text
             # content_block_delta
@@ -308,7 +331,7 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
                 "index": content_index,
                 "delta": {"type": "text_delta", "text": text}
             }
-            yield f"event: content_block_delta\ndata: {json.dumps(cbd_event, ensure_ascii=False)}\n\n"
+            yield (f"event: content_block_delta\ndata: {json.dumps(cbd_event, ensure_ascii=False)}\n\n").encode('utf-8')
 
         if chunk_finish:
             finish_reason = chunk_finish
@@ -319,7 +342,7 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
             "type": "content_block_stop",
             "index": content_index
         }
-        yield f"event: content_block_stop\ndata: {json.dumps(cbs_end)}\n\n"
+        yield (f"event: content_block_stop\ndata: {json.dumps(cbs_end)}\n\n").encode('utf-8')
 
     anthropic_stop = FINISH_REASON_MAP.get(finish_reason, "end_turn") if finish_reason else "end_turn"
 
@@ -332,11 +355,11 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
         },
         "usage": {"output_tokens": output_tokens}
     }
-    yield f"event: message_delta\ndata: {json.dumps(msg_delta)}\n\n"
+    yield (f"event: message_delta\ndata: {json.dumps(msg_delta)}\n\n").encode('utf-8')
 
     # message_stop
     msg_stop = {"type": "message_stop"}
-    yield f"event: message_stop\ndata: {json.dumps(msg_stop)}\n\n"
+    yield (f"event: message_stop\ndata: {json.dumps(msg_stop)}\n\n").encode('utf-8')
 
 
 def verify_api_key(auth_header):
@@ -348,22 +371,39 @@ def verify_api_key(auth_header):
     return auth_header == llm_api_key
 
 
+def extract_api_key():
+    """从请求头中提取 API key，支持 x-api-key 和 Authorization: Bearer 两种方式"""
+    # 优先检查 x-api-key
+    api_key = request.headers.get("x-api-key", "")
+    if api_key:
+        return api_key
+
+    # 检查 Authorization: Bearer
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[7:]  # 去掉 "Bearer " 前缀
+
+    return ""
+
 def require_auth(f):
     def decorated(*args, **kwargs):
-        api_key = request.headers.get("x-api-key", "")
+        api_key = extract_api_key()
+
         if not verify_api_key(api_key):
-            return Response(
-                json.dumps({
+            logger.warning(
+                f"Invalid API key attempt. Expected: {llm_api_key[:20]}..., Got: {api_key[:20] if api_key else 'None'}...")
+            return make_json_response(
+                {
                     "type": "error",
                     "error": {
                         "type": "authentication_error",
-                        "message": "invalid x-api-key"
+                        "message": "invalid api key"
                     }
-                }),
-                mimetype="application/json",
+                },
                 status=401
             )
         return f(*args, **kwargs)
+
     decorated.__name__ = f.__name__
     return decorated
 
@@ -376,23 +416,21 @@ def create_message():
     data = request.json
     logger.debug(f"Request body: {json.dumps(data, ensure_ascii=False)[:500]}")
     if not data:
-        return Response(
-            json.dumps({
+        return make_json_response(
+            {
                 "type": "error",
                 "error": {"type": "invalid_request_error", "message": "Request body is required"}
-            }),
-            mimetype="application/json",
+            },
             status=400
         )
 
     messages = data.get("messages", [])
     if not messages or not isinstance(messages, list):
-        return Response(
-            json.dumps({
+        return make_json_response(
+            {
                 "type": "error",
                 "error": {"type": "invalid_request_error", "message": "messages must be a non-empty list"}
-            }),
-            mimetype="application/json",
+            },
             status=400
         )
 
@@ -409,6 +447,7 @@ def create_message():
         logger.info(f"Forwarding to {llm_api_uri}/chat/completions, model={llm_model_name}, stream={stream}")
 
         if stream:
+            logger.debug("stream request")
             openai_request["stream"] = True
             upstream_response = requests.post(
                 f"{llm_api_uri}/chat/completions",
@@ -421,15 +460,14 @@ def create_message():
 
             if upstream_response.status_code != 200:
                 logger.error(f"Upstream error: {upstream_response.status_code} - {upstream_response.text}")
-                return Response(
-                    json.dumps({
+                return make_json_response(
+                    {
                         "type": "error",
                         "error": {
                             "type": "api_error",
                             "message": f"Upstream API returned {upstream_response.status_code}"
                         }
-                    }),
-                    mimetype="application/json",
+                    },
                     status=502
                 )
 
@@ -446,6 +484,7 @@ def create_message():
                 }
             )
         else:
+            logger.debug("not_stream_request")
             upstream_response = requests.post(
                 f"{llm_api_uri}/chat/completions",
                 headers=headers,
@@ -456,15 +495,14 @@ def create_message():
 
             if upstream_response.status_code != 200:
                 logger.error(f"Upstream error: {upstream_response.status_code} - {upstream_response.text}")
-                return Response(
-                    json.dumps({
+                return make_json_response(
+                    {
                         "type": "error",
                         "error": {
                             "type": "api_error",
                             "message": f"Upstream API returned {upstream_response.status_code}"
                         }
-                    }),
-                    mimetype="application/json",
+                    },
                     status=502
                 )
 
@@ -474,30 +512,27 @@ def create_message():
             processing_time = time.time() - start_time
             logger.info(f"Request processed in {processing_time:.2f}s, stream=False")
 
-            return Response(
-                json.dumps(anthropic_response, ensure_ascii=False),
-                mimetype="application/json",
+            return make_json_response(
+                anthropic_response,
                 headers={"x-request-id": anthropic_response["id"]}
             )
 
     except requests.exceptions.Timeout:
         logger.error("Upstream API timeout")
-        return Response(
-            json.dumps({
+        return make_json_response(
+            {
                 "type": "error",
                 "error": {"type": "timeout_error", "message": "Upstream API timeout"}
-            }),
-            mimetype="application/json",
+            },
             status=504
         )
     except Exception as e:
         logger.exception("Unexpected error")
-        return Response(
-            json.dumps({
+        return make_json_response(
+            {
                 "type": "error",
                 "error": {"type": "internal_error", "message": str(e)}
-            }),
-            mimetype="application/json",
+            },
             status=500
         )
 
@@ -519,25 +554,19 @@ def list_models():
         "first_id": llm_model_name,
         "last_id": llm_model_name
     }
-    return Response(
-        json.dumps(models_data, ensure_ascii=False),
-        mimetype="application/json"
-    )
+    return make_json_response(models_data)
 
 
 @app.route('/v1/models/<model_id>', methods=['GET'])
 @require_auth
 def get_model(model_id):
     """获取单个模型信息"""
-    return Response(
-        json.dumps({
-            "id": model_id,
-            "type": "model",
-            "display_name": model_id,
-            "created_at": "2024-01-01T00:00:00Z"
-        }),
-        mimetype="application/json"
-    )
+    return make_json_response({
+        "id": model_id,
+        "type": "model",
+        "display_name": model_id,
+        "created_at": "2024-01-01T00:00:00Z"
+    })
 
 
 @app.route('/health', methods=['GET'])
@@ -553,7 +582,7 @@ def health_check():
 
 @app.route('/', methods=['GET'])
 def welcome():
-    return jsonify({
+    return make_json_response({
         "status": 200,
         "msg": "LLM API Adapter - OpenAI to Anthropic API converter",
         "upstream_model": llm_model_name,
@@ -570,12 +599,11 @@ def welcome():
 @app.errorhandler(Exception)
 def handle_exception(e):
     logger.exception("Unhandled exception")
-    return Response(
-        json.dumps({
+    return make_json_response(
+        {
             "type": "error",
             "error": {"type": "internal_error", "message": str(e)}
-        }),
-        mimetype="application/json",
+        },
         status=500
     )
 
