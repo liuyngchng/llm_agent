@@ -372,8 +372,9 @@ def require_auth(f):
 @require_auth
 def create_message():
     start_time = time.time()
+    logger.debug(f"Request headers: {dict(request.headers)}")
     data = request.json
-
+    logger.debug(f"Request body: {json.dumps(data, ensure_ascii=False)[:500]}")
     if not data:
         return Response(
             json.dumps({
@@ -566,6 +567,17 @@ def welcome():
         "timestamp": int(time.time())
     })
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logger.exception("Unhandled exception")
+    return Response(
+        json.dumps({
+            "type": "error",
+            "error": {"type": "internal_error", "message": str(e)}
+        }),
+        mimetype="application/json",
+        status=500
+    )
 
 if __name__ == '__main__':
     logger.info("init")
@@ -575,5 +587,13 @@ if __name__ == '__main__':
             port = int(__import__('sys').argv[1])
         except ValueError:
             pass
-    logger.info(f"Starting LLM API Adapter, listening_port={port}, upstream={llm_api_uri}, model={llm_model_name}")
+
+    # _base_dir = os.path.dirname(os.path.abspath(__file__))
+    # _cert_dir = os.path.join(_base_dir, '../../common/cert')
+    # cert_file = os.path.join(_cert_dir, 'srv.crt')
+    # key_file = os.path.join(_cert_dir, 'srv.key')
+    # logger.info(f"Cert: {cert_file}, Key: {key_file}")
+    # app.run(host='0.0.0.0', port=port, threaded=True, ssl_context=(cert_file, key_file))
+    logger.info(f"LLM API Adapter, listening_port={port}, upstream={llm_api_uri}, model={llm_model_name}")
+
     app.run(host='0.0.0.0', port=port, threaded=True)
