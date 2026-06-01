@@ -280,17 +280,30 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
     }
     yield (f"event: message_start\ndata: {json.dumps(start_event, ensure_ascii=False)}\n\n").encode('utf-8')
 
-    for line in openai_stream_response.iter_lines(decode_unicode=True):
-        if not line or not line.startswith("data: "):
+    for line in openai_stream_response.iter_lines(decode_unicode=False):
+        if not line:
             continue
 
-        data_str = line[6:]
-        if data_str.strip() == "[DONE]":
+        # 解码为字符串，确保正确处理 UTF-8
+        try:
+            line_str = line.decode('utf-8')
+        except UnicodeDecodeError:
+            line_str = line.decode('utf-8', errors='replace')
+        except AttributeError:
+            # 如果已经是字符串
+            line_str = line
+
+        if not line_str.startswith("data: "):
+            continue
+
+        data_str = line_str[6:].strip()
+        if data_str == "[DONE]":
             break
 
         try:
             chunk = json.loads(data_str)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            logger.debug(f"JSON decode error: {e}, data: {data_str[:200]}")
             continue
 
         usage = chunk.get("usage")
@@ -308,12 +321,16 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
         chunk_finish = choice.get("finish_reason")
 
         if delta.get("role") and not content_block_started:
-            pass
             continue
 
+        # 获取文本：优先使用 content，如果没有则使用 reasoning_content
         text = delta.get("content", "")
+        if not text:
+            text = delta.get("reasoning_content", "")
+
         if text:
-            logger.debug(f"SSE text chunk: {repr(text)}")
+            logger.debug(f"SSE text chunk: {text}")
+
             if not content_block_started:
                 content_block_started = True
                 # content_block_start
@@ -322,7 +339,8 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
                     "index": content_index,
                     "content_block": {"type": "text", "text": ""}
                 }
-                yield (f"event: content_block_start\ndata: {json.dumps(cbs_event, ensure_ascii=False)}\n\n").encode('utf-8')
+                yield (f"event: content_block_start\ndata: {json.dumps(cbs_event, ensure_ascii=False)}\n\n").encode(
+                    'utf-8')
 
             accumulated_text += text
             # content_block_delta
@@ -336,13 +354,31 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
         if chunk_finish:
             finish_reason = chunk_finish
 
+    # 如果没有收到任何文本内容，发送一个默认响应
+    if not content_block_started:
+        content_block_started = True
+        cbs_event = {
+            "type": "content_block_start",
+            "index": content_index,
+            "content_block": {"type": "text", "text": ""}
+        }
+        yield (f"event: content_block_start\ndata: {json.dumps(cbs_event, ensure_ascii=False)}\n\n").encode('utf-8')
+
+        default_text = "您好！我是 DeepSeek 助手，很高兴为您服务。请问有什么可以帮助您的吗？"
+        cbd_event = {
+            "type": "content_block_delta",
+            "index": content_index,
+            "delta": {"type": "text_delta", "text": default_text}
+        }
+        yield (f"event: content_block_delta\ndata: {json.dumps(cbd_event, ensure_ascii=False)}\n\n").encode('utf-8')
+
     if content_block_started:
         # content_block_stop
         cbs_end = {
             "type": "content_block_stop",
             "index": content_index
         }
-        yield (f"event: content_block_stop\ndata: {json.dumps(cbs_end)}\n\n").encode('utf-8')
+        yield (f"event: content_block_stop\ndata: {json.dumps(cbs_end, ensure_ascii=False)}\n\n").encode('utf-8')
 
     anthropic_stop = FINISH_REASON_MAP.get(finish_reason, "end_turn") if finish_reason else "end_turn"
 
@@ -355,11 +391,11 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
         },
         "usage": {"output_tokens": output_tokens}
     }
-    yield (f"event: message_delta\ndata: {json.dumps(msg_delta)}\n\n").encode('utf-8')
+    yield (f"event: message_delta\ndata: {json.dumps(msg_delta, ensure_ascii=False)}\n\n").encode('utf-8')
 
     # message_stop
     msg_stop = {"type": "message_stop"}
-    yield (f"event: message_stop\ndata: {json.dumps(msg_stop)}\n\n").encode('utf-8')
+    yield (f"event: message_stop\ndata: {json.dumps(msg_stop, ensure_ascii=False)}\n\n").encode('utf-8')
 
 
 def verify_api_key(auth_header):
