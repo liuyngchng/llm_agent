@@ -1,5 +1,6 @@
 package llm_api_adapter.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -206,6 +207,12 @@ public class SseConversionService {
     private static int toInt(Object v, int def) {
         if (v instanceof Number) return ((Number) v).intValue();
         return def;
+    }
+
+    private static Map<String, Object> mapOf(String k1, Object v1) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put(k1, v1);
+        return m;
     }
 
     private static Map<String, Object> mapOf(String k1, Object v1, String k2, Object v2) {
