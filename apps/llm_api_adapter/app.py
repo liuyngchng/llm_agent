@@ -19,6 +19,12 @@ import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# 清除所有代理环境变量，确保 HTTP 请求在任何情况下都忽略代理
+for _proxy_var in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy',
+                    'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy',
+                    'FTP_PROXY', 'ftp_proxy']:
+    os.environ.pop(_proxy_var, None)
+
 from common.sys_init import init_yml_cfg
 
 app = Flask(__name__)
@@ -495,7 +501,8 @@ def create_message():
                 json=openai_request,
                 timeout=300,
                 stream=True,
-                verify=False
+                verify=False,
+                proxies={}
             )
 
             if upstream_response.status_code != 200:
@@ -530,7 +537,8 @@ def create_message():
                 headers=headers,
                 json=openai_request,
                 timeout=300,
-                verify=False
+                verify=False,
+                proxies={}
             )
 
             if upstream_response.status_code != 200:
