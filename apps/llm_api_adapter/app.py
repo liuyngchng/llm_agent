@@ -246,6 +246,11 @@ def anthropic_to_openai_request(anthropic_data):
     if top_k is not None:
         logger.warning("ignoring Anthropic 'top_k' parameter (not a standard OpenAI parameter)")
 
+    # 映射 metadata.user_id -> user (用于滥用监控)
+    user_id = (anthropic_data.get("metadata") or {}).get("user_id")
+    if user_id:
+        logger.debug(f"mapping metadata.user_id='{user_id}' to OpenAI 'user' field")
+
     openai_messages = anthropic_to_openai_messages(anthropic_messages, system_prompt)
 
     openai_request = {
@@ -265,6 +270,9 @@ def anthropic_to_openai_request(anthropic_data):
     if openai_tools:
         openai_request["tools"] = openai_tools
 
+    if user_id:
+        openai_request["user"] = user_id
+
     openai_tool_choice = anthropic_tool_choice_to_openai(anthropic_tool_choice)
     if openai_tool_choice:
         openai_request["tool_choice"] = openai_tool_choice
@@ -278,10 +286,11 @@ def openai_to_anthropic_response(openai_response, anthropic_model, request_id=No
 
     choice = openai_response.get("choices", [{}])[0]
     message = choice.get("message", {})
-    content_text = message.get("content", "")
-    logger.info(f"raw_content_from_upstream: {content_text}")
-    logger.info(f"raw_content_type: {type(content_text)}")
-    logger.info(f"raw_content_repr: {repr(content_text)}")
+    content_text = message.get("content") or ""
+    reasoning_text = message.get("reasoning_content") or ""
+    logger.debug(f"raw_content_from_upstream: {content_text}")
+    logger.debug(f"raw_content_type: {type(content_text)}")
+    logger.debug(f"raw_content_repr: {repr(content_text)}")
     finish_reason = choice.get("finish_reason", "stop")
     stop_reason = FINISH_REASON_MAP.get(finish_reason, "end_turn")
 
@@ -290,6 +299,8 @@ def openai_to_anthropic_response(openai_response, anthropic_model, request_id=No
     output_tokens = usage.get("completion_tokens", 0)
 
     content_blocks = []
+    if reasoning_text:
+        content_blocks.append({"type": "thinking", "thinking": reasoning_text, "signature": ""})
     if content_text:
         content_blocks.append({"type": "text", "text": content_text})
 
@@ -325,14 +336,18 @@ def openai_to_anthropic_response(openai_response, anthropic_model, request_id=No
 
 def generate_anthropic_sse(openai_stream_response, anthropic_model):
     """将 OpenAI SSE 流式响应转换为 Anthropic SSE 流式响应，
-    同时处理文本和 tool_use 内容块。"""
+    同时处理 thinking、文本和 tool_use 内容块。"""
     msg_id = f"msg_{uuid.uuid4().hex[:12]}"
-    text_block_index = -1        # 当前文本块的 Anthropic content index
+    thinking_block_index = -1    # 推理/思考内容块的 Anthropic content index
+    text_block_index = -1        # 文本内容块的 Anthropic content index
     tool_block_indices = {}      # OpenAI tool_call index -> Anthropic content index
     next_block_index = 0         # 下一个可用的 Anthropic content index
+    closed_blocks = set()        # 已提前关闭的 content block index
     input_tokens = 0
     output_tokens = 0
     finish_reason = None
+    last_ping = time.time()
+    ping_interval = 30           # 每 30 秒发送一次 ping，防止连接超时
 
     # message_start
     start_event = {
@@ -409,18 +424,33 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
         if chunk_finish:
             finish_reason = chunk_finish
 
-        # 处理文本 delta
-        text = delta.get("content", "")
-        if not text:
-            text = delta.get("reasoning_content", "")
+        # 处理推理/思考 delta（如 DeepSeek-R1 的 reasoning_content）
+        reasoning_text = delta.get("reasoning_content") or ""
+        if reasoning_text:
+            if thinking_block_index < 0:
+                thinking_block_index = next_block_index
+                next_block_index += 1
+                yield _emit_block_start(thinking_block_index, {
+                    "type": "thinking", "thinking": "", "signature": ""
+                })
+            yield _emit_block_delta(thinking_block_index, {
+                "type": "thinking_delta", "thinking": reasoning_text
+            })
 
-        if text:
+        # 处理文本 delta
+        content_text = delta.get("content") or ""
+        if content_text:
+            # 如果 thinking 内容块还开着，先关闭（推理结束后才开始正文）
+            if thinking_block_index >= 0 and thinking_block_index not in closed_blocks:
+                yield _emit_block_stop(thinking_block_index)
+                closed_blocks.add(thinking_block_index)
+
             if text_block_index < 0:
                 text_block_index = next_block_index
                 next_block_index += 1
                 yield _emit_block_start(text_block_index, {"type": "text", "text": ""})
 
-            yield _emit_block_delta(text_block_index, {"type": "text_delta", "text": text})
+            yield _emit_block_delta(text_block_index, {"type": "text_delta", "text": content_text})
 
         # 处理 tool_calls delta
         for tc in delta.get("tool_calls", []):
@@ -445,9 +475,16 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
                     "partial_json": args
                 })
 
-    # 为每个打开的 content block 发送 content_block_stop
+        # 定期发送 ping 事件，防止代理/网关因超时断开 SSE 连接
+        now = time.time()
+        if now - last_ping >= ping_interval:
+            yield f"event: ping\ndata: {{}}\n\n".encode('utf-8')
+            last_ping = now
+
+    # 为每个未关闭的 content block 发送 content_block_stop
     for i in range(next_block_index):
-        yield _emit_block_stop(i)
+        if i not in closed_blocks:
+            yield _emit_block_stop(i)
 
     anthropic_stop = FINISH_REASON_MAP.get(finish_reason, "end_turn") if finish_reason else "end_turn"
 
@@ -687,6 +724,31 @@ def get_model(model_id):
         "display_name": model_id,
         "created_at": "2024-01-01T00:00:00Z"
     })
+
+
+@app.route('/v1/messages/count_tokens', methods=['POST'])
+@require_auth
+def count_tokens():
+    """Token 计数估算端点 — Anthropic 客户端用此管理上下文窗口"""
+    data = request.json
+    if not data:
+        return make_json_response(
+            {"type": "error", "error": {"type": "invalid_request_error", "message": "Request body is required"}},
+            status=400
+        )
+    messages = data.get("messages", [])
+    system = data.get("system", "")
+    system_text = ""
+    if isinstance(system, list):
+        system_text = "".join(b.get("text", "") for b in system if isinstance(b, dict) and b.get("type") == "text")
+    elif isinstance(system, str):
+        system_text = system
+    tools = data.get("tools")
+    tool_chars = json.dumps(tools, ensure_ascii=False) if tools else ""
+    # 粗略估算：英文约 4 字符/token，中文约 1.5 字符/token，取保守值
+    total_chars = len(system_text) + len(json.dumps(messages, ensure_ascii=False)) + len(tool_chars)
+    input_tokens = max(total_chars // 3, 1)
+    return make_json_response({"input_tokens": input_tokens})
 
 
 @app.route('/health', methods=['GET'])
