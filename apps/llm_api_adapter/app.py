@@ -15,6 +15,10 @@ import re
 import requests
 from flask import Flask, request, Response, stream_with_context, jsonify
 
+import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 from common.sys_init import init_yml_cfg
 
 app = Flask(__name__)
@@ -480,7 +484,7 @@ def create_message():
             "Authorization": f"Bearer {llm_api_key}"
         }
 
-        logger.info(f"Forwarding to {llm_api_uri}/chat/completions, model={llm_model_name}, stream={stream}")
+        logger.info(f"forward_to {llm_api_uri}/chat/completions, model={llm_model_name}, stream={stream}")
 
         if stream:
             logger.debug("stream request")
@@ -658,6 +662,6 @@ if __name__ == '__main__':
     # key_file = os.path.join(_cert_dir, 'srv.key')
     # logger.info(f"Cert: {cert_file}, Key: {key_file}")
     # app.run(host='0.0.0.0', port=port, threaded=True, ssl_context=(cert_file, key_file))
-    logger.info(f"LLM API Adapter, listening_port={port}, upstream={llm_api_uri}, model={llm_model_name}")
+    logger.info(f"llm_api_adapter, listening_port={port}, upstream={llm_api_uri}, model={llm_model_name}")
 
     app.run(host='0.0.0.0', port=port, threaded=True)
