@@ -10,12 +10,10 @@ import json
 import os
 import time
 import uuid
-import re
 
 import requests
 from flask import Flask, request, Response, stream_with_context, jsonify
 
-import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -50,6 +48,40 @@ FINISH_REASON_MAP = {
     "tool_calls": "tool_use",
     "content_filter": "end_turn",
 }
+
+
+def anthropic_tools_to_openai_tools(anthropic_tools):
+    """将 Anthropic tools 格式转换为 OpenAI tools 格式"""
+    if not anthropic_tools:
+        return None
+    openai_tools = []
+    for tool in anthropic_tools:
+        input_schema = tool.get("input_schema", {"type": "object", "properties": {}})
+        openai_tools.append({
+            "type": "function",
+            "function": {
+                "name": tool.get("name", ""),
+                "description": tool.get("description", ""),
+                "parameters": input_schema
+            }
+        })
+    return openai_tools
+
+
+def anthropic_tool_choice_to_openai(tool_choice):
+    """将 Anthropic tool_choice 转换为 OpenAI tool_choice"""
+    if not tool_choice:
+        return None
+    tc_type = tool_choice.get("type", "auto")
+    if tc_type == "auto":
+        return "auto"
+    elif tc_type == "any":
+        return "required"
+    elif tc_type == "tool":
+        tool_name = tool_choice.get("name", "")
+        if tool_name:
+            return {"type": "function", "function": {"name": tool_name}}
+    return "auto"
 
 
 def make_json_response(data, status=200, headers=None):
@@ -90,25 +122,30 @@ def anthropic_to_openai_messages(anthropic_messages, system_prompt=None):
         content = msg.get("content", "")
 
         if role == "user":
-            openai_content = _convert_anthropic_content_to_openai(content)
-            openai_messages.append({"role": "user", "content": openai_content})
+            msgs = _convert_anthropic_content_to_openai(content)
+            openai_messages.extend(msgs)
         elif role == "assistant":
-            openai_content = _convert_anthropic_assistant_content_to_openai(content)
-            openai_messages.append({"role": "assistant", "content": openai_content})
+            openai_content, openai_tool_calls = _convert_anthropic_assistant_content_to_openai(content)
+            oai_msg = {"role": "assistant", "content": openai_content if openai_content else None}
+            if openai_tool_calls:
+                oai_msg["tool_calls"] = openai_tool_calls
+            openai_messages.append(oai_msg)
 
     return openai_messages
 
 
 def _convert_anthropic_content_to_openai(content):
-    """转换 Anthropic user content 为 OpenAI 格式"""
+    """转换 Anthropic user content 为 OpenAI 格式，将 tool_result 块拆分为 role:tool 消息。
+    返回 list of message dicts（一个 user 消息 + 可能的多个 tool 消息）"""
     if isinstance(content, str):
-        return content
+        return [{"role": "user", "content": content}]
 
     if not isinstance(content, list):
-        return str(content)
+        return [{"role": "user", "content": str(content)}]
 
     text_parts = []
     image_parts = []
+    tool_messages = []
 
     for block in content:
         if not isinstance(block, dict):
@@ -128,27 +165,40 @@ def _convert_anthropic_content_to_openai(content):
             tool_use_id = block.get("tool_use_id", "")
             tool_content = block.get("content", "")
             if isinstance(tool_content, list):
-                tool_text = "".join(b.get("text", "") for b in tool_content if b.get("type") == "text")
+                tool_text = "".join(
+                    b.get("text", "") for b in tool_content if b.get("type") == "text"
+                )
             else:
                 tool_text = str(tool_content)
-            text_parts.append(f"[Tool Result id={tool_use_id}]: {tool_text}")
+            tool_messages.append({
+                "role": "tool",
+                "tool_call_id": tool_use_id,
+                "content": tool_text
+            })
 
-    if image_parts and not text_parts:
-        return image_parts
-    if image_parts and text_parts:
-        result = [{"type": "text", "text": "\n".join(text_parts)}]
-        result.extend(image_parts)
-        return result
-    return "\n".join(text_parts)
+    messages = []
+    # 只在有文本或图片时构建 user 消息
+    if text_parts or image_parts:
+        if image_parts and not text_parts:
+            messages.append({"role": "user", "content": image_parts})
+        elif image_parts and text_parts:
+            result = [{"type": "text", "text": "\n".join(text_parts)}]
+            result.extend(image_parts)
+            messages.append({"role": "user", "content": result})
+        else:
+            messages.append({"role": "user", "content": "\n".join(text_parts)})
+
+    messages.extend(tool_messages)
+    return messages
 
 
 def _convert_anthropic_assistant_content_to_openai(content):
-    """转换 Anthropic assistant content 为 OpenAI 格式"""
+    """转换 Anthropic assistant content 为 OpenAI 格式，返回 (content, tool_calls) 元组"""
     if isinstance(content, str):
-        return content
+        return content, None
 
     if not isinstance(content, list):
-        return str(content)
+        return str(content), None
 
     text_parts = []
     tool_calls = []
@@ -160,25 +210,17 @@ def _convert_anthropic_assistant_content_to_openai(content):
         if block_type == "text":
             text_parts.append(block.get("text", ""))
         elif block_type == "tool_use":
-            tool_id = block.get("id", "")
-            tool_name = block.get("name", "")
-            tool_input = block.get("input", {})
             tool_calls.append({
-                "id": tool_id,
+                "id": block.get("id", ""),
                 "type": "function",
                 "function": {
-                    "name": tool_name,
-                    "arguments": json.dumps(tool_input, ensure_ascii=False)
+                    "name": block.get("name", ""),
+                    "arguments": json.dumps(block.get("input", {}), ensure_ascii=False)
                 }
             })
 
-    if tool_calls:
-        result = ""
-        if text_parts:
-            result = "\n".join(text_parts)
-        return result if result else ""
-
-    return "\n".join(text_parts)
+    content_text = "\n".join(text_parts) if text_parts else ""
+    return content_text, (tool_calls if tool_calls else None)
 
 
 def anthropic_to_openai_request(anthropic_data):
@@ -192,6 +234,13 @@ def anthropic_to_openai_request(anthropic_data):
     stop_sequences = anthropic_data.get("stop_sequences")
     top_p = anthropic_data.get("top_p")
     top_k = anthropic_data.get("top_k")
+
+    # 转换 Anthropic tools / tool_choice 到 OpenAI 格式
+    anthropic_tools = anthropic_data.get("tools")
+    anthropic_tool_choice = anthropic_data.get("tool_choice")
+    # thinking 是 Anthropic 特有参数，不转发给 OpenAI
+    if anthropic_data.get("thinking"):
+        logger.info("ignoring Anthropic 'thinking' parameter (not supported by OpenAI API)")
 
     openai_messages = anthropic_to_openai_messages(anthropic_messages, system_prompt)
 
@@ -207,6 +256,16 @@ def anthropic_to_openai_request(anthropic_data):
         openai_request["stop"] = stop_sequences
     if top_p is not None:
         openai_request["top_p"] = top_p
+    if top_k is not None:
+        openai_request["top_k"] = top_k
+
+    openai_tools = anthropic_tools_to_openai_tools(anthropic_tools)
+    if openai_tools:
+        openai_request["tools"] = openai_tools
+
+    openai_tool_choice = anthropic_tool_choice_to_openai(anthropic_tool_choice)
+    if openai_tool_choice:
+        openai_request["tool_choice"] = openai_tool_choice
 
     return openai_request, anthropic_model
 
@@ -214,7 +273,6 @@ def anthropic_to_openai_request(anthropic_data):
 def openai_to_anthropic_response(openai_response, anthropic_model, request_id=None):
     """将 OpenAI Chat Completions 响应转换为 Anthropic Messages 响应"""
     msg_id = request_id or f"msg_{uuid.uuid4().hex[:12]}"
-    created = openai_response.get("created", int(time.time()))
 
     choice = openai_response.get("choices", [{}])[0]
     message = choice.get("message", {})
@@ -264,14 +322,15 @@ def openai_to_anthropic_response(openai_response, anthropic_model, request_id=No
 
 
 def generate_anthropic_sse(openai_stream_response, anthropic_model):
-    """将 OpenAI SSE 流式响应转换为 Anthropic SSE 流式响应"""
+    """将 OpenAI SSE 流式响应转换为 Anthropic SSE 流式响应，
+    同时处理文本和 tool_use 内容块。"""
     msg_id = f"msg_{uuid.uuid4().hex[:12]}"
-    timestamp = int(time.time())
-    content_index = 0
-    content_block_started = False
+    text_block_index = -1        # 当前文本块的 Anthropic content index
+    tool_block_indices = {}      # OpenAI tool_call index -> Anthropic content index
+    next_block_index = 0         # 下一个可用的 Anthropic content index
+    content_blocks_opened = 0    # 已打开的 content block 总数
     input_tokens = 0
     output_tokens = 0
-    accumulated_text = ""
     finish_reason = None
 
     # message_start
@@ -290,17 +349,35 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
     }
     yield (f"event: message_start\ndata: {json.dumps(start_event, ensure_ascii=False)}\n\n").encode('utf-8')
 
+    def _emit_block_start(index, block):
+        event = {
+            "type": "content_block_start",
+            "index": index,
+            "content_block": block
+        }
+        return (f"event: content_block_start\ndata: {json.dumps(event, ensure_ascii=False)}\n\n").encode('utf-8')
+
+    def _emit_block_delta(index, delta):
+        event = {
+            "type": "content_block_delta",
+            "index": index,
+            "delta": delta
+        }
+        return (f"event: content_block_delta\ndata: {json.dumps(event, ensure_ascii=False)}\n\n").encode('utf-8')
+
+    def _emit_block_stop(index):
+        event = {"type": "content_block_stop", "index": index}
+        return (f"event: content_block_stop\ndata: {json.dumps(event, ensure_ascii=False)}\n\n").encode('utf-8')
+
     for line in openai_stream_response.iter_lines(decode_unicode=False):
         if not line:
             continue
 
-        # 解码为字符串，确保正确处理 UTF-8
         try:
             line_str = line.decode('utf-8')
         except UnicodeDecodeError:
             line_str = line.decode('utf-8', errors='replace')
         except AttributeError:
-            # 如果已经是字符串
             line_str = line
 
         if not line_str.startswith("data: "):
@@ -312,15 +389,14 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
 
         try:
             chunk = json.loads(data_str)
-        except json.JSONDecodeError as e:
-            logger.debug(f"JSON decode error: {e}, data: {data_str[:200]}")
+        except json.JSONDecodeError:
             continue
 
-        usage = chunk.get("usage")
-        if usage:
-            input_tokens = usage.get("prompt_tokens", 0)
-            output_tokens = usage.get("completion_tokens", 0)
-            continue
+        # 先提取 usage（可能和 choices 在同一个 chunk 中）
+        chunk_usage = chunk.get("usage")
+        if chunk_usage:
+            input_tokens = chunk_usage.get("prompt_tokens", input_tokens)
+            output_tokens = chunk_usage.get("completion_tokens", output_tokens)
 
         choices = chunk.get("choices", [])
         if not choices:
@@ -329,66 +405,50 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
         choice = choices[0]
         delta = choice.get("delta", {})
         chunk_finish = choice.get("finish_reason")
+        if chunk_finish:
+            finish_reason = chunk_finish
 
-        if delta.get("role") and not content_block_started:
-            continue
-
-        # 获取文本：优先使用 content，如果没有则使用 reasoning_content
+        # 处理文本 delta
         text = delta.get("content", "")
         if not text:
             text = delta.get("reasoning_content", "")
 
         if text:
-            logger.debug(f"SSE text chunk: {text}")
+            if text_block_index < 0:
+                text_block_index = next_block_index
+                next_block_index += 1
+                content_blocks_opened += 1
+                yield _emit_block_start(text_block_index, {"type": "text", "text": ""})
 
-            if not content_block_started:
-                content_block_started = True
-                # content_block_start
-                cbs_event = {
-                    "type": "content_block_start",
-                    "index": content_index,
-                    "content_block": {"type": "text", "text": ""}
-                }
-                yield (f"event: content_block_start\ndata: {json.dumps(cbs_event, ensure_ascii=False)}\n\n").encode(
-                    'utf-8')
+            yield _emit_block_delta(text_block_index, {"type": "text_delta", "text": text})
 
-            accumulated_text += text
-            # content_block_delta
-            cbd_event = {
-                "type": "content_block_delta",
-                "index": content_index,
-                "delta": {"type": "text_delta", "text": text}
-            }
-            yield (f"event: content_block_delta\ndata: {json.dumps(cbd_event, ensure_ascii=False)}\n\n").encode('utf-8')
+        # 处理 tool_calls delta
+        for tc in delta.get("tool_calls", []):
+            tc_index = tc.get("index", 0)
 
-        if chunk_finish:
-            finish_reason = chunk_finish
+            if tc_index not in tool_block_indices:
+                tool_block_indices[tc_index] = next_block_index
+                next_block_index += 1
+                content_blocks_opened += 1
+                tc_id = tc.get("id", "")
+                tc_name = tc.get("function", {}).get("name", "")
+                yield _emit_block_start(tool_block_indices[tc_index], {
+                    "type": "tool_use",
+                    "id": tc_id,
+                    "name": tc_name,
+                    "input": {}
+                })
 
-    # 如果没有收到任何文本内容，发送一个默认响应
-    if not content_block_started:
-        content_block_started = True
-        cbs_event = {
-            "type": "content_block_start",
-            "index": content_index,
-            "content_block": {"type": "text", "text": ""}
-        }
-        yield (f"event: content_block_start\ndata: {json.dumps(cbs_event, ensure_ascii=False)}\n\n").encode('utf-8')
+            args = tc.get("function", {}).get("arguments", "")
+            if args:
+                yield _emit_block_delta(tool_block_indices[tc_index], {
+                    "type": "input_json_delta",
+                    "partial_json": args
+                })
 
-        default_text = "您好！我是 DeepSeek 助手，很高兴为您服务。请问有什么可以帮助您的吗？"
-        cbd_event = {
-            "type": "content_block_delta",
-            "index": content_index,
-            "delta": {"type": "text_delta", "text": default_text}
-        }
-        yield (f"event: content_block_delta\ndata: {json.dumps(cbd_event, ensure_ascii=False)}\n\n").encode('utf-8')
-
-    if content_block_started:
-        # content_block_stop
-        cbs_end = {
-            "type": "content_block_stop",
-            "index": content_index
-        }
-        yield (f"event: content_block_stop\ndata: {json.dumps(cbs_end, ensure_ascii=False)}\n\n").encode('utf-8')
+    # 为每个打开的 content block 发送 content_block_stop
+    for i in range(content_blocks_opened):
+        yield _emit_block_stop(i)
 
     anthropic_stop = FINISH_REASON_MAP.get(finish_reason, "end_turn") if finish_reason else "end_turn"
 
