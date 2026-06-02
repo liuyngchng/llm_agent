@@ -5,6 +5,7 @@
 LLM API Adapter: 将兼容 OpenAI 的大语言模型 API 转换为兼容 Anthropic 的 API
 供 Claude Code 等 Anthropic 客户端使用
 """
+import functools
 import logging.config
 import json
 import os
@@ -87,8 +88,8 @@ def anthropic_tool_choice_to_openai(tool_choice):
 def make_json_response(data, status=200, headers=None):
     """统一创建 JSON 响应，正确处理 UTF-8 编码"""
     response_data = json.dumps(data, ensure_ascii=False, indent=None, separators=(',', ':'))
-    logger.info(f"json_response_data_first_500_chars: {response_data[:500]}")
-    logger.info(f"json_response_data_repr_first_200: {repr(response_data[:200])}")
+    logger.debug(f"json_response_data_first_500_chars: {response_data[:500]}")
+    logger.debug(f"json_response_data_repr_first_200: {repr(response_data[:200])}")
     response_headers = {
         'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': 'no-cache'
@@ -113,7 +114,8 @@ def anthropic_to_openai_messages(anthropic_messages, system_prompt=None):
             for block in system_prompt:
                 if block.get("type") == "text":
                     system_text += block.get("text", "")
-            openai_messages.append({"role": "system", "content": system_text})
+            if system_text:
+                openai_messages.append({"role": "system", "content": system_text})
         else:
             openai_messages.append({"role": "system", "content": system_prompt})
 
@@ -238,9 +240,11 @@ def anthropic_to_openai_request(anthropic_data):
     # 转换 Anthropic tools / tool_choice 到 OpenAI 格式
     anthropic_tools = anthropic_data.get("tools")
     anthropic_tool_choice = anthropic_data.get("tool_choice")
-    # thinking 是 Anthropic 特有参数，不转发给 OpenAI
+    # thinking 和 top_k 是 Anthropic 特有参数，不转发给 OpenAI
     if anthropic_data.get("thinking"):
         logger.info("ignoring Anthropic 'thinking' parameter (not supported by OpenAI API)")
+    if top_k is not None:
+        logger.warning("ignoring Anthropic 'top_k' parameter (not a standard OpenAI parameter)")
 
     openai_messages = anthropic_to_openai_messages(anthropic_messages, system_prompt)
 
@@ -256,8 +260,6 @@ def anthropic_to_openai_request(anthropic_data):
         openai_request["stop"] = stop_sequences
     if top_p is not None:
         openai_request["top_p"] = top_p
-    if top_k is not None:
-        openai_request["top_k"] = top_k
 
     openai_tools = anthropic_tools_to_openai_tools(anthropic_tools)
     if openai_tools:
@@ -328,7 +330,6 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
     text_block_index = -1        # 当前文本块的 Anthropic content index
     tool_block_indices = {}      # OpenAI tool_call index -> Anthropic content index
     next_block_index = 0         # 下一个可用的 Anthropic content index
-    content_blocks_opened = 0    # 已打开的 content block 总数
     input_tokens = 0
     output_tokens = 0
     finish_reason = None
@@ -417,7 +418,6 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
             if text_block_index < 0:
                 text_block_index = next_block_index
                 next_block_index += 1
-                content_blocks_opened += 1
                 yield _emit_block_start(text_block_index, {"type": "text", "text": ""})
 
             yield _emit_block_delta(text_block_index, {"type": "text_delta", "text": text})
@@ -429,7 +429,6 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
             if tc_index not in tool_block_indices:
                 tool_block_indices[tc_index] = next_block_index
                 next_block_index += 1
-                content_blocks_opened += 1
                 tc_id = tc.get("id", "")
                 tc_name = tc.get("function", {}).get("name", "")
                 yield _emit_block_start(tool_block_indices[tc_index], {
@@ -447,7 +446,7 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
                 })
 
     # 为每个打开的 content block 发送 content_block_stop
-    for i in range(content_blocks_opened):
+    for i in range(next_block_index):
         yield _emit_block_stop(i)
 
     anthropic_stop = FINISH_REASON_MAP.get(finish_reason, "end_turn") if finish_reason else "end_turn"
@@ -484,7 +483,7 @@ def extract_api_key():
     if api_key:
         return api_key
 
-    # 检查 Authorization: Bearer
+    # 检查 Authorization: Bearer（注意：返回的是裸 token，不含 "Bearer " 前缀）
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         return auth_header[7:]  # 去掉 "Bearer " 前缀
@@ -492,6 +491,7 @@ def extract_api_key():
     return ""
 
 def require_auth(f):
+    @functools.wraps(f)
     def decorated(*args, **kwargs):
         api_key = extract_api_key()
 
@@ -510,8 +510,21 @@ def require_auth(f):
             )
         return f(*args, **kwargs)
 
-    decorated.__name__ = f.__name__
     return decorated
+
+
+@app.before_request
+def handle_options():
+    if request.method == 'OPTIONS':
+        return Response(status=204)
+
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, x-api-key, anthropic-version'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    return response
 
 
 @app.route('/v1/messages', methods=['POST'])
@@ -554,7 +567,6 @@ def create_message():
 
         if stream:
             logger.debug("stream request")
-            openai_request["stream"] = True
             upstream_response = requests.post(
                 f"{llm_api_uri}/chat/completions",
                 headers=headers,
