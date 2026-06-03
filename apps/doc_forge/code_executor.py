@@ -52,6 +52,7 @@ def execute_code(code: str, output_dir: str = "output_doc",
     """
     # Resolve to absolute paths relative to this file's directory
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    workspace_root = os.path.dirname(os.path.dirname(base_dir))  # repo root for common/ imports
     output_dir = os.path.join(base_dir, output_dir) if not os.path.isabs(output_dir) else output_dir
     upload_dir = os.path.join(base_dir, upload_dir) if not os.path.isabs(upload_dir) else upload_dir
 
@@ -69,6 +70,7 @@ def execute_code(code: str, output_dir: str = "output_doc",
             f.write(f"""
 import sys
 import os
+sys.path.insert(0, {workspace_root!r})
 sys.path.insert(0, {base_dir!r})
 os.chdir({output_dir!r})
 UPLOAD_DIR = {upload_dir!r}

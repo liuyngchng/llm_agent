@@ -7,6 +7,9 @@ import logging.config
 import sys
 from typing import Generator
 
+import subprocess
+import tempfile
+
 import requests
 
 from apps.doc_forge.code_executor import extract_python_blocks, execute_code, snapshot_dir
@@ -17,9 +20,13 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 ALLOWED_EXTENSIONS = {
     'txt', 'md', 'py', 'js', 'html', 'css', 'json',
-    'pdf', 'xlsx', 'docx', 'ppt', 'pptx',
+    'pdf', 'xlsx', 'xls', 'docx', 'doc', 'ppt', 'pptx',
     'jpg', 'jpeg', 'png', 'gif'
 }
+
+# 旧 Office 格式 -> 新格式映射（LibreOffice headless 自动转换）
+_OLD_FORMAT_MAP = {'doc': 'docx', 'ppt': 'pptx', 'xls': 'xlsx'}
+
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 log_config_path = 'logging.conf'
@@ -59,10 +66,10 @@ def build_doc_processing_system_prompt(file_paths: list[str] = None,
 以下文件已上传并可供处理（绝对路径）：
 {files_list}"""
 
-    return f"""你是一个专业的文档处理助手。你可以帮助用户读取、修改、合并和创建文档（docx、pptx、xlsx、pdf 等）。
+    return f"""你是一个专业的文档处理助手。你可以帮助用户读取、修改、合并和创建文档（doc/docx、ppt/pptx、xls/xlsx、pdf 等）。
 
 ## 核心能力
-- 解析和读取 docx、pptx、pdf、xlsx 文件的内容
+- 解析和读取 doc/docx、ppt/pptx、xls/xlsx、pdf 文件的内容（旧格式 .doc/.ppt/.xls 自动转为新格式后处理）
 - 按用户要求修改文档内容（直接修改原格式文件，保留原始排版和样式）
 - 合并多个文档
 - 创建新文档
@@ -71,12 +78,47 @@ def build_doc_processing_system_prompt(file_paths: list[str] = None,
 ## 可用的 Python 库
 你可以编写 Python 脚本来处理文档。以下库已安装可用：
 - python-docx — 读取/创建/修改 Word docx 文档（原生接口，保留格式）
+- common.docx_revision_util — Word 修订模式工具（Track Changes），支持以修订模式插入/删除/替换文本
 - python-pptx — 读取/创建/修改 PowerPoint pptx 文档（原生接口，保留格式）
 - openpyxl — 读取/创建/修改 Excel xlsx 文件（原生接口，保留格式）
 - pdfplumber — 解析和提取 PDF 内容
 - reportlab — 创建 PDF 文件
-- pypandoc — 文档格式转换（仅当用户明确要求转换格式时使用，如 docx→md）
+- pypandoc — 文档格式转换（仅当用户明确要求转换格式时使用）
 - Pillow (PIL) — 图像处理
+- LibreOffice — 系统级可用，旧格式文件（.doc/.ppt/.xls）上传时自动转为新格式
+
+## Word 修订模式（Track Changes）
+当用户要求审阅、修订、校对 Word 文档，或要求"以修订模式"修改时，使用 `common.docx_revision_util`：
+
+```python
+from common.docx_revision_util import (
+    tracked_insert_text, tracked_delete_text, tracked_replace_text,
+    tracked_replace_in_document, tracked_delete_paragraph,
+    accept_all_changes, reject_all_changes, get_tracked_changes_summary,
+)
+
+doc = Document(os.path.join(UPLOAD_DIR, 'report.docx'))
+
+# 全文替换（修订模式）
+count = tracked_replace_in_document(doc, '旧文本', '新文本', author='Reviewer')
+print(f'共修订 {{count}} 处')
+
+# 单段落操作
+tracked_insert_text(doc, doc.paragraphs[0], '新增内容。', author='Reviewer')
+tracked_delete_text(doc, doc.paragraphs[2], '要删除的文本', author='Reviewer')
+
+# 查看修订摘要
+summary = get_tracked_changes_summary(doc)
+print(f"插入 {{summary['insertions']}} 处，删除 {{summary['deletions']}} 处")
+
+# 如需最终接受/拒绝所有修订：
+# accept_all_changes(doc)
+# reject_all_changes(doc)
+
+doc.save(os.path.join(OUTPUT_DIR, 'report_revised.docx'))
+```
+
+**重要：** 默认保留修订标记，不要自动 accept_all_changes，除非用户明确要求"接受修订"或"最终版"。
 
 ## 文档处理原则（重要）
 - **优先使用原生库直接操作原始文件格式**（python-docx、python-pptx、openpyxl），不要先将文档转为 markdown
@@ -91,6 +133,7 @@ def build_doc_processing_system_prompt(file_paths: list[str] = None,
 - 输出文件保存到: `{output_dir}/`
 - 脚本执行环境中已预定义变量 UPLOAD_DIR 和 OUTPUT_DIR，可直接使用
 - 使用 `print()` 输出处理结果和状态信息
+- 代码块第一行用注释简要说明脚本功能（如 `# 修改报告中的表格数据并生成新文件`）
 - 代码块内只写 Python 代码，不要混入解释文字
 
 ## 使用指南
@@ -103,6 +146,61 @@ def allowed_file(filename):
     """检查文件扩展名是否允许"""
     return '.' in filename and \
         filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _convert_old_format(filepath: str) -> str:
+    """使用 LibreOffice headless 将旧 Office 格式转为新格式，返回转换后文件路径。"""
+    ext = os.path.splitext(filepath)[1].lstrip('.').lower()
+    target_ext = _OLD_FORMAT_MAP[ext]
+    base_name = os.path.splitext(os.path.basename(filepath))[0]
+
+    output_dir = tempfile.mkdtemp(prefix='docforge_')
+    result = subprocess.run(
+        ['libreoffice', '--headless', '--convert-to', target_ext,
+         '--outdir', output_dir, filepath],
+        capture_output=True, text=True, timeout=60,
+    )
+    if result.returncode != 0:
+        error_msg = result.stderr.strip() or result.stdout.strip()
+        logger.error(f"LibreOffice 转换失败: {filepath} -> {target_ext}: {error_msg}")
+        raise RuntimeError(f"旧格式文件转换失败（{ext} -> {target_ext}）")
+
+    output_path = os.path.join(output_dir, f"{base_name}.{target_ext}")
+    logger.info(f"旧格式转换成功: {os.path.basename(filepath)} -> {os.path.basename(output_path)}")
+    return output_path
+
+
+def get_pptx_content(filepath) -> str:
+    """使用 python-pptx 原生接口提取 pptx 文件内容。"""
+    try:
+        from pptx import Presentation
+
+        prs = Presentation(filepath)
+        slides_text = []
+        for slide_num, slide in enumerate(prs.slides, 1):
+            slide_lines = [f"## Slide {slide_num}"]
+            for shape in slide.shapes:
+                if hasattr(shape, "text") and shape.text.strip():
+                    slide_lines.append(shape.text.strip())
+                if shape.has_table:
+                    table = shape.table
+                    rows_text = []
+                    for row in table.rows:
+                        cells = [cell.text.strip() for cell in row.cells]
+                        rows_text.append(" | ".join(cells))
+                    if rows_text:
+                        slide_lines.append("\n".join(rows_text))
+            slides_text.append("\n".join(slide_lines))
+        result = "\n\n".join(slides_text)
+        logger.info(f"pptx_file_parse_success, {filepath}，slides: {len(prs.slides)}，len: {len(result)}")
+        return result
+
+    except ImportError:
+        logger.warning("需要安装 python-pptx 库来解析PPT文件")
+        return "[需要安装 python-pptx 库来解析PPT文件]"
+    except Exception as e:
+        logger.error(f"读取pptx文件时出错: {str(e)}")
+        return f"[读取pptx文件时出错: {str(e)}]"
 
 
 def extract_text_from_file(filepath, filename):
@@ -136,40 +234,20 @@ def extract_text_from_file(filepath, filename):
                 logger.warning("需要安装 pdfplumber 库来解析PDF文件")
                 return "[需要安装 pdfplumber 库来解析PDF文件]"
 
-        # Word文档（使用 python-docx 原生接口，保留格式结构）
-        elif ext in ['docx']:
-            return get_docx_content(filepath)
+        # Word 文档（.doc 自动通过 LibreOffice 转为 .docx）
+        elif ext in ('docx', 'doc'):
+            path = _convert_old_format(filepath) if ext == 'doc' else filepath
+            return get_docx_content(path)
 
-        # PPT/PPTX文件（需要安装python-pptx）
-        elif ext in ['ppt', 'pptx']:
-            try:
-                from pptx import Presentation
-                prs = Presentation(filepath)
-                slides_text = []
-                for slide_num, slide in enumerate(prs.slides, 1):
-                    slide_lines = [f"## Slide {slide_num}"]
-                    for shape in slide.shapes:
-                        if hasattr(shape, "text") and shape.text.strip():
-                            slide_lines.append(shape.text.strip())
-                        if shape.has_table:
-                            table = shape.table
-                            rows_text = []
-                            for row in table.rows:
-                                cells = [cell.text.strip() for cell in row.cells]
-                                rows_text.append(" | ".join(cells))
-                            if rows_text:
-                                slide_lines.append("\n".join(rows_text))
-                    slides_text.append("\n".join(slide_lines))
-                result = "\n\n".join(slides_text)
-                logger.info(f"PPT文件解析成功，页数: {len(prs.slides)}，长度: {len(result)} 字符")
-                return result
-            except ImportError:
-                logger.warning("需要安装python-pptx库来解析PPT文件")
-                return "[需要安装python-pptx库来解析PPT文件]"
+        # PPT 文档（.ppt 自动通过 LibreOffice 转为 .pptx）
+        elif ext in ('pptx', 'ppt'):
+            path = _convert_old_format(filepath) if ext == 'ppt' else filepath
+            return get_pptx_content(path)
 
-        # Excel文件（需要安装openpyxl）
-        elif ext in ['xlsx']:
-            return get_xlsx_content(filepath)
+        # Excel 文件（.xls 自动通过 LibreOffice 转为 .xlsx）
+        elif ext in ('xlsx', 'xls'):
+            path = _convert_old_format(filepath) if ext == 'xls' else filepath
+            return get_xlsx_content(path)
 
         # 图片文件（需要安装PIL和pytesseract）
         elif ext in ['jpg', 'jpeg', 'png', 'gif']:
@@ -431,6 +509,20 @@ def generate_stream_response(messages: list, llm_cfg: dict, max_tokens: int = No
             yield "data: [DONE]\n\n"
 
 
+def _call_llm_sync(messages: list, llm_cfg: dict, max_tokens: int = None) -> str:
+    """同步调用 LLM，收集完整响应文本（非流式）。"""
+    full_text = ""
+    for chunk in generate_stream_response(messages, llm_cfg, max_tokens, include_done=False):
+        if chunk.startswith('data: ') and chunk != 'data: [DONE]\n\n':
+            try:
+                data = json.loads(chunk[6:].strip())
+                if 'content' in data:
+                    full_text += data['content']
+            except (json.JSONDecodeError, KeyError):
+                pass
+    return full_text
+
+
 def generate_stream_response_with_execution(
     messages: list, llm_cfg: dict, output_dir: str = "output_doc",
     upload_dir: str = "upload_doc", max_tokens: int = None
@@ -441,11 +533,12 @@ def generate_stream_response_with_execution(
     先流式传输 LLM 回复，然后从回复中提取 Python 代码块并在服务器端执行。
     执行结果（stdout/stderr/下载链接）作为额外的 SSE 数据发送给前端。
     """
+    import re as _re
+
     full_response = ""
 
-    # Phase 1: 流式传输 LLM 回复
+    # Phase 1: 收集 LLM 完整回复（不直接流式展示，以便过滤代码块）
     for sse_chunk in generate_stream_response(messages, llm_cfg, max_tokens, include_done=False):
-        yield sse_chunk
         if sse_chunk.startswith('data: ') and sse_chunk != 'data: [DONE]\n\n':
             try:
                 chunk_data = json.loads(sse_chunk[6:].strip())
@@ -454,10 +547,32 @@ def generate_stream_response_with_execution(
             except (json.JSONDecodeError, KeyError):
                 pass
 
-    # Phase 2: 提取并执行代码块
+    # 将代码块替换为简短摘要，再展示给用户
+    def _summarize_code_block(match: _re.Match) -> str:
+        code = match.group(1).strip()
+        line_count = code.count('\n') + 1
+        first_line = code.split('\n')[0] if code else ''
+        desc = ""
+        if first_line.lstrip().startswith('#'):
+            desc = first_line.lstrip('#').strip()
+            return f"\n\n> 📝 **脚本**（{line_count} 行）：{desc}\n\n"
+        return f"\n\n> 📝 **已生成处理脚本**（{line_count} 行），正在执行...\n\n"
+
+    display_response = _re.sub(
+        r'```python\s*\n(.*?)\n\s*```',
+        _summarize_code_block,
+        full_response,
+        flags=_re.DOTALL
+    )
+
+    yield f"data: {json.dumps({'content': display_response})}\n\n"
+
+    # Phase 2: 提取并执行代码块（带自动纠错重试）
+    MAX_RETRIES = 3
     code_blocks = extract_python_blocks(full_response)
     if code_blocks:
         logger.info(f"从LLM回复中提取到 {len(code_blocks)} 个Python代码块，开始执行...")
+        retry_history = messages + [{"role": "assistant", "content": full_response}]
 
         for i, code in enumerate(code_blocks):
             status = f"\n\n---\n\n**执行脚本 {i+1}/{len(code_blocks)}...**\n\n"
@@ -465,11 +580,51 @@ def generate_stream_response_with_execution(
 
             result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir)
 
+            # 自动纠错：出错或有警告时，反馈给 LLM 自查修复
+            retry_count = 0
+            while (not result['success'] or result['stderr']) and retry_count < MAX_RETRIES:
+                error_info = result['stderr'] or result['stdout'] or f"返回码: {result['returncode']}"
+                issue_type = "警告" if result['success'] else "错误"
+                logger.info(f"脚本执行出现{issue_type}，第 {retry_count + 1} 次自动修复...")
+
+                retry_status = (
+                    f"⚠️ 脚本执行出现{issue_type}，正在自动分析修复"
+                    f"（第 {retry_count + 1}/{MAX_RETRIES} 次）...\n\n"
+                )
+                yield f"data: {json.dumps({'content': retry_status})}\n\n"
+
+                retry_msg = (
+                    f"以上脚本执行时出现{issue_type}，请自查并修复：\n\n"
+                    f"```\n{error_info}\n```\n\n"
+                    f"请在 ```python 代码块中输出修复后的完整脚本。"
+                    f"如果确认脚本没有问题不需要修改，请说明原因但不要输出代码块。"
+                )
+                retry_history.append({"role": "user", "content": retry_msg})
+
+                fix_response = _call_llm_sync(retry_history, llm_cfg, max_tokens)
+                fixed_blocks = extract_python_blocks(fix_response)
+
+                if fixed_blocks:
+                    retry_history.append({"role": "assistant", "content": fix_response})
+                    code = fixed_blocks[0]
+                    result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir)
+                    retry_count += 1
+                else:
+                    # LLM 认为不需要修改，停止重试
+                    logger.info("LLM 确认脚本无需修改，停止自动修复")
+                    break
+
+            # 输出最终结果
             output_parts = []
+            if retry_count > 0:
+                if result['success'] and not result['stderr']:
+                    output_parts.append(f"✅ 脚本经 {retry_count} 次自动修复后执行成功")
+                else:
+                    output_parts.append(f"⚠️ 脚本经 {retry_count} 次自动修复后结果如下")
             if result['stdout']:
                 output_parts.append(f"**输出:**\n```\n{result['stdout']}\n```")
             if result['stderr']:
-                output_parts.append(f"**错误:**\n```\n{result['stderr']}\n```")
+                output_parts.append(f"**错误信息:**\n```\n{result['stderr']}\n```")
             if result['new_files']:
                 file_links = "\n".join(
                     f"- [{f}](/download/output/{f})"

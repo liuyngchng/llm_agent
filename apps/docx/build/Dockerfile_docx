@@ -23,6 +23,11 @@ COPY --from=builder /opt/llm_py_env /opt/llm_py_env
 RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime' && \
     ulimit -n 65535
 
+# LibreOffice headless — 用于旧 Office 格式转换（.doc/.ppt/.xls → .docx/.pptx/.xlsx）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreoffice-writer libreoffice-impress libreoffice-calc \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /opt/app
 EXPOSE 19000
 ENTRYPOINT ["sh", "./common/boot.sh"]
