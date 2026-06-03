@@ -15,7 +15,7 @@ def chatbot(d):
 
 if __name__ == "__main__":
     """
-    a agent for a LLM ,just define a graph with a single node to chat with ollamaLLM
+    a agent for a LLM ,just define a graph with a single node to doc_forge with ollamaLLM
     the graph for workflow can be extended for other purpose.
     """
     # 创建一个 StateGraph 对象

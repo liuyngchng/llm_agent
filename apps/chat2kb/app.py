@@ -43,7 +43,7 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 
-LLM_MODEL_DICT = {"1": "deepseek-chat", "2": "qwen2dot5-7b-chat", "3": "glm-4.5v"}
+LLM_MODEL_DICT = {"1": "deepseek-doc_forge", "2": "qwen2dot5-7b-doc_forge", "3": "glm-4.5v"}
 
 # 全局变量，用于存储后台任务状态
 background_tasks_started = False
@@ -156,7 +156,7 @@ def register_routes(app):
         logger.info(f"return_page {dt_idx}, ctx {ctx}")
         return render_template(dt_idx, **ctx)
 
-    @app.route('/chat', methods=['POST'])
+    @app.route('/doc_forge', methods=['POST'])
     def chat(catch=None):
         """
         curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/chat' \

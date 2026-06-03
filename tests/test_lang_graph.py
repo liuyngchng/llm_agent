@@ -13,7 +13,7 @@ class State(TypedDict):
 
 
 model = ChatOpenAI(
-    model="deepseek-chat",  # 你的模型名称
+    model="deepseek-doc_forge",  # 你的模型名称
     base_url="https://ai.deepseek.com/v1",  # 私有化API地址
     api_key="sk-****",  # 如果有认证
     temperature=0,

@@ -23,7 +23,7 @@ def register_i18n(app, scope: str | None = None):
 
     Args:
         app: Flask application instance
-        scope: translation namespace for app-specific keys (e.g. 'chat', 'docx')
+        scope: translation namespace for app-specific keys (e.g. 'doc_forge', 'docx')
     """
 
     @app.before_request

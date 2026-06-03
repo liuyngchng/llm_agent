@@ -600,12 +600,12 @@ def create_message():
             "Authorization": f"Bearer {llm_api_key}"
         }
 
-        logger.info(f"forward_to {llm_api_uri}/chat/completions, model={llm_model_name}, stream={stream}")
+        logger.info(f"forward_to {llm_api_uri}/doc_forge/completions, model={llm_model_name}, stream={stream}")
 
         if stream:
             logger.debug("stream request")
             upstream_response = requests.post(
-                f"{llm_api_uri}/chat/completions",
+                f"{llm_api_uri}/doc_forge/completions",
                 headers=headers,
                 json=openai_request,
                 timeout=300,
@@ -642,7 +642,7 @@ def create_message():
         else:
             logger.debug("not_stream_request")
             upstream_response = requests.post(
-                f"{llm_api_uri}/chat/completions",
+                f"{llm_api_uri}/doc_forge/completions",
                 headers=headers,
                 json=openai_request,
                 timeout=300,

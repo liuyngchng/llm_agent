@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
     model = init_chat_model(
         model_provider="deepseek",
-        model="deepseek-chat",
+        model="deepseek-doc_forge",
         api_key="sk-your-deepseek-key", # api_key 通过在 http://platform.deepseek.com/ 上注册并充值获取
         base_url="https://api.deepseek.com",    
     )

@@ -929,3 +929,23 @@ textarea::placeholder {
         justify-content: center;
     }
 }
+/* 下载链接样式 */
+.download-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #4b6cb7, #182848);
+    color: white !important;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    margin: 4px 0;
+    transition: all 0.2s ease;
+}
+
+.download-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(75, 108, 183, 0.4);
+    color: white !important;
+    text-decoration: none;
+}

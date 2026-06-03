@@ -15,10 +15,10 @@
         <header class="header">
             <h1><i class="fas fa-robot"></i>{{sys_name}}</h1>
             <div class="model-info">
-                <span id="modelName">{{ _('chat.model_loading') }}</span>
+                <span id="modelName">{{ _('doc_forge.model_loading') }}</span>
                 <div class="model-info-actions">
                     <button id="clearChat" class="btn-clear">
-                        <i class="fas fa-trash-alt"></i> {{ _('chat.clear_chat') }}
+                        <i class="fas fa-trash-alt"></i> {{ _('doc_forge.clear_chat') }}
                     </button>
                 </div>
             </div>
@@ -28,7 +28,7 @@
             <div class="chat-history" id="chatHistory">
                 <!-- 聊天消息会动态添加到这里 -->
                 <div class="welcome-message">
-                    <p>👋 {{ _('chat.welcome') }}</p>
+                    <p>👋 {{ _('doc_forge.welcome') }}</p>
                 </div>
             </div>
 
@@ -38,14 +38,14 @@
                         <!-- 文件列表 - 显示已选择的文件 -->
                         <div class="file-list-container" id="fileListContainer" style="display: none;">
                             <div class="file-list-header">
-                                <span>{{ _('chat.selected_files') }}</span>
+                                <span>{{ _('doc_forge.selected_files') }}</span>
                                 <button class="clear-files-btn" onclick="clearFileList()">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
                             <div class="file-list" id="fileList"></div>
                         </div>
-                        <textarea id="messageInput" placeholder="{{ _('chat.input_placeholder') }}" rows="3"></textarea>
+                        <textarea id="messageInput" placeholder="{{ _('doc_forge.input_placeholder') }}" rows="3"></textarea>
                     </div>
 
                     <div class="input-actions">
@@ -63,19 +63,19 @@
                             <!-- 简洁的文件上传按钮 -->
                             <div class="file-upload-btn-container">
                                 <input type="file" id="fileInput" multiple style="display: none;">
-                                <button id="uploadButton" class="btn-attach" title="{{ _('chat.upload_file') }}">
+                                <button id="uploadButton" class="btn-attach" title="{{ _('doc_forge.upload_file') }}">
                                     <i class="fas fa-paperclip"></i>
                                 </button>
                                 <div class="file-count-badge" id="fileCountBadge" style="display: none;">0</div>
                             </div>
                             <button id="sendButton" class="btn-send">
-                                <i class="fas fa-paper-plane"></i> {{ _('chat.send') }}
+                                <i class="fas fa-paper-plane"></i> {{ _('doc_forge.send') }}
                             </button>
                         </div>
                     </div>
                 </div>
                 <div class="input-hint">
-                    <small>{{ _('chat.input_hint') }}</small>
+                    <small>{{ _('doc_forge.input_hint') }}</small>
                 </div>
             </div>
         </div>

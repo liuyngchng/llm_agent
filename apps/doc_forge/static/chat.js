@@ -104,7 +104,7 @@ async function loadConfig() {
         }
 
         if (!config.has_api_key) {
-            showError(__('chat.no_api_key'));
+            showError(__('doc_forge.no_api_key'));
         }
     } catch (error) {
         console.error('加载配置失败:', error);
@@ -167,20 +167,20 @@ function processFiles(files) {
 
         // 检查文件大小
         if (file.size > maxSize) {
-            showError(__fmt_named('chat.file_too_large', {name: file.name}));
+            showError(__fmt_named('doc_forge.file_too_large', {name: file.name}));
             continue;
         }
 
         // 检查文件类型
         if (!allowedTypes.includes(file.type) && !file.name.match(/\.(txt|md|pdf|xlsx|docx|ppt|pptx|jpg|jpeg|png|gif)$/i)) {
-            showError(__fmt_named('chat.error_unsupported_file', {name: file.name}));
+            showError(__fmt_named('doc_forge.error_unsupported_file', {name: file.name}));
             continue;
         }
 
         // 检查是否已存在同名文件
         const existingFile = uploadedFiles.find(f => f.name === file.name && f.size === file.size);
         if (existingFile) {
-            showError(__fmt_named('chat.file_already_added', {name: file.name}));
+            showError(__fmt_named('doc_forge.file_already_added', {name: file.name}));
             continue;
         }
 
@@ -192,7 +192,7 @@ function processFiles(files) {
 
     if (addedFiles > 0) {
         updateFileListDisplay();
-        showSuccess(__fmt_named('chat.files_added', {n: addedFiles}));
+        showSuccess(__fmt_named('doc_forge.files_added', {n: addedFiles}));
     }
 
     fileInput.value = ''; // 重置input以便重新选择相同文件
@@ -279,7 +279,7 @@ function clearFileList(silent = false) {
     if (uploadedFiles.length > 0) {
         // 如果是静默模式（发送时自动清理），不弹确认框
         if (!silent) {
-            if (!confirm(__fmt_named('chat.remove_files_confirm', {n: uploadedFiles.length}))) {
+            if (!confirm(__fmt_named('doc_forge.remove_files_confirm', {n: uploadedFiles.length}))) {
                 return;
             }
         }
@@ -290,7 +290,7 @@ function clearFileList(silent = false) {
 
         // 如果不是静默模式，显示成功消息
         if (!silent) {
-            showSuccess(__('chat.files_removed'));
+            showSuccess(__('doc_forge.files_removed'));
         }
     }
 }
@@ -301,7 +301,7 @@ function stopStream() {
         currentStreamController.abort();
         currentStreamController = null;
         isStreaming = false;
-        showSuccess(__('chat.generation_stopped'));
+        showSuccess(__('doc_forge.generation_stopped'));
     }
 }
 
@@ -317,7 +317,7 @@ async function sendMessage() {
 
     // 如果没有消息和文件，直接返回
     if (!message && uploadedFiles.length === 0) {
-        showError(__('chat.need_message_or_file'));
+        showError(__('doc_forge.need_message_or_file'));
         return;
     }
 
@@ -330,7 +330,7 @@ async function sendMessage() {
 
     // 设置发送按钮为停止按钮
     sendButton.disabled = false; // 允许点击停止
-    sendButton.innerHTML = '<i class="fas fa-stop"></i> ' + __('chat.stop');
+    sendButton.innerHTML = '<i class="fas fa-stop"></i> ' + __('doc_forge.stop');
     sendButton.classList.add('btn-stop'); // 添加停止按钮样式
 
     // 如果有文件，先上传文件
@@ -340,7 +340,7 @@ async function sendMessage() {
             fileContents = await uploadFiles();
         } catch (error) {
             console.error('上传文件失败:', error);
-            showError(__('chat.file_upload_failed'));
+            showError(__('doc_forge.file_upload_failed'));
             resetInputState();
             return;
         }
@@ -418,11 +418,13 @@ function getFileEmoji(type, name) {
 // 上传文件到服务器
 async function uploadFiles() {
     const fileContents = [];
+    const savedFilenames = [];
 
     for (let i = 0; i < uploadedFiles.length; i++) {
         const file = uploadedFiles[i];
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('uid', uid.value);
 
         const response = await fetch('/upload', {
             method: 'POST',
@@ -435,7 +437,8 @@ async function uploadFiles() {
 
         const result = await response.json();
         if (result.success) {
-            fileContents.push(`文件: ${file.name}\n${result.content}`);
+            fileContents.push(`文件: ${file.name}\n路径: upload_doc/${result.saved_filename}\n${result.content}`);
+            savedFilenames.push(result.saved_filename);
         }
 
         // 更新进度提示
@@ -450,7 +453,7 @@ function resetInputState() {
     messageInput.disabled = false;
     sendButton.disabled = false;
     uploadButton.disabled = false;
-    sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> ' + __('chat.send');
+    sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> ' + __('doc_forge.send');
     sendButton.classList.remove('btn-stop'); // 移除停止按钮样式
     messageInput.focus();
 }
@@ -464,7 +467,7 @@ async function streamAIResponse(userMessage, messageId) {
     currentStreamController = new AbortController();
 
     // 发起流式请求
-    const response = await fetch('/chat', {
+    const response = await fetch('/doc_forge', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -577,16 +580,16 @@ function addMessageToUI(role, content, messageId = null) {
             <div class="message-content markdown-content">${displayContent}</div>
             <div class="message-actions">
                 <div class="action-buttons">
-                    <button class="action-btn copy-btn" title="${__('chat.copy')}">
+                    <button class="action-btn copy-btn" title="${__('doc_forge.copy')}">
                         <i class="fas fa-copy"></i>
                     </button>
-                    <button class="action-btn refresh-btn" title="${__('chat.regenerate')}">
+                    <button class="action-btn refresh-btn" title="${__('doc_forge.regenerate')}">
                         <i class="fas fa-redo"></i>
                     </button>
-                    <button class="action-btn like-btn" title="${__('chat.like')}">
+                    <button class="action-btn like-btn" title="${__('doc_forge.like')}">
                         <i class="fas fa-thumbs-up"></i>
                     </button>
-                    <button class="action-btn dislike-btn" title="${__('chat.dislike')}">
+                    <button class="action-btn dislike-btn" title="${__('doc_forge.dislike')}">
                         <i class="fas fa-thumbs-down"></i>
                     </button>
                     <button class="action-btn download-btn" title="${__('common.download')}">
@@ -634,20 +637,20 @@ function setupMessageActions(messageDiv, messageId) {
         const textToCopy = contentDiv.textContent;
         try {
             await navigator.clipboard.writeText(textToCopy);
-            showSuccess(__('chat.copied'));
+            showSuccess(__('doc_forge.copied'));
             copyBtn.innerHTML = '<i class="fas fa-check"></i>';
             setTimeout(() => {
                 copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
             }, 2000);
         } catch (err) {
             console.error('复制失败:', err);
-            showError(__('chat.copy_failed'));
+            showError(__('doc_forge.copy_failed'));
         }
     });
 
     // 重新生成功能
     refreshBtn.addEventListener('click', () => {
-        if (confirm(__('chat.regenerate_confirm'))) {
+        if (confirm(__('doc_forge.regenerate_confirm'))) {
             // 移除当前消息
             messageDiv.remove();
 
@@ -673,7 +676,7 @@ function setupMessageActions(messageDiv, messageId) {
             dislikeBtn.classList.remove('active');
             dislikeBtn.innerHTML = '<i class="fas fa-thumbs-down"></i>';
             console.log(`点赞消息: ${messageId}`);
-            showSuccess(__('chat.liked'));
+            showSuccess(__('doc_forge.liked'));
         } else {
             likeBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
         }
@@ -687,7 +690,7 @@ function setupMessageActions(messageDiv, messageId) {
             likeBtn.classList.remove('active');
             likeBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
             console.log(`点踩消息: ${messageId}`);
-            showSuccess(__('chat.disliked'));
+            showSuccess(__('doc_forge.disliked'));
         } else {
             dislikeBtn.innerHTML = '<i class="fas fa-thumbs-down"></i>';
         }
@@ -740,7 +743,7 @@ function setupMessageActions(messageDiv, messageId) {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showSuccess(__('chat.download_md'));
+        showSuccess(__('doc_forge.download_md'));
     });
 }
 
@@ -776,6 +779,19 @@ function renderAIMessage(messageId, content) {
             contentDiv.querySelectorAll('table').forEach((table) => {
                 table.classList.add('markdown-table');
             });
+
+            // 增强下载链接：新标签页打开 + 样式
+            contentDiv.querySelectorAll('a[href^="/download/"]').forEach((link) => {
+                link.setAttribute('target', '_blank');
+                link.classList.add('download-link');
+                // 添加下载图标
+                if (!link.querySelector('.fa-download')) {
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-download';
+                    icon.style.marginRight = '4px';
+                    link.prepend(icon);
+                }
+            });
         } catch (e) {
             console.error('Markdown渲染失败:', e);
             // 如果渲染失败，回退到纯文本
@@ -792,7 +808,7 @@ function updateAIMessage(messageId, content) {
 
 // 清空聊天
 function clearChat() {
-    if (confirm(__('chat.clear_chat_confirm'))) {
+    if (confirm(__('doc_forge.clear_chat_confirm'))) {
         // 中止当前流
         if (isStreaming) {
             stopStream();

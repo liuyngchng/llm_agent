@@ -5,7 +5,7 @@ curl -s -X POST http://127.0.0.1:16001/v1/messages \
   -H "Content-Type: application/json" \
   -H "anthropic-version: 2023-06-01" \
   -d '{
-    "model": "deepseek-chat",
+    "model": "deepseek-doc_forge",
     "messages": [{"role": "user", "content": "hello"}],
     "max_tokens": 1024,
     "system": "You are a helpful assistant",

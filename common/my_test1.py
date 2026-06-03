@@ -80,7 +80,7 @@ internet_search 工具说明
 """
 # 初始化DeepSeek大语言模型
 llm =ChatDeepSeek(
-        model="deepseek-chat",
+        model="deepseek-doc_forge",
         temperature=0.7,
         max_tokens=8192,
         api_key=DEEPSEEK_API_KEY,

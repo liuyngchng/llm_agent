@@ -277,7 +277,7 @@ def gen_mock_stream(prompt, max_tokens, temperature):
     logger.info(f"Starting MOCK stream generation for prompt length: {len(prompt)}")
 
     try:
-        yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
+        yield f"data: {json.dumps({'id': request_id, 'object': 'doc_forge.completion.chunk',
                                    'created': timestamp, 'model': model_name,
                                    'choices': [{'index': 0, 'delta': {'role': 'assistant'}, 'finish_reason': None}]})}\n\n"
 
@@ -289,21 +289,21 @@ def gen_mock_stream(prompt, max_tokens, temperature):
         for i, word in enumerate(words):
             # 模拟打字效果
             chunk_text = word + (" " if i < len(words) - 1 else "")
-            yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
+            yield f"data: {json.dumps({'id': request_id, 'object': 'doc_forge.completion.chunk',
                                        'created': timestamp, 'model': model_name,
                                        'choices': [{'index': 0, 'delta': {'content': chunk_text}, 'finish_reason': None}]}, ensure_ascii=False)}\n\n"
             time.sleep(0.05)  # 模拟流式输出的延迟
 
         logger.info(f"Mock stream generation completed: {mock_response[:100]}...")
 
-        yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
+        yield f"data: {json.dumps({'id': request_id, 'object': 'doc_forge.completion.chunk',
                                    'created': timestamp, 'model': model_name,
                                    'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
 
     except Exception as e:
         logger.error(f"Mock stream generation error: {str(e)}")
-        yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
+        yield f"data: {json.dumps({'id': request_id, 'object': 'doc_forge.completion.chunk',
                                    'created': timestamp, 'model': model_name,
                                    'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
@@ -321,7 +321,7 @@ def gen_stream(prompt, max_tokens, temperature):
     logger.info(f"Starting stream generation for prompt length: {len(prompt)}")
 
     try:
-        yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
+        yield f"data: {json.dumps({'id': request_id, 'object': 'doc_forge.completion.chunk',
                                    'created': timestamp, 'model': model_name,
                                    'choices': [{'index': 0, 'delta': {'role': 'assistant'}, 'finish_reason': None}]})}\n\n"
 
@@ -353,21 +353,21 @@ def gen_stream(prompt, max_tokens, temperature):
                                           clean_up_tokenization_spaces=False)
             if token_text.strip():
                 accumulated_text += token_text
-                yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
+                yield f"data: {json.dumps({'id': request_id, 'object': 'doc_forge.completion.chunk',
                                            'created': timestamp, 'model': model_name,
                                            'choices': [{'index': 0, 'delta': {'content': token_text}, 'finish_reason': None}]}, ensure_ascii=False)}\n\n"
                 time.sleep(0.01)
 
         logger.info(f"Stream generation completed: {accumulated_text[:100]}...")
 
-        yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
+        yield f"data: {json.dumps({'id': request_id, 'object': 'doc_forge.completion.chunk',
                                    'created': timestamp, 'model': model_name,
                                    'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
 
     except Exception as e:
         logger.error(f"Stream generation error: {str(e)}")
-        yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk',
+        yield f"data: {json.dumps({'id': request_id, 'object': 'doc_forge.completion.chunk',
                                    'created': timestamp, 'model': model_name,
                                    'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
@@ -394,7 +394,7 @@ def gen_normal_response(prompt, max_tokens, temperature):
 
         response_data = {
             "id": request_id,
-            "object": "chat.completion",
+            "object": "doc_forge.completion",
             "created": timestamp,
             "model": model_name,
             "choices": [{
@@ -420,7 +420,7 @@ def gen_normal_response(prompt, max_tokens, temperature):
         return json.dumps(error_data, ensure_ascii=False), 500
 
 
-@app.route('/v1/chat/completions', methods=['POST'])
+@app.route('/v1/doc_forge/completions', methods=['POST'])
 @require_auth
 def chat_completions():
     start_time = time.time()

@@ -40,7 +40,7 @@ Use this to run an internet search for a given query. You can specify the max nu
 """
 
  # 自定义model
-model = init_chat_model(model="deepseek:deepseek-chat")
+model = init_chat_model(model="deepseek:deepseek-doc_forge")
 # tools 参数提供可以使用的工具
 agent = create_deep_agent(
     model=model,

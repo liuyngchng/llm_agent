@@ -12,12 +12,13 @@ import os
 import logging.config
 import logging
 
-from apps.chat.chat_util import LLMConfig, generate_stream_response, allowed_file, \
+from apps.doc_forge.chat_util import LLMConfig, generate_stream_response_with_execution, \
+    build_doc_processing_system_prompt, allowed_file, \
     MAX_FILE_SIZE, ALLOWED_EXTENSIONS, extract_text_from_file
 from common import my_enums, statistic_util, cm_utils
 from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login, get_portal_login_url
 from common.cm_utils import estimate_tokens
-from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT, get_const
+from common.const import UPLOAD_FOLDER, OUTPUT_DIR, SESSION_TIMEOUT, get_const
 from common.i18n._hooks import register_i18n
 from common.i18n import get_msg
 from common.my_enums import AppType
@@ -26,9 +27,16 @@ from common.sys_init import init_yml_cfg
 
 my_cfg = init_yml_cfg()
 
-# 确保上传文件夹存在
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-print(f"上传文件夹路径: {UPLOAD_FOLDER}")
+# 确保上传和输出文件夹存在（使用绝对路径）
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER_ABS = os.path.join(BASE_DIR, UPLOAD_FOLDER)
+OUTPUT_DIR_ABS = os.path.join(BASE_DIR, OUTPUT_DIR)
+os.makedirs(UPLOAD_FOLDER_ABS, exist_ok=True)
+os.makedirs(OUTPUT_DIR_ABS, exist_ok=True)
+print(f"上传文件夹路径: {UPLOAD_FOLDER_ABS}, 输出文件夹路径: {OUTPUT_DIR_ABS}")
+
+# 会话文件追踪: uid -> [file_paths]
+session_files = {}
 
 # 创建 Flask 应用
 app = Flask(__name__, static_folder=None)
@@ -40,12 +48,11 @@ app.jinja_loader = ChoiceLoader([
 ])
 app.config['CFG'] = {}
 app.config['CFG'] = my_cfg
-app.config['APP_SOURCE'] = my_enums.AppType.CHAT.name.lower()
+app.config['APP_SOURCE'] = my_enums.AppType.DOC_FORGE.name.lower()
 
-register_i18n(app, scope="chat")
+register_i18n(app, scope="doc_forge")
 
 # 配置模板文件夹路径
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
 if not os.path.exists(TEMPLATE_DIR):
     os.makedirs(TEMPLATE_DIR, exist_ok=True)
@@ -85,7 +92,7 @@ def get_webfonts_file(file_name):
 
 @app.route('/')
 def app_home():
-    app_source = AppType.CHAT.name.lower()
+    app_source = AppType.DOC_FORGE.name.lower()
     sys_name = my_enums.AppType.get_app_type(app_source)
     t = request.args.get("t")
     if not t:
@@ -129,53 +136,62 @@ def app_home():
 
 
 
-@app.route('/chat', methods=['POST'])
+@app.route('/doc_forge', methods=['POST'])
 def chat():
-    """处理聊天请求"""
+    """处理聊天请求 — 支持文档处理与脚本执行"""
     try:
         data = request.json
         user_message = data.get('message', '').strip()
         custom_max_tokens = data.get('max_tokens')
         history_length = len(data.get('history', []))
         t = data.get('t', 0)
-        uid = int(data.get('uid', ''))
+        uid = str(data.get('uid', ''))
         session_key = f"{uid}_{get_client_ip()}"
         if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
-            return jsonify({'error': 'auth_expired', 'redirect': get_portal_login_url(AppType.CHAT.name.lower())}), 401
+            return jsonify({'error': 'auth_expired', 'redirect': get_portal_login_url(AppType.DOC_FORGE.name.lower())}), 401
         logger.info(f"收到聊天请求，消息长度: {len(user_message)}, 历史长度: {history_length}")
         logger.info(f"请求的max_tokens: {custom_max_tokens}")
-        logger.info(f"默认MAX_TOKENS: {LLMConfig.MAX_TOKENS}")
 
         if not user_message:
             logger.warning("消息为空")
-            return jsonify({'error': get_msg('chat.error_empty_message')}), 400
+            return jsonify({'error': get_msg('doc_forge.error_empty_message')}), 400
+
+        # 获取当前用户的已上传文件路径
+        user_files = session_files.get(uid, [])
+
+        # 构建增强的系统提示词（包含可用文件信息）
+        system_prompt = build_doc_processing_system_prompt(
+            file_paths=user_files,
+            output_dir=OUTPUT_DIR_ABS,
+            upload_dir=UPLOAD_FOLDER_ABS
+        )
 
         # 构建消息历史
-        messages = [{"role": "system", "content": LLMConfig.SYSTEM_PROMPT}]
+        messages = [{"role": "system", "content": system_prompt}]
 
-        # 添加上下文消息（如果需要）
+        # 添加上下文消息
         chat_history = data.get('history', [])
-        for msg in chat_history[-10:]:  # 限制历史记录长度
+        for msg in chat_history[-10:]:
             messages.append(msg)
 
         # 添加用户消息
         messages.append({"role": "user", "content": user_message})
-        logger.info(f"user_msg_input {messages}")
+        logger.info(f"user_msg_input: messages_count={len(messages)}")
         input_tokens = estimate_tokens(str(messages))
         logger.info(f"{uid}, input_tokens, {input_tokens}")
-        add_input_token_by_uid(uid, input_tokens, AppType.CHAT.name.lower())
-        # 记录发送的messages内容（脱敏）
-        for i, msg in enumerate(messages):
-            role = msg.get('role', 'unknown')
-            content = msg.get('content', '')
-            if content:
-                preview = content[:100] + "..." if len(content) > 100 else content
-                logger.info(f"消息[{i}] role={role}, 内容预览: {preview}")
+        add_input_token_by_uid(uid, input_tokens, AppType.DOC_FORGE.name.lower())
 
         # 包裹流式响应，统计 output tokens
         def generate_and_count():
             full_response = ""
-            for sse_chunk in generate_stream_response(messages, my_cfg['api'], max_tokens=custom_max_tokens):
+            # 立即回复"处理中"，提升用户体验
+            yield f"data: {json.dumps({'content': '处理中...\n\n'})}\n\n"
+            for sse_chunk in generate_stream_response_with_execution(
+                messages, my_cfg['api'],
+                output_dir=OUTPUT_DIR_ABS,
+                upload_dir=UPLOAD_FOLDER_ABS,
+                max_tokens=custom_max_tokens
+            ):
                 yield sse_chunk
                 if sse_chunk.startswith('data: ') and sse_chunk != 'data: [DONE]\n\n':
                     try:
@@ -186,14 +202,14 @@ def chat():
                         pass
             output_tokens = estimate_tokens(full_response)
             logger.info(f"{uid}, output_tokens, {output_tokens}")
-            add_output_token_by_uid(uid, output_tokens, AppType.CHAT.name.lower())
+            add_output_token_by_uid(uid, output_tokens, AppType.DOC_FORGE.name.lower())
 
         return Response(
             generate_and_count(),
             mimetype='text/event-stream',
             headers={
                 'Cache-Control': 'no-cache',
-                'X-Accel-Buffering': 'no'  # 禁用Nginx缓冲
+                'X-Accel-Buffering': 'no'
             }
         )
 
@@ -204,23 +220,24 @@ def chat():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    """处理文件上传"""
+    """处理文件上传 — 文件被持久化保存以供后续处理"""
     try:
         if 'file' not in request.files:
             logger.warning("没有选择文件")
-            return jsonify({'success': False, 'error': get_msg('chat.error_no_file')}), 400
+            return jsonify({'success': False, 'error': get_msg('doc_forge.error_no_file')}), 400
 
         file = request.files['file']
+        uid = request.form.get('uid', 'anonymous')
 
         if file.filename == '':
             logger.warning("文件名为空")
-            return jsonify({'success': False, 'error': get_msg('chat.error_no_file')}), 400
+            return jsonify({'success': False, 'error': get_msg('doc_forge.error_no_file')}), 400
 
         if not allowed_file(file.filename):
             logger.warning(f"不支持的文件类型: {file.filename}")
             return jsonify({
                 'success': False,
-                'error': get_msg('chat.error_unsupported_file', name=file.filename)
+                'error': get_msg('doc_forge.error_unsupported_file', name=file.filename)
             }), 400
 
         # 检查文件大小
@@ -234,23 +251,29 @@ def upload_file():
                 'success': False,
                 'error': f'文件太大。最大支持 {MAX_FILE_SIZE // 1024 // 1024}MB'
             }), 400
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-        temp_path = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(temp_path)
-        logger.info(f"文件保存成功: {temp_path}, 大小: {file_length} 字节")
-        content = extract_text_from_file(temp_path, file.filename)
 
-        # 清理临时文件
-        try:
-            os.remove(temp_path)
-            logger.debug(f"临时文件已清理: {temp_path}")
-        except Exception as e:
-            logger.warning(f"清理临时文件失败: {e}")
+        os.makedirs(UPLOAD_FOLDER_ABS, exist_ok=True)
+
+        # 使用时间戳前缀避免文件名冲突
+        saved_filename = f"{int(time.time())}_{file.filename}"
+        saved_path = os.path.join(UPLOAD_FOLDER_ABS, saved_filename)
+        file.save(saved_path)
+        logger.info(f"文件保存成功: {saved_path}, 大小: {file_length} 字节")
+
+        # 提取文本内容供LLM分析
+        content = extract_text_from_file(saved_path, file.filename)
+
+        # 追踪此用户的文件
+        if uid not in session_files:
+            session_files[uid] = []
+        session_files[uid].append(saved_path)
 
         return jsonify({
             'success': True,
             'filename': file.filename,
-            'content': content[:5000]  # 限制内容长度
+            'saved_filename': saved_filename,
+            'content': content[:5000],  # 限制内容长度
+            'file_count': len(session_files[uid])
         })
 
     except Exception as e:
@@ -270,11 +293,33 @@ def get_config():
     return jsonify(config_info)
 
 
+@app.route('/download/output/<path:filename>')
+def download_output(filename):
+    """下载生成的文档文件"""
+    file_path = os.path.join(OUTPUT_DIR_ABS, filename)
+    if not os.path.exists(file_path):
+        logger.warning(f"下载文件不存在: {file_path}")
+        abort(404)
+    logger.info(f"下载文件: {file_path}")
+    return send_from_directory(OUTPUT_DIR_ABS, filename, as_attachment=True)
+
+
+@app.route('/download/upload/<path:filename>')
+def download_upload(filename):
+    """下载上传的原始文件"""
+    file_path = os.path.join(UPLOAD_FOLDER_ABS, filename)
+    if not os.path.exists(file_path):
+        logger.warning(f"下载文件不存在: {file_path}")
+        abort(404)
+    logger.info(f"下载文件: {file_path}")
+    return send_from_directory(UPLOAD_FOLDER_ABS, filename, as_attachment=True)
+
+
 # 添加健康检查路由
 @app.route('/health', methods=['GET'])
 def health_check():
     """健康检查"""
-    return jsonify({'status': 'healthy', 'service': 'AI Chat Assistant'})
+    return jsonify({'status': 'healthy', 'service': 'DocForge'})
 
 if __name__ == '__main__':
     # 检查API密钥

@@ -10,6 +10,7 @@ from typing import Generator
 import requests
 
 from common.docx_md_util import convert_docx_to_md, get_md_file_content
+from apps.doc_forge.code_executor import extract_python_blocks, execute_code, snapshot_dir
 
 import urllib3
 # 全局禁用不安全请求警告 InsecureRequestWarning
@@ -45,6 +46,51 @@ class LLMConfig:
 
     # 系统提示词
     SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "你是一个有用的AI助手。请用中文回答用户的问题。")
+
+
+def build_doc_processing_system_prompt(file_paths: list[str] = None,
+                                        output_dir: str = "output_doc",
+                                        upload_dir: str = "upload_doc") -> str:
+    """Build system prompt for document processing agent."""
+    files_section = ""
+    if file_paths:
+        files_list = "\n".join(f"  - {fp}" for fp in file_paths)
+        files_section = f"""
+## 可用文件
+以下文件已上传并可供处理（绝对路径）：
+{files_list}"""
+
+    return f"""你是一个专业的文档处理助手。你可以帮助用户读取、修改、合并和创建文档（docx、pptx、pdf 等）。
+
+## 核心能力
+- 解析和读取 docx、pptx、pdf、xlsx 文件的内容
+- 按用户要求修改文档内容
+- 合并多个文档
+- 创建新文档
+- 提取文档的目录、特定章节等
+
+## 可用的 Python 库
+你可以编写 Python 脚本来处理文档。以下库已安装可用：
+- python-docx — 读取/创建/修改 Word docx 文档
+- python-pptx — 读取/创建/修改 PowerPoint pptx 文档
+- pdfplumber — 解析和提取 PDF 内容
+- pypandoc — 文档格式转换（docx↔md↔pdf 等）
+- openpyxl — 读取/创建/修改 Excel xlsx 文件
+- reportlab — 创建 PDF 文件
+- Pillow (PIL) — 图像处理
+
+## 脚本编写规则
+当需要处理文档时，请在 ```python 代码块中编写完整的 Python 脚本：
+- 上传文件目录: `{upload_dir}/`
+- 输出文件保存到: `{output_dir}/`
+- 脚本执行环境中已预定义变量 UPLOAD_DIR 和 OUTPUT_DIR，可直接使用
+- 使用 `print()` 输出处理结果和状态信息
+- 代码块内只写 Python 代码，不要混入解释文字
+
+## 使用指南
+- 如果用户只是询问文档内容，直接回答即可
+- 如果需要修改/创建文档，先简要说明你的方案，然后在一个 ```python 代码块中编写脚本
+- 脚本执行后，系统会自动提供下载链接{files_section}"""
 
 
 def allowed_file(filename):
@@ -210,9 +256,11 @@ def get_xlsx_content(filepath) -> str:
         return f"[读取Excel文件时出错: {str(e)}]"
 
 
-def generate_stream_response(messages: list, llm_cfg: dict, max_tokens: int = None) -> Generator[str, None, None]:
+def generate_stream_response(messages: list, llm_cfg: dict, max_tokens: int = None,
+                            include_done: bool = True) -> Generator[str, None, None]:
     """
     生成流式响应
+    :param include_done: 是否在流结束后发送 [DONE] 信号
     """
     headers = {
         "Content-Type": "application/json",
@@ -275,7 +323,8 @@ def generate_stream_response(messages: list, llm_cfg: dict, max_tokens: int = No
             # 向客户端返回错误信息
             error_message = f"API请求失败: {response.status_code} - {response.reason}"
             yield f"data: {json.dumps({'error': error_message})}\n\n"
-            yield "data: [DONE]\n\n"
+            if include_done:
+                yield "data: [DONE]\n\n"
             return
 
         response.raise_for_status()
@@ -296,7 +345,8 @@ def generate_stream_response(messages: list, llm_cfg: dict, max_tokens: int = No
                             logger.warning("解析JSON数据失败")
                             continue
 
-        yield "data: [DONE]\n\n"
+        if include_done:
+            yield "data: [DONE]\n\n"
 
     except requests.exceptions.RequestException as e:
         error_msg = f"API请求错误: {str(e)}"
@@ -311,4 +361,59 @@ def generate_stream_response(messages: list, llm_cfg: dict, max_tokens: int = No
                 logger.error(f"请求异常中的响应内容: {e.response.text}")
 
         yield f"data: {json.dumps({'error': error_msg})}\n\n"
-        yield "data: [DONE]\n\n"
+        if include_done:
+            yield "data: [DONE]\n\n"
+
+
+def generate_stream_response_with_execution(
+    messages: list, llm_cfg: dict, output_dir: str = "output_doc",
+    upload_dir: str = "upload_doc", max_tokens: int = None
+) -> Generator[str, None, None]:
+    """
+    流式响应 + 代码执行引擎。
+
+    先流式传输 LLM 回复，然后从回复中提取 Python 代码块并在服务器端执行。
+    执行结果（stdout/stderr/下载链接）作为额外的 SSE 数据发送给前端。
+    """
+    full_response = ""
+
+    # Phase 1: 流式传输 LLM 回复
+    for sse_chunk in generate_stream_response(messages, llm_cfg, max_tokens, include_done=False):
+        yield sse_chunk
+        if sse_chunk.startswith('data: ') and sse_chunk != 'data: [DONE]\n\n':
+            try:
+                chunk_data = json.loads(sse_chunk[6:].strip())
+                if 'content' in chunk_data:
+                    full_response += chunk_data['content']
+            except (json.JSONDecodeError, KeyError):
+                pass
+
+    # Phase 2: 提取并执行代码块
+    code_blocks = extract_python_blocks(full_response)
+    if code_blocks:
+        logger.info(f"从LLM回复中提取到 {len(code_blocks)} 个Python代码块，开始执行...")
+
+        for i, code in enumerate(code_blocks):
+            status = f"\n\n---\n\n**执行脚本 {i+1}/{len(code_blocks)}...**\n\n"
+            yield f"data: {json.dumps({'content': status})}\n\n"
+
+            result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir)
+
+            output_parts = []
+            if result['stdout']:
+                output_parts.append(f"**输出:**\n```\n{result['stdout']}\n```")
+            if result['stderr']:
+                output_parts.append(f"**错误:**\n```\n{result['stderr']}\n```")
+            if result['new_files']:
+                file_links = "\n".join(
+                    f"- [{f}](/download/output/{f})"
+                    for f in result['new_files']
+                )
+                output_parts.append(f"**生成的文件:**\n{file_links}")
+            if not result['success'] and not result['stderr'] and not result['stdout']:
+                output_parts.append(f"**脚本执行失败** (返回码: {result['returncode']})")
+
+            output_text = "\n\n".join(output_parts) + "\n\n"
+            yield f"data: {json.dumps({'content': output_text})}\n\n"
+
+    yield "data: [DONE]\n\n"

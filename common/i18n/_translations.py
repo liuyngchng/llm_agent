@@ -4,7 +4,7 @@
 Translation dictionaries for all supported languages.
 Key format: TRANSLATIONS[section][subkey][lang]
 
-Sections: common, auth, portal, chat, chat2kb, docx, paper_review,
+Sections: common, auth, portal, doc_forge, chat2kb, docx, paper_review,
           vdb, asr, mcp_client, online_office, statistic, llm, embedding, backend
 """
 
@@ -13,7 +13,7 @@ TRANSLATIONS = {
     # app_type — application type display names
     # ============================================================
     "app_type": {
-        "CHAT": {"zh": "问答助手", "en": "Q&A Assistant", "fr": "Assistant Q&R", "ar": "مساعد الاسئلة والاجوبة"},
+        "DOC_FORGE": {"zh": "文档锻造", "en": "DocForge", "fr": "ForgeDoc", "ar": "تزوير المستندات"},
         "CHAT2KB": {"zh": "知识库问答", "en": "KB Q&A", "fr": "Q&R base connaissances", "ar": "اسئلة واجوبة قاعدة المعرفة"},
         "NL2SQL": {"zh": "智能问数", "en": "NL2SQL", "fr": "NL2SQL", "ar": "NL2SQL"},
         "DOCX": {"zh": "文档生成", "en": "Document Generator", "fr": "Generateur de documents", "ar": "منشئ المستندات"},
@@ -502,11 +502,11 @@ TRANSLATIONS = {
             "ar": "عرض API",
         },
         # App names
-        "app_chat": {
-            "zh": "问答助手",
-            "en": "Q&A Assistant",
-            "fr": "Assistant Q&R",
-            "ar": "مساعد الاسئلة والاجوبة",
+        "app_doc_forge": {
+            "zh": "文档锻造",
+            "en": "DocForge",
+            "fr": "ForgeDoc",
+            "ar": "تزوير المستندات",
         },
         "app_chat2kb": {
             "zh": "知识库问答",
@@ -557,11 +557,11 @@ TRANSLATIONS = {
             "ar": "خادم MCP",
         },
         # App descriptions for portal cards
-        "app_chat_desc": {
-            "zh": "通过对话的方式，解决用户提出的需求，支持读取上传的文档内容。",
-            "en": "Solve user needs through conversation, supports reading uploaded documents.",
-            "fr": "Resoudre les besoins des utilisateurs par la conversation, prend en charge la lecture de documents televerses.",
-            "ar": "حل احتياجات المستخدم من خلال المحادثة، يدعم قراءة المستندات المرفوعة.",
+        "app_doc_forge_desc": {
+            "zh": "上传 docx/pptx/pdf 文档，用对话的方式让 AI 帮你修改、合并和生成新文档，一键下载结果。",
+            "en": "Upload docx/pptx/pdf files, let AI modify, merge and generate documents through conversation, download with one click.",
+            "fr": "Televersez des documents, laissez l'IA les modifier et generer via la conversation, telechargez le resultat.",
+            "ar": "قم برفع المستندات ودع الذكاء الاصطناعي يعدلها ويدمجها وينشئ مستندات جديدة من خلال المحادثة.",
         },
         "app_chat2kb_desc": {
             "zh": "提供基于知识库的问答能力，快速获取专业知识解答，提升信息检索效率。",
@@ -620,9 +620,9 @@ TRANSLATIONS = {
     },
 
     # ============================================================
-    # chat
+    # doc_forge
     # ============================================================
-    "chat": {
+    "doc_forge": {
         "error_empty_message": {
             "zh": "消息不能为空",
             "en": "Message cannot be empty",
@@ -658,7 +658,7 @@ TRANSLATIONS = {
         },
         "clear_chat_confirm": {
             "zh": "确定要清空聊天记录吗？",
-            "en": "Clear chat history?",
+            "en": "Clear doc_forge history?",
             "fr": "Effacer l'historique de conversation?",
             "ar": "هل تريد مسح سجل المحادثة؟",
         },

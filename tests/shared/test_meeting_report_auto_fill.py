@@ -90,7 +90,7 @@ class LLMMeetingProcessor:
         }
 
         data = {
-            "model": "deepseek-chat",
+            "model": "deepseek-doc_forge",
             "messages": [
                 {"role": "system",
                  "content": "你是一个专业的会议记录分析助手，能够准确提取会议信息并输出结构化JSON数据。"},
@@ -100,7 +100,7 @@ class LLMMeetingProcessor:
         }
 
         response = requests.post(
-            f"{self.llm_base_url}/chat/completions",
+            f"{self.llm_base_url}/doc_forge/completions",
             headers=headers,
             json=data,
             timeout=30

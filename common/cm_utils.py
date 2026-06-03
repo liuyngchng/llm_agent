@@ -347,7 +347,7 @@ def llm_health_check(llm_api_uri: str, llm_api_key: str, llm_model_name: str) ->
     检测大语言模型是否可用的健康检查方法
     :param llm_api_uri: base API, for example, https://api.deepseek.com/v1
     :param llm_api_key: sk-******,
-    :param llm_model_name: model name, for example, deepseek-chat
+    :param llm_model_name: model name, for example, deepseek-doc_forge
     Returns:
         {
             "status":200,
@@ -375,7 +375,7 @@ def llm_health_check(llm_api_uri: str, llm_api_key: str, llm_model_name: str) ->
     try:
         # 发送请求，设置合理的超时时间
         response = requests.post(
-            f"{llm_api_uri}/chat/completion",
+            f"{llm_api_uri}/doc_forge/completion",
             headers=headers,
             data=json.dumps(payload),
             timeout=30,  # 30秒超时

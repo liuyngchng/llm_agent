@@ -1,5 +1,5 @@
 // 聊天容器和元素
-const chatContainer = document.getElementById('chat-container');
+const chatContainer = document.getElementById('doc_forge-container');
 const queryForm = document.getElementById('query-form');
 const queryInput = document.getElementById('query-input');
 const sendButton = document.getElementById('send-button');

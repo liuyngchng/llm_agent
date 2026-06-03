@@ -213,7 +213,7 @@ def update_session_info(user_info: str, append_info: str, cfg: dict) -> str:
 
 def extract_session_info(chat_log: str, cfg: dict) -> str:
     """
-    extract_session_info from chat log
+    extract_session_info from doc_forge log
     """
     logger.info(f"chat_log [{chat_log}]")
     template = cfg_util.get_usr_prompt_template('extract_person_info_msg', cfg)
@@ -234,7 +234,7 @@ def extract_session_info(chat_log: str, cfg: dict) -> str:
 
 def extract_order_info(chat_log: str, cfg: dict) -> str:
     """
-    extract ord_gen order  from chat log
+    extract ord_gen order  from doc_forge log
     """
     logger.info(f"chat_log [{chat_log}]")
     template = cfg_util.get_usr_prompt_template('get_order_info_msg', cfg)

@@ -75,7 +75,7 @@ def get_current_lang() -> str:
 def get_msg(key: str, lang: str | None = None, **kwargs) -> str:
     """Look up a translation key for the given language, formatting with kwargs.
 
-    Key format: "section.specific_key" (e.g. "chat.error_empty_message")
+    Key format: "section.specific_key" (e.g. "doc_forge.error_empty_message")
 
     Args:
         key: dot-separated translation key

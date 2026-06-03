@@ -8,4 +8,4 @@ api:
     #  兼容OpenAI的大语言模型 API key
     llm_api_key: sk-123456
     #  兼容OpenAI的大语言模型 模型名称
-    llm_model_name: deepseek-chat
+    llm_model_name: deepseek-doc_forge
