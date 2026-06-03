@@ -28,12 +28,23 @@ def extract_python_blocks(text: str) -> list[str]:
 
 
 def find_new_files(before_files: set, directory: str) -> list[str]:
-    """Find newly created files in a directory after code execution."""
+    """Find newly created files in a directory after code execution.
+
+    Only returns files that actually exist on disk (verified via os.path.isfile).
+    """
     if not os.path.exists(directory):
         return []
     after_files = set(os.listdir(directory))
     new_files = after_files - before_files
-    return sorted(new_files)
+    # 仅返回确实存在的文件，过滤掉可能的临时文件或目录
+    verified = []
+    for f in sorted(new_files):
+        full_path = os.path.join(directory, f)
+        if os.path.isfile(full_path):
+            verified.append(f)
+        else:
+            logger.warning(f"find_new_files 跳过不存在的文件: {full_path}")
+    return verified
 
 
 def snapshot_dir(directory: str) -> set:

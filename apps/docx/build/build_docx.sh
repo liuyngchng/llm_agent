@@ -45,7 +45,8 @@ if [[ $confirm == [Yy] ]]; then
         langchain langchain_text_splitters langchain_unstructured unstructured \
         unstructured[pdf] langchain_core pydantic python-docx python-pptx pillow \
         concurrent_log_handler pydub pycryptodome wheel tabulate chromadb \
-        lxml websockets markdown pypandoc pandas openpyxl xlsx2html svgwrite pdfplumber
+        lxml websockets markdown pypandoc pandas openpyxl xlsx2html svgwrite \
+        docxtpl pypdf pdfplumber
 
     cd ..
 else

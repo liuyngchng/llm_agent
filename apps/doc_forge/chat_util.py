@@ -19,7 +19,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 ALLOWED_EXTENSIONS = {
-    'txt', 'md', 'py', 'js', 'html', 'css', 'json',
+    'txt', 'md', 'csv', 'py', 'js', 'html', 'css', 'json',
     'pdf', 'xlsx', 'xls', 'docx', 'doc', 'ppt', 'pptx',
     'jpg', 'jpeg', 'png', 'gif'
 }
@@ -69,23 +69,28 @@ def build_doc_processing_system_prompt(file_paths: list[str] = None,
     return f"""你是一个专业的文档处理助手。你可以帮助用户读取、修改、合并和创建文档（doc/docx、ppt/pptx、xls/xlsx、pdf 等）。
 
 ## 核心能力
-- 解析和读取 doc/docx、ppt/pptx、xls/xlsx、pdf 文件的内容（旧格式 .doc/.ppt/.xls 自动转为新格式后处理）
+- 解析和读取 doc/docx、ppt/pptx、xls/xlsx、csv、pdf 文件的内容（旧格式 .doc/.ppt/.xls 自动转为新格式后处理）
 - 按用户要求修改文档内容（直接修改原格式文件，保留原始排版和样式）
 - 合并多个文档
 - 创建新文档
 - 提取文档的目录、特定章节等
+- PDF 合并/拆分/提取页面/加水印/旋转
+- DOCX 模板填充（基于 Jinja2 占位符的模板生成）
 
 ## 可用的 Python 库
 你可以编写 Python 脚本来处理文档。以下库已安装可用：
 - python-docx — 读取/创建/修改 Word docx 文档（原生接口，保留格式）
+- docxtpl — DOCX 模板填充（Jinja2 语法，{{ placeholder }} 占位符替换）
 - common.docx_revision_util — Word 修订模式工具（Track Changes），支持以修订模式插入/删除/替换文本
 - python-pptx — 读取/创建/修改 PowerPoint pptx 文档（原生接口，保留格式）
 - openpyxl — 读取/创建/修改 Excel xlsx 文件（原生接口，保留格式）
-- pdfplumber — 解析和提取 PDF 内容
+- pdfplumber — 解析和提取 PDF 内容（文本、表格）
+- pypdf — 修改已有 PDF：合并、拆分、提取页面、旋转、加水印、加密、读取/设置元数据
 - reportlab — 创建 PDF 文件
 - pypandoc — 文档格式转换（仅当用户明确要求转换格式时使用）
 - Pillow (PIL) — 图像处理
 - LibreOffice — 系统级可用，旧格式文件（.doc/.ppt/.xls）上传时自动转为新格式
+- Python csv 标准库、pandas — CSV 和数据分析
 
 ## Word 修订模式（Track Changes）
 当用户要求审阅、修订、校对 Word 文档，或要求"以修订模式"修改时，使用 `common.docx_revision_util`：
@@ -119,6 +124,52 @@ doc.save(os.path.join(OUTPUT_DIR, 'report_revised.docx'))
 ```
 
 **重要：** 默认保留修订标记，不要自动 accept_all_changes，除非用户明确要求"接受修订"或"最终版"。
+
+## PDF 操作（pypdf）
+对已有 PDF 进行合并、拆分、提取、旋转、加水印等操作：
+
+```python
+from pypdf import PdfReader, PdfWriter
+
+# 合并多个 PDF
+writer = PdfWriter()
+for f in ['file1.pdf', 'file2.pdf']:
+    writer.append(os.path.join(UPLOAD_DIR, f))
+writer.write(os.path.join(OUTPUT_DIR, 'merged.pdf'))
+
+# 拆分/提取指定页面（第 1,3,5 页，0-indexed）
+reader = PdfReader(os.path.join(UPLOAD_DIR, 'source.pdf'))
+writer = PdfWriter()
+for i in [0, 2, 4]:
+    writer.add_page(reader.pages[i])
+writer.write(os.path.join(OUTPUT_DIR, 'extracted.pdf'))
+
+# 旋转页面
+reader = PdfReader(os.path.join(UPLOAD_DIR, 'source.pdf'))
+reader.pages[0].rotate(90)  # 顺时针90度
+writer = PdfWriter()
+writer.add_page(reader.pages[0])
+writer.write(os.path.join(OUTPUT_DIR, 'rotated.pdf'))
+```
+
+## DOCX 模板填充（docxtpl）
+从 Jinja2 模板生成 Word 文档：
+
+```python
+from docxtpl import DocxTemplate
+
+doc = DocxTemplate(os.path.join(UPLOAD_DIR, 'template.docx'))
+context = {{
+    'title': '项目报告',
+    'author': '张三',
+    'date': '2026-06-03',
+    'items': [{{'name': '任务A', 'status': '完成'}}, {{'name': '任务B', 'status': '进行中'}}],
+}}
+doc.render(context)
+doc.save(os.path.join(OUTPUT_DIR, 'generated_report.docx'))
+```
+
+**模板说明：** 用户上传的 .docx 文件中可以使用 Jinja2 语法占位符：`{{{{ title }}}}`（变量）、`{{{{% for item in items %}}}}`（循环）、`{{{{% if condition %}}}}`（条件）。
 
 ## 文档处理原则（重要）
 - **优先使用原生库直接操作原始文件格式**（python-docx、python-pptx、openpyxl），不要先将文档转为 markdown
@@ -216,6 +267,29 @@ def extract_text_from_file(filepath, filename):
                 content = f.read()
                 logger.info(f"文本文件读取成功，长度: {len(content)} 字符")
                 return content
+
+        # CSV 文件 — 解析为 Markdown 表格
+        elif ext == 'csv':
+            try:
+                import csv as _csv
+                with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                    reader = _csv.reader(f)
+                    rows = list(reader)
+                if not rows:
+                    return "[CSV 文件为空]"
+                lines = []
+                lines.append('| ' + ' | '.join(rows[0]) + ' |')
+                lines.append('| ' + ' | '.join(['---'] * len(rows[0])) + ' |')
+                for row in rows[1:]:
+                    # 补齐缺列
+                    padded = row + [''] * (len(rows[0]) - len(row))
+                    lines.append('| ' + ' | '.join(padded[:len(rows[0])]) + ' |')
+                result = '\n'.join(lines)
+                logger.info(f"CSV文件解析成功，行数: {len(rows)}")
+                return result
+            except Exception as e:
+                logger.error(f"CSV解析失败: {str(e)}")
+                return f"[CSV 解析失败: {str(e)}]"
 
         # PDF文件（需要安装PyPDF2或pdfplumber）
         elif ext == 'pdf':
