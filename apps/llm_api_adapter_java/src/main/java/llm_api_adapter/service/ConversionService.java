@@ -96,14 +96,31 @@ public class ConversionService {
 
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> anthropicToOpenAIMessages(List<Map<String, Object>> anthropicMessages,
-                                                                 String systemPrompt) {
+                                                                 Object systemPrompt) {
         List<Map<String, Object>> result = new ArrayList<>();
 
-        if (systemPrompt != null && !systemPrompt.isEmpty()) {
-            Map<String, Object> sysMsg = new LinkedHashMap<>();
-            sysMsg.put("role", "system");
-            sysMsg.put("content", systemPrompt);
-            result.add(sysMsg);
+        if (systemPrompt != null) {
+            String systemText = null;
+            if (systemPrompt instanceof List) {
+                StringBuilder sb = new StringBuilder();
+                for (Object block : (List<?>) systemPrompt) {
+                    if (block instanceof Map) {
+                        Map<String, Object> m = (Map<String, Object>) block;
+                        if ("text".equals(m.get("type"))) {
+                            sb.append(m.get("text"));
+                        }
+                    }
+                }
+                systemText = sb.toString();
+            } else if (systemPrompt instanceof String) {
+                systemText = (String) systemPrompt;
+            }
+            if (systemText != null && !systemText.isEmpty()) {
+                Map<String, Object> sysMsg = new LinkedHashMap<>();
+                sysMsg.put("role", "system");
+                sysMsg.put("content", systemText);
+                result.add(sysMsg);
+            }
         }
 
         if (anthropicMessages == null) return result;

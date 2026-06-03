@@ -9,7 +9,7 @@ import java.util.Map;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AnthropicRequest {
     private String model;
-    private String system;
+    private Object system;
     private List<Map<String, Object>> messages;
     private Integer maxTokens;
     private Double temperature;
@@ -24,8 +24,8 @@ public class AnthropicRequest {
 
     public String getModel() { return model; }
     public void setModel(String v) { this.model = v; }
-    public String getSystem() { return system; }
-    public void setSystem(String v) { this.system = v; }
+    public Object getSystem() { return system; }
+    public void setSystem(Object v) { this.system = v; }
     public List<Map<String, Object>> getMessages() { return messages; }
     public void setMessages(List<Map<String, Object>> v) { this.messages = v; }
     public Integer getMaxTokens() { return maxTokens; }
