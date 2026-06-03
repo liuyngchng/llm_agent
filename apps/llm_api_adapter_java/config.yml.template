@@ -1,0 +1,6 @@
+sys:
+    name: LLM API转换工具
+api:
+    llm_api_uri: https://your_local_domain_app_address/v1
+    llm_api_key: sk-123456
+    llm_model_name: deepseek-chat
