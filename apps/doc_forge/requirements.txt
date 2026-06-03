@@ -9,4 +9,5 @@ pandas
 openpyxl
 xlsx2html
 python-pptx
+python-docx
 pdfplumber

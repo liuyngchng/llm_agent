@@ -9,7 +9,6 @@ from typing import Generator
 
 import requests
 
-from common.docx_md_util import convert_docx_to_md, get_md_file_content
 from apps.doc_forge.code_executor import extract_python_blocks, execute_code, snapshot_dir
 
 import urllib3
@@ -60,24 +59,31 @@ def build_doc_processing_system_prompt(file_paths: list[str] = None,
 以下文件已上传并可供处理（绝对路径）：
 {files_list}"""
 
-    return f"""你是一个专业的文档处理助手。你可以帮助用户读取、修改、合并和创建文档（docx、pptx、pdf 等）。
+    return f"""你是一个专业的文档处理助手。你可以帮助用户读取、修改、合并和创建文档（docx、pptx、xlsx、pdf 等）。
 
 ## 核心能力
 - 解析和读取 docx、pptx、pdf、xlsx 文件的内容
-- 按用户要求修改文档内容
+- 按用户要求修改文档内容（直接修改原格式文件，保留原始排版和样式）
 - 合并多个文档
 - 创建新文档
 - 提取文档的目录、特定章节等
 
 ## 可用的 Python 库
 你可以编写 Python 脚本来处理文档。以下库已安装可用：
-- python-docx — 读取/创建/修改 Word docx 文档
-- python-pptx — 读取/创建/修改 PowerPoint pptx 文档
+- python-docx — 读取/创建/修改 Word docx 文档（原生接口，保留格式）
+- python-pptx — 读取/创建/修改 PowerPoint pptx 文档（原生接口，保留格式）
+- openpyxl — 读取/创建/修改 Excel xlsx 文件（原生接口，保留格式）
 - pdfplumber — 解析和提取 PDF 内容
-- pypandoc — 文档格式转换（docx↔md↔pdf 等）
-- openpyxl — 读取/创建/修改 Excel xlsx 文件
 - reportlab — 创建 PDF 文件
+- pypandoc — 文档格式转换（仅当用户明确要求转换格式时使用，如 docx→md）
 - Pillow (PIL) — 图像处理
+
+## 文档处理原则（重要）
+- **优先使用原生库直接操作原始文件格式**（python-docx、python-pptx、openpyxl），不要先将文档转为 markdown
+  处理完再转回去，这样会丢失原始排版、样式、图片等格式信息
+- 修改已有文档时，用原生库打开原始文件 → 修改 → 保存回原格式
+- 只有用户**明确要求**转换格式（如"把这个 docx 转成 markdown"）时才使用 pypandoc 做格式转换
+- 创建新文档时，直接用原生库生成目标格式（docx/pptx/xlsx/pdf），不要先生成 md 再转换
 
 ## 脚本编写规则
 当需要处理文档时，请在 ```python 代码块中编写完整的 Python 脚本：
@@ -130,15 +136,9 @@ def extract_text_from_file(filepath, filename):
                 logger.warning("需要安装 pdfplumber 库来解析PDF文件")
                 return "[需要安装 pdfplumber 库来解析PDF文件]"
 
-        # Word文档（需要安装python-docx）
+        # Word文档（使用 python-docx 原生接口，保留格式结构）
         elif ext in ['docx']:
-            try:
-                md_file = convert_docx_to_md(filepath, True)
-                result = get_md_file_content(md_file)
-                return result
-            except ImportError:
-                logger.warning("需要安装 pypandoc 库来解析Word文档")
-                return "[需要安装 pypandoc 库来解析Word文档]"
+            return get_docx_content(filepath)
 
         # PPT/PPTX文件（需要安装python-pptx）
         elif ext in ['ppt', 'pptx']:
@@ -254,6 +254,72 @@ def get_xlsx_content(filepath) -> str:
     except Exception as e:
         logger.error(f"读取Excel文件时出错: {str(e)}")
         return f"[读取Excel文件时出错: {str(e)}]"
+
+
+def get_docx_content(filepath) -> str:
+    """
+    使用 python-docx 原生接口提取 docx 文件内容。
+    保留文档结构（标题层级、表格、列表），不通过 markdown 转换。
+    """
+    try:
+        from docx import Document
+
+        doc = Document(filepath)
+        text_parts = []
+
+        for para in doc.paragraphs:
+            style_name = para.style.name if para.style else ''
+            text = para.text.strip()
+            if not text:
+                continue
+
+            if style_name.startswith('Heading'):
+                try:
+                    level = int(style_name.replace('Heading ', ''))
+                    prefix = '#' * min(level, 6)
+                    text_parts.append(f"\n{prefix} {text}")
+                except ValueError:
+                    text_parts.append(f"\n## {text}")
+            elif 'List' in style_name or 'list' in style_name.lower():
+                text_parts.append(f"- {text}")
+            else:
+                text_parts.append(text)
+
+        for i, table in enumerate(doc.tables):
+            text_parts.append(f"\n### 表格 {i + 1}")
+            row_data = []
+            for row in table.rows:
+                cells = [cell.text.strip().replace('\n', ' ').replace('|', '\\|') for cell in row.cells]
+                row_data.append('| ' + ' | '.join(cells) + ' |')
+            if row_data:
+                text_parts.append(row_data[0])
+                num_cols = len(table.rows[0].cells)
+                text_parts.append('| ' + ' | '.join(['---'] * num_cols) + ' |')
+                for row in row_data[1:]:
+                    text_parts.append(row)
+
+        for section in doc.sections:
+            header = section.header
+            if header and header.paragraphs:
+                h_text = ' '.join(p.text for p in header.paragraphs if p.text.strip())
+                if h_text:
+                    text_parts.insert(0, f"[页眉: {h_text}]")
+            footer = section.footer
+            if footer and footer.paragraphs:
+                f_text = ' '.join(p.text for p in footer.paragraphs if p.text.strip())
+                if f_text:
+                    text_parts.append(f"[页脚: {f_text}]")
+
+        result = '\n'.join(text_parts)
+        logger.info(f"docx_file_parse_success, {filepath}, file_len: {len(result)}")
+        return result
+
+    except ImportError:
+        logger.warning("需要安装 python-docx 库来解析Word文档")
+        return "[需要安装 python-docx 库来解析Word文档]"
+    except Exception as e:
+        logger.error(f"读取docx文件时出错: {str(e)}")
+        return f"[读取docx文件时出错: {str(e)}]"
 
 
 def generate_stream_response(messages: list, llm_cfg: dict, max_tokens: int = None,
