@@ -10,8 +10,8 @@ cat /etc/profile
 export ANTHROPIC_BASE_URL=http://127.0.0.1:16001
 export ANTHROPIC_AUTH_TOKEN=sk-8rfe*****e
 export API_TIMEOUT_MS=600000
-export ANTHROPIC_MODEL=deepseek-doc_forge
-export ANTHROPIC_SMALL_FAST_MODEL=deepseek-doc_forge
+export ANTHROPIC_MODEL=deepseek-chat
+export ANTHROPIC_SMALL_FAST_MODEL=deepseek-chat
 export CLAUDE_CODE_DISABLE_NONSENSENTIAL_TRAFFIC=1
 ```
 

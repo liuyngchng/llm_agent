@@ -30,10 +30,14 @@ my_cfg = init_yml_cfg()
 # 确保上传和输出文件夹存在（使用绝对路径）
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER_ABS = os.path.join(BASE_DIR, UPLOAD_FOLDER)
-OUTPUT_DIR_ABS = os.path.join(BASE_DIR, OUTPUT_DIR)
+
+# 工作空间目录：优先使用 cfg.yml 中的 sys.workspace，否则使用默认 output_doc
+WORKSPACE_DIR = my_cfg['sys'].get('workspace', os.path.join(BASE_DIR, OUTPUT_DIR))
+OUTPUT_DIR_ABS = WORKSPACE_DIR
+
 os.makedirs(UPLOAD_FOLDER_ABS, exist_ok=True)
-os.makedirs(OUTPUT_DIR_ABS, exist_ok=True)
-print(f"上传文件夹路径: {UPLOAD_FOLDER_ABS}, 输出文件夹路径: {OUTPUT_DIR_ABS}")
+os.makedirs(WORKSPACE_DIR, exist_ok=True)
+print(f"上传文件夹路径: {UPLOAD_FOLDER_ABS}, 工作空间路径: {WORKSPACE_DIR}")
 
 # 会话文件追踪: uid -> [file_paths]
 session_files = {}
@@ -127,6 +131,7 @@ def app_home():
         "arg1": arg1,
         "arg2": arg2,
         "arg3": arg3,
+        "workspace": WORKSPACE_DIR,
     }
 
     session_key = f"{uid}_{get_client_ip()}"
@@ -313,6 +318,46 @@ def download_upload(filename):
         abort(404)
     logger.info(f"下载文件: {file_path}")
     return send_from_directory(UPLOAD_FOLDER_ABS, filename, as_attachment=True)
+
+
+@app.route('/workspace-files', methods=['GET'])
+def list_workspace_files():
+    """列出工作空间中的所有文件"""
+    try:
+        files = []
+        if os.path.exists(WORKSPACE_DIR):
+            for f in os.listdir(WORKSPACE_DIR):
+                file_path = os.path.join(WORKSPACE_DIR, f)
+                if os.path.isfile(file_path):
+                    stat = os.stat(file_path)
+                    files.append({
+                        'name': f,
+                        'size': stat.st_size,
+                        'mtime': stat.st_mtime,
+                        'ext': os.path.splitext(f)[1].lower(),
+                    })
+        # 按修改时间倒序排列
+        files.sort(key=lambda x: x['mtime'], reverse=True)
+        return jsonify({'success': True, 'files': files, 'workspace': WORKSPACE_DIR})
+    except Exception as e:
+        logger.error(f"列出工作空间文件失败: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/download/workspace/<path:filename>')
+def download_workspace_file(filename):
+    """下载工作空间中的文件"""
+    file_path = os.path.join(WORKSPACE_DIR, filename)
+    # 防止目录穿越
+    real_path = os.path.realpath(file_path)
+    if not real_path.startswith(os.path.realpath(WORKSPACE_DIR)):
+        logger.warning(f"非法下载路径: {filename}")
+        abort(403)
+    if not os.path.exists(real_path):
+        logger.warning(f"工作空间文件不存在: {real_path}")
+        abort(404)
+    logger.info(f"下载工作空间文件: {real_path}")
+    return send_from_directory(WORKSPACE_DIR, filename, as_attachment=True)
 
 
 # 添加健康检查路由

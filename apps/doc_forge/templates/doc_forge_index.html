@@ -17,6 +17,9 @@
             <div class="model-info">
                 <span id="modelName">{{ _('doc_forge.model_loading') }}</span>
                 <div class="model-info-actions">
+                    <button id="workspaceBtn" class="btn-clear">
+                        <i class="fas fa-folder-open"></i> 我的电脑
+                    </button>
                     <button id="clearChat" class="btn-clear">
                         <i class="fas fa-trash-alt"></i> {{ _('doc_forge.clear_chat') }}
                     </button>
@@ -81,6 +84,24 @@
         </div>
         <input type="hidden" id ="uid" name="uid" value="{{uid}}">
         <input type="hidden" id ="t" name="t" value="{{t}}">
+
+        <!-- 工作空间文件浏览器模态框 -->
+        <div class="workspace-modal-overlay" id="workspaceModal" style="display: none;">
+            <div class="workspace-modal">
+                <div class="workspace-modal-header">
+                    <h2><i class="fas fa-folder-open"></i> 我的电脑</h2>
+                    <button class="workspace-modal-close" id="workspaceModalClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="workspace-modal-body">
+                    <div class="workspace-path" id="workspacePath"></div>
+                    <div class="workspace-file-list" id="workspaceFileList">
+                        <div class="workspace-loading"><i class="fas fa-spinner fa-spin"></i> 正在加载...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <footer class="footer">
             <p>Powered by Richard</p>

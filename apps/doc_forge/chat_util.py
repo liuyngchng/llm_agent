@@ -700,11 +700,8 @@ def generate_stream_response_with_execution(
             if result['stderr']:
                 output_parts.append(f"**错误信息:**\n```\n{result['stderr']}\n```")
             if result['new_files']:
-                file_links = "\n".join(
-                    f"- [{f}](/download/output/{f})"
-                    for f in result['new_files']
-                )
-                output_parts.append(f"**生成的文件:**\n{file_links}")
+                file_names = ", ".join(result['new_files'])
+                output_parts.append(f"文件 {file_names} 已经生成，已保存至工作空间。")
             if not result['success'] and not result['stderr'] and not result['stdout']:
                 output_parts.append(f"**脚本执行失败** (返回码: {result['returncode']})")
 

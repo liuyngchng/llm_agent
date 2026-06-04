@@ -127,6 +127,28 @@ function setupEventListeners() {
     // 文件选择事件
     fileInput.addEventListener('change', handleFileSelect);
 
+    // 工作空间文件浏览器
+    const workspaceBtn = document.getElementById('workspaceBtn');
+    const workspaceModal = document.getElementById('workspaceModal');
+    const workspaceModalClose = document.getElementById('workspaceModalClose');
+
+    if (workspaceBtn && workspaceModal) {
+        workspaceBtn.addEventListener('click', async () => {
+            workspaceModal.style.display = 'flex';
+            await loadWorkspaceFiles();
+        });
+        if (workspaceModalClose) {
+            workspaceModalClose.addEventListener('click', () => {
+                workspaceModal.style.display = 'none';
+            });
+        }
+        workspaceModal.addEventListener('click', (e) => {
+            if (e.target === workspaceModal) {
+                workspaceModal.style.display = 'none';
+            }
+        });
+    }
+
     // 输入框键盘事件
     messageInput.addEventListener('keydown', function(event) {
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -884,3 +906,105 @@ function handleKeyPress(event) {
 window.handleKeyPress = handleKeyPress;
 window.removeFile = removeFile;
 window.clearFileList = clearFileList;
+
+// 工作空间文件浏览器
+async function loadWorkspaceFiles() {
+    const fileListEl = document.getElementById('workspaceFileList');
+    const pathEl = document.getElementById('workspacePath');
+    if (!fileListEl) return;
+
+    fileListEl.innerHTML = '<div class="workspace-loading"><i class="fas fa-spinner fa-spin"></i> 正在加载...</div>';
+
+    try {
+        const response = await fetch('/workspace-files');
+        const data = await response.json();
+
+        if (data.success) {
+            if (pathEl) {
+                pathEl.textContent = data.workspace;
+            }
+
+            if (data.files.length === 0) {
+                fileListEl.innerHTML = '<div class="workspace-empty"><i class="fas fa-folder-open"></i> 工作空间为空</div>';
+                return;
+            }
+
+            fileListEl.innerHTML = '';
+            data.files.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'workspace-file-item';
+                const icon = getWorkspaceFileIcon(file.ext);
+
+                const sizeStr = formatWorkspaceFileSize(file.size);
+                const dateStr = new Date(file.mtime * 1000).toLocaleString('zh-CN');
+
+                item.innerHTML = `
+                    <div class="workspace-file-icon"><i class="${icon}"></i></div>
+                    <div class="workspace-file-info">
+                        <div class="workspace-file-name">${escapeHtml(file.name)}</div>
+                        <div class="workspace-file-meta">${sizeStr} - ${dateStr}</div>
+                    </div>
+                    <button class="workspace-file-download" title="下载">
+                        <i class="fas fa-download"></i>
+                    </button>
+                `;
+
+                // 点击文件名/图标下载
+                item.querySelector('.workspace-file-icon').addEventListener('click', () => {
+                    downloadWorkspaceFile(file.name);
+                });
+                item.querySelector('.workspace-file-info').addEventListener('click', () => {
+                    downloadWorkspaceFile(file.name);
+                });
+                item.querySelector('.workspace-file-download').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    downloadWorkspaceFile(file.name);
+                });
+
+                fileListEl.appendChild(item);
+            });
+        } else {
+            fileListEl.innerHTML = `<div class="workspace-error"><i class="fas fa-exclamation-triangle"></i> 加载失败: ${escapeHtml(data.error || '未知错误')}</div>`;
+        }
+    } catch (error) {
+        fileListEl.innerHTML = `<div class="workspace-error"><i class="fas fa-exclamation-triangle"></i> 加载失败: ${escapeHtml(error.message)}</div>`;
+    }
+}
+
+function downloadWorkspaceFile(filename) {
+    const a = document.createElement('a');
+    a.href = '/download/workspace/' + encodeURIComponent(filename);
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+function getWorkspaceFileIcon(ext) {
+    const iconMap = {
+        '.doc': 'fas fa-file-word', '.docx': 'fas fa-file-word',
+        '.xls': 'fas fa-file-excel', '.xlsx': 'fas fa-file-excel',
+        '.ppt': 'fas fa-file-powerpoint', '.pptx': 'fas fa-file-powerpoint',
+        '.pdf': 'fas fa-file-pdf',
+        '.txt': 'fas fa-file-alt', '.md': 'fas fa-file-alt',
+        '.csv': 'fas fa-file-csv',
+        '.py': 'fas fa-file-code', '.js': 'fas fa-file-code', '.html': 'fas fa-file-code', '.css': 'fas fa-file-code', '.json': 'fas fa-file-code',
+        '.png': 'fas fa-file-image', '.jpg': 'fas fa-file-image', '.jpeg': 'fas fa-file-image', '.gif': 'fas fa-file-image',
+        '.zip': 'fas fa-file-archive', '.rar': 'fas fa-file-archive', '.7z': 'fas fa-file-archive',
+    };
+    return iconMap[ext] || 'fas fa-file';
+}
+
+function formatWorkspaceFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
