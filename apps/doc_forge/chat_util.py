@@ -190,7 +190,7 @@ doc.save(os.path.join(OUTPUT_DIR, 'generated_report.docx'))
 ## 使用指南
 - 如果用户只是询问文档内容，直接回答即可
 - 如果需要修改/创建文档，先简要说明你的方案，然后在一个 ```python 代码块中编写脚本
-- 脚本执行后，系统会自动提供下载链接{files_section}"""
+- 脚本执行后，文件将自动保存到工作空间目录，用户可通过"我的电脑"查看和下载{files_section}"""
 
 
 def allowed_file(filename):
@@ -605,7 +605,7 @@ def generate_stream_response_with_execution(
     流式响应 + 代码执行引擎。
 
     先流式传输 LLM 回复，然后从回复中提取 Python 代码块并在服务器端执行。
-    执行结果（stdout/stderr/下载链接）作为额外的 SSE 数据发送给前端。
+    执行结果（stdout/stderr/保存信息）作为额外的 SSE 数据发送给前端。
     """
     import re as _re
 
@@ -654,6 +654,19 @@ def generate_stream_response_with_execution(
 
             result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir)
 
+            # 检测 ModuleNotFoundError，跳过自动修复，直接提示用户安装缺失组件
+            stderr = result.get('stderr', '')
+            module_match = _re.search(r"ModuleNotFoundError: No module named '([^']+)'", stderr) if not result['success'] else None
+            if module_match:
+                missing_module = module_match.group(1)
+                output_parts = [
+                    f"⚠️ **缺少系统组件：`{missing_module}`**\n\n"
+                    f"请在服务器上安装所需组件：`pip install {missing_module}`"
+                ]
+                output_text = "\n\n".join(output_parts) + "\n\n"
+                yield f"data: {json.dumps({'content': output_text})}\n\n"
+                continue
+
             # 自动纠错：出错或有警告时，反馈给 LLM 自查修复
             retry_count = 0
             while (not result['success'] or result['stderr']) and retry_count < MAX_RETRIES:
@@ -690,6 +703,7 @@ def generate_stream_response_with_execution(
 
             # 输出最终结果
             output_parts = []
+
             if retry_count > 0:
                 if result['success'] and not result['stderr']:
                     output_parts.append(f"✅ 脚本经 {retry_count} 次自动修复后执行成功")

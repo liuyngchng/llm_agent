@@ -359,6 +359,26 @@ def download_workspace_file(filename):
     return send_from_directory(WORKSPACE_DIR, filename, as_attachment=True)
 
 
+@app.route('/workspace-files/<path:filename>', methods=['DELETE'])
+def delete_workspace_file(filename):
+    """删除工作空间中的文件"""
+    file_path = os.path.join(WORKSPACE_DIR, filename)
+    real_path = os.path.realpath(file_path)
+    if not real_path.startswith(os.path.realpath(WORKSPACE_DIR)):
+        logger.warning(f"非法删除路径: {filename}")
+        abort(403)
+    if not os.path.exists(real_path):
+        logger.warning(f"工作空间文件不存在: {real_path}")
+        abort(404)
+    try:
+        os.remove(real_path)
+        logger.info(f"已删除工作空间文件: {real_path}")
+        return jsonify({'success': True, 'message': f'文件 {filename} 已删除'})
+    except Exception as e:
+        logger.error(f"删除文件失败: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # 添加健康检查路由
 @app.route('/health', methods=['GET'])
 def health_check():

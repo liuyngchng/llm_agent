@@ -939,9 +939,14 @@ async function loadWorkspaceFiles() {
                         <div class="workspace-file-name">${escapeHtml(file.name)}</div>
                         <div class="workspace-file-meta">${sizeStr} - ${dateStr}</div>
                     </div>
-                    <button class="workspace-file-download" title="下载">
-                        <i class="fas fa-download"></i>
-                    </button>
+                    <div class="workspace-file-actions">
+                        <button class="workspace-file-action-btn download" title="下载">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="workspace-file-action-btn delete" title="删除">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
                 `;
 
                 // 点击文件名/图标下载
@@ -951,9 +956,13 @@ async function loadWorkspaceFiles() {
                 item.querySelector('.workspace-file-info').addEventListener('click', () => {
                     downloadWorkspaceFile(file.name);
                 });
-                item.querySelector('.workspace-file-download').addEventListener('click', (e) => {
+                item.querySelector('.workspace-file-action-btn.download').addEventListener('click', (e) => {
                     e.stopPropagation();
                     downloadWorkspaceFile(file.name);
+                });
+                item.querySelector('.workspace-file-action-btn.delete').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteWorkspaceFile(file.name, item);
                 });
 
                 fileListEl.appendChild(item);
@@ -974,6 +983,28 @@ function downloadWorkspaceFile(filename) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+}
+
+async function deleteWorkspaceFile(filename, itemElement) {
+    if (!confirm(`确定要删除文件 "${filename}" 吗？`)) {
+        return;
+    }
+    try {
+        const response = await fetch('/workspace-files/' + encodeURIComponent(filename), {
+            method: 'DELETE',
+        });
+        const data = await response.json();
+        if (data.success) {
+            itemElement.style.transition = 'all 0.3s ease';
+            itemElement.style.opacity = '0';
+            itemElement.style.transform = 'translateX(30px)';
+            setTimeout(() => itemElement.remove(), 300);
+        } else {
+            alert('删除失败: ' + (data.error || '未知错误'));
+        }
+    } catch (error) {
+        alert('删除失败: ' + error.message);
+    }
 }
 
 function getWorkspaceFileIcon(ext) {

@@ -1103,24 +1103,42 @@ textarea::placeholder {
     margin-top: 3px;
 }
 
-.workspace-file-download {
+.workspace-file-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.workspace-file-action-btn {
     background: none;
     border: none;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: #999;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     transition: all 0.2s;
-    flex-shrink: 0;
 }
 
-.workspace-file-download:hover {
+.workspace-file-action-btn.download {
+    color: #4b6cb7;
+}
+
+.workspace-file-action-btn.download:hover {
     background: #4b6cb7;
+    color: white;
+}
+
+.workspace-file-action-btn.delete {
+    color: #999;
+}
+
+.workspace-file-action-btn.delete:hover {
+    background: #e74c3c;
     color: white;
 }
 

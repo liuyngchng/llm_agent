@@ -16,9 +16,9 @@ sys:
     workspace: ./apps/workspace
 api:
     # 认证服务 API
-    auth_api: http://127.0.0.1:19011
+    auth_api: https://auth_service_app:19000
     # 数据统计服务 API
-    stats_api: http://127.0.0.1:19012
+    stats_api: https://statistics_service_app:19000
     # 大语言模型 API 基地址
     llm_api_uri: https://api.deepseek.com/v1
     #  大语言模型 API key

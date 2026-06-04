@@ -5,6 +5,7 @@
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import logging.config
 import time
@@ -90,12 +91,12 @@ OUTPUT_DIR = {output_dir!r}
             f.write(code)
 
         result = subprocess.run(
-            ['python3', tmp_path],
+            [sys.executable, tmp_path],
             capture_output=True,
             text=True,
             timeout=timeout,
             cwd=base_dir,
-            env={**os.environ, 'PYTHONPATH': base_dir}
+            env=os.environ
         )
 
         stdout = result.stdout.strip()
