@@ -193,8 +193,6 @@ def chat():
         # 包裹流式响应，统计 output tokens
         def generate_and_count():
             full_response = ""
-            # 立即回复"处理中"，提升用户体验
-            yield f"data: {json.dumps({'content': '处理中...\n\n'})}\n\n"
             for sse_chunk in generate_stream_response_with_execution(
                 messages, my_cfg['api'],
                 output_dir=OUTPUT_DIR_ABS,

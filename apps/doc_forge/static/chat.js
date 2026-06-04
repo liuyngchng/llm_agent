@@ -433,12 +433,12 @@ function getFileEmoji(type, name) {
 }
 
 // 上传文件到服务器
-async function uploadFiles() {
+async function uploadFiles(files) {
     const fileContents = [];
     const savedFilenames = [];
 
-    for (let i = 0; i < uploadedFiles.length; i++) {
-        const file = uploadedFiles[i];
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         const formData = new FormData();
         formData.append('file', file);
         formData.append('uid', uid.value);
@@ -459,7 +459,7 @@ async function uploadFiles() {
         }
 
         // 更新进度提示
-        showProgress(`正在处理文件 (${i + 1}/${uploadedFiles.length})...`);
+        showProgress(`正在处理文件 (${i + 1}/${files.length})...`);
     }
 
     return fileContents;
@@ -592,9 +592,9 @@ function addMessageToUI(role, content, messageId = null) {
     let displayContent = content;
 
     if (role === 'ai') {
-        // AI消息：包含操作按钮和内容
+        const placeholder = content === '' ? '<div class="ai-loading"><i class="fas fa-spinner fa-pulse"></i></div>' : displayContent;
         messageDiv.innerHTML = `
-            <div class="message-content markdown-content">${displayContent}</div>
+            <div class="message-content markdown-content">${placeholder}</div>
             <div class="message-actions">
                 <div class="action-buttons">
                     <button class="action-btn copy-btn" title="${__('doc_forge.copy')}">
@@ -779,6 +779,10 @@ function renderAIMessage(messageId, content) {
     const messageDiv = document.getElementById(messageId);
     if (messageDiv) {
         const contentDiv = messageDiv.querySelector('.message-content');
+        // 如果当前是加载占位符，首次有内容时清除
+        if (contentDiv && contentDiv.querySelector('.ai-loading')) {
+            contentDiv.innerHTML = '';
+        }
         try {
             // 使用 marked 渲染 Markdown
             const rendered = marked.parse(content);

@@ -950,6 +950,16 @@ textarea::placeholder {
     text-decoration: none;
 }
 
+/* AI消息加载中动画 */
+.ai-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #4b6cb7;
+    font-size: 1.5rem;
+}
+
 /* 工作空间文件浏览器模态框 */
 .workspace-modal-overlay {
     display: none;
