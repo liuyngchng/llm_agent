@@ -37,9 +37,10 @@ class ImageOCR:
         Args:
             sys_cfg: 系统配置
         """
-        self.api_uri = sys_cfg['api']['llm_api_uri']
-        self.api_token = sys_cfg['api']['llm_api_key']
-        self.model_name = sys_cfg['api'].get('llm_model_name', 'qwen2-7b-vl')
+        self.api_uri = sys_cfg['api'].get('ocr_api_uri', sys_cfg['api']['llm_api_uri'])
+        self.api_token = sys_cfg['api'].get('ocr_api_key', sys_cfg['api']['llm_api_key'])
+        self.model_name = sys_cfg['api'].get('ocr_model_name',
+                           sys_cfg['api'].get('llm_model_name', 'qwen2-7b-vl'))
 
 
     @staticmethod

@@ -22,6 +22,7 @@ from common.const import UPLOAD_FOLDER, OUTPUT_DIR, SESSION_TIMEOUT, get_const
 from common.i18n._hooks import register_i18n
 from common.i18n import get_msg
 from common.my_enums import AppType
+from common.ocr_util import ImageOCR
 from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
 from common.sys_init import init_yml_cfg
 
@@ -38,6 +39,10 @@ OUTPUT_DIR_ABS = WORKSPACE_DIR
 os.makedirs(UPLOAD_FOLDER_ABS, exist_ok=True)
 os.makedirs(WORKSPACE_DIR, exist_ok=True)
 print(f"上传文件夹路径: {UPLOAD_FOLDER_ABS}, 工作空间路径: {WORKSPACE_DIR}")
+
+# 初始化 OCR 识别器
+ocr_engine = ImageOCR(my_cfg)
+print(f"OCR引擎已初始化，模型: {ocr_engine.model_name}, API: {ocr_engine.api_uri}")
 
 # 会话文件追踪: uid -> [file_paths]
 session_files = {}
@@ -265,7 +270,7 @@ def upload_file():
         logger.info(f"文件保存成功: {saved_path}, 大小: {file_length} 字节")
 
         # 提取文本内容供LLM分析
-        content = extract_text_from_file(saved_path, file.filename)
+        content = extract_text_from_file(saved_path, file.filename, ocr_engine=ocr_engine)
 
         # 追踪此用户的文件
         if uid not in session_files:
@@ -392,6 +397,12 @@ if __name__ == '__main__':
     else:
         logger.info(f"API密钥已配置，使用模型: {my_cfg['api']['llm_model_name']}")
 
+    # OCR 引擎状态
+    if ocr_engine and ocr_engine.api_uri:
+        logger.info(f"✓ OCR 引擎已初始化，模型: {ocr_engine.model_name}，API: {ocr_engine.api_uri}")
+    else:
+        logger.warning("⚠ OCR 引擎未配置，图片文字识别将不可用")
+
     # 检查依赖库
     logger.debug("检查依赖库...")
     try:
@@ -415,13 +426,6 @@ if __name__ == '__main__':
     except ImportError:
         logger.warning("⚠ openpyxl 未安装，Excel文件解析将不可用")
 
-    try:
-        from PIL import Image
-        import pytesseract
-
-        logger.debug("✓ PIL 和 pytesseract 已安装")
-    except ImportError:
-        logger.warning("⚠ PIL 或 pytesseract 未安装，图片文字识别将不可用")
     port = 20000
     logger.info(f"chat_service_listen_on_port {port}")
     app.run(debug=False, host='0.0.0.0', port=port, threaded=True)

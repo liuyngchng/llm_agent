@@ -343,7 +343,7 @@ async function sendMessage() {
         return;
     }
 
-    // 设置流式传输状态
+    // 立即构建设置流式传输状态，并显示用户消息、清空输入框
     isStreaming = true;
 
     // 禁用输入和上传按钮
@@ -351,62 +351,57 @@ async function sendMessage() {
     uploadButton.disabled = true;
 
     // 设置发送按钮为停止按钮
-    sendButton.disabled = false; // 允许点击停止
+    sendButton.disabled = false;
     sendButton.innerHTML = '<i class="fas fa-stop"></i> ' + __('doc_forge.stop');
-    sendButton.classList.add('btn-stop'); // 添加停止按钮样式
+    sendButton.classList.add('btn-stop');
 
-    // 如果有文件，先上传文件
-    let fileContents = [];
-    if (uploadedFiles.length > 0) {
-        try {
-            fileContents = await uploadFiles();
-        } catch (error) {
-            console.error('上传文件失败:', error);
-            showError(__('doc_forge.file_upload_failed'));
-            resetInputState();
-            return;
-        }
-    }
-
-    // 构建完整消息 - 发送给API的消息包含文件内容
-    let fullMessage = message;
-    if (fileContents.length > 0) {
-        fullMessage += '\n\n上传的文件内容:\n' + fileContents.join('\n\n---\n\n');
-    }
-
+    // 立即构建显示用的用户消息
     let displayMessage = message;
     if (uploadedFiles.length > 0) {
-        // 如果用户有输入消息，先添加一个换行
         if (message.trim().length > 0) {
-            displayMessage += '\n\n'; // 添加两个换行符，形成段落间距
+            displayMessage += '\n\n';
         }
-
         const fileCount = uploadedFiles.length;
         const fileEmoji = fileCount === 1 ? '📎' : '📁';
-
-        // 添加Markdown格式的文件清单
         displayMessage += `${fileEmoji} **${fileCount}个文件**\n\n`;
-
-        // 添加文件列表
-        uploadedFiles.forEach((file, index) => {
+        uploadedFiles.forEach((file) => {
             const fileIcon = getFileEmoji(file.type, file.name);
             displayMessage += `${fileIcon} **${file.name}** (${formatFileSize(file.size)})\n`;
         });
     }
 
-    // 添加用户消息到界面
+    // 立即将用户消息添加到界面并清空输入框和文件列表
     addMessageToUI('user', displayMessage);
     displayMessages.push({ role: 'user', content: displayMessage });
     saveChatHistory();
-
-    // 清空输入框和文件列表
     messageInput.value = '';
     messageInput.style.height = 'auto';
+    const currentFiles = [...uploadedFiles];
     clearFileList(true);
 
     // 添加AI消息占位符
     const aiMessageId = 'ai-' + Date.now();
     addMessageToUI('ai', '', aiMessageId);
+
+    // 如果有文件，在后台上传
+    let fileContents = [];
+    if (currentFiles.length > 0) {
+        try {
+            fileContents = await uploadFiles(currentFiles);
+        } catch (error) {
+            console.error('上传文件失败:', error);
+            showError(__('doc_forge.file_upload_failed'));
+            resetInputState();
+            isStreaming = false;
+            return;
+        }
+    }
+
+    // 构建发送给API的消息（包含文件内容）
+    let fullMessage = message;
+    if (fileContents.length > 0) {
+        fullMessage += '\n\n上传的文件内容:\n' + fileContents.join('\n\n---\n\n');
+    }
 
     // 发送请求
     try {

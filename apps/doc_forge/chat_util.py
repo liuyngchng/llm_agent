@@ -91,6 +91,25 @@ def build_doc_processing_system_prompt(file_paths: list[str] = None,
 - Pillow (PIL) — 图像处理
 - LibreOffice — 系统级可用，旧格式文件（.doc/.ppt/.xls）上传时自动转为新格式
 - Python csv 标准库、pandas — CSV 和数据分析
+- common.ocr_util.ImageOCR — 图片OCR文字识别（通过 API 调用视觉模型识别图片中的文字）
+
+## 图片文字识别（OCR）
+当用户需要识别图片（截图、扫描件、照片等）中的文字时，可以用 OCR 工具直接识别图片中的文字：
+
+```python
+from common.ocr_util import ImageOCR
+from common.sys_init import init_yml_cfg
+
+cfg = init_yml_cfg()
+ocr = ImageOCR(cfg)
+result = ocr.extract_text_from_image(os.path.join(UPLOAD_DIR, 'screenshot.png'))
+if result['success']:
+    print(result['text'])
+else:
+    print(f"OCR失败: {{result.get('error')}}")
+```
+
+**提示：** 如果是上传的图片文件，系统已自动识别过文字并包含在对话上下文中。当需要识别额外图片或对已有图片重新分析时，再使用此工具。
 
 ## Word 修订模式（Track Changes）
 当用户要求审阅、修订、校对 Word 文档，或要求"以修订模式"修改时，使用 `common.docx_revision_util`：
@@ -254,7 +273,7 @@ def get_pptx_content(filepath) -> str:
         return f"[读取pptx文件时出错: {str(e)}]"
 
 
-def extract_text_from_file(filepath, filename):
+def extract_text_from_file(filepath, filename, ocr_engine=None):
     """从文件中提取文本内容"""
     try:
         ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
@@ -323,18 +342,23 @@ def extract_text_from_file(filepath, filename):
             path = _convert_old_format(filepath) if ext == 'xls' else filepath
             return get_xlsx_content(path)
 
-        # 图片文件（需要安装PIL和pytesseract）
+        # 图片文件 — 使用 OCR API 识别文字
         elif ext in ['jpg', 'jpeg', 'png', 'gif']:
-            try:
-                from PIL import Image
-                import pytesseract
-                image = Image.open(filepath)
-                text = pytesseract.image_to_string(image, lang='chi_sim+eng')
-                logger.info(f"图片文件识别成功，识别到 {len(text)} 字符")
-                return text if text else "[图片中未识别到文字]"
-            except ImportError:
-                logger.warning("需要安装PIL和pytesseract库来识别图片文字")
-                return "[需要安装PIL和pytesseract库来识别图片文字]"
+            if ocr_engine:
+                try:
+                    result = ocr_engine.extract_text_from_image(filepath)
+                    if result['success']:
+                        text = result['text']
+                        logger.info(f"OCR API 识别成功，识别到 {len(text)} 字符")
+                        return text
+                    else:
+                        logger.warning(f"OCR API 识别失败: {result.get('error')}")
+                        return f"[OCR 识别失败: {result.get('error')}]"
+                except Exception as e:
+                    logger.error(f"OCR API 调用异常: {str(e)}")
+                    return f"[OCR 识别异常: {str(e)}]"
+            else:
+                return "[未配置 OCR 引擎，无法识别图片文字]"
 
         else:
             logger.warning(f"不支持的文件格式: {ext}")

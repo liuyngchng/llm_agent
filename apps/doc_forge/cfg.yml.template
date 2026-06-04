@@ -28,3 +28,8 @@ api:
 
     # 是否为远程模式，true 表示使用远程模式，false 表示使用本地模式 ollama 接口
     is_remote: true
+
+    # 兼容 OPENAI 的 OCR 接口
+    ocr_api_uri: https://your_local_model_domain/v1
+    ocr_api_key: sk-your-api-key
+    ocr_model_name: qwen2-7b-vl
