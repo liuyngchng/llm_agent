@@ -108,7 +108,7 @@ OUTPUT_DIR = {output_dir!r}
         # 记录新生成文件的绝对路径
         if new_files:
             abs_paths = [os.path.join(output_dir, f) for f in new_files]
-            logger.info(f"工作空间保存文件: {', '.join(abs_paths)}")
+            logger.info(f"save_file_to_workspace: {', '.join(abs_paths)}")
 
         success = result.returncode == 0
 
