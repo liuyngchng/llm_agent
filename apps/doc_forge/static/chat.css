@@ -1027,16 +1027,6 @@ textarea::placeholder {
     flex: 1;
 }
 
-.workspace-path {
-    font-size: 0.8rem;
-    color: #999;
-    padding: 8px 0;
-    border-bottom: 1px solid #f0f0f0;
-    margin-bottom: 12px;
-    word-break: break-all;
-    font-family: monospace;
-}
-
 .workspace-file-list {
     min-height: 200px;
 }

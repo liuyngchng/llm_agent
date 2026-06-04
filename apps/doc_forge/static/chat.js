@@ -910,7 +910,6 @@ window.clearFileList = clearFileList;
 // 工作空间文件浏览器
 async function loadWorkspaceFiles() {
     const fileListEl = document.getElementById('workspaceFileList');
-    const pathEl = document.getElementById('workspacePath');
     if (!fileListEl) return;
 
     fileListEl.innerHTML = '<div class="workspace-loading"><i class="fas fa-spinner fa-spin"></i> 正在加载...</div>';
@@ -920,10 +919,6 @@ async function loadWorkspaceFiles() {
         const data = await response.json();
 
         if (data.success) {
-            if (pathEl) {
-                pathEl.textContent = data.workspace;
-            }
-
             if (data.files.length === 0) {
                 fileListEl.innerHTML = '<div class="workspace-empty"><i class="fas fa-folder-open"></i> 工作空间为空</div>';
                 return;

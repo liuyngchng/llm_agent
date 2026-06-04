@@ -131,7 +131,6 @@ def app_home():
         "arg1": arg1,
         "arg2": arg2,
         "arg3": arg3,
-        "workspace": WORKSPACE_DIR,
     }
 
     session_key = f"{uid}_{get_client_ip()}"
@@ -338,7 +337,7 @@ def list_workspace_files():
                     })
         # 按修改时间倒序排列
         files.sort(key=lambda x: x['mtime'], reverse=True)
-        return jsonify({'success': True, 'files': files, 'workspace': WORKSPACE_DIR})
+        return jsonify({'success': True, 'files': files})
     except Exception as e:
         logger.error(f"列出工作空间文件失败: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
