@@ -105,6 +105,11 @@ OUTPUT_DIR = {output_dir!r}
         # Check for newly generated files
         new_files = find_new_files(before_snapshot, output_dir)
 
+        # 记录新生成文件的绝对路径
+        if new_files:
+            abs_paths = [os.path.join(output_dir, f) for f in new_files]
+            logger.info(f"工作空间保存文件: {', '.join(abs_paths)}")
+
         success = result.returncode == 0
 
         logger.info(f"code_execution: success={success}, returncode={result.returncode}, "
