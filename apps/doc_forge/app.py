@@ -14,7 +14,7 @@ import logging
 
 from apps.doc_forge.chat_util import LLMConfig, generate_stream_response_with_execution, \
     build_doc_processing_system_prompt, allowed_file, \
-    MAX_FILE_SIZE, extract_text_from_file
+    MAX_FILE_SIZE
 from common import my_enums, statistic_util, cm_utils
 from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login, get_portal_login_url
 from common.cm_utils import estimate_tokens
@@ -155,7 +155,7 @@ def chat():
         custom_max_tokens = data.get('max_tokens')
         history_length = len(data.get('history', []))
         t = data.get('t', 0)
-        uid = str(data.get('uid', ''))
+        uid = int(data.get('uid', -1))
         session_key = f"{uid}_{get_client_ip()}"
         if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
             return jsonify({'error': 'auth_expired', 'redirect': get_portal_login_url(AppType.DOC_FORGE.name.lower())}), 401
@@ -268,9 +268,6 @@ def upload_file():
         file.save(saved_path)
         logger.info(f"文件保存成功: {saved_path}, 大小: {file_length} 字节")
 
-        # 提取文本内容供LLM分析
-        content = extract_text_from_file(saved_path, file.filename, ocr_engine=ocr_engine)
-
         # 追踪此用户的文件
         if uid not in session_files:
             session_files[uid] = []
@@ -280,7 +277,6 @@ def upload_file():
             'success': True,
             'filename': file.filename,
             'saved_filename': saved_filename,
-            'content': content[:5000],  # 限制内容长度
             'file_count': len(session_files[uid])
         })
 

@@ -54,8 +54,8 @@ class LLMConfig:
     SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "你是一个有用的AI助手。请用中文回答用户的问题。")
 
 
-def build_doc_processing_system_prompt(file_paths: list[str] = None,
-                                        output_dir: str = "output_doc",
+def build_doc_processing_system_prompt(file_paths: list[str],
+                                        output_dir: str,
                                         upload_dir: str = "upload_doc") -> str:
     """Build system prompt for document processing agent."""
     files_section = ""
@@ -199,18 +199,18 @@ doc.save(os.path.join(OUTPUT_DIR, 'generated_report.docx'))
 
 ## 脚本编写规则
 当需要处理文档时，请在 ```python 代码块中编写完整的 Python 脚本：
-- 上传文件目录: `{upload_dir}/`
-- 输出文件保存到: `{output_dir}/`
-- 脚本执行环境中已预定义变量 UPLOAD_DIR 和 OUTPUT_DIR，可直接使用
+- 脚本执行环境中已预定义变量 UPLOAD_DIR 和 OUTPUT_DIR，**必须**使用这两个变量
+  - `OUTPUT_DIR` = `{output_dir}` — 所有输出文件必须保存到此目录
+  - `UPLOAD_DIR` = `{upload_dir}` — 上传文件所在目录
 - 使用 `print()` 输出处理结果和状态信息
 - 代码块第一行用注释简要说明脚本功能（如 `# 修改报告中的表格数据并生成新文件`）
 - 代码块内只写 Python 代码，不要混入解释文字
-- 脚本执行完毕后，如果需要在对话中告诉用户结果，请简要说"修改完成"即可，不要虚构文件保存路径。
+- 脚本执行完毕后，系统会自动检测 OUTPUT_DIR 下生成的文件并告知用户。**你的文字回复中不准说文件保存在哪里**（因为你的说法可能与实际结果不一致），只说"脚本执行完毕"即可
 
 ## 使用指南
 - 如果用户只是询问文档内容，直接回答即可
 - 如果需要修改/创建文档，先简要说明你的方案，然后在一个 ```python 代码块中编写脚本
-- 脚本执行后，文件将自动保存到工作空间目录，用户可通过"我的电脑"查看和下载{files_section}"""
+- **重要：在你的文字回复中，不要说"文件已保存到xxx"或类似承诺。** 只说你要做什么，不要说已经做了什么。系统会在脚本执行后自动检查生成的**真实文件**并告知用户结果。你如果虚构文件保存路径会误导用户。{files_section}"""
 
 
 def allowed_file(filename):
@@ -743,6 +743,8 @@ def generate_stream_response_with_execution(
             if result['new_files']:
                 file_names = ", ".join(result['new_files'])
                 output_parts.append(f"文件 {file_names} 已经生成，已保存至工作空间。")
+            elif result['success']:
+                output_parts.append("**注意：脚本执行成功，但没有检测到新生成的文件。** 请检查代码中保存文件的路径是否正确使用了 `OUTPUT_DIR`。")
             if not result['success'] and not result['stderr'] and not result['stdout']:
                 output_parts.append(f"**脚本执行失败** (返回码: {result['returncode']})")
 

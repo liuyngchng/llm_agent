@@ -454,7 +454,7 @@ async function uploadFiles(files) {
 
         const result = await response.json();
         if (result.success) {
-            fileContents.push(`文件: ${file.name}\n路径: upload_doc/${result.saved_filename}\n${result.content}`);
+            fileContents.push(`文件: ${file.name}`);
             savedFilenames.push(result.saved_filename);
         }
 
