@@ -14,11 +14,11 @@ import logging
 
 from apps.doc_forge.chat_util import LLMConfig, generate_stream_response_with_execution, \
     build_doc_processing_system_prompt, allowed_file, \
-    MAX_FILE_SIZE, ALLOWED_EXTENSIONS, extract_text_from_file
+    MAX_FILE_SIZE, extract_text_from_file
 from common import my_enums, statistic_util, cm_utils
 from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login, get_portal_login_url
 from common.cm_utils import estimate_tokens
-from common.const import UPLOAD_FOLDER, OUTPUT_DIR, SESSION_TIMEOUT, get_const
+from common.const import UPLOAD_FOLDER, SESSION_TIMEOUT, get_const
 from common.i18n._hooks import register_i18n
 from common.i18n import get_msg
 from common.my_enums import AppType
@@ -32,9 +32,10 @@ my_cfg = init_yml_cfg()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER_ABS = os.path.join(BASE_DIR, UPLOAD_FOLDER)
 
-# 工作空间目录：优先使用 cfg.yml 中的 sys.workspace，否则使用默认 output_doc
-WORKSPACE_DIR = my_cfg['sys'].get('workspace', os.path.join(BASE_DIR, OUTPUT_DIR))
-OUTPUT_DIR_ABS = WORKSPACE_DIR
+# 工作空间目录：优先使用 cfg.yml 中的 sys.workspace，这个配置需要是一个绝对路径，如果没有配置，则直接报错
+WORKSPACE_DIR = my_cfg['sys'].get('workspace')
+if not WORKSPACE_DIR:
+    raise RuntimeError("cfg.yml 中未配置 sys.workspace，请设置一个绝对路径")
 
 os.makedirs(UPLOAD_FOLDER_ABS, exist_ok=True)
 os.makedirs(WORKSPACE_DIR, exist_ok=True)
@@ -171,7 +172,7 @@ def chat():
         # 构建增强的系统提示词（包含可用文件信息）
         system_prompt = build_doc_processing_system_prompt(
             file_paths=user_files,
-            output_dir=OUTPUT_DIR_ABS,
+            output_dir=WORKSPACE_DIR,
             upload_dir=UPLOAD_FOLDER_ABS
         )
 
@@ -195,7 +196,7 @@ def chat():
             full_response = ""
             for sse_chunk in generate_stream_response_with_execution(
                 messages, my_cfg['api'],
-                output_dir=OUTPUT_DIR_ABS,
+                output_dir=WORKSPACE_DIR,
                 upload_dir=UPLOAD_FOLDER_ABS,
                 max_tokens=custom_max_tokens
             ):
@@ -303,12 +304,12 @@ def get_config():
 @app.route('/download/output/<path:filename>')
 def download_output(filename):
     """下载生成的文档文件"""
-    file_path = os.path.join(OUTPUT_DIR_ABS, filename)
+    file_path = os.path.join(WORKSPACE_DIR, filename)
     if not os.path.exists(file_path):
         logger.warning(f"下载文件不存在: {file_path}")
         abort(404)
     logger.info(f"下载文件: {file_path}")
-    return send_from_directory(OUTPUT_DIR_ABS, filename, as_attachment=True)
+    return send_from_directory(WORKSPACE_DIR, filename, as_attachment=True)
 
 
 @app.route('/download/upload/<path:filename>')

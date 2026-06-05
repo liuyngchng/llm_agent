@@ -12,7 +12,7 @@ import tempfile
 
 import requests
 
-from apps.doc_forge.code_executor import extract_python_blocks, execute_code, snapshot_dir
+from apps.doc_forge.code_executor import extract_python_blocks, execute_code
 
 import urllib3
 # 全局禁用不安全请求警告 InsecureRequestWarning
@@ -205,6 +205,7 @@ doc.save(os.path.join(OUTPUT_DIR, 'generated_report.docx'))
 - 使用 `print()` 输出处理结果和状态信息
 - 代码块第一行用注释简要说明脚本功能（如 `# 修改报告中的表格数据并生成新文件`）
 - 代码块内只写 Python 代码，不要混入解释文字
+- 脚本执行完毕后，如果需要在对话中告诉用户结果，请简要说"修改完成"即可，不要虚构文件保存路径。
 
 ## 使用指南
 - 如果用户只是询问文档内容，直接回答即可
@@ -670,6 +671,8 @@ def generate_stream_response_with_execution(
     code_blocks = extract_python_blocks(full_response)
     if code_blocks:
         logger.info(f"从LLM回复中提取到 {len(code_blocks)} 个Python代码块，开始执行...")
+    else:
+        logger.info("LLM回复中未提取到Python代码块，跳过代码执行")
         retry_history = messages + [{"role": "assistant", "content": full_response}]
 
         for i, code in enumerate(code_blocks):

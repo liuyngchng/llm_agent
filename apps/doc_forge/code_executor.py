@@ -62,6 +62,7 @@ def execute_code(code: str, output_dir: str = "output_doc",
     Returns:
         dict with keys: success, stdout, stderr, error, new_files
     """
+    logger.info(f"start_exec_code: code_len={len(code)}, output_dir={output_dir}")
     # Resolve to absolute paths relative to this file's directory
     base_dir = os.path.dirname(os.path.abspath(__file__))
     workspace_root = os.path.dirname(os.path.dirname(base_dir))  # repo root for common/ imports
