@@ -160,8 +160,7 @@ def chat():
         session_key = f"{uid}_{get_client_ip()}"
         if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
             return jsonify({'error': 'auth_expired', 'redirect': get_portal_login_url(AppType.DOC_FORGE.name.lower())}), 401
-        logger.info(f"收到聊天请求，消息长度: {len(user_message)}, 历史长度: {history_length}")
-        logger.info(f"请求的max_tokens: {custom_max_tokens}")
+        logger.info(f"收到用户消息, {user_message}, 历史长度: {history_length}, custom_max_tokens, {custom_max_tokens}")
 
         if not user_message:
             logger.warning("消息为空")
@@ -199,7 +198,8 @@ def chat():
                 messages, my_cfg['api'],
                 output_dir=WORKSPACE_DIR,
                 upload_dir=UPLOAD_DIR,
-                max_tokens=custom_max_tokens
+                max_tokens=custom_max_tokens,
+                file_paths=user_files
             ):
                 yield sse_chunk
                 if sse_chunk.startswith('data: ') and sse_chunk != 'data: [DONE]\n\n':
@@ -212,6 +212,8 @@ def chat():
             output_tokens = estimate_tokens(full_response)
             logger.info(f"{uid}, output_tokens, {output_tokens}")
             add_output_token_by_uid(uid, output_tokens, AppType.DOC_FORGE.name.lower())
+            # 记录完整返回给前端的内容
+            logger.info(f"最终返回给前端的完整消息:\n{full_response}")
 
         return Response(
             generate_and_count(),

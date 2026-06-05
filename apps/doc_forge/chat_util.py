@@ -63,8 +63,9 @@ def build_doc_processing_system_prompt(file_paths: list[str],
         files_list = "\n".join(f"  - {fp}" for fp in file_paths)
         files_section = f"""
 ## 可用文件
-以下文件已上传并可供处理（绝对路径）：
-{files_list}"""
+以下文件已上传并可供处理（**必须使用下表列出的绝对路径，不要自己拼接路径**）：
+{files_list}
+此外，脚本执行环境中已按顺序预定义了变量 FILE_1、FILE_2...（对应每个文件），可直接在代码中使用。"""
 
     return f"""你是一个专业的文档处理助手。你可以帮助用户读取、修改、合并和创建文档（doc/docx、ppt/pptx、xls/xlsx、pdf 等）。
 
@@ -202,6 +203,7 @@ doc.save(os.path.join(OUTPUT_DIR, 'generated_report.docx'))
 - 脚本执行环境中已预定义变量 UPLOAD_DIR 和 OUTPUT_DIR，**必须**使用这两个变量
   - `OUTPUT_DIR` = `{output_dir}` — 所有输出文件必须保存到此目录
   - `UPLOAD_DIR` = `{upload_dir}` — 上传文件所在目录
+- **读取已上传文件时，请使用预定义的 FILE_1、FILE_2... 变量**（对应"可用文件"中列表顺序），它们直接指向文件的**正确绝对路径**。不要用 `UPLOAD_DIR + filename` 自己拼接路径。
 - 使用 `print()` 输出处理结果和状态信息
 - 代码块第一行用注释简要说明脚本功能（如 `# 修改报告中的表格数据并生成新文件`）
 - 代码块内只写 Python 代码，不要混入解释文字
@@ -210,7 +212,8 @@ doc.save(os.path.join(OUTPUT_DIR, 'generated_report.docx'))
 ## 使用指南
 - 如果用户只是询问文档内容，直接回答即可
 - 如果需要修改/创建文档，先简要说明你的方案，然后在一个 ```python 代码块中编写脚本
-- **重要：在你的文字回复中，不要说"文件已保存到xxx"或类似承诺。** 只说你要做什么，不要说已经做了什么。系统会在脚本执行后自动检查生成的**真实文件**并告知用户结果。你如果虚构文件保存路径会误导用户。{files_section}"""
+- **重要：在你的文字回复中，不要说"文件已保存到xxx"或类似承诺。** 只说你要做什么，不要说已经做了什么。系统会在脚本执行后自动检查生成的**真实文件**并告知用户结果。你如果虚构文件保存路径会误导用户。
+- **关键规则：当用户要求修改/创建文档时，你**必须**输出 ```python 代码块，仅靠文字说"已完成"系统不会执行任何操作。如果只想报告修改方案而不执行，请明确说明"以下为修改方案，需要我执行请告知"。{files_section}"""
 
 
 def allowed_file(filename):
@@ -624,7 +627,8 @@ def _call_llm_sync(messages: list, llm_cfg: dict, max_tokens: int = None) -> str
 
 def generate_stream_response_with_execution(
     messages: list, llm_cfg: dict, output_dir: str = "output_doc",
-    upload_dir: str = "upload_doc", max_tokens: int = None
+    upload_dir: str = "upload_doc", max_tokens: int = None,
+    file_paths: list | None = None
 ) -> Generator[str, None, None]:
     """
     流式响应 + 代码执行引擎。
@@ -673,13 +677,62 @@ def generate_stream_response_with_execution(
         logger.info(f"从LLM回复中提取到 {len(code_blocks)} 个Python代码块，开始执行...")
     else:
         logger.info("LLM回复中未提取到Python代码块，跳过代码执行")
+        # 兜底：LLM 文字声称修改了但没输出代码块 → 自动重试让它生成真实代码
+        fake_keywords = ['修改完成', '已修改', '脚本执行', '文件已保存', '文档已', '已保存', '修订模式', '已修正']
+        if any(kw in full_response for kw in fake_keywords):
+            logger.warning("LLM 声称已修改文档但未输出代码块，尝试自动修复")
+            retry_history = messages + [{"role": "assistant", "content": full_response}]
+            for retry_count in range(MAX_RETRIES):
+                retry_msg = (
+                    f"你刚才说已经修改了文档，但系统没有检测到可执行的 Python 代码块（```python），"
+                    f"因此实际上没有做任何修改。\n\n"
+                    f"请重新输出完整的 Python 代码块来实现上述修改方案。\n"
+                    f"记住：必须使用 ```python 代码块，且文件保存到 OUTPUT_DIR。"
+                )
+                retry_history.append({"role": "user", "content": retry_msg})
+
+                fix_response = _call_llm_sync(retry_history, llm_cfg, max_tokens)
+                fixed_blocks = extract_python_blocks(fix_response)
+
+                if fixed_blocks:
+                    retry_history.append({"role": "assistant", "content": fix_response})
+                    code = fixed_blocks[0]
+                    result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
+
+                    output_parts = []
+                    if result['success']:
+                        output_parts.append(f"✅ 自动修复成功（第 {retry_count + 1} 次重试）")
+                    else:
+                        output_parts.append(f"⚠️ 自动修复后脚本仍执行失败（第 {retry_count + 1} 次重试）")
+                    if result['stdout']:
+                        output_parts.append(f"**输出:**\n```\n{result['stdout']}\n```")
+                    if result['stderr']:
+                        output_parts.append(f"**错误信息:**\n```\n{result['stderr']}\n```")
+                    if result['new_files']:
+                        file_names = ", ".join(result['new_files'])
+                        output_parts.append(f"文件 {file_names} 已经生成，已保存至工作空间。")
+                    elif result['success']:
+                        output_parts.append("**注意：脚本执行成功，但没有检测到新生成的文件。请检查代码中保存文件的路径是否正确使用了 `OUTPUT_DIR`。**")
+
+                    output_text = "\n\n".join(output_parts) + "\n\n"
+                    yield f"data: {json.dumps({'content': output_text})}\n\n"
+                    break
+                else:
+                    retry_history.append({"role": "assistant", "content": fix_response})
+                    if retry_count == MAX_RETRIES - 1:
+                        warning = (
+                            f"\n\n---\n\n⚠️ **系统已尝试 {MAX_RETRIES} 次要求 LLM 生成实际代码，但均未成功。**\n"
+                            f"请重新发消息并要求 AI 输出可执行的 Python 代码。\n\n"
+                        )
+                        logger.warning("LLM 多次仍不输出代码块，放弃自动修复")
+                        yield f"data: {json.dumps({'content': warning})}\n\n"
         retry_history = messages + [{"role": "assistant", "content": full_response}]
 
         for i, code in enumerate(code_blocks):
             status = f"\n\n---\n\n**执行脚本 {i+1}/{len(code_blocks)}...**\n\n"
             yield f"data: {json.dumps({'content': status})}\n\n"
 
-            result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir)
+            result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
 
             # 检测 ModuleNotFoundError，跳过自动修复，直接提示用户安装缺失组件
             stderr = result.get('stderr', '')
@@ -721,7 +774,7 @@ def generate_stream_response_with_execution(
                 if fixed_blocks:
                     retry_history.append({"role": "assistant", "content": fix_response})
                     code = fixed_blocks[0]
-                    result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir)
+                    result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
                     retry_count += 1
                 else:
                     # LLM 认为不需要修改，停止重试

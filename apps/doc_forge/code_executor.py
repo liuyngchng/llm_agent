@@ -56,13 +56,14 @@ def snapshot_dir(directory: str) -> set:
 
 
 def execute_code(code: str, output_dir: str = "output_doc",
-                 upload_dir: str = "upload_doc", timeout: int = CODE_EXEC_TIMEOUT) -> dict:
+                 upload_dir: str = "upload_doc", timeout: int = CODE_EXEC_TIMEOUT,
+                 file_paths: list | None = None) -> dict:
     """Execute Python code in a subprocess and return results.
 
     Returns:
         dict with keys: success, stdout, stderr, error, new_files
     """
-    logger.info(f"start_exec_code: code_len={len(code)}, output_dir={output_dir}")
+    logger.info(f"start_exec_code: code_len={len(code)}, output_dir={output_dir}, file_paths={file_paths}")
     # Resolve to absolute paths relative to this file's directory
     base_dir = os.path.dirname(os.path.abspath(__file__))
     workspace_root = os.path.dirname(os.path.dirname(base_dir))  # repo root for common/ imports
@@ -89,6 +90,13 @@ os.chdir({output_dir!r})
 UPLOAD_DIR = {upload_dir!r}
 OUTPUT_DIR = {output_dir!r}
 """)
+            # If file_paths provided, inject them as named variables for easy reference
+            if file_paths:
+                f.write(f"# 上传文件的绝对路径对照表（请直接使用这些变量，不要自己拼接路径）\n")
+                for i, fp in enumerate(file_paths):
+                    varname = f"FILE_{i + 1}"
+                    basename = os.path.basename(fp)
+                    f.write(f"{varname} = {fp!r}  # {basename}\n")
             f.write(code)
 
         result = subprocess.run(
