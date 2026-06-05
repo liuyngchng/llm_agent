@@ -23,7 +23,7 @@ CODE_EXEC_TIMEOUT = 120  # seconds
 
 def extract_python_blocks(text: str) -> list[str]:
     """Extract python code blocks from markdown text."""
-    pattern = r'```python\s*\n(.*?)\n```'
+    pattern = r'```python\s*\n(.*?)\n\s*```'
     matches = re.findall(pattern, text, re.DOTALL)
     return [m.strip() for m in matches if m.strip()]
 

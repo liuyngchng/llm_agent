@@ -661,147 +661,134 @@ def generate_stream_response_with_execution(
             return f"\n\n> 📝 **脚本**（{line_count} 行）：{desc}\n\n"
         return f"\n\n> 📝 **已生成处理脚本**（{line_count} 行），正在执行...\n\n"
 
+    # 只截取最后一个代码块之前的文本作为"方案"，不展示LLM的虚假完成声明
+    plan_text = full_response
+    last_match = None
+    for m in _re.finditer(r'```python\s*\n.*?\n\s*```', full_response, _re.DOTALL):
+        last_match = m
+    if last_match:
+        plan_text = full_response[:last_match.end()]
+
     display_response = _re.sub(
         r'```python\s*\n(.*?)\n\s*```',
         _summarize_code_block,
-        full_response,
+        plan_text,
         flags=_re.DOTALL
     )
 
     yield f"data: {json.dumps({'content': display_response})}\n\n"
 
-    # Phase 2: 提取并执行代码块（带自动纠错重试）
+    # Phase 2: 执行脚本（遵循5步流程：理解→计划→执行→重试→总结）
     MAX_RETRIES = 3
     code_blocks = extract_python_blocks(full_response)
+    retry_history = messages + [{"role": "assistant", "content": full_response}]
     if code_blocks:
         logger.info(f"从LLM回复中提取到 {len(code_blocks)} 个Python代码块，开始执行...")
+        all_new_files = set()
+        all_errors = []
+        all_stdouts = []
+        overall_success = True
+
+        for i, code in enumerate(code_blocks):
+            result = None
+            for attempt in range(MAX_RETRIES):
+                if attempt > 0:
+                    logger.info(f"第{i+1}个脚本第{attempt+1}次重试...")
+                result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
+
+                if result['success'] and not result['stderr']:
+                    break
+
+                stderr = result.get('stderr', '')
+                if _re.search(r"ModuleNotFoundError: No module named '([^']+)'", stderr):
+                    logger.warning(f"缺少模块，停止重试: {stderr}")
+                    break
+
+                if attempt < MAX_RETRIES - 1:
+                    error_info = result['stderr'] or result['stdout'] or f"返回码: {result['returncode']}"
+                    issue_type = "警告" if result['success'] else "错误"
+                    retry_msg = (
+                        f"以上脚本执行时出现{issue_type}，请自查并修复：\n\n"
+                        f"```\n{error_info}\n```\n\n"
+                        f"请在 ```python 代码块中输出修复后的完整脚本。"
+                    )
+                    retry_history.append({"role": "user", "content": retry_msg})
+                    fix_response = _call_llm_sync(retry_history, llm_cfg, max_tokens)
+                    fixed_blocks = extract_python_blocks(fix_response)
+                    if fixed_blocks:
+                        retry_history.append({"role": "assistant", "content": fix_response})
+                        code = fixed_blocks[0]
+                    else:
+                        logger.info("LLM 认为脚本无需修改，停止重试")
+                        break
+
+            if result:
+                all_new_files.update(result.get('new_files', []))
+                if result['stdout']:
+                    all_stdouts.append(result['stdout'])
+                if not result['success'] or result['stderr']:
+                    overall_success = False
+                    if result['stderr']:
+                        all_errors.append(result['stderr'])
+                    elif result['stdout']:
+                        all_errors.append(result['stdout'])
+
+        # 步骤(5): 汇总最终结果
+        output_parts = []
+        if overall_success:
+            if all_new_files:
+                file_names = ", ".join(sorted(all_new_files))
+                output_parts.append(f"✅ 修改完成！处理后的文件：`{file_names}`")
+            elif all_stdouts:
+                execution_stdout = "\n".join(all_stdouts)
+                output_parts.append(f"✅ 处理完成！\n```\n{execution_stdout}\n```")
+            else:
+                output_parts.append("⚠️ 脚本执行成功，但未生成新文件。请检查是否使用了 `OUTPUT_DIR` 保存文件。")
+        else:
+            output_parts.append("❌ 处理失败，已尝试多次修复仍无法完成。")
+            if all_errors:
+                output_parts.append(f"**错误信息:**\n```\n{all_errors[-1]}\n```")
+
+        output_text = "\n\n".join(output_parts) + "\n\n"
+        yield f"data: {json.dumps({'content': output_text})}\n\n"
+
     else:
         logger.info("LLM回复中未提取到Python代码块，跳过代码执行")
-        # 兜底：LLM 文字声称修改了但没输出代码块 → 自动重试让它生成真实代码
         fake_keywords = ['修改完成', '已修改', '脚本执行', '文件已保存', '文档已', '已保存', '修订模式', '已修正']
         if any(kw in full_response for kw in fake_keywords):
             logger.warning("LLM 声称已修改文档但未输出代码块，尝试自动修复")
             retry_history = messages + [{"role": "assistant", "content": full_response}]
             for retry_count in range(MAX_RETRIES):
-                retry_msg = (
-                    f"你刚才说已经修改了文档，但系统没有检测到可执行的 Python 代码块（```python），"
-                    f"因此实际上没有做任何修改。\n\n"
-                    f"请重新输出完整的 Python 代码块来实现上述修改方案。\n"
-                    f"记住：必须使用 ```python 代码块，且文件保存到 OUTPUT_DIR。"
-                )
-                retry_history.append({"role": "user", "content": retry_msg})
-
                 fix_response = _call_llm_sync(retry_history, llm_cfg, max_tokens)
                 fixed_blocks = extract_python_blocks(fix_response)
-
                 if fixed_blocks:
                     retry_history.append({"role": "assistant", "content": fix_response})
-                    code = fixed_blocks[0]
-                    result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
+                    result = execute_code(fixed_blocks[0], output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
 
                     output_parts = []
-                    if result['success']:
-                        output_parts.append(f"✅ 自动修复成功（第 {retry_count + 1} 次重试）")
-                    else:
-                        output_parts.append(f"⚠️ 自动修复后脚本仍执行失败（第 {retry_count + 1} 次重试）")
-                    if result['stdout']:
-                        output_parts.append(f"**输出:**\n```\n{result['stdout']}\n```")
-                    if result['stderr']:
-                        output_parts.append(f"**错误信息:**\n```\n{result['stderr']}\n```")
-                    if result['new_files']:
+                    if result['success'] and result['new_files']:
                         file_names = ", ".join(result['new_files'])
-                        output_parts.append(f"文件 {file_names} 已经生成，已保存至工作空间。")
-                    elif result['success']:
-                        output_parts.append("**注意：脚本执行成功，但没有检测到新生成的文件。请检查代码中保存文件的路径是否正确使用了 `OUTPUT_DIR`。**")
-
-                    output_text = "\n\n".join(output_parts) + "\n\n"
-                    yield f"data: {json.dumps({'content': output_text})}\n\n"
+                        output_parts.append(f"✅ 修改完成！处理后的文件：`{file_names}`")
+                    elif result['success'] and not result['new_files']:
+                        output_parts.append("⚠️ 脚本执行成功，但未生成新文件。")
+                    else:
+                        if retry_count < MAX_RETRIES - 1:
+                            continue
+                        output_parts.append("❌ 处理失败，已尝试多次修复仍无法完成。")
+                        if result['stderr']:
+                            output_parts.append(f"**错误信息:**\n```\n{result['stderr']}\n```")
+                    if result['stdout']:
+                        output_parts.insert(1, f"**输出:**\n```\n{result['stdout']}\n```")
+                    yield f"data: {json.dumps({'content': '\n\n'.join(output_parts) + '\n\n'})}\n\n"
                     break
                 else:
                     retry_history.append({"role": "assistant", "content": fix_response})
                     if retry_count == MAX_RETRIES - 1:
                         warning = (
-                            f"\n\n---\n\n⚠️ **系统已尝试 {MAX_RETRIES} 次要求 LLM 生成实际代码，但均未成功。**\n"
-                            f"请重新发消息并要求 AI 输出可执行的 Python 代码。\n\n"
+                            f"\n\n---\n\n⚠️ **系统已尝试 {MAX_RETRIES} 次要求 LLM 生成实际代码，但均未成功。**"
+                            f"请重新发送消息，要求 AI 输出可执行的 Python 代码。\n\n"
                         )
                         logger.warning("LLM 多次仍不输出代码块，放弃自动修复")
                         yield f"data: {json.dumps({'content': warning})}\n\n"
-        retry_history = messages + [{"role": "assistant", "content": full_response}]
-
-        for i, code in enumerate(code_blocks):
-            status = f"\n\n---\n\n**执行脚本 {i+1}/{len(code_blocks)}...**\n\n"
-            yield f"data: {json.dumps({'content': status})}\n\n"
-
-            result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
-
-            # 检测 ModuleNotFoundError，跳过自动修复，直接提示用户安装缺失组件
-            stderr = result.get('stderr', '')
-            module_match = _re.search(r"ModuleNotFoundError: No module named '([^']+)'", stderr) if not result['success'] else None
-            if module_match:
-                missing_module = module_match.group(1)
-                output_parts = [
-                    f"⚠️ **缺少系统组件：`{missing_module}`**\n\n"
-                    f"请在服务器上安装所需组件：`pip install {missing_module}`"
-                ]
-                output_text = "\n\n".join(output_parts) + "\n\n"
-                yield f"data: {json.dumps({'content': output_text})}\n\n"
-                continue
-
-            # 自动纠错：出错或有警告时，反馈给 LLM 自查修复
-            retry_count = 0
-            while (not result['success'] or result['stderr']) and retry_count < MAX_RETRIES:
-                error_info = result['stderr'] or result['stdout'] or f"返回码: {result['returncode']}"
-                issue_type = "警告" if result['success'] else "错误"
-                logger.info(f"脚本执行出现{issue_type}，第 {retry_count + 1} 次自动修复...")
-
-                retry_status = (
-                    f"⚠️ 脚本执行出现{issue_type}，正在自动分析修复"
-                    f"（第 {retry_count + 1}/{MAX_RETRIES} 次）...\n\n"
-                )
-                yield f"data: {json.dumps({'content': retry_status})}\n\n"
-
-                retry_msg = (
-                    f"以上脚本执行时出现{issue_type}，请自查并修复：\n\n"
-                    f"```\n{error_info}\n```\n\n"
-                    f"请在 ```python 代码块中输出修复后的完整脚本。"
-                    f"如果确认脚本没有问题不需要修改，请说明原因但不要输出代码块。"
-                )
-                retry_history.append({"role": "user", "content": retry_msg})
-
-                fix_response = _call_llm_sync(retry_history, llm_cfg, max_tokens)
-                fixed_blocks = extract_python_blocks(fix_response)
-
-                if fixed_blocks:
-                    retry_history.append({"role": "assistant", "content": fix_response})
-                    code = fixed_blocks[0]
-                    result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
-                    retry_count += 1
-                else:
-                    # LLM 认为不需要修改，停止重试
-                    logger.info("LLM 确认脚本无需修改，停止自动修复")
-                    break
-
-            # 输出最终结果
-            output_parts = []
-
-            if retry_count > 0:
-                if result['success'] and not result['stderr']:
-                    output_parts.append(f"✅ 脚本经 {retry_count} 次自动修复后执行成功")
-                else:
-                    output_parts.append(f"⚠️ 脚本经 {retry_count} 次自动修复后结果如下")
-            if result['stdout']:
-                output_parts.append(f"**输出:**\n```\n{result['stdout']}\n```")
-            if result['stderr']:
-                output_parts.append(f"**错误信息:**\n```\n{result['stderr']}\n```")
-            if result['new_files']:
-                file_names = ", ".join(result['new_files'])
-                output_parts.append(f"文件 {file_names} 已经生成，已保存至工作空间。")
-            elif result['success']:
-                output_parts.append("**注意：脚本执行成功，但没有检测到新生成的文件。** 请检查代码中保存文件的路径是否正确使用了 `OUTPUT_DIR`。")
-            if not result['success'] and not result['stderr'] and not result['stdout']:
-                output_parts.append(f"**脚本执行失败** (返回码: {result['returncode']})")
-
-            output_text = "\n\n".join(output_parts) + "\n\n"
-            yield f"data: {json.dumps({'content': output_text})}\n\n"
 
     yield "data: [DONE]\n\n"

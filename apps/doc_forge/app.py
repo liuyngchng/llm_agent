@@ -238,7 +238,7 @@ def upload_file():
             return jsonify({'success': False, 'error': get_msg('doc_forge.error_no_file')}), 400
 
         file = request.files['file']
-        uid = request.form.get('uid', 'anonymous')
+        uid = int(request.form.get('uid', '-1'))
 
         if file.filename == '':
             logger.warning("文件名为空")
