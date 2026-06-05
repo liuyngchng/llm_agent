@@ -694,6 +694,55 @@ textarea::placeholder {
     overflow-x: auto;
 }
 
+/* 脚本折叠块 */
+.message-content.markdown-rendered details.script-details {
+    margin: 1em 0;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fafbfc;
+}
+
+.message-content.markdown-rendered details.script-details summary {
+    padding: 10px 16px;
+    cursor: pointer;
+    user-select: none;
+    background: linear-gradient(135deg, #f0f4ff, #e8edf5);
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 0.9em;
+    color: #4b6cb7;
+    transition: background 0.2s;
+    list-style: none;
+}
+
+.message-content.markdown-rendered details.script-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.message-content.markdown-rendered details.script-details summary::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 0.7em;
+    transition: transform 0.2s;
+    color: #4b6cb7;
+}
+
+.message-content.markdown-rendered details.script-details[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.message-content.markdown-rendered details.script-details summary:hover {
+    background: linear-gradient(135deg, #e8ecf5, #dce3f0);
+}
+
+.message-content.markdown-rendered details.script-details pre {
+    margin: 0;
+    border-radius: 0;
+    background: #f8f9fa;
+    border: none;
+}
+
 .message-content.markdown-rendered code {
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
     font-size: 0.9em;

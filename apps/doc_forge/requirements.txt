@@ -13,3 +13,5 @@ python-docx
 docxtpl
 pypdf
 pdfplumber
+reportlab
+Pillow

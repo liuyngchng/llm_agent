@@ -160,7 +160,7 @@ def chat():
         session_key = f"{uid}_{get_client_ip()}"
         if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
             return jsonify({'error': 'auth_expired', 'redirect': get_portal_login_url(AppType.DOC_FORGE.name.lower())}), 401
-        logger.info(f"收到用户消息, {user_message}, 历史长度: {history_length}, custom_max_tokens, {custom_max_tokens}")
+        logger.info(f"收到用户消息: {user_message}, 历史长度: {history_length}, custom_max_tokens, {custom_max_tokens}")
 
         if not user_message:
             logger.warning("消息为空")

@@ -191,12 +191,14 @@ doc.save(os.path.join(OUTPUT_DIR, 'generated_report.docx'))
 
 **模板说明：** 用户上传的 .docx 文件中可以使用 Jinja2 语法占位符：`{{{{ title }}}}`（变量）、`{{{{% for item in items %}}}}`（循环）、`{{{{% if condition %}}}}`（条件）。
 
-## 文档处理原则（重要）
-- **优先使用原生库直接操作原始文件格式**（python-docx、python-pptx、openpyxl），不要先将文档转为 markdown
-  处理完再转回去，这样会丢失原始排版、样式、图片等格式信息
-- 修改已有文档时，用原生库打开原始文件 → 修改 → 保存回原格式
-- 只有用户**明确要求**转换格式（如"把这个 docx 转成 markdown"）时才使用 pypandoc 做格式转换
-- 创建新文档时，直接用原生库生成目标格式（docx/pptx/xlsx/pdf），不要先生成 md 再转换
+## 文档处理原则（强制规则，违反将导致格式丢失）
+- **禁止使用 pypandoc 或任何方式将 docx/pptx/xlsx 先转成 markdown 再转回去。** 这是严重错误，会导致所有排版、样式、图片、表格格式丢失
+- 修改已有文档时，**必须**用原生库打开原始文件 → 修改 → 保存回原格式：
+  - docx → `from docx import Document` → 修改 → `doc.save()`
+  - pptx → `from pptx import Presentation` → 修改 → `prs.save()`
+  - xlsx → `from openpyxl import load_workbook` → 修改 → `wb.save()`
+- 创建新文档时，**必须**直接用原生库生成目标格式，禁止先生成 md/html 再转换
+- pypandoc **仅限**用户明确说"把这个 docx 转成 markdown"这类单向格式转换场景，不得用于文档修改流程
 
 ## 脚本编写规则
 当需要处理文档时，请在 ```python 代码块中编写完整的 Python 脚本：
@@ -211,7 +213,8 @@ doc.save(os.path.join(OUTPUT_DIR, 'generated_report.docx'))
 
 ## 使用指南
 - 如果用户只是询问文档内容，直接回答即可
-- 如果需要修改/创建文档，先简要说明你的方案，然后在一个 ```python 代码块中编写脚本
+- 如果需要修改/创建文档，先简要说明你的方案，然后在**一个** ```python 代码块中编写完整脚本
+- **必须将所有操作（读取、修改、保存）写在一个代码块内**，不要拆成多个代码块。多个代码块运行在独立进程中，变量无法共享，会导致后续代码块报错
 - **重要：在你的文字回复中，不要说"文件已保存到xxx"或类似承诺。** 只说你要做什么，不要说已经做了什么。系统会在脚本执行后自动检查生成的**真实文件**并告知用户结果。你如果虚构文件保存路径会误导用户。
 - **关键规则：当用户要求修改/创建文档时，你**必须**输出 ```python 代码块，仅靠文字说"已完成"系统不会执行任何操作。如果只想报告修改方案而不执行，请明确说明"以下为修改方案，需要我执行请告知"。{files_section}"""
 
@@ -650,7 +653,7 @@ def generate_stream_response_with_execution(
             except (json.JSONDecodeError, KeyError):
                 pass
 
-    # 将代码块替换为简短摘要，再展示给用户
+    # 将代码块替换为可折叠详情块，默认折叠，用户可点击展开查看完整脚本
     def _summarize_code_block(match: _re.Match) -> str:
         code = match.group(1).strip()
         line_count = code.count('\n') + 1
@@ -658,8 +661,15 @@ def generate_stream_response_with_execution(
         desc = ""
         if first_line.lstrip().startswith('#'):
             desc = first_line.lstrip('#').strip()
-            return f"\n\n> 📝 **脚本**（{line_count} 行）：{desc}\n\n"
-        return f"\n\n> 📝 **已生成处理脚本**（{line_count} 行），正在执行...\n\n"
+        summary = desc if desc else f"已生成处理脚本（{line_count} 行），正在执行..."
+        escaped_code = code.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        return f"""
+<details class="script-details">
+<summary>📝 <b>脚本</b>（{line_count} 行）：{summary}</summary>
+
+<pre><code class="language-python">{escaped_code}</code></pre>
+</details>
+"""
 
     # 只截取最后一个代码块之前的文本作为"方案"，不展示LLM的虚假完成声明
     plan_text = full_response
@@ -678,76 +688,68 @@ def generate_stream_response_with_execution(
 
     yield f"data: {json.dumps({'content': display_response})}\n\n"
 
-    # Phase 2: 执行脚本（遵循5步流程：理解→计划→执行→重试→总结）
+    # Phase 2: 执行脚本（合并所有代码块为一个脚本，避免多进程变量不共享）
     MAX_RETRIES = 3
     code_blocks = extract_python_blocks(full_response)
     retry_history = messages + [{"role": "assistant", "content": full_response}]
     if code_blocks:
-        logger.info(f"从LLM回复中提取到 {len(code_blocks)} 个Python代码块，开始执行...")
-        all_new_files = set()
-        all_errors = []
-        all_stdouts = []
-        overall_success = True
+        logger.info(f"从LLM回复中提取到 {len(code_blocks)} 个Python代码块，合并执行...")
+        combined_code = "\n\n".join(code_blocks)
 
-        for i, code in enumerate(code_blocks):
-            result = None
-            for attempt in range(MAX_RETRIES):
-                if attempt > 0:
-                    logger.info(f"第{i+1}个脚本第{attempt+1}次重试...")
-                result = execute_code(code, output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
+        result = None
+        for attempt in range(MAX_RETRIES):
+            if attempt > 0:
+                logger.info(f"脚本第{attempt+1}次重试...")
+            result = execute_code(combined_code, output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
 
-                if result['success'] and not result['stderr']:
+            if result['success'] and not result['stderr']:
+                break
+
+            stderr = result.get('stderr', '')
+            if _re.search(r"ModuleNotFoundError: No module named '([^']+)'", stderr):
+                logger.warning(f"缺少模块，停止重试: {stderr}")
+                break
+
+            if attempt < MAX_RETRIES - 1:
+                error_info = result['stderr'] or result['stdout'] or f"返回码: {result['returncode']}"
+                retry_msg = (
+                    f"脚本执行时出现错误，请自查并修复：\n\n"
+                    f"```\n{error_info}\n```\n\n"
+                    f"请在 ```python 代码块中输出修复后的完整脚本。"
+                )
+                retry_history.append({"role": "user", "content": retry_msg})
+                fix_response = _call_llm_sync(retry_history, llm_cfg, max_tokens)
+                fixed_blocks = extract_python_blocks(fix_response)
+                if fixed_blocks:
+                    retry_history.append({"role": "assistant", "content": fix_response})
+                    combined_code = "\n\n".join(fixed_blocks)
+                else:
+                    logger.info("LLM 认为脚本无需修改，停止重试")
                     break
-
-                stderr = result.get('stderr', '')
-                if _re.search(r"ModuleNotFoundError: No module named '([^']+)'", stderr):
-                    logger.warning(f"缺少模块，停止重试: {stderr}")
-                    break
-
-                if attempt < MAX_RETRIES - 1:
-                    error_info = result['stderr'] or result['stdout'] or f"返回码: {result['returncode']}"
-                    issue_type = "警告" if result['success'] else "错误"
-                    retry_msg = (
-                        f"以上脚本执行时出现{issue_type}，请自查并修复：\n\n"
-                        f"```\n{error_info}\n```\n\n"
-                        f"请在 ```python 代码块中输出修复后的完整脚本。"
-                    )
-                    retry_history.append({"role": "user", "content": retry_msg})
-                    fix_response = _call_llm_sync(retry_history, llm_cfg, max_tokens)
-                    fixed_blocks = extract_python_blocks(fix_response)
-                    if fixed_blocks:
-                        retry_history.append({"role": "assistant", "content": fix_response})
-                        code = fixed_blocks[0]
-                    else:
-                        logger.info("LLM 认为脚本无需修改，停止重试")
-                        break
-
-            if result:
-                all_new_files.update(result.get('new_files', []))
-                if result['stdout']:
-                    all_stdouts.append(result['stdout'])
-                if not result['success'] or result['stderr']:
-                    overall_success = False
-                    if result['stderr']:
-                        all_errors.append(result['stderr'])
-                    elif result['stdout']:
-                        all_errors.append(result['stdout'])
 
         # 步骤(5): 汇总最终结果
         output_parts = []
-        if overall_success:
-            if all_new_files:
-                file_names = ", ".join(sorted(all_new_files))
+        if result and result['success']:
+            new_files = result.get('new_files', [])
+            if new_files:
+                file_names = ", ".join(sorted(new_files))
                 output_parts.append(f"✅ 修改完成！处理后的文件：`{file_names}`")
-            elif all_stdouts:
-                execution_stdout = "\n".join(all_stdouts)
-                output_parts.append(f"✅ 处理完成！\n```\n{execution_stdout}\n```")
+                if result['stdout']:
+                    brief = result['stdout'][-500:]
+                    output_parts.append(f"**处理日志:**\n```\n{brief}\n```")
             else:
-                output_parts.append("⚠️ 脚本执行成功，但未生成新文件。请检查是否使用了 `OUTPUT_DIR` 保存文件。")
+                output_parts.append(
+                    "📋 脚本已执行完毕，但未生成新的文档文件。\n\n"
+                    "这通常说明 AI 只做了内容分析，还没有执行实际修改。\n"
+                    "**请补充你的修改要求**，比如：\n"
+                    "- 需要修改哪些内容？\n"
+                    "- 需要调整哪些格式？\n"
+                    "- 需要输出什么格式的文件？"
+                )
         else:
             output_parts.append("❌ 处理失败，已尝试多次修复仍无法完成。")
-            if all_errors:
-                output_parts.append(f"**错误信息:**\n```\n{all_errors[-1]}\n```")
+            if result and result.get('stderr'):
+                output_parts.append(f"**错误信息:**\n```\n{result['stderr'][-1000:]}\n```")
 
         output_text = "\n\n".join(output_parts) + "\n\n"
         yield f"data: {json.dumps({'content': output_text})}\n\n"
