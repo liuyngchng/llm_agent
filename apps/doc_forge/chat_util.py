@@ -653,9 +653,11 @@ def generate_stream_response_with_execution(
             except (json.JSONDecodeError, KeyError):
                 pass
 
-    # 将代码块替换为可折叠详情块，默认折叠，用户可点击展开查看完整脚本
+    # 将代码块替换为可折叠详情块，同时收集代码用于后续执行（只提取一次，避免二次正则不一致）
+    collected_codes = []
     def _summarize_code_block(match: _re.Match) -> str:
         code = match.group(1).strip()
+        collected_codes.append(code)  # 边替换边收集
         line_count = code.count('\n') + 1
         first_line = code.split('\n')[0] if code else ''
         desc = ""
@@ -690,7 +692,7 @@ def generate_stream_response_with_execution(
 
     # Phase 2: 执行脚本（合并所有代码块为一个脚本，避免多进程变量不共享）
     MAX_RETRIES = 3
-    code_blocks = extract_python_blocks(full_response)
+    code_blocks = collected_codes
     retry_history = messages + [{"role": "assistant", "content": full_response}]
     if code_blocks:
         logger.info(f"从LLM回复中提取到 {len(code_blocks)} 个Python代码块，合并执行...")
