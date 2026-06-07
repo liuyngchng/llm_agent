@@ -65,48 +65,45 @@ def build_doc_processing_system_prompt(file_paths: list[str],
 ## 可用文件
 以下文件已上传并可供处理（**必须使用下表列出的绝对路径，不要自己拼接路径**）：
 {files_list}
-此外，脚本执行环境中已按顺序预定义了变量 FILE_1、FILE_2...（对应每个文件），可直接在代码中使用。"""
+脚本执行环境中已预定义了变量 FILE_1、FILE_2...（按顺序对应每个文件的绝对路径），直接在代码中使用。"""
 
     return f"""你是文档处理助手，帮助用户读取、修改、合并、创建文档（doc/docx、ppt/pptx、xls/xlsx、pdf、csv）。
 
 ## 环境与输入
 - `UPLOAD_DIR` = `{upload_dir}` — 上传文件所在目录
 - `OUTPUT_DIR` = `{output_dir}` — 所有输出文件**必须**保存到此目录
-- `FILE_1`, `FILE_2`, ... — 预定义变量，直接指向每个上传文件的**绝对路径**。使用这些变量，不要自己拼接路径
-- 旧格式（.doc/.ppt/.xls）上传时已自动转为新格式
+- `FILE_1`, `FILE_2`, ... — 预定义变量，指向每个上传文件的**绝对路径**，直接使用即可
+- 旧格式（.doc/.ppt/.xls）上传时已自动转为新格式（.docx/.pptx/.xlsx）
 
-## 可用库（按场景选用）
+## 可用库
 
 **Word (docx):**
-- `python-docx` — 读取/创建/修改 docx（`Document`, `doc.save()`）
-- `common.docx_revision_util` — 修订模式（Track Changes）：`tracked_replace_in_document(doc, old, new, author)`, `tracked_insert_text`, `tracked_delete_text`, `accept_all_changes`, `reject_all_changes`
-- `common.docx_direct_util.direct_tracked_replace(src_path, dst_path, {{old: new}}, author)` — **纯文本替换首选**，直接编辑 ZIP 内 XML，100% 保留格式，不用 `Document()` 读写循环
-- `docxtpl` — Jinja2 模板填充（`DocxTemplate`, `render(context)`）
+- `python-docx` — 读取、修改、创建 Word 文档。可操作段落、表格、样式、图片、页眉页脚
+- `docxtpl` — 基于 Jinja2 模板填充 Word 文档
 
 **PowerPoint (pptx):**
-- `python-pptx` — 读取/创建/修改 pptx（`Presentation`, `prs.save()`）
+- `python-pptx` — 读取、修改、创建 PPT 演示文稿。可操作幻灯片、形状、表格、图片
 
 **Excel (xlsx):**
-- `openpyxl` — 读取/创建/修改 xlsx（`load_workbook`, `wb.save()`）
+- `openpyxl` — 读取、修改、创建 Excel 工作簿。可操作工作表、单元格、公式、样式、图表
 
 **PDF:**
-- `pdfplumber` — 提取内容（文本、表格）
-- `pypdf` — 修改已有 PDF：合并、拆分、提取页面、旋转、加水印（`PdfReader`, `PdfWriter`）
-- `reportlab` — 创建新 PDF
+- `pdfplumber` — 提取 PDF 中的文本和表格
+- `pypdf` — 修改已有 PDF：合并、拆分、提取页面、旋转、加水印
+- `reportlab` — 以编程方式创建新 PDF
 
 **其他:**
-- `common.ocr_util.ImageOCR` — 图片 OCR 文字识别：`ImageOCR(cfg).extract_text_from_image(path)` 返回 `{{success, text, error}}`
-- `pypandoc` — **仅限**格式转换（如 docx→markdown），**严禁**用于文档修改流程
-- `Pillow (PIL)`, `pandas`, `csv`
+- `Pillow (PIL)` — 图片处理
+- `pandas` — 数据处理和分析
+- `csv` — CSV 文件读写
+- `common.ocr_util.ImageOCR` — 图片 OCR 文字识别
 
 ## 强制规则
-1. **禁止 markdown 中转**：修改 docx/pptx/xlsx 必须用原生库直接操作，严禁先转 markdown 再转回
-2. **docx 纯文本替换**（错别字修正、查找替换）→ 必须用 `direct_tracked_replace`，禁止 `Document()` + `doc.save()`
-3. **修订模式**：默认保留修订标记，不要主动调用 `accept_all_changes`，除非用户明确要求"接受修订"
-4. **一个代码块**：所有操作（读取→修改→保存）写在一个 ```python 代码块中
-5. **不要虚构保存路径**：文字回复中不说"文件已保存到xxx"。系统会在脚本执行后自动检测生成的文件并告知用户
-6. **必须输出代码块**：用户要求修改/创建文档时，必须输出 ```python 代码块才能触发执行
-7. 使用 `print()` 输出状态信息，代码块第一行用注释说明功能{files_section}"""
+1. **直接操作原生格式**：修改文档必须使用对应格式的原生库打开文件、修改内容、保存到 `OUTPUT_DIR`
+2. **禁止 markdown 中转**：严禁先将文档转成 markdown 再转回，这会导致格式丢失
+3. **输出到指定目录**：所有生成的文档必须保存到 `OUTPUT_DIR`（即 `{output_dir}`）。使用 `os.path.join(OUTPUT_DIR, "文件名.扩展名")` 构造输出路径
+4. **一个代码块输出**：将所有操作写在一个 ```python 代码块中，第一行用注释简要说明功能。代码块是触发文档修改的唯一方式
+5. **用 print() 汇报结果**：脚本执行完成后用 `print()` 输出操作结果和生成的文件名{files_section}"""
 
 
 def allowed_file(filename):
@@ -581,31 +578,32 @@ def generate_stream_response_with_execution(
     yield f"data: {json.dumps({'content': display_response})}\n\n"
 
     # Phase 2: 执行脚本（合并所有代码块为一个脚本，避免多进程变量不共享）
-    MAX_RETRIES = 3
+    MAX_RETRIES = 2
     code_blocks = collected_codes
-    retry_history = messages + [{"role": "assistant", "content": full_response}]
     if code_blocks:
         logger.info(f"从LLM回复中提取到 {len(code_blocks)} 个Python代码块，合并执行...")
         combined_code = "\n\n".join(code_blocks)
+        retry_history = messages + [{"role": "assistant", "content": full_response}]
 
         result = None
         for attempt in range(MAX_RETRIES):
             if attempt > 0:
-                logger.info(f"脚本第{attempt+1}次重试...")
+                logger.info(f"脚本执行出错，第{attempt}次重试...")
             result = execute_code(combined_code, output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
 
             if result['success'] and not result['stderr']:
                 break
 
             stderr = result.get('stderr', '')
+            # 缺少模块时不重试
             if _re.search(r"ModuleNotFoundError: No module named '([^']+)'", stderr):
-                logger.warning(f"缺少模块，停止重试: {stderr}")
+                logger.warning(f"缺少模块，无法自动修复: {stderr}")
                 break
 
             if attempt < MAX_RETRIES - 1:
                 error_info = result['stderr'] or result['stdout'] or f"返回码: {result['returncode']}"
                 retry_msg = (
-                    f"脚本执行时出现错误，请自查并修复：\n\n"
+                    f"脚本执行出错，请根据错误信息修复代码：\n\n"
                     f"```\n{error_info}\n```\n\n"
                     f"请在 ```python 代码块中输出修复后的完整脚本。"
                 )
@@ -616,10 +614,10 @@ def generate_stream_response_with_execution(
                     retry_history.append({"role": "assistant", "content": fix_response})
                     combined_code = "\n\n".join(fixed_blocks)
                 else:
-                    logger.info("LLM 认为脚本无需修改，停止重试")
+                    logger.info("LLM 修复回复中未包含代码块，停止重试")
                     break
 
-        # 步骤(5): 汇总最终结果
+        # 汇总结果
         output_parts = []
         if result and result['success']:
             new_files = result.get('new_files', [])
@@ -627,62 +625,53 @@ def generate_stream_response_with_execution(
                 file_names = ", ".join(sorted(new_files))
                 output_parts.append(f"✅ 修改完成！处理后的文件：`{file_names}`")
                 if result['stdout']:
-                    brief = result['stdout'][-500:]
-                    output_parts.append(f"**处理日志:**\n```\n{brief}\n```")
+                    output_parts.append(f"**处理日志:**\n```\n{result['stdout'][-500:]}\n```")
             else:
                 output_parts.append(
                     "📋 脚本已执行完毕，但未生成新的文档文件。\n\n"
-                    "这通常说明 AI 只做了内容分析，还没有执行实际修改。\n"
-                    "**请补充你的修改要求**，比如：\n"
+                    "请补充你的修改要求，比如：\n"
                     "- 需要修改哪些内容？\n"
                     "- 需要调整哪些格式？\n"
                     "- 需要输出什么格式的文件？"
                 )
         else:
-            output_parts.append("❌ 处理失败，已尝试多次修复仍无法完成。")
+            output_parts.append("❌ 处理失败，请根据错误信息调整你的要求后重试。")
             if result and result.get('stderr'):
                 output_parts.append(f"**错误信息:**\n```\n{result['stderr'][-1000:]}\n```")
 
-        output_text = "\n\n".join(output_parts) + "\n\n"
-        yield f"data: {json.dumps({'content': output_text})}\n\n"
+        yield f"data: {json.dumps({'content': '\n\n'.join(output_parts) + '\n\n'})}\n\n"
 
     else:
         logger.info("LLM回复中未提取到Python代码块，跳过代码执行")
-        fake_keywords = ['修改完成', '已修改', '脚本执行', '文件已保存', '文档已', '已保存', '修订模式', '已修正']
+        fake_keywords = ['修改完成', '已修改', '脚本执行', '文件已保存', '文档已', '已保存', '已修正']
         if any(kw in full_response for kw in fake_keywords):
-            logger.warning("LLM 声称已修改文档但未输出代码块，尝试自动修复")
+            logger.warning("LLM 声称已修改但未输出代码块，尝试一次修复")
             retry_history = messages + [{"role": "assistant", "content": full_response}]
-            for retry_count in range(MAX_RETRIES):
-                fix_response = _call_llm_sync(retry_history, llm_cfg, max_tokens)
-                fixed_blocks = extract_python_blocks(fix_response)
-                if fixed_blocks:
-                    retry_history.append({"role": "assistant", "content": fix_response})
-                    result = execute_code(fixed_blocks[0], output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
-
-                    output_parts = []
-                    if result['success'] and result['new_files']:
-                        file_names = ", ".join(result['new_files'])
-                        output_parts.append(f"✅ 修改完成！处理后的文件：`{file_names}`")
-                    elif result['success'] and not result['new_files']:
-                        output_parts.append("⚠️ 脚本执行成功，但未生成新文件。")
-                    else:
-                        if retry_count < MAX_RETRIES - 1:
-                            continue
-                        output_parts.append("❌ 处理失败，已尝试多次修复仍无法完成。")
-                        if result['stderr']:
-                            output_parts.append(f"**错误信息:**\n```\n{result['stderr']}\n```")
-                    if result['stdout']:
-                        output_parts.insert(1, f"**输出:**\n```\n{result['stdout']}\n```")
-                    yield f"data: {json.dumps({'content': '\n\n'.join(output_parts) + '\n\n'})}\n\n"
-                    break
+            retry_msg = (
+                "你声称已修改文档，但没有输出 Python 代码块。"
+                "请在 ```python 代码块中输出可执行的脚本来完成修改。"
+            )
+            retry_history.append({"role": "user", "content": retry_msg})
+            fix_response = _call_llm_sync(retry_history, llm_cfg, max_tokens)
+            fixed_blocks = extract_python_blocks(fix_response)
+            if fixed_blocks:
+                result = execute_code("\n\n".join(fixed_blocks), output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
+                output_parts = []
+                if result['success'] and result['new_files']:
+                    file_names = ", ".join(result['new_files'])
+                    output_parts.append(f"✅ 修改完成！处理后的文件：`{file_names}`")
                 else:
-                    retry_history.append({"role": "assistant", "content": fix_response})
-                    if retry_count == MAX_RETRIES - 1:
-                        warning = (
-                            f"\n\n---\n\n⚠️ **系统已尝试 {MAX_RETRIES} 次要求 LLM 生成实际代码，但均未成功。**"
-                            f"请重新发送消息，要求 AI 输出可执行的 Python 代码。\n\n"
-                        )
-                        logger.warning("LLM 多次仍不输出代码块，放弃自动修复")
-                        yield f"data: {json.dumps({'content': warning})}\n\n"
+                    output_parts.append("❌ 脚本执行未成功，请重新描述你的修改需求。")
+                    if result.get('stderr'):
+                        output_parts.append(f"**错误信息:**\n```\n{result['stderr'][-500:]}\n```")
+                if result.get('stdout'):
+                    output_parts.append(f"**输出:**\n```\n{result['stdout'][-500:]}\n```")
+                yield f"data: {json.dumps({'content': '\n\n'.join(output_parts) + '\n\n'})}\n\n"
+            else:
+                warning = (
+                    "\n\n---\n\n⚠️ 未能生成可执行的代码。请重新发送消息，明确要求 AI 输出 Python 代码块。\n\n"
+                )
+                logger.warning("一次修复仍未生成代码块，放弃")
+                yield f"data: {json.dumps({'content': warning})}\n\n"
 
     yield "data: [DONE]\n\n"
