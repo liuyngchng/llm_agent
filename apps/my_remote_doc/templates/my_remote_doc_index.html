@@ -12,45 +12,28 @@
     <div class="container">
         <header class="header">
             <h1><i class="fas fa-cloud"></i>{{sys_name}}</h1>
-            <div class="model-info">
-                <span id="modelName">{{ _('my_remote_doc.my_computer') }}</span>
-                <div class="model-info-actions">
-                    <button id="workspaceBtn" class="btn-clear">
-                        <i class="fas fa-folder-open"></i> {{ _('my_remote_doc.my_computer') }}
+            <div class="header-bottom">
+                <span>{{ _('my_remote_doc.my_computer') }}</span>
+                <div class="header-actions">
+                    <input type="file" id="fileInput" multiple style="display: none;">
+                    <button id="uploadBtn" class="btn-clear">
+                        <i class="fas fa-upload"></i> 上传
+                    </button>
+                    <button id="refreshBtn" class="btn-clear">
+                        <i class="fas fa-sync-alt"></i> 刷新
                     </button>
                 </div>
             </div>
         </header>
 
-        <div class="main-content">
-            <div class="welcome-section">
-                <i class="fas fa-cloud-upload-alt welcome-icon"></i>
-                <h2>{{ _('my_remote_doc.title') }}</h2>
-                <p>{{ _('my_remote_doc.my_computer') }} - 浏览、下载、管理您的远程工作空间文件</p>
-                <button id="openWorkspaceBtn" class="btn-primary">
-                    <i class="fas fa-folder-open"></i> {{ _('my_remote_doc.my_computer') }}
-                </button>
+        <div id="uploadStatus" class="upload-status" style="display: none;"></div>
+        <div class="file-list-container">
+            <div class="file-list" id="fileList">
+                <div class="loading"><i class="fas fa-spinner fa-spin"></i> {{ _('my_remote_doc.loading') }}</div>
             </div>
         </div>
         <input type="hidden" id="uid" name="uid" value="{{uid}}">
         <input type="hidden" id="t" name="t" value="{{t}}">
-
-        <!-- 工作空间文件浏览器模态框 -->
-        <div class="workspace-modal-overlay" id="workspaceModal" style="display: none;">
-            <div class="workspace-modal">
-                <div class="workspace-modal-header">
-                    <h2><i class="fas fa-folder-open"></i> {{ _('my_remote_doc.my_computer') }}</h2>
-                    <button class="workspace-modal-close" id="workspaceModalClose">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="workspace-modal-body">
-                    <div class="workspace-file-list" id="workspaceFileList">
-                        <div class="workspace-loading"><i class="fas fa-spinner fa-spin"></i> {{ _('my_remote_doc.loading') }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <footer class="footer">
             <p>Powered by Richard</p>

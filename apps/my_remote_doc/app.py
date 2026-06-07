@@ -138,8 +138,15 @@ def download_workspace_file(filename):
     return send_from_directory(WORKSPACE_DIR, filename, as_attachment=True)
 
 
+# 受保护的文件/目录，不允许删除
+PROTECTED_NAMES = {'AGENTS.md', 'HEARTBEAT.md', 'IDENTITY.md', 'SOUL.md', 'TOOLS.md', 'USER.md', 'memory'}
+
+
 @app.route('/workspace-files/<path:filename>', methods=['DELETE'])
 def delete_workspace_file(filename):
+    if filename in PROTECTED_NAMES:
+        logger.warning(f"尝试删除受保护文件: {filename}")
+        abort(403)
     file_path = os.path.join(WORKSPACE_DIR, filename)
     real_path = os.path.realpath(file_path)
     if not real_path.startswith(os.path.realpath(WORKSPACE_DIR)):
@@ -154,6 +161,32 @@ def delete_workspace_file(filename):
         return jsonify({'success': True, 'message': f'文件 {filename} 已删除'})
     except Exception as e:
         logger.error(f"删除文件失败: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': '没有选择文件'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': '文件名为空'}), 400
+
+        filename = file.filename
+        # 避免文件名冲突：重名文件加时间戳前缀
+        dest_path = os.path.join(WORKSPACE_DIR, filename)
+        if os.path.exists(dest_path):
+            name, ext = os.path.splitext(filename)
+            filename = f"{name}_{int(time.time())}{ext}"
+            dest_path = os.path.join(WORKSPACE_DIR, filename)
+
+        file.save(dest_path)
+        logger.info(f"文件上传成功: {dest_path}")
+        return jsonify({'success': True, 'filename': filename})
+    except Exception as e:
+        logger.error(f"文件上传失败: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
