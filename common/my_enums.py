@@ -69,6 +69,7 @@ class AppType(Enum):
     OPEN = "开放平台"
     PAPER_REVIEW = "文档审核"
     ASR = "语音识别"
+    MY_REMOTE_DOC = "我的远程文档"
     PORTAL = "AI 应用"
 
     @staticmethod

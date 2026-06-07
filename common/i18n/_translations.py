@@ -5,7 +5,7 @@ Translation dictionaries for all supported languages.
 Key format: TRANSLATIONS[section][subkey][lang]
 
 Sections: common, auth, portal, doc_forge, chat2kb, docx, paper_review,
-          vdb, asr, mcp_client, online_office, statistic, llm, embedding, backend
+          vdb, asr, mcp_client, online_office, statistic, llm, embedding, backend, my_remote_doc
 """
 
 TRANSLATIONS = {
@@ -22,6 +22,7 @@ TRANSLATIONS = {
         "OPEN": {"zh": "开放平台", "en": "Open Platform", "fr": "Plateforme ouverte", "ar": "منصة مفتوحة"},
         "PAPER_REVIEW": {"zh": "文档审核", "en": "Document Review", "fr": "Revision de document", "ar": "مراجعة المستندات"},
         "ASR": {"zh": "语音识别", "en": "Speech Recognition", "fr": "Reconnaissance vocale", "ar": "التعرف على الكلام"},
+        "MY_REMOTE_DOC": {"zh": "我的远程文档", "en": "My Remote Doc", "fr": "Mon Doc Distant", "ar": "مستندي البعيد"},
         "PORTAL": {"zh": "AI 应用", "en": "AI Apps", "fr": "Apps IA", "ar": "تطبيقات الذكاء الاصطناعي"},
     },
 
@@ -3062,6 +3063,66 @@ TRANSLATIONS = {
             "en": "Auth service unavailable, please try later",
             "fr": "Service d'authentification indisponible, veuillez reessayer",
             "ar": "خدمة المصادقة غير متاحة، يرجى المحاولة لاحقا",
+        },
+    },
+
+    # ============================================================
+    # my_remote_doc
+    # ============================================================
+    "my_remote_doc": {
+        "title": {
+            "zh": "我的远程文档",
+            "en": "My Remote Doc",
+            "fr": "Mon Doc Distant",
+            "ar": "مستندي البعيد",
+        },
+        "my_computer": {
+            "zh": "我的电脑",
+            "en": "My Computer",
+            "fr": "Mon Ordinateur",
+            "ar": "جهاز الكمبيوتر",
+        },
+        "empty_workspace": {
+            "zh": "工作空间为空",
+            "en": "Workspace is empty",
+            "fr": "Espace de travail vide",
+            "ar": "مساحة العمل فارغة",
+        },
+        "loading": {
+            "zh": "正在加载...",
+            "en": "Loading...",
+            "fr": "Chargement...",
+            "ar": "جار التحميل...",
+        },
+        "delete_confirm": {
+            "zh": "确定要删除文件 \"{name}\" 吗？",
+            "en": "Are you sure you want to delete \"{name}\"?",
+            "fr": "Etes-vous sur de vouloir supprimer \"{name}\"?",
+            "ar": "هل انت متاكد من حذف \"{name}\"?",
+        },
+        "delete_failed": {
+            "zh": "删除失败",
+            "en": "Delete failed",
+            "fr": "Echec de suppression",
+            "ar": "فشل الحذف",
+        },
+        "load_failed": {
+            "zh": "加载失败",
+            "en": "Load failed",
+            "fr": "Echec du chargement",
+            "ar": "فشل التحميل",
+        },
+        "download": {
+            "zh": "下载",
+            "en": "Download",
+            "fr": "Telecharger",
+            "ar": "تحميل",
+        },
+        "delete": {
+            "zh": "删除",
+            "en": "Delete",
+            "fr": "Supprimer",
+            "ar": "حذف",
         },
     },
 }

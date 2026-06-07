@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{sys_name}}</title>
+    <link rel="stylesheet" href="/static/my_remote_doc.css">
+    <link rel="stylesheet" href="/static/font-awesome.6.0.0.all.min.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-cloud"></i>{{sys_name}}</h1>
+            <div class="model-info">
+                <span id="modelName">{{ _('my_remote_doc.my_computer') }}</span>
+                <div class="model-info-actions">
+                    <button id="workspaceBtn" class="btn-clear">
+                        <i class="fas fa-folder-open"></i> {{ _('my_remote_doc.my_computer') }}
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="welcome-section">
+                <i class="fas fa-cloud-upload-alt welcome-icon"></i>
+                <h2>{{ _('my_remote_doc.title') }}</h2>
+                <p>{{ _('my_remote_doc.my_computer') }} - 浏览、下载、管理您的远程工作空间文件</p>
+                <button id="openWorkspaceBtn" class="btn-primary">
+                    <i class="fas fa-folder-open"></i> {{ _('my_remote_doc.my_computer') }}
+                </button>
+            </div>
+        </div>
+        <input type="hidden" id="uid" name="uid" value="{{uid}}">
+        <input type="hidden" id="t" name="t" value="{{t}}">
+
+        <!-- 工作空间文件浏览器模态框 -->
+        <div class="workspace-modal-overlay" id="workspaceModal" style="display: none;">
+            <div class="workspace-modal">
+                <div class="workspace-modal-header">
+                    <h2><i class="fas fa-folder-open"></i> {{ _('my_remote_doc.my_computer') }}</h2>
+                    <button class="workspace-modal-close" id="workspaceModalClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="workspace-modal-body">
+                    <div class="workspace-file-list" id="workspaceFileList">
+                        <div class="workspace-loading"><i class="fas fa-spinner fa-spin"></i> {{ _('my_remote_doc.loading') }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Powered by Richard</p>
+        </footer>
+    </div>
+
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
+    <script type="text/javascript" src="/static/my_remote_doc.js"></script>
+</body>
+</html>
