@@ -163,6 +163,6 @@ def health_check():
 
 
 if __name__ == '__main__':
-    port = 21000
+    port = 19013
     logger.info(f"my_remote_doc service listen on port {port}")
     app.run(debug=False, host='0.0.0.0', port=port, threaded=True)

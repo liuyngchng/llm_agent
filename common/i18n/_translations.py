@@ -612,6 +612,18 @@ TRANSLATIONS = {
             "fr": "Serveur MCP fournissant des points d'acces pour les clients MCP, avec prise en charge d'appels d'outils multiples.",
             "ar": "خادم MCP يوفر نقاط وصول لعملاء MCP، يدعم استدعاءات الادوات المتعددة والامتدادات.",
         },
+        "app_my_remote_doc": {
+            "zh": "我的远程文档",
+            "en": "My Remote Doc",
+            "fr": "Mon Doc Distant",
+            "ar": "مستندي البعيد",
+        },
+        "app_my_remote_doc_desc": {
+            "zh": "浏览、下载和管理远程工作空间中的文件。",
+            "en": "Browse, download and manage files in your remote workspace.",
+            "fr": "Parcourez, telechargez et gerez les fichiers de votre espace de travail distant.",
+            "ar": "تصفح وتحميل وادارة الملفات في مساحة العمل البعيدة.",
+        },
         "port_label": {
             "zh": "端口: {port}",
             "en": "Port: {port}",

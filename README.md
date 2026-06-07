@@ -22,10 +22,11 @@
 | 9 | apps/asr | HTTP/HTTPS | 19010 | 语音转录 |
 | 10 | apps/auth_service | HTTP/HTTPS | 19011 | 用户认证服务 |
 | 11 | apps/statistics_service | HTTP/HTTPS | 19012 | 数据统计服务 |
-| 12 | apps/llm            | HTTP/HTTPS | 16000 | 兼容 OpenAI 接口格式的大语言模型服务        |
-| 13 | apps/embedding      | HTTP/HTTPS | 17000 | 兼容 OpenAI 接口格式的文本嵌入模型服务       |
-| 14 | apps/portal         | HTTP/HTTPS | 443   | 所有应用的入口地址，提供用户登录、退出及APP导航 |
-| 15 | apps/llm_api_adapter | HTTP/HTTPS | 16001 | 将兼容 OpenAI 接口的 大语言模型API转换成兼容 Anthropic 的格式的 API |
+| 12 | apps/my_remote_doc | HTTP/HTTPS | 19013 | 我的远程文档 |
+| 13 | apps/llm            | HTTP/HTTPS | 16000 | 兼容 OpenAI 接口格式的大语言模型服务        |
+| 14 | apps/embedding      | HTTP/HTTPS | 17000 | 兼容 OpenAI 接口格式的文本嵌入模型服务       |
+| 15 | apps/portal         | HTTP/HTTPS | 443   | 所有应用的入口地址，提供用户登录、退出及APP导航 |
+| 16 | apps/llm_api_adapter | HTTP/HTTPS | 16001 | 将兼容 OpenAI 接口的 大语言模型API转换成兼容 Anthropic 的格式的 API |
 
 # 2. 开发环境配置
 
