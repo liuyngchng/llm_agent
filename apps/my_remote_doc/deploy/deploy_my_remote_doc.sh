@@ -4,15 +4,15 @@ CONTAINER="${APP}_app"
 APP_DIR="apps/${APP}"
 CURRENT_DIR=$(pwd)
 WORKSPACE="/data/openclaw/workspace"
+CONTAINER_WORKSPACE="/opt/app/workspace"
 # 检查当前目录下是否存在 apps/${APP} 文件夹
 if [ ! -d ${APP_DIR} ]; then
     echo "错误：当前目录下未找到 ${APP_DIR} 文件夹"
     echo "请确保在项目根目录下执行此脚本"
     exit 1
 fi
-echo "工作目录为 ${WORKSPACE}"
+echo "宿主机工作目录为 ${WORKSPACE}"
 echo "当前目录为 ${CURRENT_DIR}, 正在复制 ${APP} 服务配置文件"
-cp ${APP_DIR}/cfg.db ./
 cp ${APP_DIR}/cfg_prd.yml ./cfg.yml
 echo "正在部署 ${APP} 服务"
 docker stop ${CONTAINER}
@@ -25,8 +25,8 @@ docker run -dit --name ${CONTAINER}  \
   --security-opt seccomp=unconfined \
   --network llm_net \
   -v ${CURRENT_DIR}:/opt/app \
-  -v ${WORKSPACE}:/opt/app/workspace \
-  -p 20000:19000 \
+  -v ${WORKSPACE}:${CONTAINER_WORKSPACE} \
+  -p 19013:19000 \
   -e APP_NAME=${APP} \
   llm_docx:1.1
 echo "容器 ${CONTAINER} 已启动"
