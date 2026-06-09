@@ -11,7 +11,7 @@ if [ ! -d ${APP_DIR} ]; then
     exit 1
 fi
 echo "当前目录为 ${CURRENT_DIR}, 正在复制 ${APP} 服务配置文件"
-cp ${APP_DIR}/cfg.yml ./
+cp ${APP_DIR}/cfg_prd.yml ./cfg.yml
 echo "正在部署 ${APP} 服务"
 docker stop ${CONTAINER}
 echo "正在删除 ${APP} 服务"
