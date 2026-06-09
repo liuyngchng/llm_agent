@@ -99,13 +99,19 @@ OUTPUT_DIR = {output_dir!r}
                     f.write(f"{varname} = {fp!r}  # {basename}\n")
             f.write(code)
 
+        # 将 FILE_* 也注入到环境变量中，防止 LLM 生成的代码使用 os.environ["FILE_1"] 方式访问
+        exec_env = os.environ.copy()
+        if file_paths:
+            for i, fp in enumerate(file_paths):
+                exec_env[f"FILE_{i + 1}"] = fp
+
         result = subprocess.run(
             [sys.executable, tmp_path],
             capture_output=True,
             text=True,
             timeout=timeout,
             cwd=base_dir,
-            env=os.environ
+            env=exec_env
         )
 
         stdout = result.stdout.strip()
