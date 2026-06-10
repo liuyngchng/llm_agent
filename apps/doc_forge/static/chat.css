@@ -193,6 +193,17 @@ body {
     opacity: 1;
 }
 
+.message-time {
+    font-size: 0.75rem;
+    color: #999;
+    margin-top: 4px;
+    user-select: none;
+}
+
+.user-message .message-time {
+    text-align: right;
+}
+
 .action-buttons {
     display: flex;
     gap: 4px;

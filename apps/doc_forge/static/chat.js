@@ -35,7 +35,7 @@ function restoreChatHistory() {
     chatHistoryEl.innerHTML = '';
     displayMessages.forEach(msg => {
         const id = msg.messageId || undefined;
-        addMessageToUI(msg.role, msg.content, id);
+        addMessageToUI(msg.role, msg.content, id, msg.time);
         chatHistory.push({ role: msg.role, content: msg.content, messageId: id });
     });
     if (welcomeMsg && displayMessages.length === 0) {
@@ -372,7 +372,7 @@ async function sendMessage() {
 
     // 立即将用户消息添加到界面并清空输入框和文件列表
     addMessageToUI('user', displayMessage);
-    displayMessages.push({ role: 'user', content: displayMessage });
+    displayMessages.push({ role: 'user', content: displayMessage, time: Date.now() });
     saveChatHistory();
     messageInput.value = '';
     messageInput.style.height = 'auto';
@@ -548,7 +548,7 @@ async function streamAIResponse(userMessage, messageId) {
                         messageId: messageId
                     };
                     chatHistory.push(completedMessage);
-                    displayMessages.push({ role: 'assistant', content: aiResponse, messageId: messageId });
+                    displayMessages.push({ role: 'assistant', content: aiResponse, messageId: messageId, time: Date.now() });
                     saveChatHistory();
 
                     // 更新消息对象的完整内容
@@ -561,7 +561,9 @@ async function streamAIResponse(userMessage, messageId) {
                     const parsed = JSON.parse(data);
 
                     if (parsed.error) {
-                        throw new Error(parsed.error);
+                        const errMsg = parsed.error;
+                        updateAIMessage(messageId, `<div class="error"><i class="fas fa-exclamation-circle"></i> ${errMsg}</div>`);
+                        return;
                     }
 
                     if (parsed.content) {
@@ -581,13 +583,21 @@ async function streamAIResponse(userMessage, messageId) {
 }
 
 // 添加消息到界面
-function addMessageToUI(role, content, messageId = null) {
+function addMessageToUI(role, content, messageId = null, time = null) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}-message`;
 
     if (messageId) {
         messageDiv.id = messageId;
     }
+
+    const d = time ? new Date(time) : new Date();
+    const timeStr = d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0') + ' ' +
+        String(d.getHours()).padStart(2, '0') + ':' +
+        String(d.getMinutes()).padStart(2, '0') + ':' +
+        String(d.getSeconds()).padStart(2, '0');
 
     let displayContent = content;
 
@@ -613,6 +623,7 @@ function addMessageToUI(role, content, messageId = null) {
                         <i class="fas fa-download"></i>
                     </button>
                 </div>
+                <div class="message-time">${timeStr}</div>
             </div>
         `;
     } else {
@@ -622,6 +633,7 @@ function addMessageToUI(role, content, messageId = null) {
                 <i class="fas fa-user"></i>
             </div>
             <div class="message-content">${displayContent}</div>
+            <div class="message-time">${timeStr}</div>
         `;
     }
 

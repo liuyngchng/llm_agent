@@ -197,7 +197,6 @@ def chat():
                 messages, my_cfg['api'],
                 output_dir=WORKSPACE_DIR,
                 upload_dir=UPLOAD_DIR,
-                max_tokens=8096,
                 file_paths=user_files
             ):
                 yield sse_chunk

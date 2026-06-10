@@ -48,7 +48,7 @@ class LLMConfig:
 
     # 流式响应配置
     STREAM = True
-    TIMEOUT = 600  # 请求超时时间（秒）
+    TIMEOUT = 60  # 请求超时时间（秒）
 
     # 系统提示词
     SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "你是一个有用的AI助手。请用中文回答用户的问题。")
@@ -392,7 +392,7 @@ def get_docx_content(filepath) -> str:
         return f"[读取docx文件时出错: {str(e)}]"
 
 
-def generate_stream_response(messages: list, llm_cfg: dict, max_tokens: int = None,
+def generate_stream_response(messages: list, llm_cfg: dict,
                             include_done: bool = True) -> Generator[str, None, None]:
     """
     生成流式响应
@@ -406,7 +406,7 @@ def generate_stream_response(messages: list, llm_cfg: dict, max_tokens: int = No
     payload = {
         "model": llm_cfg['llm_model_name'],
         "messages": messages,
-        "max_tokens": max_tokens or LLMConfig.MAX_TOKENS,
+        "max_tokens": LLMConfig.MAX_TOKENS,
         "temperature": LLMConfig.TEMPERATURE,
         "top_p": LLMConfig.TOP_P,
         "stream": LLMConfig.STREAM,
@@ -501,10 +501,10 @@ def generate_stream_response(messages: list, llm_cfg: dict, max_tokens: int = No
             yield "data: [DONE]\n\n"
 
 
-def _call_llm_sync(messages: list, llm_cfg: dict, max_tokens: int = None) -> str:
+def _call_llm_sync(messages: list, llm_cfg: dict) -> str:
     """同步调用 LLM，收集完整响应文本（非流式）。"""
     full_text = ""
-    for chunk in generate_stream_response(messages, llm_cfg, max_tokens, include_done=False):
+    for chunk in generate_stream_response(messages, llm_cfg, include_done=False):
         if chunk.startswith('data: ') and chunk != 'data: [DONE]\n\n':
             try:
                 data = json.loads(chunk[6:].strip())
@@ -517,8 +517,7 @@ def _call_llm_sync(messages: list, llm_cfg: dict, max_tokens: int = None) -> str
 
 def generate_stream_response_with_execution(
     messages: list, llm_cfg: dict, output_dir: str = "output_doc",
-    upload_dir: str = "upload_doc", max_tokens: int = None,
-    file_paths: list | None = None
+    upload_dir: str = "upload_doc", file_paths: list | None = None
 ) -> Generator[str, None, None]:
     """
     流式响应 + 代码执行引擎。
@@ -531,10 +530,15 @@ def generate_stream_response_with_execution(
     full_response = ""
 
     # Phase 1: 收集 LLM 完整回复（不直接流式展示，以便过滤代码块）
-    for sse_chunk in generate_stream_response(messages, llm_cfg, max_tokens, include_done=False):
+    for sse_chunk in generate_stream_response(messages, llm_cfg, include_done=False):
         if sse_chunk.startswith('data: ') and sse_chunk != 'data: [DONE]\n\n':
             try:
                 chunk_data = json.loads(sse_chunk[6:].strip())
+                if 'error' in chunk_data:
+                    # API 错误直接传给前端，不继续执行
+                    yield sse_chunk
+                    yield "data: [DONE]\n\n"
+                    return
                 if 'content' in chunk_data:
                     full_response += chunk_data['content']
             except (json.JSONDecodeError, KeyError):
@@ -608,7 +612,7 @@ def generate_stream_response_with_execution(
                     f"请在 ```python 代码块中输出修复后的完整脚本。"
                 )
                 retry_history.append({"role": "user", "content": retry_msg})
-                fix_response = _call_llm_sync(retry_history, llm_cfg, max_tokens)
+                fix_response = _call_llm_sync(retry_history, llm_cfg)
                 fixed_blocks = extract_python_blocks(fix_response)
                 if fixed_blocks:
                     retry_history.append({"role": "assistant", "content": fix_response})
@@ -652,7 +656,7 @@ def generate_stream_response_with_execution(
                 "请在 ```python 代码块中输出可执行的脚本来完成修改。"
             )
             retry_history.append({"role": "user", "content": retry_msg})
-            fix_response = _call_llm_sync(retry_history, llm_cfg, max_tokens)
+            fix_response = _call_llm_sync(retry_history, llm_cfg)
             fixed_blocks = extract_python_blocks(fix_response)
             if fixed_blocks:
                 result = execute_code("\n\n".join(fixed_blocks), output_dir=output_dir, upload_dir=upload_dir, file_paths=file_paths)
