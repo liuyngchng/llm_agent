@@ -671,6 +671,14 @@ app = create_app()
 
 # 当直接运行脚本时，启动开发服务器
 if __name__ == '__main__':
+    # ====== Debug链接：生成带 token 的直接访问链接 ======
+    debug_token = cm_utils.create_token(1, 0, 86400, my_cfg['sys']['cypher_key'])
+    print(f"\n{'='*70}")
+    print(f"  Debug访问链接（直接点击进入）:")
+    print(f"  >>> http://127.0.0.1:19003?t={debug_token}")
+    print(f"  uid=1, role=0, token有效期=24h")
+    print(f"{'='*70}\n")
+
     # port = get_console_arg1()
     port = 19003
     logger.info(f"docx_service_listen_on_port {port}")

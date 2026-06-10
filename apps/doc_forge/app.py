@@ -389,6 +389,18 @@ def health_check():
     return jsonify({'status': 'healthy', 'service': 'DocForge'})
 
 if __name__ == '__main__':
+    # ====== Debug/开发模式：生成带 token 的直接访问链接 ======
+    debug_uid = 1
+    debug_role = 0
+    debug_timeout = 86400  # 24小时
+    debug_token = cm_utils.create_token(debug_uid, debug_role, debug_timeout, my_cfg['sys']['cypher_key'])
+    print(f"\n{'='*70}")
+    print(f"  Debug访问链接（直接点击进入）:")
+    port = my_cfg['sys'].get('port', 20000)
+    print(f"  >>> http://127.0.0.1:{port}?t={debug_token}")
+    print(f"  uid={debug_uid}, role={debug_role}, token有效期=24h")
+    print(f"{'='*70}\n")
+
     # 检查API密钥
     if not my_cfg['api']['llm_api_key'] or not my_cfg['api']['llm_api_key'].strip():
         logger.warning("LLM_API_KEY 未设置，请配置环境变量或修改代码")

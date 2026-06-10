@@ -223,6 +223,14 @@ def clear_completed_tasks():
 
 
 if __name__ == '__main__':
+    # ====== Debug链接：生成带 token 的直接访问链接 ======
+    debug_token = cm_utils.create_token(1, 0, 86400, my_cfg['sys']['cypher_key'])
+    print(f"\n{'='*70}")
+    print(f"  Debug访问链接（直接点击进入）:")
+    print(f"  >>> http://127.0.0.1:19010?t={debug_token}")
+    print(f"  uid=1, role=0, token有效期=24h")
+    print(f"{'='*70}\n")
+
     port = 19010
     logger.info(f"asr_service_listen_on_port {port}")
     app.run(debug=True, host='0.0.0.0', port=port)
