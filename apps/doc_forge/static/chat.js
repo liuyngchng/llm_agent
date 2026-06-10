@@ -987,13 +987,28 @@ async function loadWorkspaceFiles() {
 }
 
 function downloadWorkspaceFile(filename) {
-    const a = document.createElement('a');
-    a.href = '/download/workspace/' + encodeURIComponent(filename);
-    a.download = filename;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    // HTTPS + 自签证书下，a.click() 方式会被浏览器拦截
+    // 改用 fetch + blob 方式绕过安全策略
+    fetch('/download/workspace/' + encodeURIComponent(filename))
+        .then(response => {
+            if (!response.ok) throw new Error('下载失败: ' + response.status);
+            return response.blob();
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+        })
+        .catch(err => {
+            console.error('下载文件失败:', err);
+            alert('下载文件失败: ' + err.message);
+        });
 }
 
 async function deleteWorkspaceFile(filename, itemElement) {
