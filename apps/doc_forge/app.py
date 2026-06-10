@@ -153,14 +153,13 @@ def chat():
     try:
         data = request.json
         user_message = data.get('message', '').strip()
-        custom_max_tokens = data.get('max_tokens')
         history_length = len(data.get('history', []))
         t = data.get('t', 0)
         uid = int(data.get('uid', -1))
         session_key = f"{uid}_{get_client_ip()}"
         if not auth_info.get(session_key, None) or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT:
             return jsonify({'error': 'auth_expired', 'redirect': get_portal_login_url(AppType.DOC_FORGE.name.lower())}), 401
-        logger.info(f"收到用户消息: {user_message}, 历史长度: {history_length}, custom_max_tokens, {custom_max_tokens}")
+        logger.info(f"收到用户消息: {user_message}, 历史长度: {history_length}")
 
         if not user_message:
             logger.warning("消息为空")
@@ -198,7 +197,7 @@ def chat():
                 messages, my_cfg['api'],
                 output_dir=WORKSPACE_DIR,
                 upload_dir=UPLOAD_DIR,
-                max_tokens=custom_max_tokens,
+                max_tokens=8096,
                 file_paths=user_files
             ):
                 yield sse_chunk
