@@ -40,7 +40,7 @@ def _post(endpoint: str, body: dict) -> bool:
         resp = requests.post(url, json=body, timeout=10, verify=False)
         return resp.status_code == 200
     except Exception as e:
-        logger.exception(f"stats_api_post_failed, endpoint={endpoint}")
+        logger.error(f"stats_api_post_failed, endpoint={endpoint}")
         return False
 
 
@@ -52,7 +52,7 @@ def _get(endpoint: str) -> list | dict | None:
         if resp.status_code == 200:
             return resp.json()
     except Exception as e:
-        logger.exception(f"stats_api_get_failed, endpoint={endpoint}")
+        logger.error(f"stats_api_get_failed, endpoint={endpoint}")
     return None
 
 
