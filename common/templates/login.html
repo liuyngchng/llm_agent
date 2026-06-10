@@ -26,6 +26,7 @@
                 <div>{{sys_name}}</div>
             </div>
             <p class="login-subtitle">{{ _('auth.login_subtitle') }}</p>
+            <div class="server-clock" id="serverClock"></div>
         </div>
 
         <form id="my_form" method="post" action="/login">
@@ -229,6 +230,21 @@
                 document.getElementById("login-button").click();
             }
         });
+
+        // 服务器时钟
+        (function() {
+            var serverTime = {{ server_time }};
+            var clockEl = document.getElementById('serverClock');
+            function updateClock() {
+                var d = new Date(serverTime * 1000);
+                var pad = function(n) { return String(n).padStart(2, '0'); };
+                clockEl.textContent = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+                    + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+                serverTime++;
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+        })();
     </script>
 </body>
 </html>

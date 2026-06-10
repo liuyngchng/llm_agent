@@ -84,6 +84,14 @@ body {
     margin-top: 10px;
 }
 
+.server-clock {
+    font-size: 0.85rem;
+    color: #999;
+    margin-top: 8px;
+    font-family: 'Courier New', monospace;
+    user-select: none;
+}
+
 .form-group {
     margin-bottom: 25px;
     position: relative;

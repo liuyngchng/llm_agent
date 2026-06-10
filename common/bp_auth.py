@@ -124,6 +124,7 @@ def login_index(app_source=None, app_base_uri=None, warning_info=None):
         "app_base_uri": app_base_uri,
         "warning_info": warning_info,
         "captcha_token": captcha_token,
+        "server_time": int(time.time()),
     }
     auth_flag = get_cfg()['sys']['auth']
     if auth_flag:
