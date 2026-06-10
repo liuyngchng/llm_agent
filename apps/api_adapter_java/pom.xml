@@ -12,8 +12,8 @@
         <relativePath/>
     </parent>
 
-    <groupId>llm-api-adapter</groupId>
-    <artifactId>llm-api-adapter</artifactId>
+    <groupId>api-adapter</groupId>
+    <artifactId>api-adapter</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
@@ -42,7 +42,7 @@
     </dependencies>
 
     <build>
-        <finalName>llm_api_adapter</finalName>
+        <finalName>api_adapter</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
