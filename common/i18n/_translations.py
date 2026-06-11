@@ -613,12 +613,24 @@ TRANSLATIONS = {
             "ar": "خادم MCP يوفر نقاط وصول لعملاء MCP، يدعم استدعاءات الادوات المتعددة والامتدادات.",
         },
         "app_my_remote_doc": {
-            "zh": "我的远程文档",
-            "en": "My Remote Doc",
+            "zh": "OpenClaw 远程文档",
+            "en": "OpenClaw Remote Doc",
             "fr": "Mon Doc Distant",
             "ar": "مستندي البعيد",
         },
         "app_my_remote_doc_desc": {
+            "zh": "浏览、下载和管理远程工作空间中的文件。",
+            "en": "Browse, download and manage files in your remote workspace.",
+            "fr": "Parcourez, telechargez et gerez les fichiers de votre espace de travail distant.",
+            "ar": "تصفح وتحميل وادارة الملفات في مساحة العمل البعيدة.",
+        },
+        "app_claude_code_remote_doc": {
+            "zh": "ClaudeCode 远程文档",
+            "en": "ClaudeCode Remote Doc",
+            "fr": "Doc Distant ClaudeCode",
+            "ar": "مستند ClaudeCode البعيد",
+        },
+        "app_claude_code_remote_doc_desc": {
             "zh": "浏览、下载和管理远程工作空间中的文件。",
             "en": "Browse, download and manage files in your remote workspace.",
             "fr": "Parcourez, telechargez et gerez les fichiers de votre espace de travail distant.",

@@ -23,7 +23,7 @@
 | 10 | apps/asr | HTTP/HTTPS | 19010 | 语音转录 |
 | 11 | apps/auth_service | HTTP/HTTPS | 19011 | 用户认证服务 |
 | 12 | apps/statistics_service | HTTP/HTTPS | 19012 | 数据统计服务 |
-| 13 | apps/my_remote_doc | HTTP/HTTPS | 19013 | 我的远程文档 |
+| 13 | apps/remote_doc | HTTP/HTTPS | 19013 | 远程文档 |
 | 14 | apps/llm            | HTTP/HTTPS | 16000 | 兼容 OpenAI 接口格式的大语言模型服务        |
 | 15 | apps/embedding      | HTTP/HTTPS | 17000 | 兼容 OpenAI 接口格式的文本嵌入模型服务       |
 | 16 | apps/portal         | HTTP/HTTPS | 443   | 所有应用的入口地址，提供用户登录、退出及APP导航 |

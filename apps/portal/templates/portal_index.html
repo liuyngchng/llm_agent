@@ -136,14 +136,14 @@
                         </div>
                         <div class="app-content">
                             <h3 class="app-title">
-                                <i class="fas fa-terminal"></i> openclaw
+                                <i class="fas fa-terminal"></i> OpenClaw
                             </h3>
                             <p class="app-description">
-                                openclaw
+                                OpenClaw
                             </p>
                             <div class="app-meta">
                                 <span class="app-port">{{ _('portal.port_label', port=38789) }}</span>
-                                <span>openclaw</span>
+                                <span>OpenClaw</span>
                             </div>
                             <a href="{{claw_url}}" class="app-link" target="_blank">{{ _('portal.enter_app') }}</a>
                         </div>
@@ -155,16 +155,34 @@
                         </div>
                         <div class="app-content">
                             <h3 class="app-title">
-                                <i class="fas fa-magic"></i> Claude Code
+                                <i class="fas fa-magic"></i> ClaudeCode
                             </h3>
                             <p class="app-description">
-                                Claude Code
+                                ClaudeCode
                             </p>
                             <div class="app-meta">
                                 <span class="app-port">{{ _('portal.port_label', port=19004) }}</span>
-                                <span>claude_code</span>
+                                <span>ClaudeCode</span>
                             </div>
                             <a href="{{claude_code_url}}" class="app-link" target="_blank">{{ _('portal.enter_app') }}</a>
+                        </div>
+                    </div>
+                    <div class="app-card">
+                        <div class="app-icon">
+                            <i class="fas fa-cloud"></i>
+                        </div>
+                        <div class="app-content">
+                            <h3 class="app-title">
+                                <i class="fas fa-cloud"></i> {{ _('portal.app_claude_code_remote_doc') }}
+                            </h3>
+                            <p class="app-description">
+                                {{ _('portal.app_claude_code_remote_doc_desc') }}
+                            </p>
+                            <div class="app-meta">
+                                <span class="app-port">{{ _('portal.port_label', port=19014) }}</span>
+                                <span>claude_code_remote_doc</span>
+                            </div>
+                            <a href="{{app_base_uri}}:19014?t={{t}}" class="app-link">{{ _('portal.enter_app') }}</a>
                         </div>
                     </div>
                     <div class="app-card">
@@ -180,7 +198,7 @@
                             </p>
                             <div class="app-meta">
                                 <span class="app-port">{{ _('portal.port_label', port=19013) }}</span>
-                                <span>my_remote_doc</span>
+                                <span>open_claw_remote_doc</span>
                             </div>
                             <a href="{{app_base_uri}}:19013?t={{t}}" class="app-link">{{ _('portal.enter_app') }}</a>
                         </div>
