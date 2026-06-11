@@ -22,7 +22,7 @@ TRANSLATIONS = {
         "OPEN": {"zh": "开放平台", "en": "Open Platform", "fr": "Plateforme ouverte", "ar": "منصة مفتوحة"},
         "PAPER_REVIEW": {"zh": "文档审核", "en": "Document Review", "fr": "Revision de document", "ar": "مراجعة المستندات"},
         "ASR": {"zh": "语音识别", "en": "Speech Recognition", "fr": "Reconnaissance vocale", "ar": "التعرف على الكلام"},
-        "MY_REMOTE_DOC": {"zh": "我的远程文档", "en": "My Remote Doc", "fr": "Mon Doc Distant", "ar": "مستندي البعيد"},
+        "REMOTE_DOC": {"zh": "远程文档", "en": "Remote Doc", "fr": "Mon Doc Distant", "ar": "مستندي البعيد"},
         "PORTAL": {"zh": "AI 应用", "en": "AI Apps", "fr": "Apps IA", "ar": "تطبيقات الذكاء الاصطناعي"},
     },
 
@@ -613,8 +613,8 @@ TRANSLATIONS = {
             "ar": "خادم MCP يوفر نقاط وصول لعملاء MCP، يدعم استدعاءات الادوات المتعددة والامتدادات.",
         },
         "app_my_remote_doc": {
-            "zh": "OpenClaw 远程文档",
-            "en": "OpenClaw Remote Doc",
+            "zh": "远程文档",
+            "en": "Remote Doc",
             "fr": "Mon Doc Distant",
             "ar": "مستندي البعيد",
         },
@@ -624,19 +624,7 @@ TRANSLATIONS = {
             "fr": "Parcourez, telechargez et gerez les fichiers de votre espace de travail distant.",
             "ar": "تصفح وتحميل وادارة الملفات في مساحة العمل البعيدة.",
         },
-        "app_claude_code_remote_doc": {
-            "zh": "ClaudeCode 远程文档",
-            "en": "ClaudeCode Remote Doc",
-            "fr": "Doc Distant ClaudeCode",
-            "ar": "مستند ClaudeCode البعيد",
-        },
-        "app_claude_code_remote_doc_desc": {
-            "zh": "浏览、下载和管理远程工作空间中的文件。",
-            "en": "Browse, download and manage files in your remote workspace.",
-            "fr": "Parcourez, telechargez et gerez les fichiers de votre espace de travail distant.",
-            "ar": "تصفح وتحميل وادارة الملفات في مساحة العمل البعيدة.",
-        },
-        "port_label": {
+                "port_label": {
             "zh": "端口: {port}",
             "en": "Port: {port}",
             "fr": "Port: {port}",

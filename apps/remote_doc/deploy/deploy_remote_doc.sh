@@ -3,7 +3,7 @@ APP='my_remote_doc'
 CONTAINER="${APP}_app"
 APP_DIR="apps/${APP}"
 CURRENT_DIR=$(pwd)
-WORKSPACE="/data/openclaw/workspace"
+WORKSPACE="/data/remote/workspace"
 CONTAINER_WORKSPACE="/opt/app/workspace"
 # 检查当前目录下是否存在 apps/${APP} 文件夹
 if [ ! -d ${APP_DIR} ]; then

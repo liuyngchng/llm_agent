@@ -36,7 +36,7 @@ app.jinja_loader = ChoiceLoader([
     FileSystemLoader(common_templates)
 ])
 app.config['CFG'] = my_cfg
-app.config['APP_SOURCE'] = AppType.MY_REMOTE_DOC.name.lower()
+app.config['APP_SOURCE'] = AppType.REMOTE_DOC.name.lower()
 
 register_i18n(app, scope="my_remote_doc")
 
@@ -75,7 +75,7 @@ def get_webfonts_file(file_name):
 
 @app.route('/')
 def app_home():
-    app_source = AppType.MY_REMOTE_DOC.name.lower()
+    app_source = AppType.REMOTE_DOC.name.lower()
     sys_name = AppType.get_app_type(app_source)
     t = request.args.get("t")
     if not t:
