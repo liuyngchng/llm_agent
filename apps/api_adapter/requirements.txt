@@ -3,3 +3,4 @@ flask==3.1.2
 concurrent-log-handler==0.9.25
 wheel==0.45.1
 requests==2.32.4
+pyyml
