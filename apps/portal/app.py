@@ -82,6 +82,7 @@ def app_home():
             sys_name = my_enums.AppType.get_app_type(app_source)
 
             claw_url = my_cfg['sys'].get('claw_url', '')
+            claude_code_url = my_cfg['sys'].get('claude_code_url', '')
 
             ctx = {
                 "uid": uid,
@@ -91,6 +92,7 @@ def app_home():
                 "sys_name": sys_name,
                 "app_base_uri": app_base_uri,
                 "claw_url": claw_url,
+                "claude_code_url": claude_code_url,
                 "greeting": greeting,
                 "app_source": app_source,
                 "hack_admin": hack_admin,
