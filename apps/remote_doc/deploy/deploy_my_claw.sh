@@ -4,7 +4,7 @@ echo "正在创建 ${CONTAINER} 容器"
 docker run -dit \
   --name ${CONTAINER} \
   --rm \
-  -v /data/openclaw:/root/.openclaw \
+  -v /data/remote/workspace:/root/.openclaw/workspace \
   -e NODE_TLS_REJECT_UNAUTHORIZED=0 \
   -e TZ=Asia/Shanghai \
   -e LANG=C.UTF-8 \
