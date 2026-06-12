@@ -1,5 +1,5 @@
 #!/bin/bash
-APP='my_remote_doc'
+APP='remote_doc'
 CONTAINER="${APP}_app"
 APP_DIR="apps/${APP}"
 CURRENT_DIR=$(pwd)

@@ -1,9 +1,15 @@
 #!/bin/bash
+APP="openclaw"
 CONTAINER="openclaw-gateway"
-echo "正在创建 ${CONTAINER} 容器"
+echo "开始部署 ${APP} 服务"
+docker stop ${CONTAINER}
+echo "正在删除 ${APP} 服务"
+docker rm ${CONTAINER}
+echo "开始创建 ${CONTAINER} 容器"
 docker run -dit \
   --name ${CONTAINER} \
   --rm \
+  -v /data/openclaw:/root/.openclaw \
   -v /data/remote/workspace:/root/.openclaw/workspace \
   -e NODE_TLS_REJECT_UNAUTHORIZED=0 \
   -e TZ=Asia/Shanghai \

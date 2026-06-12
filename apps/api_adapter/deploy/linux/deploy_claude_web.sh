@@ -1,11 +1,12 @@
 #!/bin/bash
 # 需要在容器内启动 api_adaptor,
-# /opt/workspace/llm_agent
+# /opt/claude_code/llm_agent
 # python -m apps.api_adapter.app &
 docker run -dit \
 	--name my_claude_code \
 	--rm \
 	-v /data/remote/workspace:/opt/workspace \
+	-v /data/claude_code:/opt/claude_code \
 	-w /opt/workspace \
 	-e NODE_TLS_REJECT_UNAUTHORIZED=0 \
 	-e ANTHROPIC_BASE_URL=http://127.0.0.1:16001 \
