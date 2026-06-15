@@ -24,9 +24,11 @@ echo "workspace in container, ${WORKSPACE}, on host, ${HOST_WORKSPACE}"
 docker run -dit \
 	--name ${CONTAINER} \
 	--rm \
+	--security-opt seccomp=unconfined \
+  --network llm_net \
 	-w ${WORKSPACE} \
 	-e NODE_TLS_REJECT_UNAUTHORIZED=0 \
-	-e ANTHROPIC_BASE_URL=http://172.17.0.1:16001 \
+	-e ANTHROPIC_BASE_URL=http://api_adapter_app:19000 \
 	-e ANTHROPIC_AUTH_TOKEN=${AUTH_TOKEN} \
 	-e API_TIMEOUT_MS=600000 \
 	-e ANTHROPIC_MODEL=deepseek-chat \

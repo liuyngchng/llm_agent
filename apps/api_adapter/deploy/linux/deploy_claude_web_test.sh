@@ -23,6 +23,7 @@ HOST_WORKSPACE="/data/remote/workspace"
 echo "workspace in container, ${WORKSPACE}, on host, ${HOST_WORKSPACE}"
 docker run -dit \
 	--name ${CONTAINER} \
+	--security-opt seccomp=unconfined \
 	--rm \
 	-w ${WORKSPACE} \
 	-e NODE_TLS_REJECT_UNAUTHORIZED=0 \
