@@ -20,11 +20,10 @@ docker rm ${CONTAINER}
 echo "开始创建 ${CONTAINER} 容器"
 WORKSPACE="/opt/workspace"
 HOST_WORKSPACE="/data/remote/workspace"
-echo "workspace in container,${WORKSPACE}, on host ${HOST_WORKSPACE}"
+echo "workspace in container, ${WORKSPACE}, on host, ${HOST_WORKSPACE}"
 docker run -dit \
 	--name ${CONTAINER} \
 	--rm \
-	-v ${HOST_WORKSPACE}:${WORKSPACE} \
 	-w ${WORKSPACE} \
 	-e NODE_TLS_REJECT_UNAUTHORIZED=0 \
 	-e ANTHROPIC_BASE_URL=http://172.17.0.1:16001 \
