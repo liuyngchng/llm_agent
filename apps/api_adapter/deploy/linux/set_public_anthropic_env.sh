@@ -10,7 +10,16 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     echo "或者：. $SCRIPT_PATH"
     return 1 2>/dev/null || exit 1
 fi
-
+echo '清除网络代理'
+unset http_proxy https_proxy ftp_proxy rsync_proxy
+unset HTTP_PROXY HTTPS_PROXY FTP_PROXY RSYNC_PROXY
+unset all_proxy ALL_PROXY no_proxy NO_PROXY
+if env | grep -qi proxy; then
+    echo "⚠️ 警告：仍有代理环境变量存在："
+    env | grep proxy -i
+else
+    echo "✅ 所有代理环境变量已清除"
+fi
 echo "正在执行: $SCRIPT_NAME"
 
 export ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
