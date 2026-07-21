@@ -31,6 +31,7 @@ from chromadb.api.types import QueryResult
 from common.vdb_meta_util import VdbMeta
 from common.statistic_util import add_embedding_token_by_uid
 from common.cm_utils import estimate_tokens
+from common.xmind_util import XMindLoader
 
 # 配置日志
 log_config_path = 'logging.conf'
@@ -267,6 +268,7 @@ def vector_file(file_id: int, file_name: str, vector_db: str, llm_cfg: dict, chu
             "txt": lambda f: TextLoader(f, encoding='utf8'),
             "pdf": lambda f: UnstructuredPDFLoader(f, encoding='utf8'),
             "docx": lambda f: UnstructuredWordDocumentLoader(f),
+            "xmind": lambda f: XMindLoader(f),
         }
         if file_type not in loader_mapping:
             logger.error(f"Unsupported_file_type: {file_type}")
