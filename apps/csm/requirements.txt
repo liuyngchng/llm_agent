@@ -1,0 +1,7 @@
+gunicorn
+flask
+langchain
+pydantic
+langchain_core
+concurrent-log-handler
+svgwrite

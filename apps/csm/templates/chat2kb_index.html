@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+    <meta charset="UTF-8">
+    <meta id="chat_index.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="text/javascript" src="/static/purify.min.js"></script>
+    <script type="text/javascript" src="/static/marked.min.js"></script>
+    <link rel="stylesheet" href="/static/chat2kb.css">
+    <link rel="stylesheet" href="/static/font-awesome.all.min.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
+    <title>{{sys_name}}</title>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-comments"></i>{{sys_name}}</h1>
+            <div class="system-settings-link-container">
+                <button id="clearChat" class="btn-clear" title="{{ _('chat2kb.clear_chat') }}">
+                    <i class="fas fa-trash-alt"></i> {{ _('chat2kb.clear_chat') }}
+                </button>
+                <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="system-settings-link" target="_blank">
+                    <i class="fas fa-book"></i> {{ _('chat2kb.kb_config') }}
+                </a>
+            </div>
+        </header>
+
+        <div class="chat-container" id="chat-container">
+            <!-- 初始欢迎消息 -->
+            <div class="message-container bot-message-container">
+            </div>
+        </div>
+
+        <form id="query-form">
+            <div class="input-container">
+                <input type="text" class="input-field" id="query-input" name="msg"
+                       placeholder="{{ _('chat2kb.input_placeholder') }}" required autocomplete="off">
+                <div class="toolbar">
+                    <select id="kb_selector" class="kb-selector">
+                        <option value="" disabled selected>{{ _('chat2kb.select_kb') }}</option>
+                    </select>
+                    <button type="button" class="kb-refresh-btn" id="kbRefreshBtn" onclick="loadKnowledgeBases()" title="{{ _('common.refresh') }}">
+                        <i class="fas fa-sync-alt" id="refreshIcon"></i>
+                    </button>
+                    <select id="model_selector" class="kb-selector">
+                        <option value="1">deepseek</option>
+                        <option value="2">通义千问</option>
+                        <option value="3">智谱</option>
+                    </select>
+                </div>
+                <div class="button-container">
+                    <button type="submit" class="send-button" id="send-button">
+                        <i class="fas fa-paper-plane"></i> {{ _('chat2kb.send') }}
+                    </button>
+                    <button type="button" class="stop-button" id="stop-button" style="display:none;">
+                        <i class="fas fa-stop"></i> {{ _('chat2kb.stop') }}
+                    </button>
+                </div>
+            </div>
+
+            <input type="hidden" id ="uid" name="uid" value="{{uid}}">
+            <input type="hidden" id ="t" name="t" value="{{t}}">
+            <input type="hidden" id ="app_source" name="app_source" value="{{app_source}}">
+            <input type="hidden" id ="greeting" name="greeting" value="{{greeting}}">
+        </form>
+    </div>
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
+    <script type="text/javascript" src="/static/chat2kb.js"></script>
+</body>
+</html>

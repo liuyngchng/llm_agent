@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+    <title>{{ _('vdb.title') }}</title>
+    <meta charset="utf-8">
+    <meta id="vdb_index.html">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/vdb.css?t=2">
+    <link rel="stylesheet" href="/static/font-awesome.all.min.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-database"></i> {{ _('vdb.title') }}</h1>
+            <p>{{ _('vdb.subtitle') }}</p>
+        </header>
+        <div class="content-section">
+            <h2><i class="fas fa-database"></i> {{ _('vdb.title') }}</h2>
+
+            <div class="info-box">
+                <h3><i class="fas fa-info-circle"></i> {{ _('vdb.info_title') }}</h3>
+                <p>{{ _('vdb.info_desc') }}</p>
+            </div>
+
+            <div class="knowledge-base-manager">
+                <div class="kb-controls">
+                    <div class="kb-combined-container">
+                        <div class="kb-inline-group">
+                            <div class="kb-select-section">
+                                <div class="kb-select-wrapper">
+                                    <select id="kb_selector" class="kb-select" aria-label="{{ _('vdb.select_kb') }}">
+                                        <option value="">{{ _('vdb.select_kb_option') }}</option>
+                                    </select>
+                                    <div class="kb-select-actions">
+                                        <button class="kb-action-btn btn-refresh" id="kbRefreshBtn" title="{{ _('vdb.refresh_list') }}">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                        <button class="kb-action-btn btn-delete" id="deleteBtn" title="{{ _('vdb.delete_kb') }}" style="display:none;">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                        <button class="kb-action-btn btn-star" id="setDefaultBtn" title="{{ _('vdb.set_default_title') }}" style="display:none;">
+                                            <i class="fas fa-star"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="kb-divider-vertical">
+                                <span>{{ _('vdb.or_divider') }}</span>
+                            </div>
+
+                            <div class="kb-create-section">
+                                <div class="kb-create-inputs">
+                                    <input type="text" id="kb_name" class="kb-create-input"
+                                           placeholder="{{ _('vdb.kb_name_placeholder') }}">
+                                    <div class="visibility-toggle">
+                                        <input type="checkbox" id="public_checkbox" class="public-checkbox">
+                                        <label for="public_checkbox" class="public-label">
+                                            <i class="fas fa-globe"></i>
+                                            <span>{{ _('vdb.public') }}</span>
+                                        </label>
+                                    </div>
+                                    <button class="btn btn-primary btn-create" id="createKB" aria-label="{{ _('vdb.creating_new_kb') }}">
+                                        <i class="fas fa-plus-circle"></i> {{ _('vdb.create_btn') }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="kb_status" class="status-container" style="display:none">
+                        <i class="fas fa-check-circle"></i>
+                        <span>{{ _('vdb.kb_created_status') }}</span>
+                    </div>
+
+                    <div class="kb-status-area">
+                        <div class="kb-status-info">
+                            <strong>{{ _('vdb.current_kb') }}</strong>
+                            <span id="vdb_status_desc">{{vdb_status}}</span>
+                        </div>
+                        <div class="kb-status-badges">
+                            <span id="public_badge" class="badge badge-public" style="display:none;">
+                                <i class="fas fa-globe"></i> {{ _('vdb.public') }}
+                            </span>
+                            <span id="default_badge" class="badge badge-default" style="display:none;">
+                                <i class="fas fa-star"></i> {{ _('vdb.default_badge') }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="fileListContainer" style="margin-top: 20px; display: none;">
+                    <h3><i class="fas fa-file-alt"></i> {{ _('vdb.file_list_title') }}</h3>
+                    <table id="fileListTable" class="result-table">
+                        <thead>
+                            <tr>
+                                <th>{{ _('vdb.col_no') }}</th>
+                                <th>{{ _('vdb.col_filename') }}</th>
+                                <th>{{ _('vdb.col_create_time') }}</th>
+                                <th>{{ _('vdb.col_progress') }}</th>
+                                <th>{{ _('vdb.col_details') }}</th>
+                                <th>{{ _('vdb.col_actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="step2" class="hidden">
+            <div class="content-section">
+                <h2><i class="fas fa-file-upload"></i> {{ _('vdb.doc_upload_title') }}</h2>
+                <div class="input-group">
+                    <input type="file" id="fileInput" accept=".pdf,.docx,.txt" multiple style="display:none">
+                    <button class="btn btn-primary" id="selectBtn">
+                        <i class="fas fa-folder-open"></i> {{ _('vdb.select_docs') }}
+                    </button>
+                    <div id="fileList" class="file-list-container">
+                        <div class="file-list-header">
+                            <span>{{ _('vdb.files_selected', n='<span id="fileCount">0</span>')|safe }}</span>
+                            <button type="button" class="btn-clear" id="clearFilesBtn">{{ _('vdb.clear_btn') }}</button>
+                        </div>
+                        <div id="fileItems" class="file-items">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="startBtn">
+                        <i class="fas fa-cloud-upload-alt"></i> {{ _('vdb.upload_btn') }}
+                    </button>
+                </div>
+
+                <div class="progress-display">
+                    <div class="progress-text">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="fileUploadResult">{{ _('vdb.upload_instruction') }}</span>
+                    </div>
+                    <div id="uploadProgress" class="upload-progress" style="display: none;">
+                        <div class="progress-bar">
+                            <div id="overallProgressFill" class="progress-fill"></div>
+                        </div>
+                        <div class="progress-info">
+                            <span id="progressText">{{ _('vdb.uploading_progress', done=0, total=0) }}</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>{{ _('vdb.footer_text') }}</p>
+        </footer>
+    </div>
+
+    <input type="hidden" id="uid" name="uid" value="{{uid}}">
+    <input type="hidden" id="t" name="t" value="{{t}}">
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
+    <script type="text/javascript" src="/static/vdb.js?a=222"></script>
+</body>
+</html>
