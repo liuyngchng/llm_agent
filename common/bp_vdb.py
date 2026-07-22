@@ -44,6 +44,7 @@ task_lock = threading.Lock()
 ALLOWED_TYPES = {
     '.pdf': [b'%PDF'],          # PDF签名
     '.docx': [b'PK\x03\x04'],   # ZIP格式签名(DOCX本质是ZIP)
+    '.xmind': [b'PK\x03\x04'],  # ZIP格式签名(XMind本质是ZIP)
     '.txt': []                  # 文本文件无固定签名
 }
 
@@ -237,7 +238,7 @@ def upload_file():
             return json.dumps(info, ensure_ascii=False), 400
         # 检查文件类型
         logger.info(f"{uid}, filename_safe_check_finish: {safe_filename}")
-        allowed_extensions = {'.docx', '.pdf', '.txt'}
+        allowed_extensions = {'.docx', '.pdf', '.txt', '.xmind'}
         original_filename = upload_file_name
         file_ext = os.path.splitext(original_filename)[1].lower()  # 提取扩展名并转为小写
         if file_ext not in allowed_extensions:
