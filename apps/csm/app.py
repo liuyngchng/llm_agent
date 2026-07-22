@@ -182,7 +182,7 @@ def register_routes(app):
             logger.error(f"auth_expired_for_uid, {uid}")
             return app.response_class(
                 json.dumps({'error': 'auth_expired',
-                            'redirect': get_portal_login_url(AppType.CHAT2KB.name.lower())}),
+                            'redirect': get_portal_login_url(AppType.CSM.name.lower())}),
                 status=401,
                 mimetype='application/json'
             )
@@ -242,7 +242,7 @@ def register_routes(app):
             logger.info(f"full_response: {full_response}")
             output_tokens = estimate_tokens(json.dumps(full_response))
             logger.info(f"{uid}, output_tokens, {output_tokens}")
-            add_output_token_by_uid(uid, output_tokens, AppType.CHAT2KB.name.lower())
+            add_output_token_by_uid(uid, output_tokens, AppType.CSM.name.lower())
 
         return app.response_class(generate_stream(), mimetype='text/event-stream')
 
