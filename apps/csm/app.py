@@ -215,8 +215,22 @@ def register_routes(app):
         chat_agent = ChatAgent(my_cfg)
 
         def generate_stream():
+            from datetime import datetime
+            now = datetime.now()
+            cur_date = now.strftime("%Y-%m-%d")
+            weekdays = ["一", "二", "三", "四", "五", "六", "日"]
+            cur_week = weekdays[now.weekday()]
+            best_practice = my_cfg.get('prompts', {}).get('best_practice', '')
+
             full_response = ""
-            stream_input = {"context": context, "question": msg, "history": history}
+            stream_input = {
+                "context": context,
+                "question": msg,
+                "history": history,
+                "cur_date": cur_date,
+                "cur_week": cur_week,
+                "best_practice": best_practice,
+            }
             logger.info(f"stream_input {stream_input}")
             input_tokens = estimate_tokens(str(stream_input))
             logger.info(f"{uid}, input_tokens, {input_tokens}")
