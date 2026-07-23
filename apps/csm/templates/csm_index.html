@@ -14,7 +14,7 @@
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-comments"></i>{{sys_name}}</h1>
+            <h1><i class="fas fa-headset"></i>{{sys_name}}</h1>
             <div class="system-settings-link-container">
                 <button id="clearChat" class="btn-clear" title="{{ _('csm.clear_chat') }}">
                     <i class="fas fa-trash-alt"></i> {{ _('csm.clear_chat') }}
@@ -42,11 +42,6 @@
                     <button type="button" class="kb-refresh-btn" id="kbRefreshBtn" onclick="loadKnowledgeBases()" title="{{ _('common.refresh') }}">
                         <i class="fas fa-sync-alt" id="refreshIcon"></i>
                     </button>
-                    <select id="model_selector" class="kb-selector">
-                        <option value="1">deepseek</option>
-                        <option value="2">通义千问</option>
-                        <option value="3">智谱</option>
-                    </select>
                 </div>
                 <div class="button-container">
                     <button type="submit" class="send-button" id="send-button">

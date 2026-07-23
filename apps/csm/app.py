@@ -43,8 +43,6 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 
-LLM_MODEL_DICT = {"1": "deepseek-v4-flash", "2": "qwen2dot5-7b-chat", "3": "glm-4.5v"}
-
 # 全局变量，用于存储后台任务状态
 background_tasks_started = False
 background_tasks_lock = threading.Lock()
@@ -168,12 +166,11 @@ def register_routes(app):
         msg = request.form.get('msg', "").strip()
         uid = int(request.form.get('uid'))
         kb_id = request.form.get('kb_id')
-        model_id = request.form.get('model_id')
         history = request.form.get('history', '')
 
         if not msg or not uid or not kb_id:
             warning_info = get_msg("csm.missing_params")
-            logger.error(f"{warning_info}, {msg}, {uid}, {kb_id}, {model_id}")
+            logger.error(f"{warning_info}, {msg}, {uid}, {kb_id}")
             return warning_info
 
         session_key = f"{uid}_{get_client_ip()}"
@@ -201,10 +198,6 @@ def register_routes(app):
             answer = get_msg("csm.no_knowledge")
             logger.info(f"vector_db_dir_not_exists_return_none, {answer}, {my_vector_db_dir}")
             return answer
-
-        # if model_id:
-        #     my_cfg['api']['llm_model_name'] = LLM_MODEL_DICT.get(model_id)
-        #     logger.info(f"llm_cfg_customized_for_uid, {uid}, {my_cfg['api']['llm_model_name']}")
 
         context = search_txt(msg, my_vector_db_dir, 0.1, my_cfg['api'], 3)
         if not context:
@@ -282,13 +275,13 @@ if __name__ == '__main__':
     debug_token = cm_utils.create_token(1, 0, 86400, my_cfg['sys']['cypher_key'])
     print(f"\n{'='*70}")
     print(f"  Debug访问链接（直接点击进入）:")
-    print(f"  >>> http://127.0.0.1:19002?t={debug_token}")
+    print(f"  >>> http://127.0.0.1:19007?t={debug_token}")
     print(f"  uid=1, role=0, token有效期=24h")
     print(f"{'='*70}\n")
 
     logger.info(f"my_cfg {my_cfg.get('db')},\n{my_cfg.get('api')}")
     app.config['ENV'] = 'dev'
     # port = get_console_arg1()
-    port = 19002
+    port = 19007
     logger.info(f"csm_listen_on_port {port}")
     app.run(host='0.0.0.0', port=port)
