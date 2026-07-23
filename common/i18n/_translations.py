@@ -927,6 +927,142 @@ TRANSLATIONS = {
     },
 
     # ============================================================
+    # csm — smart customer service
+    # ============================================================
+    "csm": {
+        "kb_config": {
+            "zh": "知识库配置",
+            "en": "Knowledge Base Config",
+            "fr": "Configuration de la base de connaissances",
+            "ar": "اعدادات قاعدة المعرفة",
+        },
+        "select_kb": {
+            "zh": "-- 选择知识库 --",
+            "en": "-- Select Knowledge Base --",
+            "fr": "-- Selectionner la base de connaissances --",
+            "ar": "-- اختر قاعدة المعرفة --",
+        },
+        "input_placeholder": {
+            "zh": "输入你的问题，帮你深度解答...",
+            "en": "Type your question for in-depth answers...",
+            "fr": "Tapez votre question pour des reponses approfondies...",
+            "ar": "اكتب سؤالك للحصول على اجابات معمقة...",
+        },
+        "question_required": {
+            "zh": "请填写您想问的问题",
+            "en": "Please enter your question",
+            "fr": "Veuillez entrer votre question",
+            "ar": "الرجاء كتابة سؤالك",
+        },
+        "generation_error": {
+            "zh": "回答生成中断或出错，请重试",
+            "en": "Response generation interrupted or failed, please retry",
+            "fr": "Generation de reponse interrompue ou echouee, veuillez reessayer",
+            "ar": "تم مقاطعة انشاء الرد او فشل، يرجى إعادة المحاولة",
+        },
+        "generation_retry": {
+            "zh": "回答生成出错，请重试",
+            "en": "Response generation error, please retry",
+            "fr": "Erreur de generation de reponse, veuillez reessayer",
+            "ar": "خطا في انشاء الرد، يرجى إعادة المحاولة",
+        },
+        "stopped_note": {
+            "zh": "（生成已停止）",
+            "en": "(generation stopped)",
+            "fr": "(generation arretee)",
+            "ar": "(تم ايقاف الانشاء)",
+        },
+        "thinking": {
+            "zh": "思考中...",
+            "en": "Thinking...",
+            "fr": "Reflexion...",
+            "ar": "جاري التفكير...",
+        },
+        "user_role": {"zh": "用户", "en": "User", "fr": "Utilisateur", "ar": "المستخدم"},
+        "assistant_role": {
+            "zh": "助手",
+            "en": "Assistant",
+            "fr": "Assistant",
+            "ar": "المساعد",
+        },
+        "ai_assistant": {
+            "zh": "智能助手",
+            "en": "AI Assistant",
+            "fr": "Assistant IA",
+            "ar": "المساعد الذكي",
+        },
+        "network_failed": {
+            "zh": "网络响应失败",
+            "en": "Network request failed",
+            "fr": "Echec de la requete reseau",
+            "ar": "فشل طلب الشبكة",
+        },
+        "kb_refreshed": {
+            "zh": "知识库列表已刷新",
+            "en": "Knowledge base list refreshed",
+            "fr": "Liste des bases de connaissances actualisee",
+            "ar": "تم تحديث قائمة قواعد المعرفة",
+        },
+        "no_kb": {
+            "zh": "没有可用的知识库",
+            "en": "No knowledge bases available",
+            "fr": "Aucune base de connaissances disponible",
+            "ar": "لا توجد قواعد معرفة متاحة",
+        },
+        "refresh_kb_failed": {
+            "zh": "刷新知识库失败: ",
+            "en": "Failed to refresh knowledge base: ",
+            "fr": "Echec d'actualisation de la base de connaissances: ",
+            "ar": "فشل تحديث قاعدة المعرفة: ",
+        },
+        "copied_state": {
+            "zh": "已复制!",
+            "en": "Copied!",
+            "fr": "Copie!",
+            "ar": "تم النسخ!",
+        },
+        "send": {"zh": "发送", "en": "Send", "fr": "Envoyer", "ar": "ارسال"},
+        "stop": {"zh": "停止", "en": "Stop", "fr": "Arreter", "ar": "ايقاف"},
+        "clear_chat": {"zh": "清空聊天", "en": "Clear Chat", "fr": "Effacer la conversation", "ar": "مسح المحادثة"},
+        "no_kb_selected": {
+            "zh": "未选择知识库",
+            "en": "No knowledge base selected",
+            "fr": "Aucune base de connaissances selectionnee",
+            "ar": "لم يتم اختيار قاعدة معرفة",
+        },
+        "loading_kb_failed": {
+            "zh": "加载知识库失败: ",
+            "en": "Failed to load knowledge base: ",
+            "fr": "Echec de chargement de la base de connaissances: ",
+            "ar": "فشل تحميل قاعدة المعرفة: ",
+        },
+        "missing_params": {
+            "zh": "缺少用户消息、用户身份信息、知识库信息中的一个或多个参数，请您检查后再试",
+            "en": "Missing one or more parameters: message, user ID, or knowledge base ID. Please check and try again.",
+            "fr": "Parametres manquants: message, ID utilisateur ou ID de base de connaissances. Veuillez verifier et reessayer.",
+            "ar": "معلمات مفقودة: الرسالة او معرف المستخدم او معرف قاعدة المعرفة. يرجى التحقق والمحاولة مرة اخرى.",
+        },
+        "kb_not_found": {
+            "zh": "所选择的知识库不存在，请您检查后再试",
+            "en": "The selected knowledge base does not exist. Please check and try again.",
+            "fr": "La base de connaissances selectionnee n'existe pas. Veuillez verifier et reessayer.",
+            "ar": "قاعدة المعرفة المحددة غير موجودة. يرجى التحقق والمحاولة مرة اخرى.",
+        },
+        "no_knowledge": {
+            "zh": "暂时没有相关知识提供给您，请您先上传文档，创建知识库",
+            "en": "No relevant knowledge available yet. Please upload documents to create a knowledge base first.",
+            "fr": "Aucune connaissance pertinente disponible. Veuillez d'abord televerser des documents pour creer une base de connaissances.",
+            "ar": "لا توجد معرفة ذات صلة متاحة بعد. يرجى رفع المستندات لانشاء قاعدة معرفة اولا.",
+        },
+        "no_relevant_content": {
+            "zh": "暂时没有相关内容提供给您，您可以尝试换一个问题试试",
+            "en": "No relevant content found. Try asking a different question.",
+            "fr": "Aucun contenu pertinent trouve. Essayez de poser une autre question.",
+            "ar": "لم يتم العثور على محتوى ذي صلة. حاول طرح سؤال مختلف.",
+        },
+    },
+
+    # ============================================================
     # docx — document generation
     # ============================================================
     "docx": {

@@ -16,11 +16,11 @@
         <header>
             <h1><i class="fas fa-comments"></i>{{sys_name}}</h1>
             <div class="system-settings-link-container">
-                <button id="clearChat" class="btn-clear" title="{{ _('chat2kb.clear_chat') }}">
-                    <i class="fas fa-trash-alt"></i> {{ _('chat2kb.clear_chat') }}
+                <button id="clearChat" class="btn-clear" title="{{ _('csm.clear_chat') }}">
+                    <i class="fas fa-trash-alt"></i> {{ _('csm.clear_chat') }}
                 </button>
                 <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="system-settings-link" target="_blank">
-                    <i class="fas fa-book"></i> {{ _('chat2kb.kb_config') }}
+                    <i class="fas fa-book"></i> {{ _('csm.kb_config') }}
                 </a>
             </div>
         </header>
@@ -34,10 +34,10 @@
         <form id="query-form">
             <div class="input-container">
                 <input type="text" class="input-field" id="query-input" name="msg"
-                       placeholder="{{ _('chat2kb.input_placeholder') }}" required autocomplete="off">
+                       placeholder="{{ _('csm.input_placeholder') }}" required autocomplete="off">
                 <div class="toolbar">
                     <select id="kb_selector" class="kb-selector">
-                        <option value="" disabled selected>{{ _('chat2kb.select_kb') }}</option>
+                        <option value="" disabled selected>{{ _('csm.select_kb') }}</option>
                     </select>
                     <button type="button" class="kb-refresh-btn" id="kbRefreshBtn" onclick="loadKnowledgeBases()" title="{{ _('common.refresh') }}">
                         <i class="fas fa-sync-alt" id="refreshIcon"></i>
@@ -50,10 +50,10 @@
                 </div>
                 <div class="button-container">
                     <button type="submit" class="send-button" id="send-button">
-                        <i class="fas fa-paper-plane"></i> {{ _('chat2kb.send') }}
+                        <i class="fas fa-paper-plane"></i> {{ _('csm.send') }}
                     </button>
                     <button type="button" class="stop-button" id="stop-button" style="display:none;">
-                        <i class="fas fa-stop"></i> {{ _('chat2kb.stop') }}
+                        <i class="fas fa-stop"></i> {{ _('csm.stop') }}
                     </button>
                 </div>
             </div>

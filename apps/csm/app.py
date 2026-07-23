@@ -16,7 +16,7 @@ import threading
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, abort, send_from_directory, render_template
 from jinja2 import ChoiceLoader, FileSystemLoader
-from apps.chat2kb.chat_agent import ChatAgent
+from apps.csm.chat_agent import ChatAgent
 from common.const import SESSION_TIMEOUT, get_const
 from common.my_enums import AppType
 from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
@@ -43,7 +43,7 @@ os.system(
     "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
 )
 
-LLM_MODEL_DICT = {"1": "deepseek-doc_forge", "2": "qwen2dot5-7b-doc_forge", "3": "glm-4.5v"}
+LLM_MODEL_DICT = {"1": "deepseek-v4-flash", "2": "qwen2dot5-7b-chat", "3": "glm-4.5v"}
 
 # 全局变量，用于存储后台任务状态
 background_tasks_started = False
@@ -156,7 +156,7 @@ def register_routes(app):
         logger.info(f"return_page {dt_idx}, ctx {ctx}")
         return render_template(dt_idx, **ctx)
 
-    @app.route('/doc_forge', methods=['POST'])
+    @app.route('/chat', methods=['POST'])
     def chat(catch=None):
         """
         curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/chat' \
@@ -292,5 +292,5 @@ if __name__ == '__main__':
     app.config['ENV'] = 'dev'
     # port = get_console_arg1()
     port = 19002
-    logger.info(f"chat2kb_listen_on_port {port}")
+    logger.info(f"csm_listen_on_port {port}")
     app.run(host='0.0.0.0', port=port)
