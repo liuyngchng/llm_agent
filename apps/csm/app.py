@@ -62,13 +62,13 @@ def create_app():
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
     app.config['JSON_AS_ASCII'] = False
     app.config['CFG'] = my_cfg
-    app.config['APP_SOURCE'] = my_enums.AppType.CHAT2KB.name.lower()
+    app.config['APP_SOURCE'] = my_enums.AppType.CSM.name.lower()
 
     # 注册蓝图
     app.register_blueprint(vdb_bp)
 
     # 注册 i18n
-    register_i18n(app, scope="chat2kb")
+    register_i18n(app, scope="csm")
 
     # 注册路由
     register_routes(app)
@@ -114,7 +114,7 @@ def register_routes(app):
 
     @app.route('/')
     def app_home():
-        app_source = AppType.CHAT2KB.name.lower()
+        app_source = AppType.CSM.name.lower()
         sys_name = my_enums.AppType.get_app_type(app_source)
         t = request.args.get("t")
         if not t:
@@ -172,7 +172,7 @@ def register_routes(app):
         history = request.form.get('history', '')
 
         if not msg or not uid or not kb_id:
-            warning_info = get_msg("chat2kb.missing_params")
+            warning_info = get_msg("csm.missing_params")
             logger.error(f"{warning_info}, {msg}, {uid}, {kb_id}, {model_id}")
             return warning_info
 
@@ -192,23 +192,23 @@ def register_routes(app):
 
         vdb_info = VdbMeta.get_vdb_info_by_id(int(kb_id))
         if not vdb_info:
-            warning_info = get_msg("chat2kb.kb_not_found")
+            warning_info = get_msg("csm.kb_not_found")
             logger.error(f"{warning_info}, {kb_id}")
             return warning_info
 
         my_vector_db_dir = f"{VDB_PREFIX}{vdb_info[0]['uid']}_{kb_id}"
         if not os.path.exists(my_vector_db_dir):
-            answer = get_msg("chat2kb.no_knowledge")
+            answer = get_msg("csm.no_knowledge")
             logger.info(f"vector_db_dir_not_exists_return_none, {answer}, {my_vector_db_dir}")
             return answer
 
-        if model_id:
-            my_cfg['api']['llm_model_name'] = LLM_MODEL_DICT.get(model_id)
-            logger.info(f"llm_cfg_customized_for_uid, {uid}, {my_cfg['api']['llm_model_name']}")
+        # if model_id:
+        #     my_cfg['api']['llm_model_name'] = LLM_MODEL_DICT.get(model_id)
+        #     logger.info(f"llm_cfg_customized_for_uid, {uid}, {my_cfg['api']['llm_model_name']}")
 
         context = search_txt(msg, my_vector_db_dir, 0.1, my_cfg['api'], 3)
         if not context:
-            answer = get_msg("chat2kb.no_relevant_content")
+            answer = get_msg("csm.no_relevant_content")
             logger.info(f"vector_db_search_return_none, {answer}, {my_vector_db_dir}")
             return answer
 
@@ -234,7 +234,7 @@ def register_routes(app):
             logger.info(f"stream_input {stream_input}")
             input_tokens = estimate_tokens(str(stream_input))
             logger.info(f"{uid}, input_tokens, {input_tokens}")
-            add_input_token_by_uid(uid, input_tokens, AppType.CHAT2KB.name.lower())
+            add_input_token_by_uid(uid, input_tokens, AppType.CSM.name.lower())
             logger.info(f"{uid}, get_stream")
             for chunk in chat_agent.get_chain().stream(stream_input):
                 full_response += chunk
