@@ -1,5 +1,5 @@
 #!/bin/bash
-APP='chat2kb'
+APP='csm'
 CONTAINER="${APP}_app"
 APP_DIR="apps/${APP}"
 CURRENT_DIR=$(pwd)
@@ -24,7 +24,7 @@ docker run -dit --name ${CONTAINER}  \
   --network llm_net \
   -v ${CURRENT_DIR}:/opt/app \
   -v /data/nltk_data:/usr/share/nltk_data \
-  -p 19002:19000 \
+  -p 19007:19000 \
   -e APP_NAME=${APP} \
   llm_docx:1.1
 echo "容器 ${CONTAINER} 已启动"

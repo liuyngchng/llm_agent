@@ -19,15 +19,16 @@
 | 6 | apps/claude_code | HTTP/HTTPS | 19004 | Claude code |
 | 7 | apps/mcp_client     | HTTP/HTTPS | 19005 | MCP client，通过Web 界面           |
 | 8 | apps/mcp_server     | HTTP/HTTPS | 19006 | MCP server， 提供 MCP tools 查询服务 |
-| 9 | apps/paper_review   | HTTP/HTTPS | 19009 | 数字评委                          |
-| 10 | apps/asr | HTTP/HTTPS | 19010 | 语音转录 |
-| 11 | apps/auth_service | HTTP/HTTPS | 19011 | 用户认证服务 |
-| 12 | apps/statistics_service | HTTP/HTTPS | 19012 | 数据统计服务 |
-| 13 | apps/remote_doc | HTTP/HTTPS | 19013 | 远程文档 |
-| 14 | apps/llm            | HTTP/HTTPS | 16000 | 兼容 OpenAI 接口格式的大语言模型服务        |
-| 15 | apps/embedding      | HTTP/HTTPS | 17000 | 兼容 OpenAI 接口格式的文本嵌入模型服务       |
-| 16 | apps/portal         | HTTP/HTTPS | 443   | 所有应用的入口地址，提供用户登录、退出及APP导航 |
-| 17 | apps/llm_api_adapter | HTTP/HTTPS | 16001 | 将兼容 OpenAI 接口的 大语言模型API转换成兼容 Anthropic 的格式的 API |
+| 9 | apps/csm | HTTP/HTTPS | 19007 | 智能客服 |
+| 10 | apps/paper_review   | HTTP/HTTPS | 19009 | 数字评委                          |
+| 11 | apps/asr | HTTP/HTTPS | 19010 | 语音转录 |
+| 12 | apps/auth_service | HTTP/HTTPS | 19011 | 用户认证服务 |
+| 13 | apps/statistics_service | HTTP/HTTPS | 19012 | 数据统计服务 |
+| 14 | apps/remote_doc | HTTP/HTTPS | 19013 | 远程文档 |
+| 15 | apps/llm            | HTTP/HTTPS | 16000 | 兼容 OpenAI 接口格式的大语言模型服务        |
+| 16 | apps/embedding      | HTTP/HTTPS | 17000 | 兼容 OpenAI 接口格式的文本嵌入模型服务       |
+| 17 | apps/portal         | HTTP/HTTPS | 443   | 所有应用的入口地址，提供用户登录、退出及APP导航 |
+| 18 | apps/llm_api_adapter | HTTP/HTTPS | 16001 | 将兼容 OpenAI 接口的 大语言模型API转换成兼容 Anthropic 的格式的 API |
 
 # 2. 开发环境配置
 
