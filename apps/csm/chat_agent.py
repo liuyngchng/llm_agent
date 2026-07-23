@@ -33,12 +33,13 @@ class ChatAgent:
         return agt_util.get_model(self.syc_cfg, temperature=1.3)
 
     def get_chain(self):
-        template = cfg_util.get_usr_prompt_template('vdb_chat_msg', self.syc_cfg)
+        template = cfg_util.get_usr_prompt_template('csm_chat_msg', self.syc_cfg)
         logger.debug(f"template {template}")
         prompt = ChatPromptTemplate.from_template(template)
         model = self.get_llm()
         chain = (
-            {"context": RunnablePassthrough(), "question": RunnablePassthrough(), "history": RunnablePassthrough()}
+            {"context": RunnablePassthrough(), "question": RunnablePassthrough(), "history": RunnablePassthrough(),
+             "cur_date": RunnablePassthrough(), "cur_week": RunnablePassthrough()}
             | prompt
             | model
             | StrOutputParser()
