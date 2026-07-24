@@ -28,6 +28,7 @@ from tqdm import tqdm
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import QueryResult
 
+from common.const import MAX_EMBEDDING_TXT_LENGTH
 from common.vdb_meta_util import VdbMeta
 from common.statistic_util import add_embedding_token_by_uid
 from common.cm_utils import estimate_tokens
@@ -45,36 +46,121 @@ logger = logging.getLogger(__name__)
 
 class RemoteChromaEmbedder(EmbeddingFunction):
     """Chroma兼容的远程嵌入适配器"""
-    def __init__(self, client: OpenAI, model_name: str, *args: Any, **kwargs: Any):
+    def __init__(self, client: OpenAI, model_name: str, max_input_length: int = MAX_EMBEDDING_TXT_LENGTH, *args: Any, **kwargs: Any):
         self.client = client
         self.model_name = model_name
+        self.max_input_length = max_input_length  # 嵌入模型的最大输入长度
         # super().__init__(*args, **kwargs)
 
     def __call__(self, doc: Documents) -> Embeddings:
-        """批量获取文本嵌入向量"""
+        """批量获取文本嵌入向量，支持超长文本自动分割"""
         batch_size = 32
         embeddings = []
+
         for i in range(0, len(doc), batch_size):
             batch = doc[i:i + batch_size]
-            resp = self.client.embeddings.create(model=self.model_name, input=batch)
-            if i == 0 and resp.data:
-                dimension = len(resp.data[0].embedding)
-                logger.info(f"{self.model_name}, embedding_model_dimension, {dimension}")
-            embeddings.extend([
-                np.array(item.embedding, dtype=np.float32)
-                for item in resp.data
-            ])
+
+            # 检查并处理超长文本
+            processed_batch = []
+            for text in batch:
+                if len(text) > self.max_input_length:
+                    # 如果文本超长，进一步分割
+                    logger.warning(f"文本长度 {len(text)} 超过限制 {self.max_input_length}，进行二次分割")
+                    chunks = self._split_long_text(text)
+                    processed_batch.extend(chunks)
+                else:
+                    processed_batch.append(text)
+
+            if not processed_batch:
+                continue
+
+            # 处理后的批次可能超过限制，需要分批发送
+            for j in range(0, len(processed_batch), batch_size):
+                sub_batch = processed_batch[j:j + batch_size]
+                if not sub_batch:
+                    continue
+
+                try:
+                    resp = self.client.embeddings.create(model=self.model_name, input=sub_batch)
+
+                    if i == 0 and j == 0 and resp.data:
+                        dimension = len(resp.data[0].embedding)
+                        logger.info(f"{self.model_name}, embedding_model_dimension, {dimension}")
+
+                    embeddings.extend([
+                        np.array(item.embedding, dtype=np.float32)
+                        for item in resp.data
+                    ])
+                except Exception as e:
+                    logger.error(f"嵌入API调用失败: {str(e)}")
+                    raise
+
         return embeddings
+
+    def _split_long_text(self, text: str) -> list[str]:
+        """将超长文本进一步分割为小于最大限制的块"""
+        chunks = []
+        start = 0
+
+        while start < len(text):
+            # 计算当前块的结束位置
+            end = start + self.max_input_length
+
+            # 如果剩余文本不足一个完整块，直接取剩余部分
+            if end >= len(text):
+                chunks.append(text[start:])
+                break
+
+            # 尝试在标点符号处分割，避免在单词中间分割
+            split_positions = [
+                text.rfind('。', start, end),
+                text.rfind('！', start, end),
+                text.rfind('？', start, end),
+                text.rfind('.', start, end),
+                text.rfind('!', start, end),
+                text.rfind('?', start, end),
+                text.rfind('\n', start, end),
+                text.rfind(' ', start, end),
+                text.rfind('，', start, end),
+                text.rfind(',', start, end),
+            ]
+
+            # 选择最大的有效分割位置
+            split_pos = -1
+            for pos in split_positions:
+                if pos > start and pos < end:
+                    split_pos = max(split_pos, pos)
+
+            # 如果找到了合适的分割点
+            if split_pos > start and split_pos < end:
+                end = split_pos + 1  # 包含标点符号
+            else:
+                # 没有找到合适的分割点，在最大限制处强制分割
+                end = start + self.max_input_length
+
+            chunks.append(text[start:end])
+            start = end
+
+        logger.info(f"超长文本已分割为 {len(chunks)} 个块")
+        return chunks
 
     def name(self) -> str:  # 关键修改：去掉@property装饰器
         return f"RemoteChromaEmbedder({self.model_name})"
 
     @classmethod
     def build_from_config(cls, config: dict[str, Any]) -> "RemoteChromaEmbedder":
-        return cls(client=config["client"], model_name=config["model_name"])
+        return cls(
+            client=config["client"],
+            model_name=config["model_name"],
+            max_input_length=config.get("max_input_length", MAX_EMBEDDING_TXT_LENGTH)
+        )
 
     def get_config(self) -> dict[str, Any]:
-        return {"client": self.client, "model_name": self.model_name}
+        return {
+            "client": self.client,
+            "model_name": self.model_name,
+            "max_input_length": self.max_input_length
+        }
 
 def get_chroma_client(vector_db_abs_path: str):
     """
@@ -103,7 +189,24 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
         logger.info(f"load_documents_size, {len(documents)}:\n" + "\n".join(f"- {src}" for src in doc_sources))
         VdbMeta.update_vdb_file_process_info(file_id, "开始切分文本")
         if not separators:
-            separators = ['。', '！', '？', '；', '...', '、', '，']
+            separators = [
+                # 中文标点
+                '。', '！', '？', '；', '...', '、', '，', '：', '——', '……',
+                # 英文标点
+                '\n\n', '. ', '! ', '? ', '; ', ', ', ': ',
+                # 其他常用分隔符
+                '\n', '  ', '\t', '|', '•', '·',
+                # 括号类
+                '）', ')', '】', ']', '」', '》',
+                # HTML/XML标签（简单处理）
+                '</', '/>', '>',
+                # Markdown分隔符
+                '# ', '## ', '### ', '#### ',
+                # 列表项
+                '\n- ', '\n* ', '\n1. ', '\n• ',
+                # 段落分隔
+                '\r\n\r\n', '\r\r'
+            ]
         logger.info(f"{uid}, splitting_documents_with_separators {separators}...")
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
@@ -113,7 +216,11 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
         )
         doc_list = text_splitter.split_documents(documents)
         openai_client = build_client(llm_cfg)
-        embed_model = RemoteChromaEmbedder(openai_client, llm_cfg['embedding_model_name'])
+        embed_model = RemoteChromaEmbedder(
+            openai_client,
+            llm_cfg['embedding_model_name'],
+            max_input_length=llm_cfg.get('embedding_max_input_length', MAX_EMBEDDING_TXT_LENGTH)
+        )
         collection = get_chroma_client(vector_db).get_or_create_collection(
             name="knowledge_base",
             embedding_function=embed_model,
@@ -193,7 +300,8 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
                             if processed_count > 0:
                                 completed_count += processed_count
                             else:
-                                err_info += f"处理批次 {start_idx}-{end_idx} 时有异常, "
+                                batch_start_idx, batch_end_idx = batch_ranges[i]
+                                err_info += f"处理批次 {batch_start_idx}-{batch_end_idx} 时有异常, "
                             current_completed = completed_count
 
                         percent = round(100 * current_completed / total_chunks, 1)
@@ -218,7 +326,8 @@ def process_doc(file_id: int, documents: list[Document], vector_db: str,
         VdbMeta.update_vdb_file_process_info(file_id, process_info, 100)
     except Exception as e:
         info = f"{uid}, 处理文档时发生错误: {str(e)}"
-        VdbMeta.update_vdb_file_process_info(file_id, info)
+        safe_info = info.replace("'", "''")
+        VdbMeta.update_vdb_file_process_info(file_id, safe_info)
         logger.error(info, exc_info=True)
         raise
     finally:
@@ -351,7 +460,11 @@ def load_vdb(vector_db: str, llm_cfg: dict) -> Optional[chromadb.Collection]:
 
     try:
         openai_client = build_client(llm_cfg)
-        embed_model = RemoteChromaEmbedder(openai_client, llm_cfg['embedding_model_name'])
+        embed_model = RemoteChromaEmbedder(
+            openai_client,
+            llm_cfg['embedding_model_name'],
+            max_input_length=llm_cfg.get('embedding_max_input_length', MAX_EMBEDDING_TXT_LENGTH)
+        )
 
         return get_chroma_client(vector_db).get_collection(
             name="knowledge_base",
@@ -373,7 +486,11 @@ def search(query: str, score_threshold: float, vector_db: str,llm_cfg: dict, top
 
     # 使用远程embedding获取查询向量
     openai_client = build_client(llm_cfg)
-    embedder = RemoteChromaEmbedder(openai_client, llm_cfg['embedding_model_name'])
+    embedder = RemoteChromaEmbedder(
+        openai_client,
+        llm_cfg['embedding_model_name'],
+        max_input_length=llm_cfg.get('embedding_max_input_length', MAX_EMBEDDING_TXT_LENGTH)
+    )
     query_embedding = embedder([query])[0]
 
     # 执行查询
