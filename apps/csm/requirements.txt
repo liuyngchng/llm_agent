@@ -5,3 +5,6 @@ pydantic
 langchain_core
 concurrent-log-handler
 svgwrite
+jinja2
+rank-bm25
+jieba

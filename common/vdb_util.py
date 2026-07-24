@@ -443,10 +443,172 @@ def search1(query: str, score_threshold: float, vector_db: str,llm_cfg: dict, to
     # 按分数降序排序
     return sorted(formatted_results, key=lambda x: x["score"], reverse=True)
 
+
+# ============================================================
+# BM25 关键词检索 + 混合检索（RRF）
+# ============================================================
+
+# BM25 索引缓存: {vector_db_dir: {"index": BM25Okapi, "documents": [...], "mtime": float}}
+_bm25_cache = {}
+_bm25_cache_lock = threading.Lock()
+
+# RRF 常数
+RRF_K = 60
+
+
+def _tokenize(text: str) -> list[str]:
+    """中文分词 + 英文按空格切，用于 BM25 索引和查询"""
+    try:
+        import jieba
+    except ImportError:
+        # fallback: 简单按字符 + 空格切分
+        tokens = text.replace(" ", " ").split()
+        return [t.strip() for t in tokens if t.strip()]
+
+    tokens = list(jieba.cut(text))
+    return [t.strip() for t in tokens if t.strip()]
+
+
+def _get_or_build_bm25(vector_db_dir: str) -> tuple:
+    """
+    获取或构建 BM25 索引（带缓存，按 chroma.sqlite3 mtime 自动失效）
+    Returns: (BM25Okapi | None, list[str])  — 索引和原始文档列表
+    """
+    import os as _os
+    chroma_db_path = _os.path.join(vector_db_dir, "chroma.sqlite3")
+    if not _os.path.exists(chroma_db_path):
+        logger.info(f"bm25_no_chroma_db, {vector_db_dir}")
+        return None, []
+
+    mtime = _os.path.getmtime(chroma_db_path)
+
+    with _bm25_cache_lock:
+        if vector_db_dir in _bm25_cache and _bm25_cache[vector_db_dir]["mtime"] == mtime:
+            logger.debug(f"bm25_cache_hit, {vector_db_dir}")
+            return _bm25_cache[vector_db_dir]["index"], _bm25_cache[vector_db_dir]["documents"]
+
+    logger.info(f"bm25_building_index, {vector_db_dir}")
+    try:
+        collection = get_chroma_client(vector_db_dir).get_collection("knowledge_base")
+        results = collection.get(include=["documents"])
+        documents = results.get("documents", []) or []
+    except Exception as e:
+        logger.warning(f"bm25_load_chroma_err, {vector_db_dir}, {e}")
+        return None, []
+
+    if not documents:
+        logger.info(f"bm25_empty_collection, {vector_db_dir}")
+        with _bm25_cache_lock:
+            _bm25_cache[vector_db_dir] = {"index": None, "documents": [], "mtime": mtime}
+        return None, []
+
+    try:
+        from rank_bm25 import BM25Okapi
+    except ImportError:
+        logger.warning("bm25_not_installed, fallback to empty")
+        return None, documents
+
+    tokenized = [_tokenize(doc) for doc in documents]
+    index = BM25Okapi(tokenized)
+
+    with _bm25_cache_lock:
+        _bm25_cache[vector_db_dir] = {"index": index, "documents": documents, "mtime": mtime}
+
+    logger.info(f"bm25_index_built, {vector_db_dir}, docs={len(documents)}")
+    return index, documents
+
+
+def _keyword_search(query: str, vector_db_dir: str, top_k: int = 3) -> list[dict]:
+    """BM25 关键词检索"""
+    index, documents = _get_or_build_bm25(vector_db_dir)
+    if not index or not documents:
+        return []
+
+    tokenized_query = _tokenize(query)
+    try:
+        scores = index.get_scores(tokenized_query)
+    except Exception as e:
+        logger.warning(f"bm25_score_err, {e}")
+        return []
+
+    # 取 top_k，只保留 score > 0 的结果
+    ranked = sorted(
+        [(i, s) for i, s in enumerate(scores) if s > 0],
+        key=lambda x: x[1], reverse=True
+    )[:top_k]
+
+    results = []
+    for idx, score in ranked:
+        content = documents[idx]
+        if "......................." in content:
+            continue
+        results.append({
+            "content": content,
+            "score": float(score),
+            "source": "keyword"
+        })
+    return results
+
+
+def hybrid_search(query: str, vector_db_dir: str, score_threshold: float,
+                  llm_cfg: dict, top_k: int = 3) -> list[dict]:
+    """
+    混合检索：向量 + BM25，RRF 合并排序
+    """
+    # 向量检索
+    vector_results = []
+    try:
+        vector_results = search(query, score_threshold, vector_db_dir, llm_cfg, top_k)
+    except Exception as e:
+        logger.warning(f"hybrid_vector_err, {e}")
+
+    # BM25 关键词检索
+    keyword_results = []
+    try:
+        keyword_results = _keyword_search(query, vector_db_dir, top_k)
+    except Exception as e:
+        logger.warning(f"hybrid_keyword_err, {e}")
+
+    logger.info(f"hybrid_search, vector={len(vector_results)}, keyword={len(keyword_results)}, q={query[:50]}")
+
+    # 如果只有一侧有结果，直接返回
+    if not keyword_results:
+        return vector_results[:top_k]
+    if not vector_results:
+        return keyword_results[:top_k]
+
+    # RRF 合并：按 content 去重，分数叠加
+    rrf_scores = {}       # content -> RRF score
+    doc_by_content = {}   # content -> doc dict
+
+    for rank, doc in enumerate(vector_results):
+        content = doc.get("content", "")
+        rrf_scores[content] = rrf_scores.get(content, 0.0) + 1.0 / (RRF_K + rank)
+        doc_by_content[content] = doc
+
+    for rank, doc in enumerate(keyword_results):
+        content = doc.get("content", "")
+        rrf_scores[content] = rrf_scores.get(content, 0.0) + 1.0 / (RRF_K + rank)
+        if content not in doc_by_content:
+            doc_by_content[content] = doc
+
+    # 按 RRF 分数降序，取 top_k
+    sorted_contents = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
+
+    merged = []
+    for content, rrf_score in sorted_contents:
+        doc = doc_by_content[content]
+        doc["rrf_score"] = rrf_score
+        merged.append(doc)
+
+    logger.info(f"hybrid_merged, total={len(merged)}")
+    return merged
+
+
 def search_txt(txt: str, vector_db_dir: str, score_threshold: float,
         llm_cfg: dict, txt_num: int) -> str:
     """
-    调用入口
+    调用入口 — 混合检索（向量 + BM25）
     :param txt: the query text
     :param vector_db_dir: the directory to save the vector db
     :param score_threshold: the score threshold
@@ -456,7 +618,7 @@ def search_txt(txt: str, vector_db_dir: str, score_threshold: float,
     """
     search_results = []
     try:
-        search_results = search(txt, score_threshold, vector_db_dir, llm_cfg, txt_num)
+        search_results = hybrid_search(txt, vector_db_dir, score_threshold, llm_cfg, txt_num)
     except Exception as e:
         logger.exception(f"search_txt_err, embedding uri: {llm_cfg['embedding_api_uri']}, err={e}", exc_info=True)
 
@@ -468,7 +630,6 @@ def search_txt(txt: str, vector_db_dir: str, score_threshold: float,
         s_r_txt = s_r.get("content", "").replace("\n", "")
         if "......................." in s_r_txt:
             continue
-        # logger.info(f"s_r_txt: {s_r_txt}, score: {s_r[1]}, from_file: {s_r[0].metadata['source']}")
         all_txt += s_r_txt + "\n"
     return all_txt
 

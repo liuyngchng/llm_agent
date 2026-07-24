@@ -15,7 +15,7 @@ RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl
     unstructured[pdf] langchain_core pydantic python-docx python-pptx pillow \
     concurrent_log_handler pydub pycryptodome wheel tabulate chromadb \
     lxml websockets markdown pandas pypandoc openpyxl xlsx2html svgwrite \
-    docxtpl pypdf pdfplumber $PROXY && \
+    docxtpl pypdf pdfplumber rank-bm25 jieba $PROXY && \
     rm -rf /tmp/whl && \
     rm -rf ~/.cache/pip
 
