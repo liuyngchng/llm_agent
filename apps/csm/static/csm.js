@@ -39,14 +39,11 @@ function restoreMessages() {
     messages.forEach(m => addMessageToDOM(m.text, m.type));
 }
 
-// 页面加载时显示欢迎信息
+// 页面加载时恢复历史消息
 window.onload = function() {
     loadKnowledgeBases();
     loadMessages();
-    const greetingEl = document.getElementById('greeting');
-    if (messages.length === 0 && greetingEl && greetingEl.value) {
-        addMessage(greetingEl.value, 'bot');
-    } else if (messages.length > 0) {
+    if (messages.length > 0) {
         restoreMessages();
     }
     queryInput.focus();
@@ -392,10 +389,6 @@ function clearChat() {
     messages = [];
     saveMessages();
     chatContainer.innerHTML = '';
-    const greetingEl = document.getElementById('greeting');
-    if (greetingEl && greetingEl.value) {
-        addMessageToDOM(greetingEl.value, 'bot');
-    }
     resetUI();
 }
 

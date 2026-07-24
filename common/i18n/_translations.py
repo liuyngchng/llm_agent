@@ -447,6 +447,7 @@ TRANSLATIONS = {
             "fr": "Erreur du service statistique, veuillez reessayer",
             "ar": "خطا في خدمة الاحصاءات، يرجى المحاولة لاحقا",
         },
+        "copy": {"zh": "复制", "en": "Copy", "fr": "Copier", "ar": "نسخ"},
     },
 
     # ============================================================
