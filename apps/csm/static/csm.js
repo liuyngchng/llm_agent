@@ -9,20 +9,33 @@ let currentResponse = null;
 let abortController = null;
 let currentBotMessage = null;
 
-const CHAT_STORAGE_KEY = 'chat2kb_messages';
-const MAX_MESSAGES = 19;  // 与 common/const.py:MAX_HISTORY_SIZE 保持一致
+const MAX_MESSAGES = 50;
 let messages = [];
+
+// 会话 ID — 标识一次连续对话，用于后端管理 LLM 上下文
+let sessionId = generateSessionId();
+
+function generateSessionId() {
+    return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+// localStorage key 按 uid 隔离，防止不同用户串数据
+function getStorageKey() {
+    const uidEl = document.getElementById('uid');
+    const uid = uidEl ? uidEl.value : 'default';
+    return `chat2kb_messages_${uid}`;
+}
 
 function saveMessages() {
     if (messages.length > MAX_MESSAGES) {
         messages = messages.slice(-MAX_MESSAGES);
     }
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+    localStorage.setItem(getStorageKey(), JSON.stringify(messages));
 }
 
 function loadMessages() {
     try {
-        const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+        const raw = localStorage.getItem(getStorageKey());
         if (raw) {
             messages = JSON.parse(raw);
             if (messages.length > MAX_MESSAGES) {
@@ -117,12 +130,6 @@ async function fetchQueryData(query) {
         const t = document.getElementById('t').value;
         const appSource = document.getElementById('app_source').value;
         const uid = document.getElementById('uid').value;
-        // 构建历史消息（排除当前用户消息和"思考中"占位）
-        const historyMessages = messages.slice(0, -2).slice(-10);
-        const history = historyMessages.map(m => {
-            const role = m.type === 'user' ? __('csm.user_role') : __('csm.assistant_role');
-            return `${role}：${m.text}`;
-        }).join('\n');
 
         const response = await fetch('/chat', {
             method: 'POST',
@@ -130,7 +137,7 @@ async function fetchQueryData(query) {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Accept': 'text/event-stream'
             },
-            body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&t=${t}&app_source=${appSource}&history=${encodeURIComponent(history)}`,
+            body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&t=${t}&app_source=${appSource}&session_id=${encodeURIComponent(sessionId)}`,
             signal: abortController.signal,
             credentials: 'include'
         });
@@ -269,11 +276,25 @@ function addCopyButton(messageContainer, text) {
     messageContainer.appendChild(actionsContainer);
 }
 
-// 清空聊天
-function clearChat() {
+// 开启新对话 — 清空前端存储 + 清空后端 LLM 上下文
+async function newChat() {
     if (isFetching && abortController) {
         abortController.abort();
     }
+    // 通知后端清空当前会话上下文
+    const uid = document.getElementById('uid').value;
+    try {
+        await fetch('/chat/clear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `session_id=${encodeURIComponent(sessionId)}&uid=${encodeURIComponent(uid)}`
+        });
+    } catch (e) {
+        console.warn('清空后端上下文失败:', e);
+    }
+    // 生成新会话 ID
+    sessionId = generateSessionId();
+    // 清空前端
     messages = [];
     saveMessages();
     chatContainer.innerHTML = '';
@@ -289,10 +310,10 @@ function resetUI() {
     abortController = null;
 }
 
-// 清空聊天按钮
-const clearChatBtn = document.getElementById('clearChat');
-if (clearChatBtn) {
-    clearChatBtn.addEventListener('click', clearChat);
+// 开启新对话按钮
+const newChatBtn = document.getElementById('newChat');
+if (newChatBtn) {
+    newChatBtn.addEventListener('click', newChat);
 }
 
 // 键盘快捷键支持

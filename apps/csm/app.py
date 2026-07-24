@@ -12,6 +12,7 @@ import logging.config
 import os
 import time
 import threading
+from collections import deque
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, abort, send_from_directory, render_template
@@ -46,6 +47,12 @@ os.system(
 # 全局变量，用于存储后台任务状态
 background_tasks_started = False
 background_tasks_lock = threading.Lock()
+
+# 聊天会话历史 — key: session_id, value: {"uid": int, "history": deque(maxlen=10)}
+# 每个会话最多保留 10 条（5 轮对话），按 uid 隔离
+chat_sessions = {}
+chat_sessions_lock = threading.Lock()
+MAX_CHAT_HISTORY = 10
 
 
 def create_app():
@@ -165,11 +172,11 @@ def register_routes(app):
         logger.info(f"chat_request {request.form}")
         msg = request.form.get('msg', "").strip()
         uid = int(request.form.get('uid'))
-        history = request.form.get('history', '')
+        session_id = request.form.get('session_id', '')
 
-        if not msg or not uid:
+        if not msg or not uid or not session_id:
             warning_info = get_msg("csm.missing_params")
-            logger.error(f"{warning_info}, {msg}, {uid}")
+            logger.error(f"{warning_info}, {msg}, {uid}, {session_id}")
             return warning_info
 
         session_key = f"{uid}_{get_client_ip()}"
@@ -183,8 +190,23 @@ def register_routes(app):
                 mimetype='application/json'
             )
 
-        logger.info(f"rcv_msg, {msg}, uid {uid}")
+        logger.info(f"rcv_msg, {msg}, uid {uid}, sid {session_id}")
         auth_info[session_key] = time.time()
+
+        # 获取后端管理的会话历史（最近 10 条），按 uid 隔离
+        with chat_sessions_lock:
+            if session_id not in chat_sessions:
+                chat_sessions[session_id] = {"uid": uid, "history": deque(maxlen=MAX_CHAT_HISTORY)}
+            elif str(chat_sessions[session_id].get("uid", "")) != str(uid):
+                # 如果 session 属于其他用户，重建一个（极端情况：UUID 碰撞或恶意请求）
+                logger.warning(f"session_uid_mismatch_reset, sid={session_id}, old_uid={chat_sessions[session_id].get('uid')}, req_uid={uid}")
+                chat_sessions[session_id] = {"uid": uid, "history": deque(maxlen=MAX_CHAT_HISTORY)}
+            session_history = list(chat_sessions[session_id]["history"])
+
+        history_str = "\n".join(
+            f"{h['role']}：{h['content']}" for h in session_history
+        ) if session_history else ""
+        logger.info(f"session_history_len={len(session_history)}, uid={uid}, sid={session_id}")
 
         # 获取用户所有知识库，逐个检索并合并结果
         user_kb_list = VdbMeta.get_vdb_info_by_uid(uid, include_others_public=False)
@@ -228,7 +250,7 @@ def register_routes(app):
             stream_input = {
                 "context": context,
                 "question": msg,
-                "history": history,
+                "history": history_str,
                 "cur_date": cur_date,
                 "cur_week": cur_week,
             }
@@ -245,7 +267,32 @@ def register_routes(app):
             logger.info(f"{uid}, output_tokens, {output_tokens}")
             add_output_token_by_uid(uid, output_tokens, AppType.CSM.name.lower())
 
+            # 流式结束后，将本轮对话存入后端会话历史
+            with chat_sessions_lock:
+                if session_id not in chat_sessions:
+                    chat_sessions[session_id] = {"uid": uid, "history": deque(maxlen=MAX_CHAT_HISTORY)}
+                chat_sessions[session_id]["history"].append({"role": "用户", "content": msg})
+                chat_sessions[session_id]["history"].append({"role": "助手", "content": full_response})
+                logger.info(f"saved_to_history, sid={session_id}, len={len(chat_sessions[session_id]['history'])}")
+
         return app.response_class(generate_stream(), mimetype='text/event-stream')
+
+    @app.route('/chat/clear', methods=['POST'])
+    def clear_chat():
+        """清空指定会话的后端聊天历史"""
+        session_id = request.form.get('session_id', '')
+        uid = request.form.get('uid', '')
+        logger.info(f"clear_chat_request, uid={uid}, sid={session_id}")
+        with chat_sessions_lock:
+            if session_id in chat_sessions:
+                session_data = chat_sessions[session_id]
+                # 校验 uid 归属，防止跨用户操作
+                if str(session_data.get("uid", "")) != str(uid):
+                    logger.warning(f"clear_chat_uid_mismatch, req_uid={uid}, session_uid={session_data.get('uid')}")
+                    return 'denied'
+                del chat_sessions[session_id]
+                logger.info(f"chat_history_cleared, sid={session_id}")
+        return 'ok'
 
 
 def start_background_tasks():

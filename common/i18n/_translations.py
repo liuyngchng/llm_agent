@@ -1026,6 +1026,7 @@ TRANSLATIONS = {
         "send": {"zh": "发送", "en": "Send", "fr": "Envoyer", "ar": "ارسال"},
         "stop": {"zh": "停止", "en": "Stop", "fr": "Arreter", "ar": "ايقاف"},
         "clear_chat": {"zh": "清空聊天", "en": "Clear Chat", "fr": "Effacer la conversation", "ar": "مسح المحادثة"},
+        "new_chat": {"zh": "开启新对话", "en": "New Chat", "fr": "Nouvelle conversation", "ar": "محادثة جديدة"},
         "no_kb_selected": {
             "zh": "未选择知识库",
             "en": "No knowledge base selected",
