@@ -225,6 +225,7 @@ TRANSLATIONS = {
             "fr": "Erreur HTTP {status}: {msg}",
             "ar": "خطا HTTP {status}: {msg}",
         },
+        "copy": {"zh": "复制", "en": "Copy", "fr": "Copier", "ar": "نسخ"},
     },
 
     # ============================================================

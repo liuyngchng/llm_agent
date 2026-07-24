@@ -165,12 +165,11 @@ def register_routes(app):
         logger.info(f"chat_request {request.form}")
         msg = request.form.get('msg', "").strip()
         uid = int(request.form.get('uid'))
-        kb_id = request.form.get('kb_id')
         history = request.form.get('history', '')
 
-        if not msg or not uid or not kb_id:
+        if not msg or not uid:
             warning_info = get_msg("csm.missing_params")
-            logger.error(f"{warning_info}, {msg}, {uid}, {kb_id}")
+            logger.error(f"{warning_info}, {msg}, {uid}")
             return warning_info
 
         session_key = f"{uid}_{get_client_ip()}"
@@ -187,23 +186,34 @@ def register_routes(app):
         logger.info(f"rcv_msg, {msg}, uid {uid}")
         auth_info[session_key] = time.time()
 
-        vdb_info = VdbMeta.get_vdb_info_by_id(int(kb_id))
-        if not vdb_info:
-            warning_info = get_msg("csm.kb_not_found")
-            logger.error(f"{warning_info}, {kb_id}")
-            return warning_info
-
-        my_vector_db_dir = f"{VDB_PREFIX}{vdb_info[0]['uid']}_{kb_id}"
-        if not os.path.exists(my_vector_db_dir):
+        # 获取用户所有知识库，逐个检索并合并结果
+        user_kb_list = VdbMeta.get_vdb_info_by_uid(uid, include_others_public=False)
+        if not user_kb_list:
             answer = get_msg("csm.no_knowledge")
-            logger.info(f"vector_db_dir_not_exists_return_none, {answer}, {my_vector_db_dir}")
+            logger.info(f"no_kb_found_for_uid, {uid}")
             return answer
 
-        context = search_txt(msg, my_vector_db_dir, 0.1, my_cfg['api'], 3)
-        if not context:
+        all_context_parts = []
+        for kb in user_kb_list:
+            kb_id = kb.get('id')
+            kb_name = kb.get('name', '')
+            kb_owner_uid = kb.get('uid', uid)
+            my_vector_db_dir = f"{VDB_PREFIX}{kb_owner_uid}_{kb_id}"
+            if not os.path.exists(my_vector_db_dir):
+                logger.info(f"vdb_dir_not_exists_skip, {my_vector_db_dir}")
+                continue
+            kb_context = search_txt(msg, my_vector_db_dir, 0.1, my_cfg['api'], 3)
+            if kb_context:
+                all_context_parts.append(f"[{kb_name}]\n{kb_context}")
+            logger.info(f"searched_kb, {kb_name}, kb_id={kb_id}, has_result={bool(kb_context)}")
+
+        if not all_context_parts:
             answer = get_msg("csm.no_relevant_content")
-            logger.info(f"vector_db_search_return_none, {answer}, {my_vector_db_dir}")
+            logger.info(f"no_relevant_content_across_all_kbs_for_uid, {uid}")
             return answer
+
+        context = "\n".join(all_context_parts)
+        logger.info(f"merged_context_from_{len(all_context_parts)}_kbs, len={len(context)}")
 
         chat_agent = ChatAgent(my_cfg)
 

@@ -35,14 +35,6 @@
             <div class="input-container">
                 <input type="text" class="input-field" id="query-input" name="msg"
                        placeholder="{{ _('csm.input_placeholder') }}" required autocomplete="off">
-                <div class="toolbar">
-                    <select id="kb_selector" class="kb-selector">
-                        <option value="" disabled selected>{{ _('csm.select_kb') }}</option>
-                    </select>
-                    <button type="button" class="kb-refresh-btn" id="kbRefreshBtn" onclick="loadKnowledgeBases()" title="{{ _('common.refresh') }}">
-                        <i class="fas fa-sync-alt" id="refreshIcon"></i>
-                    </button>
-                </div>
                 <div class="button-container">
                     <button type="submit" class="send-button" id="send-button">
                         <i class="fas fa-paper-plane"></i> {{ _('csm.send') }}

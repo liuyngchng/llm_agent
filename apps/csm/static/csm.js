@@ -41,7 +41,6 @@ function restoreMessages() {
 
 // 页面加载时恢复历史消息
 window.onload = function() {
-    loadKnowledgeBases();
     loadMessages();
     if (messages.length > 0) {
         restoreMessages();
@@ -118,7 +117,6 @@ async function fetchQueryData(query) {
         const t = document.getElementById('t').value;
         const appSource = document.getElementById('app_source').value;
         const uid = document.getElementById('uid').value;
-        const kbId = document.getElementById('kb_selector').value || '';
         // 构建历史消息（排除当前用户消息和"思考中"占位）
         const historyMessages = messages.slice(0, -2).slice(-10);
         const history = historyMessages.map(m => {
@@ -132,7 +130,7 @@ async function fetchQueryData(query) {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Accept': 'text/event-stream'
             },
-            body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&t=${t}&app_source=${appSource}&kb_id=${kbId}&history=${encodeURIComponent(history)}`,
+            body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&t=${t}&app_source=${appSource}&history=${encodeURIComponent(history)}`,
             signal: abortController.signal,
             credentials: 'include'
         });
@@ -189,116 +187,6 @@ async function fetchQueryData(query) {
         resetUI();
     }
 }
-
-// 加载知识库列表
-async function loadKnowledgeBases() {
-    const selector = document.getElementById('kb_selector');
-    const refreshBtn = document.getElementById('kbRefreshBtn');
-    const refreshIcon = document.getElementById('refreshIcon');
-    const uid = document.getElementById('uid').value;
-    const t = document.getElementById('t').value;
-
-    // 添加加载状态
-    refreshBtn.disabled = true;
-    refreshIcon.classList.add('fa-spin'); // 添加旋转动画
-
-    try {
-        const response = await fetch('/vdb/pub/list', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ uid, t })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`API error ${response.status}: ${errorText.slice(0, 100)}...`);
-        }
-
-        const result = await response.json();
-        console.log('vdb_list=' + result);
-
-        // 清空选择器（保留第一个选项）
-        while (selector.options.length > 1) {
-            selector.remove(1);
-        }
-
-        // 添加知识库选项
-        if (result.kb_list && result.kb_list.length > 0) {
-            result.kb_list.forEach(kb => {
-                const option = document.createElement('option');
-                option.value = kb.id;
-                option.textContent = kb.name;
-                selector.appendChild(option);
-            });
-
-            // 显示成功提示（可选）
-            showNotification(__('csm.kb_refreshed'), 'success');
-        } else {
-            // 显示空提示
-            showNotification(__('csm.no_kb'), 'info');
-        }
-
-    } catch (error) {
-        console.error('Load KB failed:', error);
-        showNotification(__('csm.refresh_kb_failed') + error.message, 'error');
-    } finally {
-        // 移除加载状态
-        refreshBtn.disabled = false;
-        refreshIcon.classList.remove('fa-spin');
-    }
-}
-
-function showNotification(message, type = 'info') {
-    // 创建通知元素
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-
-    // 添加样式
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 12px 20px;
-        border-radius: 6px;
-        background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
-        color: white;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 1000;
-        animation: slideIn 0.3s ease;
-    `;
-
-    // 添加动画
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        .notification {
-            transition: all 0.3s;
-        }
-    `;
-    document.head.appendChild(style);
-
-    // 添加到页面
-    document.body.appendChild(notification);
-
-    // 3秒后自动移除
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translateX(100%)';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-            if (style.parentNode) {
-                style.parentNode.removeChild(style);
-            }
-        }, 300);
-    }, 3000);
-}
-
 
 // 更新机器人消息
 function updateBotMessage(text) {
