@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 750" font-family="'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <linearGradient id="headerGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#667eea"/>
+      <stop offset="100%" stop-color="#764ba2"/>
+    </linearGradient>
+    <linearGradient id="catGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0f4ff"/>
+      <stop offset="100%" stop-color="#e8ecf8"/>
+    </linearGradient>
+    <linearGradient id="agentGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff7ed"/>
+      <stop offset="100%" stop-color="#ffedd5"/>
+    </linearGradient>
+    <linearGradient id="retrievalGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0fdf4"/>
+      <stop offset="100%" stop-color="#dcfce7"/>
+    </linearGradient>
+    <linearGradient id="aggGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+    <linearGradient id="msgGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ede9fe"/>
+      <stop offset="100%" stop-color="#c4b5fd"/>
+    </linearGradient>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="3" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowLight" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="0.5" dy="1" stdDeviation="1.5" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- ====== Background ====== -->
+  <rect width="900" height="750" fill="#f8f9fc" rx="12"/>
+
+  <!-- ====== Top: Begin ====== -->
+  <rect x="310" y="20" width="280" height="46" rx="23" fill="url(#headerGrad)" filter="url(#shadow)"/>
+  <text x="450" y="49" text-anchor="middle" fill="#fff" font-size="16" font-weight="bold">Begin（用户提问）</text>
+
+  <!-- Arrow: Begin → Categorize -->
+  <line x1="450" y1="66" x2="450" y2="98" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- ====== Categorize ====== -->
+  <rect x="250" y="100" width="400" height="72" rx="10" fill="url(#catGrad)" stroke="#667eea" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="450" y="126" text-anchor="middle" fill="#333" font-size="15" font-weight="bold">Categorize（意图分类 / 词典可配置）</text>
+  <text x="450" y="150" text-anchor="middle" fill="#666" font-size="12">
+    ① 燃气泄漏/紧急  ② 账单与缴费  ③ 业务办理  ④ 维修与保养  ⑤ 综合咨询
+  </text>
+
+  <!-- ====== Branch lines from Categorize to nodes ====== -->
+
+  <!-- Main arrow going down from Categorize -->
+  <line x1="450" y1="172" x2="450" y2="210" stroke="#555" stroke-width="1.2" stroke-dasharray="6,3"/>
+
+  <!-- Horizontal distribution line -->
+  <line x1="70" y1="210" x2="830" y2="210" stroke="#555" stroke-width="1.2"/>
+
+  <!-- ====== Column 1: 燃气泄漏/紧急 (Agent) ====== -->
+  <line x1="130" y1="210" x2="130" y2="240" stroke="#555" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="40" y="242" width="180" height="44" rx="8" fill="url(#agentGrad)" stroke="#f97316" stroke-width="1.3" filter="url(#shadowLight)"/>
+  <text x="130" y="260" text-anchor="middle" fill="#92400e" font-size="13" font-weight="bold">Agent 紧急</text>
+  <text x="130" y="276" text-anchor="middle" fill="#92400e" font-size="10">急修调度</text>
+
+  <!-- ====== Column 2: 账单与缴费 ====== -->
+  <line x1="310" y1="210" x2="310" y2="248" stroke="#555" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <!-- Retrieval node -->
+  <rect x="220" y="250" width="180" height="44" rx="8" fill="url(#retrievalGrad)" stroke="#22c55e" stroke-width="1.3" filter="url(#shadowLight)"/>
+  <text x="310" y="268" text-anchor="middle" fill="#166534" font-size="13" font-weight="bold">Retrieval 账单与缴费</text>
+  <text x="310" y="284" text-anchor="middle" fill="#166534" font-size="10">向量检索 / KB</text>
+
+  <!-- Arrow down to Agent 账单 -->
+  <line x1="310" y1="294" x2="310" y2="322" stroke="#555" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="220" y="324" width="180" height="44" rx="8" fill="url(#agentGrad)" stroke="#f97316" stroke-width="1.3" filter="url(#shadowLight)"/>
+  <text x="310" y="342" text-anchor="middle" fill="#92400e" font-size="13" font-weight="bold">Agent 账单</text>
+  <text x="310" y="358" text-anchor="middle" fill="#92400e" font-size="10">账单查询 / 缴费引导</text>
+
+  <!-- ====== Column 3: 业务办理 (Agent) ====== -->
+  <line x1="450" y1="210" x2="450" y2="240" stroke="#555" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="370" y="242" width="160" height="44" rx="8" fill="url(#agentGrad)" stroke="#f97316" stroke-width="1.3" filter="url(#shadowLight)"/>
+  <text x="450" y="260" text-anchor="middle" fill="#92400e" font-size="13" font-weight="bold">Agent 业务办理</text>
+  <text x="450" y="276" text-anchor="middle" fill="#92400e" font-size="10">开户 / 过户 / 变更</text>
+
+  <!-- ====== Column 4: 维修与保养 ====== -->
+  <line x1="590" y1="210" x2="590" y2="248" stroke="#555" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <!-- Retrieval node -->
+  <rect x="500" y="250" width="180" height="44" rx="8" fill="url(#retrievalGrad)" stroke="#22c55e" stroke-width="1.3" filter="url(#shadowLight)"/>
+  <text x="590" y="268" text-anchor="middle" fill="#166534" font-size="13" font-weight="bold">Retrieval 维修KB</text>
+  <text x="590" y="284" text-anchor="middle" fill="#166534" font-size="10">维修知识库</text>
+
+  <!-- Arrow down to Agent 维修 -->
+  <line x1="590" y1="294" x2="590" y2="322" stroke="#555" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="505" y="324" width="170" height="44" rx="8" fill="url(#agentGrad)" stroke="#f97316" stroke-width="1.3" filter="url(#shadowLight)"/>
+  <text x="590" y="342" text-anchor="middle" fill="#92400e" font-size="13" font-weight="bold">Agent 维修</text>
+  <text x="590" y="358" text-anchor="middle" fill="#92400e" font-size="10">故障诊断 / 报修</text>
+
+  <!-- ====== Column 5: 综合咨询 (Retrieval FAQ KB → Agent) ====== -->
+  <line x1="770" y1="210" x2="770" y2="248" stroke="#555" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="680" y="250" width="180" height="44" rx="8" fill="url(#retrievalGrad)" stroke="#22c55e" stroke-width="1.3" filter="url(#shadowLight)"/>
+  <text x="770" y="268" text-anchor="middle" fill="#166534" font-size="13" font-weight="bold">Retrieval FAQ KB</text>
+  <text x="770" y="284" text-anchor="middle" fill="#166534" font-size="10">FAQ 知识库</text>
+
+  <!-- Arrow down to Agent 综合FAQ -->
+  <line x1="770" y1="294" x2="770" y2="322" stroke="#555" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="680" y="324" width="180" height="44" rx="8" fill="url(#agentGrad)" stroke="#f97316" stroke-width="1.3" filter="url(#shadowLight)"/>
+  <text x="770" y="342" text-anchor="middle" fill="#92400e" font-size="13" font-weight="bold">Agent 综合FAQ</text>
+  <text x="770" y="358" text-anchor="middle" fill="#92400e" font-size="10">常见问题解答</text>
+
+  <!-- ====== Convergence lines to Aggregator ====== -->
+  <!-- Column 1 → Aggregator -->
+  <line x1="130" y1="286" x2="130" y2="400" stroke="#555" stroke-width="1.2"/>
+  <line x1="130" y1="400" x2="450" y2="400" stroke="#555" stroke-width="1.2"/>
+
+  <!-- Column 2 Agent 账单 → Aggregator -->
+  <line x1="310" y1="368" x2="310" y2="400" stroke="#555" stroke-width="1.2"/>
+  <line x1="310" y1="400" x2="450" y2="400" stroke="#555" stroke-width="1.2"/>
+
+  <!-- Column 3 Agent 业务办理 → Aggregator (straight down) -->
+  <line x1="450" y1="286" x2="450" y2="412" stroke="#555" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <!-- Column 4 Agent 维修 → Aggregator -->
+  <line x1="590" y1="368" x2="590" y2="400" stroke="#555" stroke-width="1.2"/>
+  <line x1="590" y1="400" x2="450" y2="400" stroke="#555" stroke-width="1.2"/>
+
+  <!-- Column 5 Agent 综合FAQ → Aggregator -->
+  <line x1="770" y1="368" x2="770" y2="400" stroke="#555" stroke-width="1.2"/>
+  <line x1="770" y1="400" x2="450" y2="400" stroke="#555" stroke-width="1.2"/>
+
+  <!-- ====== VariableAggregator ====== -->
+  <rect x="280" y="414" width="340" height="48" rx="10" fill="url(#aggGrad)" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="450" y="435" text-anchor="middle" fill="#78350f" font-size="14" font-weight="bold">VariableAggregator（结果聚合）</text>
+  <text x="450" y="452" text-anchor="middle" fill="#92400e" font-size="11">汇聚各分支结果 → 融合上下文 → 生成最终回复</text>
+
+  <!-- Arrow: Aggregator → Final Message -->
+  <line x1="450" y1="462" x2="450" y2="500" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- ====== Final Message Output ====== -->
+  <rect x="310" y="502" width="280" height="46" rx="23" fill="url(#msgGrad)" stroke="#8b5cf6" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="450" y="531" text-anchor="middle" fill="#4c1d95" font-size="15" font-weight="bold">Message（最终输出）</text>
+
+  <!-- ====== Legend ====== -->
+  <g transform="translate(30, 580)">
+    <text x="0" y="0" fill="#888" font-size="11" font-weight="bold">图例：</text>
+
+    <rect x="0" y="10" width="18" height="12" rx="3" fill="url(#agentGrad)" stroke="#f97316" stroke-width="0.8"/>
+    <text x="24" y="20" fill="#666" font-size="11">Agent 处理器</text>
+
+    <rect x="120" y="10" width="18" height="12" rx="3" fill="url(#retrievalGrad)" stroke="#22c55e" stroke-width="0.8"/>
+    <text x="144" y="20" fill="#666" font-size="11">Retrieval 知识库检索</text>
+
+    <rect x="280" y="10" width="18" height="12" rx="3" fill="url(#catGrad)" stroke="#667eea" stroke-width="0.8"/>
+    <text x="304" y="20" fill="#666" font-size="11">路由 / 分类</text>
+
+    <rect x="400" y="10" width="18" height="12" rx="3" fill="url(#aggGrad)" stroke="#f59e0b" stroke-width="0.8"/>
+    <text x="424" y="20" fill="#666" font-size="11">聚合层</text>
+  </g>
+</svg>
