@@ -54,6 +54,16 @@ def create_app():
     app = Flask(__name__, static_folder=None, template_folder='templates')
     app.config['JSON_AS_ASCII'] = False
 
+    # 添加 common/templates 到 Jinja2 搜索路径（login.html 等公共模板）
+    from jinja2 import FileSystemLoader, ChoiceLoader
+    common_templates = os.path.join(os.path.dirname(__file__), '../../common/templates')
+    if os.path.isdir(common_templates):
+        original_loader = app.jinja_loader
+        app.jinja_loader = ChoiceLoader([
+            original_loader if original_loader else FileSystemLoader(app.template_folder),
+            FileSystemLoader(common_templates),
+        ])
+
     # ============================================================
     # 1. 加载配置
     # ============================================================
@@ -536,5 +546,5 @@ app = create_app()
 # ============================================================
 if __name__ == '__main__':
     port = 19007
-    logger.info("CSM 服务启动: port=%d", port)
+    logger.info("CSM 服务启动: http://localhost:%d", port)
     app.run(host='0.0.0.0', port=port, debug=my_cfg.get("server", {}).get("debug", False))

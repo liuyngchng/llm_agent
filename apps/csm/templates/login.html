@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/lib/font-awesome.all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <title>登录</title>
+</head>
+<body>
+    <div class="login-wrapper">
+        <div class="login-card">
+            <div class="login-header">
+                <i class="fas fa-headset"></i>
+                <h1>对话机器人</h1>
+                <p>请登录以继续</p>
+            </div>
+
+            {% if error_msg %}
+            <div class="login-error" id="loginError" style="display:flex;">
+                <i class="fas fa-exclamation-circle"></i> <span id="loginErrorMsg">{{ error_msg }}</span>
+            </div>
+            {% else %}
+            <div class="login-error" id="loginError" style="display:none;">
+                <i class="fas fa-exclamation-circle"></i> <span id="loginErrorMsg"></span>
+            </div>
+            {% endif %}
+
+            <form id="loginForm" class="login-form">
+                <div class="login-field">
+                    <label><i class="fas fa-user"></i> 用户名</label>
+                    <input type="text" id="userName" value="{{ default_user }}" placeholder="请输入用户名" required autocomplete="off">
+                </div>
+                <div class="login-field">
+                    <label><i class="fas fa-lock"></i> 密码</label>
+                    <input type="password" id="userPwd" value="{{ default_pwd }}" placeholder="请输入密码" required>
+                </div>
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i> 登 录
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <p>内置账号: user0 / user1 / admin / person0 / person1</p>
+                <p>密码与用户名相同</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const userName = document.getElementById('userName').value.trim();
+            const userPwd = document.getElementById('userPwd').value.trim();
+            const errorDiv = document.getElementById('loginError');
+            const errorMsg = document.getElementById('loginErrorMsg');
+
+            if (!userName || !userPwd) {
+                errorMsg.textContent = '用户名和密码不能为空';
+                errorDiv.style.display = 'flex';
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_name: userName, user_pwd: userPwd })
+                });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    localStorage.setItem('token', data.token);
+                    window.location.href = '/?t=' + encodeURIComponent(data.token);
+                } else {
+                    errorMsg.textContent = data.error || '登录失败';
+                    errorDiv.style.display = 'flex';
+                }
+            } catch (err) {
+                errorMsg.textContent = '网络错误: ' + err.message;
+                errorDiv.style.display = 'flex';
+            }
+        });
+    </script>
+</body>
+</html>

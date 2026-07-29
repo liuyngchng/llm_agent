@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/lib/font-awesome.all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <title>API管理 - {{ sys_name }}</title>
+    <style>
+        .api-page { max-width: 960px; margin: 0 auto; padding: 24px 32px; }
+        .api-page h2 { font-size: 1.15rem; color: #2c3e50; margin: 28px 0 14px; display: flex; align-items: center; gap: 8px; }
+        .api-page h2 i { color: #4b6cb7; }
+        .token-alert { padding: 12px 16px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; font-size: 0.85rem; color: #e65100; margin-bottom: 12px; display: none; }
+        .token-box { background: #f8f9fb; border: 1px solid #e0e3e8; border-radius: 8px; padding: 14px 18px; font-family: monospace; font-size: 0.82rem; word-break: break-all; color: #333; margin-bottom: 12px; }
+        .btn-sm { padding: 8px 18px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-key"></i> API 管理</h1>
+            <div class="system-settings-link-container">
+                <a href="/" class="system-settings-link"><i class="fas fa-arrow-left"></i> 返回</a>
+            </div>
+        </header>
+
+        <div class="api-page">
+            <h2><i class="fas fa-key"></i> 我的 Token</h2>
+            <div class="token-alert" id="tokenAlert">
+                <i class="fas fa-exclamation-triangle"></i> 有 token 即将过期（10分钟内），请生成新 token。
+            </div>
+            <table class="result-table" style="max-width:700px;margin-bottom:12px;">
+                <thead><tr><th>Token 预览</th><th>过期时间</th><th>状态</th><th>创建时间</th></tr></thead>
+                <tbody id="tokensTbody"><tr><td colspan="4" style="text-align:center;color:#999;">加载中...</td></tr></tbody>
+            </table>
+            <button class="cfg-btn cfg-btn-save btn-sm" onclick="genToken()">
+                <i class="fas fa-plus"></i> 生成新 Token
+            </button>
+            <div id="newTokenBox" class="token-box" style="display:none;">
+                <strong>新 Token:</strong><br><span id="newTokenText"></span>
+                <br><small style="color:#888;">请立即复制保存，刷新后不再显示</small>
+            </div>
+
+            <h2><i class="fas fa-history"></i> API 调用记录</h2>
+            <table class="result-table" style="max-width:100%;">
+                <thead><tr><th>时间</th><th>方法</th><th>接口</th><th>状态码</th><th>入参</th><th>出参/错误</th></tr></thead>
+                <tbody id="logsTbody"><tr><td colspan="6" style="text-align:center;color:#999;">加载中...</td></tr></tbody>
+            </table>
+        </div>
+
+        <footer><p>{{ sys_name }} - API管理</p></footer>
+    </div>
+
+    <script>
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var t = params.get('t');
+            if (t) {
+                localStorage.setItem('token', t);
+            }
+            var stored = localStorage.getItem('token');
+            if (stored && !params.get('t')) {
+                var url = new URL(window.location);
+                url.searchParams.set('t', stored);
+                window.location.replace(url);
+            }
+        })();
+
+        function getToken() {
+            return localStorage.getItem('token') || '';
+        }
+        function authFetch(url, options) {
+            options = options || {};
+            options.headers = options.headers || {};
+            options.headers['Authorization'] = 'Bearer ' + getToken();
+            return fetch(url, options);
+        }
+
+        async function loadTokens() {
+            try {
+                const resp = await authFetch('/api/user/tokens');
+                const data = await resp.json();
+                const tokens = data.data || [];
+                const tbody = document.getElementById('tokensTbody');
+                if (tokens.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;padding:30px;">暂无有效 Token</td></tr>';
+                    return;
+                }
+                let hasExpiring = false;
+                tbody.innerHTML = tokens.map(t => {
+                    if (t.expiring_soon) hasExpiring = true;
+                    const badge = t.expiring_soon
+                        ? '<span style="color:#e65100;font-weight:600;">即将过期</span>'
+                        : '<span style="color:#2e7d32;">有效</span>';
+                    return `<tr><td><code>${t.token_preview}...</code></td><td>${t.expires_at}</td><td>${badge}</td><td>${t.create_time}</td></tr>`;
+                }).join('');
+                document.getElementById('tokenAlert').style.display = hasExpiring ? 'block' : 'none';
+            } catch (e) {
+                document.getElementById('tokensTbody').innerHTML = '<tr><td colspan="4" style="color:#c62828;">加载失败</td></tr>';
+            }
+        }
+        async function genToken() {
+            try {
+                const resp = await authFetch('/api/user/token', { method: 'POST' });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    document.getElementById('newTokenText').textContent = data.token;
+                    document.getElementById('newTokenBox').style.display = 'block';
+                    loadTokens();
+                } else {
+                    alert(data.error || '生成失败');
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+        async function loadLogs() {
+            try {
+                const resp = await authFetch('/api/user/call-logs');
+                const data = await resp.json();
+                const logs = data.data || [];
+                const tbody = document.getElementById('logsTbody');
+                if (logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:30px;">暂无调用记录</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = logs.map(l => {
+                    const statusColor = l.status_code < 400 ? '#2e7d32' : '#c62828';
+                    const detail = l.error_msg || l.response_body || '';
+                    return `<tr>
+                        <td style="font-size:0.82rem;">${l.create_time}</td>
+                        <td><code>${l.method}</code></td>
+                        <td style="font-size:0.82rem;">${l.api_path}</td>
+                        <td style="color:${statusColor};font-weight:600;">${l.status_code}</td>
+                        <td style="font-size:0.78rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escAttr(l.request_body)}">${escHtml(l.request_body)}</td>
+                        <td style="font-size:0.78rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escAttr(detail)}">${escHtml(detail)}</td>
+                    </tr>`;
+                }).join('');
+            } catch (e) {
+                document.getElementById('logsTbody').innerHTML = '<tr><td colspan="6" style="color:#c62828;">加载失败</td></tr>';
+            }
+        }
+        function escHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+        function escAttr(s) { if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        loadTokens();
+        loadLogs();
+    </script>
+</body>
+</html>

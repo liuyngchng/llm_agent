@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/lib/font-awesome.all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <title>系统管理 - {{ sys_name }}</title>
+    <style>
+        .cfg-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .cfg-sidebar {
+            width: 200px;
+            background: linear-gradient(180deg, #f8f9fb 0%, #eef1f6 100%);
+            border-right: 1px solid #e0e3e8;
+            padding: 16px 0;
+            flex-shrink: 0;
+        }
+
+        .cfg-tab {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 20px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #555;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .cfg-tab:hover {
+            background: rgba(75, 108, 183, 0.06);
+            color: #333;
+        }
+
+        .cfg-tab.active {
+            background: rgba(75, 108, 183, 0.1);
+            color: #4b6cb7;
+            border-left-color: #4b6cb7;
+            font-weight: 600;
+        }
+
+        .cfg-tab i {
+            width: 18px;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+
+        .cfg-sidebar-divider {
+            margin: 8px 16px;
+            border-top: 1px solid #dce2ec;
+        }
+
+        .cfg-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 32px;
+            background: #fff;
+        }
+
+        .cfg-section {
+            display: none;
+        }
+
+        .cfg-section.active {
+            display: block;
+        }
+
+        .cfg-section h2 {
+            font-size: 1.25rem;
+            color: #2c3e50;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #eef1f6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cfg-section h2 i {
+            color: #4b6cb7;
+        }
+
+        .cfg-form-group {
+            margin-bottom: 20px;
+        }
+
+        .cfg-form-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 6px;
+        }
+
+        .cfg-form-group label .cfg-hint {
+            font-weight: 400;
+            color: #999;
+            font-size: 0.82rem;
+        }
+
+        .cfg-form-group input[type="text"],
+        .cfg-form-group input[type="password"],
+        .cfg-form-group input[type="number"],
+        .cfg-form-group textarea,
+        .cfg-form-group select {
+            width: 100%;
+            max-width: 560px;
+            padding: 10px 14px;
+            border: 2px solid #e0e3e8;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        .cfg-pwd-wrap {
+            position: relative;
+            display: inline-block;
+            max-width: 560px;
+            width: 100%;
+        }
+
+        .cfg-pwd-wrap input {
+            width: 100%;
+            padding-right: 40px !important;
+        }
+
+        .cfg-pwd-toggle {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            padding: 6px;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .cfg-pwd-toggle:hover {
+            color: #4b6cb7;
+        }
+
+        .cfg-form-group input:focus,
+        .cfg-form-group textarea:focus,
+        .cfg-form-group select:focus {
+            outline: none;
+            border-color: #4b6cb7;
+            box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.12);
+        }
+
+        .cfg-form-group textarea {
+            max-width: 720px;
+            min-height: 280px;
+            font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            resize: vertical;
+        }
+
+        .cfg-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .cfg-toggle {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            cursor: pointer;
+        }
+
+        .cfg-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .cfg-toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: #ccc;
+            border-radius: 26px;
+            transition: all 0.3s;
+        }
+
+        .cfg-toggle-slider::before {
+            content: '';
+            position: absolute;
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .cfg-toggle input:checked + .cfg-toggle-slider {
+            background: #4b6cb7;
+        }
+
+        .cfg-toggle input:checked + .cfg-toggle-slider::before {
+            transform: translateX(22px);
+        }
+
+        .cfg-toggle-label {
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .cfg-actions {
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 12px;
+        }
+
+        .cfg-btn {
+            padding: 11px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cfg-btn-save {
+            background: linear-gradient(135deg, #4b6cb7, #3a5a9e);
+            color: white;
+        }
+
+        .cfg-btn-save:hover {
+            background: linear-gradient(135deg, #3a5a9e, #2c487e);
+            box-shadow: 0 4px 12px rgba(75, 108, 183, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .cfg-btn-reset {
+            background: #f0f0f0;
+            color: #555;
+        }
+
+        .cfg-btn-reset:hover {
+            background: #e0e0e0;
+        }
+
+        .cfg-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 14px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            z-index: 9999;
+            display: none;
+            animation: cfgToastIn 0.3s ease-out;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .cfg-toast.success { background: #2e7d32; }
+        .cfg-toast.error { background: #c62828; }
+
+        @keyframes cfgToastIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* KB iframe */
+        .cfg-iframe-wrap {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .cfg-iframe-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: #f8f9fb;
+            border: 1px solid #e0e3e8;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .cfg-iframe-header a {
+            margin-left: auto;
+            color: #4b6cb7;
+            text-decoration: none;
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .cfg-iframe-header a:hover { text-decoration: underline; }
+
+        .cfg-iframe {
+            flex: 1;
+            border: 1px solid #e0e3e8;
+            border-radius: 0 0 8px 8px;
+            min-height: 1000px;
+            background: #fff;
+        }
+
+        .cfg-desc-block {
+            background: #f8f9fb;
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-top: 24px;
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.6;
+            max-width: 560px;
+        }
+
+        .cfg-desc-block code {
+            background: #e8ecf2;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            color: #4b6cb7;
+        }
+
+        @media (max-width: 768px) {
+            .cfg-layout { flex-direction: column; }
+            .cfg-sidebar {
+                width: 100%;
+                flex-direction: row;
+                display: flex;
+                padding: 8px;
+                overflow-x: auto;
+                border-right: none;
+                border-bottom: 1px solid #e0e3e8;
+            }
+            .cfg-tab {
+                border-left: none;
+                border-bottom: 3px solid transparent;
+                white-space: nowrap;
+                padding: 10px 16px;
+            }
+            .cfg-tab.active {
+                border-left-color: transparent;
+                border-bottom-color: #4b6cb7;
+            }
+            .cfg-content { padding: 20px 16px; }
+            .cfg-form-group input,
+            .cfg-form-group textarea,
+            .cfg-form-group select { max-width: 100%; }
+            .cfg-iframe { min-height: 800px; }
+        }
+
+        /* ============================================================
+           工作流流程图样式
+           ============================================================ */
+        .wf-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            padding: 20px 0;
+        }
+
+        .wf-node {
+            position: relative;
+            border-radius: 12px;
+            padding: 14px 20px;
+            text-align: center;
+            min-width: 200px;
+            max-width: 480px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: box-shadow 0.2s;
+        }
+
+        .wf-node:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .wf-node-start {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .wf-node-classifier {
+            background: #f0f4ff;
+            border: 2px solid #667eea;
+            min-width: 360px;
+        }
+
+        .wf-node-classifier .wf-node-title {
+            color: #4b6cb7;
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+        }
+
+        .wf-node-classifier .wf-cat-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .wf-cat-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: #fff;
+            border: 1px solid #dce2ec;
+            color: #555;
+        }
+
+        .wf-node-agent {
+            background: #fafbfc;
+            border: 2px solid #e0e3e8;
+            text-align: left;
+        }
+
+        .wf-node-agent.is-final {
+            border-color: #4b6cb7;
+            background: #f8f9ff;
+        }
+
+        .wf-node-agent .wf-agent-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .wf-node-agent .wf-agent-name i {
+            color: #4b6cb7;
+        }
+
+        .wf-node-agent .wf-agent-meta {
+            font-size: 0.78rem;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .wf-badge-final {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 8px;
+            background: #4b6cb7;
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .wf-badge-condition {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 8px;
+            background: #fef3c7;
+            color: #92400e;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* 连接线 */
+        .wf-connector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #aab;
+            font-size: 0.85rem;
+            padding: 4px 0;
+        }
+
+        .wf-connector-line {
+            width: 2px;
+            height: 20px;
+            background: #dce2ec;
+        }
+
+        .wf-connector-arrow {
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .wf-connector-label {
+            font-size: 0.75rem;
+            color: #999;
+            padding: 2px 8px;
+            background: #fff;
+            border-radius: 4px;
+        }
+
+        /* 分支容器 */
+        .wf-branches {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            position: relative;
+            padding-top: 8px;
+        }
+
+        .wf-branch {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        .wf-branch-label {
+            font-size: 0.75rem;
+            color: #667eea;
+            font-weight: 600;
+            padding: 2px 10px;
+            background: #f0f4ff;
+            border-radius: 6px;
+            margin-bottom: 4px;
+        }
+
+        .wf-branch .wf-connector-line {
+            height: 14px;
+        }
+
+        .wf-branch-items {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        /* 聚合 */
+        .wf-merge-line {
+            width: 2px;
+            height: 16px;
+            background: #dce2ec;
+            margin: 8px 0;
+        }
+
+        .wf-node-end {
+            background: linear-gradient(135deg, #e8ecf8, #dce2f0);
+            border: 2px solid #8b5cf6;
+            color: #4c1d95;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        /* 旧版线性流程 */
+        .wf-linear {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .wf-linear-arrow {
+            font-size: 1.5rem;
+            color: #ccc;
+            margin: 0 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-cog"></i> 系统管理</h1>
+        </header>
+
+        <div class="cfg-layout">
+            <!-- 左侧导航 -->
+            <nav class="cfg-sidebar">
+                <div class="cfg-tab active" data-tab="kbmgmt">
+                    <i class="fas fa-database"></i> 知识库管理
+                </div>
+                <div class="cfg-sidebar-divider"></div>
+                <div class="cfg-tab" data-tab="kb">
+                    <i class="fas fa-book"></i> 文本处理配置
+                </div>
+                <div class="cfg-tab" data-tab="llm">
+                    <i class="fas fa-robot"></i> 大模型配置
+                </div>
+                <div class="cfg-tab" data-tab="sys">
+                    <i class="fas fa-sliders-h"></i> 系统配置
+                </div>
+                <div class="cfg-sidebar-divider"></div>
+                <div class="cfg-tab" data-tab="users">
+                    <i class="fas fa-users"></i> 用户管理
+                </div>
+                <div class="cfg-tab" data-tab="agents">
+                    <i class="fas fa-headset"></i> 客服座席
+                </div>
+                <div class="cfg-sidebar-divider"></div>
+                <div class="cfg-tab" data-tab="ai-agents">
+                    <i class="fas fa-robot"></i> AI Agent 管理
+                </div>
+                <div class="cfg-tab" data-tab="workflow">
+                    <i class="fas fa-project-diagram"></i> 工作流
+                </div>
+                <div class="cfg-sidebar-divider"></div>
+                <div class="cfg-tab" data-tab="faq">
+                    <i class="fas fa-question-circle"></i> FAQ 管理
+                </div>
+            </nav>
+
+            <!-- 右侧内容区 -->
+            <div class="cfg-content">
+                <!-- 知识库管理（iframe 嵌入） -->
+                <div class="cfg-section active" id="section-kbmgmt">
+                    <div class="cfg-iframe-wrap">
+                        <div class="cfg-iframe-header">
+                            <i class="fas fa-database"></i> 知识库管理
+                            <a href="/vdb/idx?t={{ token }}" target="_blank">
+                                <i class="fas fa-external-link-alt"></i> 新窗口打开
+                            </a>
+                        </div>
+                        <iframe class="cfg-iframe" id="kbmgmtIframe"
+                                src="/vdb/idx?t={{ token }}">
+                        </iframe>
+                    </div>
+                </div>
+
+                <!-- 文本处理配置 -->
+                <div class="cfg-section" id="section-kb">
+                    <h2><i class="fas fa-book"></i> 文本处理配置</h2>
+
+                    <h3 style="font-size:1rem;color:#4b6cb7;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #eef1f6;">
+                        <i class="fas fa-sliders-h"></i> 检索与分片参数
+                    </h3>
+
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                        <div class="cfg-form-group" style="flex:1;min-width:200px;">
+                            <label>文本分片大小 <span class="cfg-hint">(字符数)</span></label>
+                            <input type="number" id="kb_chunk_size" min="50" max="2000" placeholder="300">
+                        </div>
+                        <div class="cfg-form-group" style="flex:1;min-width:200px;">
+                            <label>分片重叠大小 <span class="cfg-hint">(字符数)</span></label>
+                            <input type="number" id="kb_chunk_overlap" min="0" max="500" placeholder="80">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                        <div class="cfg-form-group" style="flex:1;min-width:200px;">
+                            <label>检索返回条数</label>
+                            <input type="number" id="kb_top_k" min="1" max="50" placeholder="3">
+                        </div>
+                        <div class="cfg-form-group" style="flex:1;min-width:200px;">
+                            <label>相似度阈值 <span class="cfg-hint">(0~1)</span></label>
+                            <input type="number" id="kb_score_threshold" min="0" max="1" step="0.01" placeholder="0.1">
+                        </div>
+                    </div>
+
+                    <h3 style="font-size:1rem;color:#4b6cb7;margin:28px 0 16px;padding-bottom:8px;border-bottom:1px solid #eef1f6;">
+                        <i class="fas fa-sort-amount-down"></i> Rerank 重排序参数
+                    </h3>
+
+                    <div class="cfg-form-group">
+                        <label>启用 Rerank</label>
+                        <div class="cfg-toggle-row">
+                            <label class="cfg-toggle">
+                                <input type="checkbox" id="kb_rerank_enabled">
+                                <span class="cfg-toggle-slider"></span>
+                            </label>
+                            <span class="cfg-toggle-label" id="rerankLabel">未启用</span>
+                        </div>
+                    </div>
+
+                    <div class="cfg-form-group">
+                        <label>预检索条数 <span class="cfg-hint">(Rerank 前从向量库检索的条数，需大于返回条数)</span></label>
+                        <input type="number" id="kb_rerank_retrieve_n" min="3" max="50" placeholder="15" style="max-width:200px;">
+                    </div>
+
+                    <div class="cfg-actions">
+                        <button class="cfg-btn cfg-btn-save" onclick="saveKBConfig()">
+                            <i class="fas fa-check"></i> 保存知识库参数
+                        </button>
+                        <button class="cfg-btn cfg-btn-reset" onclick="loadConfig()">
+                            <i class="fas fa-undo"></i> 重置
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 大模型配置 -->
+                <div class="cfg-section" id="section-llm">
+                    <h2><i class="fas fa-robot"></i> 大模型配置</h2>
+
+                    <h3 style="font-size:1rem;color:#4b6cb7;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #eef1f6;">
+                        <i class="fas fa-comments"></i> LLM 对话模型
+                    </h3>
+
+                    <div class="cfg-form-group">
+                        <label>API 地址 <span class="cfg-hint">(OpenAI 兼容接口)</span></label>
+                        <input type="text" id="llm_api_uri" placeholder="https://api.example.com/v1">
+                    </div>
+                    <div class="cfg-form-group">
+                        <label>API Key</label>
+                        <div class="cfg-pwd-wrap">
+                            <input type="password" id="llm_api_key" placeholder="sk-xxx">
+                            <button type="button" class="cfg-pwd-toggle" onclick="togglePwd('llm_api_key', this)" title="显示/隐藏">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="cfg-form-group">
+                        <label>模型名称</label>
+                        <input type="text" id="llm_model_name" placeholder="qwen3.7-plus">
+                    </div>
+
+                    <h3 style="font-size:1rem;color:#4b6cb7;margin:28px 0 16px;padding-bottom:8px;border-bottom:1px solid #eef1f6;">
+                        <i class="fas fa-cubes"></i> Embedding 向量模型
+                    </h3>
+
+                    <div class="cfg-form-group">
+                        <label>API 地址 <span class="cfg-hint">(OpenAI 兼容接口)</span></label>
+                        <input type="text" id="embedding_api_uri" placeholder="https://api.example.com/v1">
+                    </div>
+                    <div class="cfg-form-group">
+                        <label>API Key</label>
+                        <div class="cfg-pwd-wrap">
+                            <input type="password" id="embedding_api_key" placeholder="sk-xxx">
+                            <button type="button" class="cfg-pwd-toggle" onclick="togglePwd('embedding_api_key', this)" title="显示/隐藏">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="cfg-form-group">
+                        <label>模型名称</label>
+                        <input type="text" id="embedding_model_name" placeholder="text-embedding-3-small">
+                    </div>
+
+                    <h3 style="font-size:1rem;color:#4b6cb7;margin:28px 0 16px;padding-bottom:8px;border-bottom:1px solid #eef1f6;">
+                        <i class="fas fa-sort-amount-down"></i> Rerank 重排序模型
+                    </h3>
+
+                    <div class="cfg-form-group">
+                        <label>API 地址 <span class="cfg-hint">(OpenAI/Cohere 兼容接口)</span></label>
+                        <input type="text" id="rerank_api_uri" placeholder="https://api.example.com/v1">
+                    </div>
+                    <div class="cfg-form-group">
+                        <label>API Key</label>
+                        <input type="password" id="rerank_api_key" placeholder="sk-xxx">
+                    </div>
+                    <div class="cfg-form-group">
+                        <label>模型名称</label>
+                        <input type="text" id="rerank_model_name" placeholder="bge-reranker-v2-m3">
+                    </div>
+
+                    <h3 style="font-size:1rem;color:#4b6cb7;margin:28px 0 16px;padding-bottom:8px;border-bottom:1px solid #eef1f6;">
+                        <i class="fas fa-microchip"></i> LLM 模型参数
+                    </h3>
+
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                        <div class="cfg-form-group" style="flex:1;min-width:180px;">
+                            <label>Temperature <span class="cfg-hint">(0~2)</span></label>
+                            <input type="number" id="llm_temperature" min="0" max="2" step="0.1" placeholder="0.7">
+                        </div>
+                        <div class="cfg-form-group" style="flex:1;min-width:180px;">
+                            <label>Top-P <span class="cfg-hint">(0~1)</span></label>
+                            <input type="number" id="llm_top_p" min="0" max="1" step="0.01" placeholder="0.9">
+                        </div>
+                        <div class="cfg-form-group" style="flex:1;min-width:180px;">
+                            <label>Max Tokens</label>
+                            <input type="number" id="llm_max_tokens" min="1" max="32768" placeholder="2048">
+                        </div>
+                    </div>
+
+                    <div class="cfg-actions">
+                        <button class="cfg-btn cfg-btn-save" onclick="saveLLMConfig()">
+                            <i class="fas fa-check"></i> 保存大模型配置
+                        </button>
+                        <button class="cfg-btn cfg-btn-reset" onclick="loadConfig()">
+                            <i class="fas fa-undo"></i> 重置
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 系统配置 -->
+                <div class="cfg-section" id="section-sys">
+                    <h2><i class="fas fa-sliders-h"></i> 系统配置</h2>
+
+                    <div class="cfg-form-group">
+                        <label>系统名称</label>
+                        <input type="text" id="sys_name" placeholder="对话机器人" maxlength="50">
+                    </div>
+
+                    <div class="cfg-form-group">
+                        <label>用户认证</label>
+                        <div class="cfg-toggle-row">
+                            <label class="cfg-toggle">
+                                <input type="checkbox" id="sys_auth">
+                                <span class="cfg-toggle-slider"></span>
+                            </label>
+                            <span class="cfg-toggle-label" id="authLabel">未启用</span>
+                        </div>
+                    </div>
+
+                    <div class="cfg-form-group">
+                        <label>接口认证</label>
+                        <div class="cfg-toggle-row">
+                            <label class="cfg-toggle">
+                                <input type="checkbox" id="sys_api_auth">
+                                <span class="cfg-toggle-slider"></span>
+                            </label>
+                            <span class="cfg-toggle-label" id="apiAuthLabel">未启用</span>
+                        </div>
+                    </div>
+
+                    <div class="cfg-form-group" style="margin-top:28px;">
+                        <label>
+                            聊天提示词模板
+                            <span class="cfg-hint">
+                                — 可用变量: <code>{'{context}'}</code> <code>{'{history}'}</code> <code>{'{question}'}</code> <code>{'{cur_date}'}</code> <code>{'{cur_week}'}</code>
+                            </span>
+                        </label>
+                        <textarea id="chat_msg" placeholder="输入提示词模板..."></textarea>
+                    </div>
+
+                    <div class="cfg-actions">
+                        <button class="cfg-btn cfg-btn-save" onclick="saveSysConfig()">
+                            <i class="fas fa-check"></i> 保存系统配置
+                        </button>
+                        <button class="cfg-btn cfg-btn-reset" onclick="loadConfig()">
+                            <i class="fas fa-undo"></i> 重置
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 用户管理 -->
+                <div class="cfg-section" id="section-users">
+                    <h2><i class="fas fa-users"></i> 用户管理</h2>
+
+                    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end;">
+                        <div class="cfg-form-group" style="margin-bottom:0;flex:1;min-width:140px;">
+                            <label>用户名</label>
+                            <input type="text" id="newUserName" placeholder="用户名" style="max-width:200px;">
+                        </div>
+                        <div class="cfg-form-group" style="margin-bottom:0;flex:1;min-width:140px;">
+                            <label>密码</label>
+                            <input type="password" id="newUserPwd" placeholder="密码" style="max-width:200px;">
+                        </div>
+                        <div class="cfg-form-group" style="margin-bottom:0;">
+                            <label>角色</label>
+                            <select id="newUserRole" style="max-width:150px;padding:10px 14px;border:2px solid #e0e3e8;border-radius:8px;font-size:0.9rem;">
+                                <option value="0">普通用户</option>
+                                <option value="1">管理员</option>
+                                <option value="2">客服座席</option>
+                                <option value="3">API用户</option>
+                            </select>
+                        </div>
+                        <div class="cfg-form-group" style="margin-bottom:0;flex:2;min-width:180px;">
+                            <label>备注</label>
+                            <input type="text" id="newUserNote" placeholder="备注" style="max-width:260px;">
+                        </div>
+                        <button class="cfg-btn cfg-btn-save btn-sm" onclick="addUser()">
+                            <i class="fas fa-plus"></i> 添加用户
+                        </button>
+                    </div>
+
+                    <table class="result-table" style="max-width:900px;">
+                        <thead><tr><th>用户名</th><th>角色</th><th>备注</th><th>操作</th></tr></thead>
+                        <tbody id="usersTbody"><tr><td colspan="4" style="text-align:center;color:#999;">加载中...</td></tr></tbody>
+                    </table>
+                </div>
+
+                <!-- 客服座席 -->
+                <div class="cfg-section" id="section-agents">
+                    <h2><i class="fas fa-headset"></i> 在线客服座席</h2>
+
+                    <table class="result-table" id="agentsTable" style="max-width:700px;">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>登录时间</th>
+                                <th>备注</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agentsTbody">
+                            <tr>
+                                <td colspan="3" style="text-align:center;color:#999;padding:40px;">
+                                    <i class="fas fa-spinner fa-pulse"></i> 加载中...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="cfg-actions">
+                        <button class="cfg-btn cfg-btn-reset" onclick="loadAgents()">
+                            <i class="fas fa-sync-alt"></i> 刷新
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AI Agent 管理 -->
+                <div class="cfg-section" id="section-ai-agents">
+                    <h2><i class="fas fa-robot"></i> AI Agent 管理</h2>
+
+                    <div style="margin-bottom:16px;">
+                        <button class="cfg-btn cfg-btn-save" onclick="showAgentModal()">
+                            <i class="fas fa-plus"></i> 新建 Agent
+                        </button>
+                    </div>
+
+                    <table class="result-table" style="max-width:100%;">
+                        <thead><tr><th>名称</th><th>描述</th><th>模型</th><th>创建时间</th><th>操作</th></tr></thead>
+                        <tbody id="aiAgentsTbody"><tr><td colspan="5" style="text-align:center;color:#999;">加载中...</td></tr></tbody>
+                    </table>
+
+                    <!-- Agent 编辑弹窗 -->
+                    <div id="agentModal" class="pwd-modal-overlay" style="display:none;">
+                        <div class="pwd-modal" style="max-width:600px;width:90%;">
+                            <h3 id="agentModalTitle"><i class="fas fa-robot"></i> 新建 Agent</h3>
+                            <form id="agentForm">
+                                <input type="hidden" id="agentEditId" value="0">
+                                <div class="pwd-field">
+                                    <label>名称 <span style="color:#e53935;">*</span></label>
+                                    <input type="text" id="agentName" required maxlength="50" style="width:100%;">
+                                </div>
+                                <div class="pwd-field">
+                                    <label>描述</label>
+                                    <input type="text" id="agentDesc" maxlength="200" style="width:100%;">
+                                </div>
+                                <div class="pwd-field">
+                                    <label>System Prompt <span style="color:#e53935;">*</span></label>
+                                    <textarea id="agentPrompt" required rows="6" style="width:100%;font-family:monospace;font-size:0.85rem;"></textarea>
+                                </div>
+                                <div class="pwd-field">
+                                    <label>模型名称 <span style="color:#999;font-weight:400;">(可选，留空用默认)</span></label>
+                                    <input type="text" id="agentModel" placeholder="如 qwen3.7-plus" style="width:100%;">
+                                </div>
+                                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                                    <div class="pwd-field" style="flex:1;">
+                                        <label>Temperature <span style="color:#999;font-weight:400;">(可选)</span></label>
+                                        <input type="number" id="agentTemp" min="0" max="2" step="0.1" placeholder="默认" style="width:100%;">
+                                    </div>
+                                    <div class="pwd-field" style="flex:1;">
+                                        <label>Top-P <span style="color:#999;font-weight:400;">(可选)</span></label>
+                                        <input type="number" id="agentTopP" min="0" max="1" step="0.01" placeholder="默认" style="width:100%;">
+                                    </div>
+                                    <div class="pwd-field" style="flex:1;">
+                                        <label>Max Tokens <span style="color:#999;font-weight:400;">(可选)</span></label>
+                                        <input type="number" id="agentMaxTok" min="1" max="32768" placeholder="默认" style="width:100%;">
+                                    </div>
+                                </div>
+                                <div class="pwd-field">
+                                    <label>关联知识库 <span style="color:#999;font-weight:400;">(可选多选)</span></label>
+                                    <div id="agentVdbCheckboxes" style="max-height:120px;overflow-y:auto;padding:8px;border:1px solid #e0e3e8;border-radius:6px;"></div>
+                                </div>
+                                <div class="pwd-actions">
+                                    <button type="button" class="cfg-btn cfg-btn-reset" onclick="hideAgentModal()">取消</button>
+                                    <button type="submit" class="cfg-btn cfg-btn-save">保存</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 工作流编排 -->
+                <div class="cfg-section" id="section-workflow">
+                    <h2><i class="fas fa-project-diagram"></i> 工作流</h2>
+
+                    <div style="display:flex;gap:24px;min-height:500px;">
+                        <!-- 左侧：工作流列表 -->
+                        <div style="width:250px;flex-shrink:0;border-right:1px solid #eee;padding-right:16px;">
+                            <div id="workflowList" style="max-height:500px;overflow-y:auto;">
+                                <div style="color:#999;font-size:0.85rem;text-align:center;padding:20px;">加载中...</div>
+                            </div>
+                        </div>
+
+                        <!-- 右侧：流程图展示 -->
+                        <div style="flex:1;min-width:0;">
+                            <div id="wfViewPlaceholder" style="color:#999;text-align:center;padding:80px 20px;">
+                                <i class="fas fa-arrow-left" style="font-size:2rem;display:block;margin-bottom:16px;"></i>
+                                请先选择左侧一个工作流查看
+                            </div>
+                            <div id="wfView" style="display:none;">
+                                <!-- 工作流名称 -->
+                                <h3 id="wfViewTitle" style="font-size:1.1rem;color:#2c3e50;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #eef1f6;"></h3>
+                                <!-- 流程图 -->
+                                <div id="wfFlowchart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ 管理 -->
+                <div class="cfg-section" id="section-faq">
+                    <h2><i class="fas fa-question-circle"></i> FAQ 管理</h2>
+
+                    <!-- 工具栏卡片 -->
+                    <div style="background:#fafbfc;border:1px solid #e0e3e8;border-radius:10px;padding:20px 24px;margin-bottom:24px;">
+                        <!-- 第一行：阈值配置 -->
+                        <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+                            <div class="cfg-form-group" style="margin-bottom:0;flex:1;min-width:220px;max-width:320px;">
+                                <label style="margin-bottom:6px;">匹配阈值 <span class="cfg-hint">(0~1，越高越严格)</span></label>
+                                <input type="number" id="faq_match_threshold" min="0" max="1" step="0.01" placeholder="0.85"
+                                       style="width:100%;padding:10px 14px;border:2px solid #e0e3e8;border-radius:8px;font-size:0.9rem;">
+                            </div>
+                            <button class="cfg-btn cfg-btn-save" style="padding:10px 22px;" onclick="saveFaqConfig()">
+                                <i class="fas fa-check"></i> 保存阈值
+                            </button>
+                        </div>
+
+                        <div style="margin:16px 0;border-top:1px solid #e8eaed;"></div>
+
+                        <!-- 第二行：操作按钮 -->
+                        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                            <label class="cfg-btn cfg-btn-save" style="cursor:pointer;margin:0;">
+                                <i class="fas fa-upload"></i> 上传 FAQ 文件
+                                <input type="file" id="faqFileInput" accept=".txt,.md" style="display:none;" onchange="uploadFaqFile()">
+                            </label>
+                            <a href="javascript:void(0)" class="cfg-btn cfg-btn-reset" style="text-decoration:none;" onclick="downloadFaqTemplate()">
+                                <i class="fas fa-download"></i> 下载 FAQ 模板
+                            </a>
+                            <button class="cfg-btn cfg-btn-save" onclick="showFaqModal()">
+                                <i class="fas fa-plus"></i> 新增 FAQ
+                            </button>
+                            <button class="cfg-btn cfg-btn-reset" onclick="clearAllFaq()" style="color:#c62828;">
+                                <i class="fas fa-trash"></i> 清空全部
+                            </button>
+                            <span style="color:#999;font-size:0.82rem;margin-left:4px;">
+                                支持 .txt / .md 格式，每行 <code>Q: 问题</code> / <code>A: 答案</code>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- FAQ 列表 -->
+                    <div id="faqList">
+                        <div style="color:#999;text-align:center;padding:20px;">加载中...</div>
+                    </div>
+
+                    <!-- FAQ 编辑弹窗 -->
+                    <div id="faqModal" class="pwd-modal-overlay" style="display:none;">
+                        <div class="pwd-modal" style="max-width:600px;width:90%;">
+                            <h3 id="faqModalTitle"><i class="fas fa-question-circle"></i> 新增 FAQ</h3>
+                            <form id="faqForm">
+                                <input type="hidden" id="faqEditId" value="0">
+
+                                <div class="pwd-field">
+                                    <label>问法列表 <span style="color:#999;font-weight:400;">(多个不同问法，指向同一答案)</span></label>
+                                    <div id="faqQuestionsContainer">
+                                        <div class="faq-question-row" style="display:flex;gap:8px;margin-bottom:8px;">
+                                            <input type="text" class="faq-question-input" placeholder="问题..." style="flex:1;">
+                                            <button type="button" class="cfg-btn cfg-btn-reset" style="padding:6px 10px;font-size:0.8rem;color:#c62828;" onclick="removeFaqQuestionRow(this)">×</button>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="cfg-btn cfg-btn-reset" style="padding:4px 12px;font-size:0.8rem;margin-top:4px;" onclick="addFaqQuestionRow()">
+                                        <i class="fas fa-plus"></i> 添加问法
+                                    </button>
+                                </div>
+
+                                <div class="pwd-field">
+                                    <label>答案 <span style="color:#e53935;">*</span></label>
+                                    <textarea id="faqAnswer" rows="4" style="width:100%;font-family:inherit;"></textarea>
+                                </div>
+
+                                <div class="pwd-actions">
+                                    <button type="button" class="cfg-btn cfg-btn-reset" onclick="hideFaqModal()">取消</button>
+                                    <button type="submit" class="cfg-btn cfg-btn-save">保存</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>{{ sys_name }} - 系统管理</p>
+        </footer>
+    </div>
+
+    <!-- Toast -->
+    <div id="cfgToast" class="cfg-toast"></div>
+
+    <script>
+        // 从 URL 参数 t 提取 token 并持久化
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var t = params.get('t');
+            if (t) {
+                localStorage.setItem('token', t);
+            }
+        })();
+
+        // Go template parses double-brace; use hex escapes to define template variable delimiters
+        var T_OPEN = '\x7B\x7B';   // double-open-brace
+        var T_CLOSE = '\x7D\x7D';  // double-close-brace
+
+        function getToken() {
+            return localStorage.getItem('token') || '';
+        }
+        function authFetch(url, options) {
+            options = options || {};
+            options.headers = options.headers || {};
+            options.headers['Authorization'] = 'Bearer ' + getToken();
+            return fetch(url, options);
+        }
+
+        // ============================================================
+        // 密码可见性切换
+        // ============================================================
+        function togglePwd(inputId, btn) {
+            var input = document.getElementById(inputId);
+            var icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        // ============================================================
+        // Tab 切换
+        // ============================================================
+        document.querySelectorAll('.cfg-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.cfg-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.cfg-section').forEach(s => s.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('section-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Auth 开关标签
+        document.getElementById('sys_auth').addEventListener('change', function() {
+            document.getElementById('authLabel').textContent = this.checked ? '已启用' : '未启用';
+        });
+        document.getElementById('sys_api_auth').addEventListener('change', function() {
+            document.getElementById('apiAuthLabel').textContent = this.checked ? '已启用' : '未启用';
+        });
+        document.getElementById('kb_rerank_enabled').addEventListener('change', function() {
+            document.getElementById('rerankLabel').textContent = this.checked ? '已启用' : '未启用';
+        });
+
+        // ============================================================
+        // 加载配置
+        // ============================================================
+        async function loadConfig() {
+            try {
+                const resp = await authFetch('/api/config');
+                const json = await resp.json();
+                const data = json.data;
+
+                // 系统配置
+                document.getElementById('sys_name').value = data.sys.name || '';
+                const auth = data.sys.auth === 'true';
+                document.getElementById('sys_auth').checked = auth;
+                document.getElementById('authLabel').textContent = auth ? '已启用' : '未启用';
+                const apiAuth = data.sys.api_auth !== 'false'; // 默认启用
+                document.getElementById('sys_api_auth').checked = apiAuth;
+                document.getElementById('apiAuthLabel').textContent = apiAuth ? '已启用' : '未启用';
+
+                // 大模型配置
+                document.getElementById('llm_api_uri').value = data.api.llm_api_uri || '';
+                document.getElementById('llm_api_key').value = data.api.llm_api_key || '';
+                document.getElementById('llm_model_name').value = data.api.llm_model_name || '';
+                document.getElementById('embedding_api_uri').value = data.api.embedding_api_uri || '';
+                document.getElementById('embedding_api_key').value = data.api.embedding_api_key || '';
+                document.getElementById('embedding_model_name').value = data.api.embedding_model_name || '';
+                document.getElementById('rerank_api_uri').value = data.api.rerank_api_uri || '';
+                document.getElementById('rerank_api_key').value = data.api.rerank_api_key || '';
+                document.getElementById('rerank_model_name').value = data.api.rerank_model_name || '';
+
+                // 提示词
+                document.getElementById('chat_msg').value = data.prompt.chat_msg || '';
+
+                // 知识库参数
+                document.getElementById('kb_chunk_size').value = data.kb.chunk_size || 300;
+                document.getElementById('kb_chunk_overlap').value = data.kb.chunk_overlap || 80;
+                document.getElementById('kb_top_k').value = data.kb.top_k || 3;
+                document.getElementById('kb_score_threshold').value = data.kb.score_threshold || 0.1;
+                document.getElementById('kb_rerank_enabled').checked = data.kb.rerank_enabled === true;
+                document.getElementById('rerankLabel').textContent = data.kb.rerank_enabled === true ? '已启用' : '未启用';
+                document.getElementById('kb_rerank_retrieve_n').value = data.kb.rerank_retrieve_n || 15;
+
+                // LLM 参数
+                document.getElementById('llm_temperature').value = data.llm.temperature || 0.7;
+                document.getElementById('llm_top_p').value = data.llm.top_p || 0.9;
+                document.getElementById('llm_max_tokens').value = data.llm.max_tokens || 2048;
+
+                // FAQ 参数
+                document.getElementById('faq_match_threshold').value = (data.faq && data.faq.match_threshold) || 0.85;
+            } catch (err) {
+                showToast('加载配置失败: ' + err.message, 'error');
+            }
+        }
+
+        // ============================================================
+        // 保存大模型配置
+        // ============================================================
+        async function saveLLMConfig() {
+            const payload = {
+                sys: { name: '', auth: '' },
+                api: {
+                    llm_api_uri: document.getElementById('llm_api_uri').value.trim(),
+                    llm_api_key: document.getElementById('llm_api_key').value.trim(),
+                    llm_model_name: document.getElementById('llm_model_name').value.trim(),
+                    embedding_api_uri: document.getElementById('embedding_api_uri').value.trim(),
+                    embedding_api_key: document.getElementById('embedding_api_key').value.trim(),
+                    embedding_model_name: document.getElementById('embedding_model_name').value.trim(),
+                    rerank_api_uri: document.getElementById('rerank_api_uri').value.trim(),
+                    rerank_api_key: document.getElementById('rerank_api_key').value.trim(),
+                    rerank_model_name: document.getElementById('rerank_model_name').value.trim()
+                },
+                prompt: { chat_msg: '' },
+                kb: { chunk_size: 0, chunk_overlap: 0, top_k: 0, score_threshold: 0, rerank_enabled: false, rerank_retrieve_n: 0 },
+                llm: {
+                    temperature: parseFloat(document.getElementById('llm_temperature').value) || 0,
+                    top_p: parseFloat(document.getElementById('llm_top_p').value) || 0,
+                    max_tokens: parseInt(document.getElementById('llm_max_tokens').value) || 0
+                }
+            };
+
+            try {
+                const resp = await authFetch('/api/config', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const json = await resp.json();
+                if (json.status === 'ok') {
+                    showToast('大模型配置已保存', 'success');
+                } else {
+                    showToast('保存失败: ' + (json.error || '未知错误'), 'error');
+                }
+            } catch (err) {
+                showToast('保存失败: ' + err.message, 'error');
+            }
+        }
+
+        // ============================================================
+        // 保存知识库参数
+        // ============================================================
+        async function saveKBConfig() {
+            const payload = {
+                sys: { name: '', auth: '' },
+                api: {
+                    llm_api_uri: '', llm_api_key: '', llm_model_name: '',
+                    embedding_api_uri: '', embedding_api_key: '', embedding_model_name: '',
+                    rerank_api_uri: '', rerank_api_key: '', rerank_model_name: ''
+                },
+                prompt: { chat_msg: '' },
+                kb: {
+                    chunk_size: parseInt(document.getElementById('kb_chunk_size').value) || 0,
+                    chunk_overlap: parseInt(document.getElementById('kb_chunk_overlap').value) || 0,
+                    top_k: parseInt(document.getElementById('kb_top_k').value) || 0,
+                    score_threshold: parseFloat(document.getElementById('kb_score_threshold').value) || 0,
+                    rerank_enabled: document.getElementById('kb_rerank_enabled').checked,
+                    rerank_retrieve_n: parseInt(document.getElementById('kb_rerank_retrieve_n').value) || 0
+                },
+                llm: { temperature: 0, top_p: 0, max_tokens: 0 }
+            };
+
+            try {
+                const resp = await authFetch('/api/config', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const json = await resp.json();
+                if (json.status === 'ok') {
+                    showToast('知识库参数已保存', 'success');
+                } else {
+                    showToast('保存失败: ' + (json.error || '未知错误'), 'error');
+                }
+            } catch (err) {
+                showToast('保存失败: ' + err.message, 'error');
+            }
+        }
+
+        // ============================================================
+        // 保存系统配置
+        // ============================================================
+        async function saveSysConfig() {
+            const payload = {
+                sys: {
+                    name: document.getElementById('sys_name').value.trim(),
+                    auth: document.getElementById('sys_auth').checked ? 'true' : 'false',
+                    api_auth: document.getElementById('sys_api_auth').checked ? 'true' : 'false'
+                },
+                api: {
+                    llm_api_uri: '', llm_api_key: '', llm_model_name: '',
+                    embedding_api_uri: '', embedding_api_key: '', embedding_model_name: '',
+                    rerank_api_uri: '', rerank_api_key: '', rerank_model_name: ''
+                },
+                prompt: {
+                    chat_msg: document.getElementById('chat_msg').value
+                },
+                kb: { chunk_size: 0, chunk_overlap: 0, top_k: 0, score_threshold: 0, rerank_enabled: false, rerank_retrieve_n: 0 },
+                llm: { temperature: 0, top_p: 0, max_tokens: 0 }
+            };
+
+            try {
+                const resp = await authFetch('/api/config', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const json = await resp.json();
+                if (json.status === 'ok') {
+                    showToast('系统配置已保存', 'success');
+                } else {
+                    showToast('保存失败: ' + (json.error || '未知错误'), 'error');
+                }
+            } catch (err) {
+                showToast('保存失败: ' + err.message, 'error');
+            }
+        }
+
+        // ============================================================
+        // Toast 提示
+        // ============================================================
+        function showToast(msg, type) {
+            const toast = document.getElementById('cfgToast');
+            toast.textContent = msg;
+            toast.className = 'cfg-toast ' + type;
+            toast.style.display = 'block';
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        // ============================================================
+        // AI Agent 管理
+        // ============================================================
+
+        async function loadAiAgents() {
+            try {
+                const resp = await authFetch('/api/ai-agents');
+                const json = await resp.json();
+                const agents = json.data || [];
+                const tbody = document.getElementById('aiAgentsTbody');
+                if (agents.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">暂无 Agent</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = agents.map(a => {
+                    var model = a.model_name || '<span style="color:#999;">默认</span>';
+                    var desc = (a.description || '').substring(0, 40) + ((a.description||'').length > 40 ? '...' : '');
+                    return '<tr>' +
+                        '<td><i class="fas fa-robot" style="color:#4b6cb7;"></i> ' + escHtml2(a.name) + '</td>' +
+                        '<td>' + escHtml2(desc) + '</td>' +
+                        '<td>' + model + '</td>' +
+                        '<td>' + (a.created_at || '').substring(0,10) + '</td>' +
+                        '<td>' +
+                            '<button class="cfg-btn cfg-btn-reset" style="padding:4px 12px;font-size:0.8rem;" onclick="editAgent(' + a.id + ')"><i class="fas fa-edit"></i> 编辑</button> ' +
+                            '<button class="cfg-btn cfg-btn-reset" style="padding:4px 12px;font-size:0.8rem;color:#c62828;" onclick="delAgent(' + a.id + ')"><i class="fas fa-trash"></i> 删除</button>' +
+                        '</td>' +
+                    '</tr>';
+                }).join('');
+            } catch(e) {
+                document.getElementById('aiAgentsTbody').innerHTML = '<tr><td colspan="5" style="color:#c62828;">加载失败: ' + e.message + '</td></tr>';
+            }
+        }
+
+        function showAgentModal() {
+            document.getElementById('agentEditId').value = '0';
+            document.getElementById('agentModalTitle').innerHTML = '<i class="fas fa-robot"></i> 新建 Agent';
+            document.getElementById('agentName').value = '';
+            document.getElementById('agentDesc').value = '';
+            document.getElementById('agentPrompt').value = '';
+            document.getElementById('agentModel').value = '';
+            document.getElementById('agentTemp').value = '';
+            document.getElementById('agentTopP').value = '';
+            document.getElementById('agentMaxTok').value = '';
+            document.getElementById('agentModal').style.display = 'flex';
+            loadVdbChecks([]);
+        }
+
+        async function editAgent(id) {
+            try {
+                const resp = await authFetch('/api/ai-agents/' + id);
+                const json = await resp.json();
+                const a = json.data;
+                document.getElementById('agentEditId').value = a.id;
+                document.getElementById('agentModalTitle').innerHTML = '<i class="fas fa-edit"></i> 编辑 Agent';
+                document.getElementById('agentName').value = a.name || '';
+                document.getElementById('agentDesc').value = a.description || '';
+                document.getElementById('agentPrompt').value = a.system_prompt || '';
+                document.getElementById('agentModel').value = a.model_name || '';
+                document.getElementById('agentTemp').value = a.temperature != null ? a.temperature : '';
+                document.getElementById('agentTopP').value = a.top_p != null ? a.top_p : '';
+                document.getElementById('agentMaxTok').value = a.max_tokens != null ? a.max_tokens : '';
+                // vdb_ids
+                var currentIds = [];
+                if (a.vdb_ids && a.vdb_ids !== '[]') {
+                    try { currentIds = JSON.parse(a.vdb_ids); } catch(e) {}
+                }
+                loadVdbChecks(currentIds);
+                document.getElementById('agentModal').style.display = 'flex';
+            } catch(e) {
+                showToast('加载 Agent 失败: ' + e.message, 'error');
+            }
+        }
+
+        function hideAgentModal() {
+            document.getElementById('agentModal').style.display = 'none';
+        }
+
+        async function loadVdbChecks(selectedIds) {
+            try {
+                const resp = await authFetch('/api/vdb');
+                const json = await resp.json();
+                const vdbs = json.data || [];
+                var h = '';
+                vdbs.forEach(function(v) {
+                    var checked = selectedIds.indexOf(v.id) >= 0 ? 'checked' : '';
+                    h += '<label style="display:block;margin:2px 0;font-size:0.85rem;"><input type="checkbox" value="' + v.id + '" ' + checked + '> ' + escHtml2(v.name) + '</label>';
+                });
+                document.getElementById('agentVdbCheckboxes').innerHTML = h || '<span style="color:#999;font-size:0.85rem;">暂无知识库</span>';
+            } catch(e) {
+                document.getElementById('agentVdbCheckboxes').innerHTML = '<span style="color:#c62828;">加载失败</span>';
+            }
+        }
+
+        document.getElementById('agentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var id = parseInt(document.getElementById('agentEditId').value) || 0;
+            var name = document.getElementById('agentName').value.trim();
+            var prompt = document.getElementById('agentPrompt').value.trim();
+            if (!name || !prompt) { alert('名称和 System Prompt 不能为空'); return; }
+
+            // 收集选中的 vdb_ids
+            var checks = document.querySelectorAll('#agentVdbCheckboxes input[type=checkbox]:checked');
+            var vdbIds = [];
+            checks.forEach(function(cb) { vdbIds.push(parseInt(cb.value)); });
+
+            var payload = {
+                name: name,
+                description: document.getElementById('agentDesc').value.trim(),
+                system_prompt: prompt,
+                model_name: document.getElementById('agentModel').value.trim(),
+                temperature: document.getElementById('agentTemp').value ? parseFloat(document.getElementById('agentTemp').value) : null,
+                top_p: document.getElementById('agentTopP').value ? parseFloat(document.getElementById('agentTopP').value) : null,
+                max_tokens: document.getElementById('agentMaxTok').value ? parseInt(document.getElementById('agentMaxTok').value) : null,
+                vdb_ids: vdbIds
+            };
+
+            try {
+                var url = id > 0 ? '/api/ai-agents/' + id : '/api/ai-agents';
+                var method = id > 0 ? 'PUT' : 'POST';
+                var resp = await authFetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                var data = await resp.json();
+                if (data.status === 'ok') {
+                    hideAgentModal();
+                    loadAiAgents();
+                    showToast(id > 0 ? 'Agent 已更新' : 'Agent 已创建', 'success');
+                } else {
+                    showToast('保存失败: ' + (data.error || '未知错误'), 'error');
+                }
+            } catch(err) {
+                showToast('网络错误: ' + err.message, 'error');
+            }
+        });
+
+        async function delAgent(id) {
+            if (!confirm('确定删除该 Agent？')) return;
+            try {
+                var resp = await authFetch('/api/ai-agents/' + id, { method: 'DELETE' });
+                var data = await resp.json();
+                if (data.status === 'ok') {
+                    loadAiAgents();
+                    showToast('Agent 已删除', 'success');
+                } else {
+                    showToast('删除失败: ' + (data.error || ''), 'error');
+                }
+            } catch(err) {
+                showToast('网络错误: ' + err.message, 'error');
+            }
+        }
+
+        // ============================================================
+        // 工作流（只读浏览）
+        // ============================================================
+
+        var currentWfId = 0;
+        var currentWfData = null;  // 完整的工作流对象（含 classifier + nodes）
+
+        async function loadWorkflowList() {
+            try {
+                var resp = await authFetch('/api/workflows');
+                var json = await resp.json();
+                var wfs = json.data || [];
+                var h = '';
+                wfs.forEach(function(w) {
+                    var active = w.id === currentWfId ? ' style="background:#e8ecf2;border-left:3px solid #4b6cb7;"' : '';
+                    var hasClassifier = w.classifier ? ' <i class="fas fa-code-branch" style="color:#4b6cb7;font-size:0.75rem;" title="含意图分类"></i>' : '';
+                    h += '<div class="wf-list-item" onclick="selectWorkflow(' + w.id + ')"' + active + ' style="padding:10px 12px;margin:4px 0;cursor:pointer;border-radius:6px;border-left:3px solid transparent;transition:all 0.2s;">' +
+                        '<div style="font-weight:600;font-size:0.9rem;">' + escHtml2(w.name) + hasClassifier + '</div>' +
+                        '<div style="color:#999;font-size:0.8rem;">' + (w.classifier ? '意图路由 · ' + (w.classifier.categories||[]).length + ' 个分支' : '线性流程 · ' + (w.nodes||[]).length + ' 个节点') + '</div>' +
+                    '</div>';
+                });
+                document.getElementById('workflowList').innerHTML = h || '<div style="color:#999;font-size:0.85rem;text-align:center;padding:20px;">暂无工作流</div>';
+            } catch(e) {
+                document.getElementById('workflowList').innerHTML = '<div style="color:#c62828;font-size:0.85rem;text-align:center;padding:20px;">加载失败</div>';
+            }
+        }
+
+        async function selectWorkflow(id) {
+            currentWfId = id;
+            loadWorkflowList();
+            try {
+                var resp = await authFetch('/api/workflows/' + id);
+                var json = await resp.json();
+                currentWfData = json.data;
+                document.getElementById('wfViewTitle').textContent = currentWfData.name || '';
+                document.getElementById('wfViewPlaceholder').style.display = 'none';
+                document.getElementById('wfView').style.display = 'block';
+                // 获取 agent 名称映射
+                await loadAgentNameMap();
+                renderFlowchart();
+            } catch(err) {
+                showToast('加载工作流失败: ' + err.message, 'error');
+            }
+        }
+
+        // agent 名称缓存
+        var agentNameMap = {};
+
+        async function loadAgentNameMap() {
+            try {
+                var resp = await authFetch('/api/ai-agents');
+                var json = await resp.json();
+                var agents = json.data || [];
+                agentNameMap = {};
+                agents.forEach(function(a) { agentNameMap[a.id] = a.name; });
+            } catch(e) { console.error('加载 agent 列表失败', e); }
+        }
+
+        function getAgentName(agentId) {
+            if (agentNameMap[agentId]) return agentNameMap[agentId];
+            // fallback: try node's own agent_name
+            if (currentWfData && currentWfData.nodes) {
+                for (var i = 0; i < currentWfData.nodes.length; i++) {
+                    if (currentWfData.nodes[i].agent_id === agentId && currentWfData.nodes[i].agent_name) {
+                        return currentWfData.nodes[i].agent_name;
+                    }
+                }
+            }
+            return 'Agent #' + agentId;
+        }
+
+        function renderFlowchart() {
+            var classifier = currentWfData.classifier;
+            var nodes = currentWfData.nodes || [];
+            var h = '';
+
+            if (classifier && classifier.categories && classifier.categories.length > 0) {
+                // ============================================================
+                // 分类器模式：展示路由流程图
+                // ============================================================
+                h += '<div class="wf-flow">';
+
+                // 起始节点
+                h += '<div class="wf-node wf-node-start"><i class="fas fa-user"></i> 用户提问</div>';
+                h += '<div class="wf-connector"><div class="wf-connector-line"></div><div class="wf-connector-arrow">▼</div></div>';
+
+                // 分类器节点
+                h += '<div class="wf-node wf-node-classifier">';
+                h += '<div class="wf-node-title"><i class="fas fa-code-branch"></i> 意图分类</div>';
+                if (classifier.prompt) {
+                    h += '<div style="font-size:0.75rem;color:#999;margin-bottom:8px;">LLM 分类 + 关键词匹配</div>';
+                }
+                h += '<div class="wf-cat-list">';
+                var catColors = ['#ef4444','#f97316','#22c55e','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#eab308'];
+                classifier.categories.forEach(function(cat, i) {
+                    var c = catColors[i % catColors.length];
+                    h += '<span class="wf-cat-tag" style="border-color:' + c + ';color:' + c + ';">' + escHtml2(cat.name) + '</span>';
+                });
+                h += '</div>';
+                h += '</div>';
+
+                h += '<div class="wf-connector"><div class="wf-connector-line"></div><div class="wf-connector-arrow">▼</div></div>';
+
+                // 分支
+                h += '<div class="wf-branches">';
+                classifier.categories.forEach(function(cat) {
+                    // 找到 condition 匹配该 category 的节点
+                    var branchNodes = nodes.filter(function(n) {
+                        return n.condition === cat.name;
+                    });
+
+                    h += '<div class="wf-branch">';
+                    h += '<div class="wf-branch-label"><i class="fas fa-chevron-right"></i> ' + escHtml2(cat.description || cat.name) + '</div>';
+
+                    if (branchNodes.length === 0) {
+                        h += '<div class="wf-node wf-node-agent" style="opacity:0.5;border-style:dashed;">';
+                        h += '<div class="wf-agent-name"><i class="fas fa-exclamation-triangle"></i> 未配置节点</div>';
+                        h += '</div>';
+                    } else {
+                        branchNodes.forEach(function(node, ni) {
+                            h += '<div class="wf-node wf-node-agent' + (node.is_final ? ' is-final' : '') + '">';
+                            h += '<div class="wf-agent-name">';
+                            h += '<i class="fas fa-robot"></i> ' + escHtml2(getAgentName(node.agent_id));
+                            if (node.is_final) {
+                                h += ' <span class="wf-badge-final">最终输出</span>';
+                            }
+                            h += '</div>';
+                            if (node.output_var) {
+                                h += '<div class="wf-agent-meta">输出变量: <code>' + escHtml2(node.output_var) + '</code></div>';
+                            }
+                            h += '</div>';
+                            // 节点间连接线
+                            if (ni < branchNodes.length - 1) {
+                                h += '<div class="wf-connector"><div class="wf-connector-line"></div><div class="wf-connector-arrow">▼</div></div>';
+                            }
+                        });
+                    }
+                    h += '</div>';
+                });
+                h += '</div>';
+
+                // 聚合
+                h += '<div class="wf-merge-line"></div>';
+                h += '<div class="wf-node wf-node-end"><i class="fas fa-reply"></i> 最终回复</div>';
+
+                h += '</div>';
+
+            } else {
+                // ============================================================
+                // 旧版线性模式
+                // ============================================================
+                h += '<div class="wf-flow">';
+
+                h += '<div class="wf-node wf-node-start"><i class="fas fa-user"></i> 用户提问</div>';
+                h += '<div class="wf-connector"><div class="wf-connector-line"></div><div class="wf-connector-arrow">▼</div></div>';
+
+                nodes.forEach(function(node, idx) {
+                    var isLast = node.is_final || idx === nodes.length - 1;
+                    h += '<div class="wf-node wf-node-agent' + (isLast ? ' is-final' : '') + '" style="min-width:260px;">';
+                    h += '<div class="wf-agent-name">';
+                    h += '<i class="fas fa-robot"></i> ' + escHtml2(getAgentName(node.agent_id));
+                    if (node.condition) {
+                        h += ' <span class="wf-badge-condition">条件: ' + escHtml2(node.condition) + '</span>';
+                    }
+                    if (isLast) {
+                        h += ' <span class="wf-badge-final">最终输出</span>';
+                    }
+                    h += '</div>';
+                    if (node.output_var) {
+                        h += '<div class="wf-agent-meta">输出变量: <code>' + escHtml2(node.output_var) + '</code></div>';
+                    }
+                    if (node.input_template && node.input_template !== T_OPEN + 'user_query' + T_CLOSE) {
+                        h += '<div class="wf-agent-meta">输入模板: <code style="font-size:0.72rem;">' + escHtml2(node.input_template.substring(0, 80)) + (node.input_template.length > 80 ? '...' : '') + '</code></div>';
+                    }
+                    h += '</div>';
+
+                    if (!isLast) {
+                        h += '<div class="wf-connector"><div class="wf-connector-line"></div><div class="wf-connector-arrow">▼</div></div>';
+                    }
+                });
+
+                h += '</div>';
+            }
+
+            document.getElementById('wfFlowchart').innerHTML = h;
+        }
+
+        // ============================================================
+        // 在线座席
+        // ============================================================
+        async function loadAgents() {
+            try {
+                const resp = await authFetch('/api/agents');
+                const json = await resp.json();
+                const agents = json.agents || [];
+                const tbody = document.getElementById('agentsTbody');
+
+                if (agents.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#999;padding:40px;">暂无在线座席</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = agents.map(a => {
+                    const roleLabel = '<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.8rem;background:#e3f2fd;color:#1976d2;">座席</span>';
+                    return `<tr>
+                        <td><i class="fas fa-user-circle" style="color:#4b6cb7;"></i> ${a.user_name} ${roleLabel}</td>
+                        <td>${a.login_time}</td>
+                        <td>${a.note || '-'}</td>
+                    </tr>`;
+                }).join('');
+            } catch (err) {
+                document.getElementById('agentsTbody').innerHTML =
+                    '<tr><td colspan="3" style="text-align:center;color:#c62828;padding:40px;">加载失败: ' + err.message + '</td></tr>';
+            }
+        }
+
+        // ============================================================
+        // 用户管理
+        // ============================================================
+        const ROLE_NAMES = {0:'普通用户', 1:'管理员', 2:'客服座席', 3:'API用户'};
+
+        async function loadUsers() {
+            try {
+                const resp = await authFetch('/api/users');
+                const data = await resp.json();
+                const users = data.data || [];
+                document.getElementById('usersTbody').innerHTML = users.map(u =>
+                    `<tr>
+                        <td><i class="fas fa-user-circle" style="color:#4b6cb7;"></i> ${escHtml2(u.user_name)}</td>
+                        <td>${ROLE_NAMES[u.role] || u.role}</td>
+                        <td>${escHtml2(u.note)}</td>
+                        <td>
+                            <button class="cfg-btn cfg-btn-reset" style="padding:4px 12px;font-size:0.8rem;" onclick="resetPwd('${escHtml2(u.user_name)}')"><i class="fas fa-redo"></i> 重置密码</button>
+                            <button class="cfg-btn cfg-btn-reset" style="padding:4px 12px;font-size:0.8rem;color:#c62828;" onclick="delUser('${escHtml2(u.user_name)}')"><i class="fas fa-trash"></i> 删除</button>
+                        </td>
+                    </tr>`
+                ).join('');
+            } catch(e) { document.getElementById('usersTbody').innerHTML = '<tr><td colspan="4" style="color:#c62828;">加载失败</td></tr>'; }
+        }
+
+        async function addUser() {
+            const userName = document.getElementById('newUserName').value.trim();
+            const userPwd = document.getElementById('newUserPwd').value.trim();
+            const role = parseInt(document.getElementById('newUserRole').value);
+            const note = document.getElementById('newUserNote').value.trim();
+            if (!userName || !userPwd) { alert('用户名和密码不能为空'); return; }
+            try {
+                const resp = await authFetch('/api/users', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({user_name:userName, user_pwd:userPwd, role, note})
+                });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    document.getElementById('newUserName').value = '';
+                    document.getElementById('newUserPwd').value = '';
+                    document.getElementById('newUserNote').value = '';
+                    loadUsers();
+                } else { alert(data.error || '添加失败'); }
+            } catch(e) { alert('网络错误: '+e.message); }
+        }
+
+        async function delUser(name) {
+            if (!confirm('确定删除用户 "' + name + '" 吗？')) return;
+            try {
+                const resp = await authFetch('/api/users/' + encodeURIComponent(name), { method: 'DELETE' });
+                const data = await resp.json();
+                if (data.status === 'ok') loadUsers();
+                else alert(data.error || '删除失败');
+            } catch(e) { alert('网络错误: '+e.message); }
+        }
+
+        async function resetPwd(name) {
+            const pwd = prompt('输入用户 "' + name + '" 的新密码：');
+            if (!pwd) return;
+            try {
+                const resp = await authFetch('/api/users/' + encodeURIComponent(name) + '/reset-pwd', {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({user_pwd: pwd})
+                });
+                const data = await resp.json();
+                if (data.status === 'ok') alert('密码已重置');
+                else alert(data.error || '重置失败');
+            } catch(e) { alert('网络错误: '+e.message); }
+        }
+
+        function escHtml2(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        // ============================================================
+        // FAQ 管理
+        // ============================================================
+
+        async function loadFaqList() {
+            try {
+                const resp = await authFetch('/api/faq');
+                const json = await resp.json();
+                const entries = json.data || [];
+                if (entries.length === 0) {
+                    document.getElementById('faqList').innerHTML =
+                        '<div style="color:#999;text-align:center;padding:40px;">暂无 FAQ 条目，请上传文件或手动添加</div>';
+                    return;
+                }
+                let h = '';
+                entries.forEach(function(e, idx) {
+                    const questions = (e.questions || []).map(function(q) {
+                        return '<span style="display:inline-block;background:#e3f2fd;color:#1976d2;padding:2px 8px;border-radius:4px;margin:2px 4px 2px 0;font-size:0.82rem;">' + escHtml2(q.question) + '</span>';
+                    }).join('');
+                    h += '<div style="background:#fafbfc;border:1px solid #e0e3e8;border-radius:8px;padding:16px;margin-bottom:12px;">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+                            '<div style="flex:1;">' +
+                                '<div style="margin-bottom:8px;">' + questions + '</div>' +
+                                '<div style="color:#333;font-size:0.9rem;line-height:1.5;white-space:pre-wrap;">' + escHtml2(e.answer) + '</div>' +
+                                (e.source_file ? '<div style="color:#999;font-size:0.75rem;margin-top:8px;">来源: ' + escHtml2(e.source_file) + '</div>' : '') +
+                            '</div>' +
+                            '<div style="display:flex;gap:6px;margin-left:12px;flex-shrink:0;">' +
+                                '<button class="cfg-btn cfg-btn-reset" style="padding:4px 12px;font-size:0.8rem;" onclick="editFaq(' + e.id + ')"><i class="fas fa-edit"></i></button>' +
+                                '<button class="cfg-btn cfg-btn-reset" style="padding:4px 12px;font-size:0.8rem;color:#c62828;" onclick="delFaq(' + e.id + ')"><i class="fas fa-trash"></i></button>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+                });
+                document.getElementById('faqList').innerHTML = h;
+            } catch(e) {
+                document.getElementById('faqList').innerHTML = '<div style="color:#c62828;">加载失败: ' + e.message + '</div>';
+            }
+        }
+
+        // 上传 FAQ 文件
+        function uploadFaqFile() {
+            const input = document.getElementById('faqFileInput');
+            const file = input.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            authFetch('/api/faq/upload', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        showToast('已导入 ' + data.created + '/' + data.total + ' 条 FAQ', 'success');
+                        loadFaqList();
+                    } else {
+                        showToast('导入失败: ' + (data.error || '未知错误'), 'error');
+                    }
+                })
+                .catch(err => showToast('网络错误: ' + err.message, 'error'));
+
+            input.value = '';
+        }
+
+        // FAQ 弹窗
+        function showFaqModal() {
+            document.getElementById('faqEditId').value = '0';
+            document.getElementById('faqModalTitle').innerHTML = '<i class="fas fa-question-circle"></i> 新增 FAQ';
+            document.getElementById('faqAnswer').value = '';
+            // 重置问题列表为一行
+            document.getElementById('faqQuestionsContainer').innerHTML =
+                '<div class="faq-question-row" style="display:flex;gap:8px;margin-bottom:8px;">' +
+                    '<input type="text" class="faq-question-input" placeholder="问题..." style="flex:1;">' +
+                    '<button type="button" class="cfg-btn cfg-btn-reset" style="padding:6px 10px;font-size:0.8rem;color:#c62828;" onclick="removeFaqQuestionRow(this)">×</button>' +
+                '</div>';
+            document.getElementById('faqModal').style.display = 'flex';
+        }
+
+        function hideFaqModal() {
+            document.getElementById('faqModal').style.display = 'none';
+        }
+
+        function addFaqQuestionRow() {
+            const row = document.createElement('div');
+            row.className = 'faq-question-row';
+            row.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;';
+            row.innerHTML = '<input type="text" class="faq-question-input" placeholder="问题..." style="flex:1;">' +
+                '<button type="button" class="cfg-btn cfg-btn-reset" style="padding:6px 10px;font-size:0.8rem;color:#c62828;" onclick="removeFaqQuestionRow(this)">×</button>';
+            document.getElementById('faqQuestionsContainer').appendChild(row);
+        }
+
+        function removeFaqQuestionRow(btn) {
+            const container = document.getElementById('faqQuestionsContainer');
+            if (container.children.length <= 1) return; // 至少保留一行
+            btn.parentElement.remove();
+        }
+
+        async function editFaq(id) {
+            try {
+                const resp = await authFetch('/api/faq');
+                const json = await resp.json();
+                const entries = json.data || [];
+                const entry = entries.find(e => e.id === id);
+                if (!entry) { showToast('FAQ 条目不存在', 'error'); return; }
+
+                document.getElementById('faqEditId').value = entry.id;
+                document.getElementById('faqModalTitle').innerHTML = '<i class="fas fa-edit"></i> 编辑 FAQ';
+                document.getElementById('faqAnswer').value = entry.answer || '';
+
+                // 填充问题列表
+                let qRows = '';
+                (entry.questions || []).forEach(function(q) {
+                    qRows += '<div class="faq-question-row" style="display:flex;gap:8px;margin-bottom:8px;">' +
+                        '<input type="text" class="faq-question-input" value="' + escHtml2(q.question) + '" style="flex:1;">' +
+                        '<button type="button" class="cfg-btn cfg-btn-reset" style="padding:6px 10px;font-size:0.8rem;color:#c62828;" onclick="removeFaqQuestionRow(this)">×</button>' +
+                    '</div>';
+                });
+                document.getElementById('faqQuestionsContainer').innerHTML = qRows;
+                document.getElementById('faqModal').style.display = 'flex';
+            } catch(e) {
+                showToast('加载 FAQ 失败: ' + e.message, 'error');
+            }
+        }
+
+        async function delFaq(id) {
+            if (!confirm('确定删除该 FAQ 条目？')) return;
+            try {
+                const resp = await authFetch('/api/faq/' + id, { method: 'DELETE' });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    showToast('FAQ 已删除', 'success');
+                    loadFaqList();
+                } else {
+                    showToast('删除失败: ' + (data.error || ''), 'error');
+                }
+            } catch(e) {
+                showToast('网络错误: ' + e.message, 'error');
+            }
+        }
+
+        async function clearAllFaq() {
+            if (!confirm('确定清空所有 FAQ？此操作不可恢复。')) return;
+            try {
+                const resp = await authFetch('/api/faq', { method: 'DELETE' });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    showToast('FAQ 已全部清空', 'success');
+                    loadFaqList();
+                } else {
+                    showToast('清空失败: ' + (data.error || ''), 'error');
+                }
+            } catch(e) {
+                showToast('网络错误: ' + e.message, 'error');
+            }
+        }
+
+        // FAQ 模板下载（带认证）
+        async function downloadFaqTemplate() {
+            try {
+                const resp = await authFetch('/api/faq/template');
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    showToast('下载失败: ' + (err.error || '未知错误'), 'error');
+                    return;
+                }
+                const blob = await resp.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'faq_template.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                showToast('下载失败: ' + err.message, 'error');
+            }
+        }
+
+        // FAQ 阈值保存
+        async function saveFaqConfig() {
+            const payload = {
+                sys: { name: '', auth: '' },
+                api: {
+                    llm_api_uri: '', llm_api_key: '', llm_model_name: '',
+                    embedding_api_uri: '', embedding_api_key: '', embedding_model_name: '',
+                    rerank_api_uri: '', rerank_api_key: '', rerank_model_name: ''
+                },
+                prompt: { chat_msg: '' },
+                kb: { chunk_size: 0, chunk_overlap: 0, top_k: 0, score_threshold: 0, rerank_enabled: false, rerank_retrieve_n: 0 },
+                llm: { temperature: 0, top_p: 0, max_tokens: 0 },
+                faq: {
+                    match_threshold: parseFloat(document.getElementById('faq_match_threshold').value) || 0
+                }
+            };
+
+            try {
+                const resp = await authFetch('/api/config', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const json = await resp.json();
+                if (json.status === 'ok') {
+                    showToast('FAQ 匹配阈值已保存', 'success');
+                } else {
+                    showToast('保存失败: ' + (json.error || '未知错误'), 'error');
+                }
+            } catch (err) {
+                showToast('保存失败: ' + err.message, 'error');
+            }
+        }
+
+        // FAQ 表单提交
+        document.getElementById('faqForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('faqEditId').value) || 0;
+            const answer = document.getElementById('faqAnswer').value.trim();
+            if (!answer) { alert('答案不能为空'); return; }
+
+            const questionInputs = document.querySelectorAll('#faqQuestionsContainer .faq-question-input');
+            const questions = [];
+            questionInputs.forEach(function(inp) {
+                const v = inp.value.trim();
+                if (v) questions.push(v);
+            });
+            if (questions.length === 0) { alert('至少需要一个问法'); return; }
+
+            const payload = { questions: questions, answer: answer };
+            const url = id > 0 ? '/api/faq/' + id : '/api/faq';
+            const method = id > 0 ? 'PUT' : 'POST';
+
+            try {
+                const resp = await authFetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    hideFaqModal();
+                    loadFaqList();
+                    showToast(id > 0 ? 'FAQ 已更新' : 'FAQ 已创建', 'success');
+                } else {
+                    showToast('保存失败: ' + (data.error || ''), 'error');
+                }
+            } catch(err) {
+                showToast('网络错误: ' + err.message, 'error');
+            }
+        });
+
+        // 文件选择触发
+        document.getElementById('faqFileInput').addEventListener('change', uploadFaqFile);
+
+        // 初始加载
+        loadConfig();
+        loadUsers();
+        loadAiAgents();
+        loadWorkflowList();
+        loadFaqList();
+    </script>
+</body>
+</html>

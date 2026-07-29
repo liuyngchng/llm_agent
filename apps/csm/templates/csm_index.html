@@ -6,20 +6,18 @@
     <script src="/static/purify.min.js"></script>
     <script src="/static/marked.min.js"></script>
     <link rel="stylesheet" href="/static/csm.css">
-    <link rel="stylesheet" href="/static/font-awesome.all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/lib/font-awesome.all.min.css">
     <title>{{sys_name}}</title>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-headset"></i>{{sys_name}}</h1>
+            <h1><i class="fas fa-headset"></i> {{ sys_name }}</h1>
             <div class="system-settings-link-container">
                 <button id="newChat" class="btn-clear" title="新对话">
                     <i class="fas fa-plus-circle"></i> 新对话
                 </button>
-                <a href="/vdb/idx?t={{token}}" class="system-settings-link" target="_blank">
-                    <i class="fas fa-book"></i> 知识库配置
-                </a>
                 {% if role == 1 %}
                 <a href="/admin/config?t={{token}}" class="system-settings-link" target="_blank">
                     <i class="fas fa-cog"></i> 系统管理
@@ -30,6 +28,14 @@
                     <i class="fas fa-key"></i> API管理
                 </a>
                 {% endif %}
+                {% if role == 2 %}
+                <a href="#" class="system-settings-link" onclick="showChangePwd(); return false;">
+                    <i class="fas fa-lock"></i> 修改密码
+                </a>
+                {% endif %}
+                <a href="#" class="system-settings-link" title="注销" onclick="logout(); return false;">
+                    <i class="fas fa-sign-out-alt"></i> 注销
+                </a>
             </div>
         </header>
 
@@ -56,7 +62,28 @@
             <input type="hidden" id="t" name="t" value="{{token}}">
             <input type="hidden" id="app_source" name="app_source" value="csm">
         </form>
+    <!-- 修改密码弹窗 -->
+    <div id="pwdModal" class="pwd-modal-overlay" style="display:none;">
+        <div class="pwd-modal">
+            <h3><i class="fas fa-lock"></i> 修改密码</h3>
+            <div class="pwd-modal-error" id="pwdError" style="display:none;"></div>
+            <form id="pwdForm">
+                <div class="pwd-field">
+                    <label>旧密码</label>
+                    <input type="password" id="oldPwd" required>
+                </div>
+                <div class="pwd-field">
+                    <label>新密码</label>
+                    <input type="password" id="newPwd" required>
+                </div>
+                <div class="pwd-actions">
+                    <button type="button" class="cfg-btn cfg-btn-reset" onclick="hideChangePwd()">取消</button>
+                    <button type="submit" class="cfg-btn cfg-btn-save">确认修改</button>
+                </div>
+            </form>
+        </div>
     </div>
+
     <script>
         // 从 URL 参数 t 提取 token 并持久化
         (function() {
@@ -68,5 +95,59 @@
         })();
     </script>
     <script type="text/javascript" src="/static/csm.js"></script>
+    <script>
+        // 注销（对标 Go app.js）
+        async function logout() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
+                });
+            } catch (e) { /* ignore */ }
+            window.location.href = '/login';
+        }
+        // 修改密码弹窗
+        function showChangePwd() {
+            document.getElementById('pwdModal').style.display = 'flex';
+            document.getElementById('oldPwd').value = '';
+            document.getElementById('newPwd').value = '';
+            document.getElementById('pwdError').style.display = 'none';
+        }
+        function hideChangePwd() {
+            document.getElementById('pwdModal').style.display = 'none';
+        }
+        document.getElementById('pwdForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const oldPwd = document.getElementById('oldPwd').value.trim();
+            const newPwd = document.getElementById('newPwd').value.trim();
+            const errDiv = document.getElementById('pwdError');
+            if (!oldPwd || !newPwd) {
+                errDiv.textContent = '密码不能为空';
+                errDiv.style.display = 'block';
+                return;
+            }
+            try {
+                const resp = await fetch('/api/user/password', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+                    },
+                    body: JSON.stringify({ old_pwd: oldPwd, new_pwd: newPwd })
+                });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    alert('密码修改成功');
+                    hideChangePwd();
+                } else {
+                    errDiv.textContent = data.error || '修改失败';
+                    errDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errDiv.textContent = '网络错误: ' + err.message;
+                errDiv.style.display = 'block';
+            }
+        });
+    </script>
 </body>
 </html>
