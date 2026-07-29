@@ -1,10 +1,7 @@
-gunicorn
-flask
-langchain
-pydantic
-langchain_core
-concurrent-log-handler
-svgwrite
-jinja2
-rank-bm25
-jieba
+flask>=3.0
+gunicorn>=21.2
+pyyaml>=6.0
+requests>=2.31
+PyPDF2>=3.0
+python-docx>=1.1
+openpyxl>=3.1

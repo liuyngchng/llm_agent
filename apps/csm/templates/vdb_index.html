@@ -1,27 +1,24 @@
 <!DOCTYPE html>
-<html lang="{{ lang }}" dir="{{ dir }}">
+<html lang="zh-CN">
 <head>
-    <title>{{ _('vdb.title') }}</title>
     <meta charset="utf-8">
-    <meta id="vdb_index.html">
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/vdb.css?t=2">
+    <title>知识库管理</title>
     <link rel="stylesheet" href="/static/font-awesome.all.min.css">
-    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
+    <link rel="stylesheet" href="/static/vdb.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-database"></i> {{ _('vdb.title') }}</h1>
-            <p>{{ _('vdb.subtitle') }}</p>
+            <h1><i class="fas fa-database"></i> 知识库管理</h1>
+            <p>管理您的知识库和文档，支持 txt、md、pdf、docx、xlsx 格式</p>
         </header>
         <div class="content-section">
-            <h2><i class="fas fa-database"></i> {{ _('vdb.title') }}</h2>
+            <h2><i class="fas fa-database"></i> 我的知识库</h2>
 
             <div class="info-box">
-                <h3><i class="fas fa-info-circle"></i> {{ _('vdb.info_title') }}</h3>
-                <p>{{ _('vdb.info_desc') }}</p>
+                <h3><i class="fas fa-info-circle"></i> 说明</h3>
+                <p>您可以创建多个知识库，上传文档后系统会自动处理并向量化。聊天时系统会检索所有知识库中的相关内容来回答用户问题。</p>
             </div>
 
             <div class="knowledge-base-manager">
@@ -30,17 +27,17 @@
                         <div class="kb-inline-group">
                             <div class="kb-select-section">
                                 <div class="kb-select-wrapper">
-                                    <select id="kb_selector" class="kb-select" aria-label="{{ _('vdb.select_kb') }}">
-                                        <option value="">{{ _('vdb.select_kb_option') }}</option>
+                                    <select id="kb_selector" class="kb-select" aria-label="选择知识库">
+                                        <option value="">-- 选择知识库 --</option>
                                     </select>
                                     <div class="kb-select-actions">
-                                        <button class="kb-action-btn btn-refresh" id="kbRefreshBtn" title="{{ _('vdb.refresh_list') }}">
+                                        <button class="kb-action-btn btn-refresh" id="kbRefreshBtn" title="刷新列表">
                                             <i class="fas fa-sync-alt"></i>
                                         </button>
-                                        <button class="kb-action-btn btn-delete" id="deleteBtn" title="{{ _('vdb.delete_kb') }}" style="display:none;">
+                                        <button class="kb-action-btn btn-delete" id="deleteBtn" title="删除知识库" style="display:none;">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
-                                        <button class="kb-action-btn btn-star" id="setDefaultBtn" title="{{ _('vdb.set_default_title') }}" style="display:none;">
+                                        <button class="kb-action-btn btn-star" id="setDefaultBtn" title="设为默认" style="display:none;">
                                             <i class="fas fa-star"></i>
                                         </button>
                                     </div>
@@ -48,22 +45,22 @@
                             </div>
 
                             <div class="kb-divider-vertical">
-                                <span>{{ _('vdb.or_divider') }}</span>
+                                <span>或</span>
                             </div>
 
                             <div class="kb-create-section">
                                 <div class="kb-create-inputs">
                                     <input type="text" id="kb_name" class="kb-create-input"
-                                           placeholder="{{ _('vdb.kb_name_placeholder') }}">
+                                           placeholder="新知识库名称">
                                     <div class="visibility-toggle">
                                         <input type="checkbox" id="public_checkbox" class="public-checkbox">
                                         <label for="public_checkbox" class="public-label">
                                             <i class="fas fa-globe"></i>
-                                            <span>{{ _('vdb.public') }}</span>
+                                            <span>公开</span>
                                         </label>
                                     </div>
-                                    <button class="btn btn-primary btn-create" id="createKB" aria-label="{{ _('vdb.creating_new_kb') }}">
-                                        <i class="fas fa-plus-circle"></i> {{ _('vdb.create_btn') }}
+                                    <button class="btn btn-primary btn-create" id="createKB" aria-label="创建新知识库">
+                                        <i class="fas fa-plus-circle"></i> 创建
                                     </button>
                                 </div>
                             </div>
@@ -72,36 +69,36 @@
 
                     <div id="kb_status" class="status-container" style="display:none">
                         <i class="fas fa-check-circle"></i>
-                        <span>{{ _('vdb.kb_created_status') }}</span>
+                        <span>知识库创建成功</span>
                     </div>
 
                     <div class="kb-status-area">
                         <div class="kb-status-info">
-                            <strong>{{ _('vdb.current_kb') }}</strong>
+                            <strong>当前知识库：</strong>
                             <span id="vdb_status_desc">{{vdb_status}}</span>
                         </div>
                         <div class="kb-status-badges">
                             <span id="public_badge" class="badge badge-public" style="display:none;">
-                                <i class="fas fa-globe"></i> {{ _('vdb.public') }}
+                                <i class="fas fa-globe"></i> 公开
                             </span>
                             <span id="default_badge" class="badge badge-default" style="display:none;">
-                                <i class="fas fa-star"></i> {{ _('vdb.default_badge') }}
+                                <i class="fas fa-star"></i> 默认
                             </span>
                         </div>
                     </div>
                 </div>
 
                 <div id="fileListContainer" style="margin-top: 20px; display: none;">
-                    <h3><i class="fas fa-file-alt"></i> {{ _('vdb.file_list_title') }}</h3>
+                    <h3><i class="fas fa-file-alt"></i> 文件列表</h3>
                     <table id="fileListTable" class="result-table">
                         <thead>
                             <tr>
-                                <th>{{ _('vdb.col_no') }}</th>
-                                <th>{{ _('vdb.col_filename') }}</th>
-                                <th>{{ _('vdb.col_create_time') }}</th>
-                                <th>{{ _('vdb.col_progress') }}</th>
-                                <th>{{ _('vdb.col_details') }}</th>
-                                <th>{{ _('vdb.col_actions') }}</th>
+                                <th>序号</th>
+                                <th>文件名</th>
+                                <th>上传时间</th>
+                                <th>进度</th>
+                                <th>详情</th>
+                                <th>操作</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -113,36 +110,36 @@
 
         <div id="step2" class="hidden">
             <div class="content-section">
-                <h2><i class="fas fa-file-upload"></i> {{ _('vdb.doc_upload_title') }}</h2>
+                <h2><i class="fas fa-file-upload"></i> 上传文档</h2>
                 <div class="input-group">
-                    <input type="file" id="fileInput" accept=".pdf,.docx,.txt" multiple style="display:none">
+                    <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md,.xlsx" multiple style="display:none">
                     <button class="btn btn-primary" id="selectBtn">
-                        <i class="fas fa-folder-open"></i> {{ _('vdb.select_docs') }}
+                        <i class="fas fa-folder-open"></i> 选择文件
                     </button>
                     <div id="fileList" class="file-list-container">
                         <div class="file-list-header">
-                            <span>{{ _('vdb.files_selected', n='<span id="fileCount">0</span>')|safe }}</span>
-                            <button type="button" class="btn-clear" id="clearFilesBtn">{{ _('vdb.clear_btn') }}</button>
+                            <span>已选择 <span id="fileCount">0</span> 个文件</span>
+                            <button type="button" class="btn-clear" id="clearFilesBtn">清空</button>
                         </div>
                         <div id="fileItems" class="file-items">
                         </div>
                     </div>
                     <button class="btn btn-primary" id="startBtn">
-                        <i class="fas fa-cloud-upload-alt"></i> {{ _('vdb.upload_btn') }}
+                        <i class="fas fa-cloud-upload-alt"></i> 上传
                     </button>
                 </div>
 
                 <div class="progress-display">
                     <div class="progress-text">
                         <i class="fas fa-info-circle"></i>
-                        <span id="fileUploadResult">{{ _('vdb.upload_instruction') }}</span>
+                        <span id="fileUploadResult">请选择文件后上传，系统会自动处理</span>
                     </div>
                     <div id="uploadProgress" class="upload-progress" style="display: none;">
                         <div class="progress-bar">
                             <div id="overallProgressFill" class="progress-fill"></div>
                         </div>
                         <div class="progress-info">
-                            <span id="progressText">{{ _('vdb.uploading_progress', done=0, total=0) }}</span>
+                            <span id="progressText">上传中 0/0</span>
                             <span id="progressPercent">0%</span>
                         </div>
                     </div>
@@ -151,14 +148,12 @@
         </div>
 
         <footer>
-            <p>{{ _('vdb.footer_text') }}</p>
+            <p>知识库管理系统</p>
         </footer>
     </div>
 
     <input type="hidden" id="uid" name="uid" value="{{uid}}">
-    <input type="hidden" id="t" name="t" value="{{t}}">
-    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
-    <script type="text/javascript" src="/static/i18n.js"></script>
-    <script type="text/javascript" src="/static/vdb.js?a=222"></script>
+    <input type="hidden" id="t" name="t" value="{{token}}">
+    <script src="/static/vdb.js"></script>
 </body>
 </html>

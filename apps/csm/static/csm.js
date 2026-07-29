@@ -68,7 +68,7 @@ queryForm.addEventListener('submit', async function(e) {
 
     const query = queryInput.value.trim();
     if (!query) {
-        addMessage(__('csm.question_required'), 'bot');
+        addMessage('请输入问题', 'bot');
         return;
     }
 
@@ -83,7 +83,7 @@ queryForm.addEventListener('submit', async function(e) {
     } catch (error) {
         console.error("请求出错:", error);
         if (currentBotMessage) {
-            updateBotMessage(__('csm.generation_error'));
+            updateBotMessage('生成回答时出错，请重试');
         }
         resetUI();
     }
@@ -98,15 +98,13 @@ stopButton.addEventListener('click', function() {
     if (currentBotMessage) {
         const messageBubble = currentBotMessage.querySelector('.bot-message-bubble');
         if (messageBubble) {
-            // 保留现有内容，只移除加载动画
             const typingIndicator = messageBubble.querySelector('.typing-indicator');
             if (typingIndicator) {
                 typingIndicator.remove();
 
-                // 添加停止提示（不覆盖已有内容）
                 const stopNotice = document.createElement('div');
                 stopNotice.className = 'stop-notice';
-                stopNotice.textContent = __('csm.stopped_note');
+                stopNotice.textContent = '已停止生成';
                 messageBubble.appendChild(stopNotice);
             }
         }
@@ -124,20 +122,20 @@ async function fetchQueryData(query) {
     abortController = new AbortController();
 
     // 添加加载中的消息
-    currentBotMessage = addMessage(`<div class="typing-indicator"><span></span><span></span><span></span> ${__('csm.thinking')}</div>`, 'bot');
+    currentBotMessage = addMessage(`<div class="typing-indicator"><span></span><span></span><span></span> 思考中...</div>`, 'bot');
 
     try {
         const t = document.getElementById('t').value;
-        const appSource = document.getElementById('app_source').value;
         const uid = document.getElementById('uid').value;
 
-        const response = await fetch('/chat', {
+        const response = await fetch('/api/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'text/event-stream'
+                'Accept': 'text/event-stream',
+                'Authorization': 'Bearer ' + t,
             },
-            body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&t=${t}&app_source=${appSource}&session_id=${encodeURIComponent(sessionId)}`,
+            body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&session_id=${encodeURIComponent(sessionId)}`,
             signal: abortController.signal,
             credentials: 'include'
         });
@@ -145,18 +143,14 @@ async function fetchQueryData(query) {
         // 检查响应是否正常
         if (!response.ok) {
             if (response.status === 401) {
-                try {
-                    const errData = await response.json();
-                    if (errData.error === 'auth_expired' && errData.redirect) {
-                        window.location.href = errData.redirect;
-                        return;
-                    }
-                } catch (e) { /* fall through */ }
+                // 未认证，跳转到登录
+                window.location.href = '/login';
+                return;
             }
-            throw new Error(__('csm.network_failed'));
+            throw new Error('网络请求失败');
         }
         if (!response.body) {
-            throw new Error(__('csm.network_failed'));
+            throw new Error('网络请求失败');
         }
 
         // 设置当前响应对象
@@ -171,8 +165,18 @@ async function fetchQueryData(query) {
             const { value, done } = await reader.read();
             if (done) break;
 
+            // SSE 格式：data: xxx\n\n
             const chunk = decoder.decode(value, { stream: true });
-            accumulatedText += chunk;
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.substring(6);
+                    if (data === '[DONE]') {
+                        break;
+                    }
+                    accumulatedText += data;
+                }
+            }
 
             // 更新消息内容
             updateBotMessage(accumulatedText);
@@ -187,7 +191,7 @@ async function fetchQueryData(query) {
         } else {
             console.error('请求出错:', error);
             if (currentBotMessage) {
-                updateBotMessage(__('csm.generation_retry'));
+                updateBotMessage('生成回答时出错，请重试');
             }
         }
     } finally {
@@ -236,7 +240,7 @@ function addMessageToDOM(text, type) {
         messageContainer.innerHTML = `
             <div class="bot-message-header">
                 <img src="/static/bot.png" alt="AI Assistant">
-                <span>${__('csm.ai_assistant')}</span>
+                <span>AI 助手</span>
             </div>
             <div class="message-bubble bot-message-bubble">${sanitizedContent}</div>
         `;
@@ -261,11 +265,11 @@ function addCopyButton(messageContainer, text) {
 
     const copyButton = document.createElement('button');
     copyButton.classList.add('copy-button');
-    copyButton.innerHTML = `<i class="fas fa-copy"></i> ${__('common.copy')}`;
+    copyButton.innerHTML = `<i class="fas fa-copy"></i> 复制`;
     copyButton.onclick = function() {
         navigator.clipboard.writeText(text).then(() => {
             const originalText = copyButton.innerHTML;
-            copyButton.innerHTML = `<i class="fas fa-check"></i> ${__('csm.copied_state')}`;
+            copyButton.innerHTML = `<i class="fas fa-check"></i> 已复制`;
             setTimeout(() => {
                 copyButton.innerHTML = originalText;
             }, 2000);
@@ -283,10 +287,14 @@ async function newChat() {
     }
     // 通知后端清空当前会话上下文
     const uid = document.getElementById('uid').value;
+    const t = document.getElementById('t').value;
     try {
-        await fetch('/chat/clear', {
+        await fetch('/api/chat/clear', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': 'Bearer ' + t,
+            },
             body: `session_id=${encodeURIComponent(sessionId)}&uid=${encodeURIComponent(uid)}`
         });
     } catch (e) {

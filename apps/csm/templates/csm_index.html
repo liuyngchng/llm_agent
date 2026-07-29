@@ -1,14 +1,12 @@
 <!DOCTYPE html>
-<html lang="{{ lang }}" dir="{{ dir }}">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta id="csm_index.html">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script type="text/javascript" src="/static/purify.min.js"></script>
-    <script type="text/javascript" src="/static/marked.min.js"></script>
+    <script src="/static/purify.min.js"></script>
+    <script src="/static/marked.min.js"></script>
     <link rel="stylesheet" href="/static/csm.css">
     <link rel="stylesheet" href="/static/font-awesome.all.min.css">
-    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
     <title>{{sys_name}}</title>
 </head>
 <body>
@@ -16,17 +14,26 @@
         <header>
             <h1><i class="fas fa-headset"></i>{{sys_name}}</h1>
             <div class="system-settings-link-container">
-                <button id="newChat" class="btn-clear" title="{{ _('csm.new_chat') }}">
-                    <i class="fas fa-plus-circle"></i> {{ _('csm.new_chat') }}
+                <button id="newChat" class="btn-clear" title="新对话">
+                    <i class="fas fa-plus-circle"></i> 新对话
                 </button>
-                <a href="/vdb/idx?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="system-settings-link" target="_blank">
-                    <i class="fas fa-book"></i> {{ _('csm.kb_config') }}
+                <a href="/vdb/idx?t={{token}}" class="system-settings-link" target="_blank">
+                    <i class="fas fa-book"></i> 知识库配置
                 </a>
+                {% if role == 1 %}
+                <a href="/admin/config?t={{token}}" class="system-settings-link" target="_blank">
+                    <i class="fas fa-cog"></i> 系统管理
+                </a>
+                {% endif %}
+                {% if role == 3 %}
+                <a href="/user/api?t={{token}}" class="system-settings-link" target="_blank">
+                    <i class="fas fa-key"></i> API管理
+                </a>
+                {% endif %}
             </div>
         </header>
 
         <div class="chat-container" id="chat-container">
-            <!-- 初始欢迎消息 -->
             <div class="message-container bot-message-container">
             </div>
         </div>
@@ -34,25 +41,32 @@
         <form id="query-form">
             <div class="input-container">
                 <input type="text" class="input-field" id="query-input" name="msg"
-                       placeholder="{{ _('csm.input_placeholder') }}" required autocomplete="off">
+                       placeholder="请输入您的问题..." required autocomplete="off">
                 <div class="button-container">
                     <button type="submit" class="send-button" id="send-button">
-                        <i class="fas fa-paper-plane"></i> {{ _('csm.send') }}
+                        <i class="fas fa-paper-plane"></i> 发送
                     </button>
                     <button type="button" class="stop-button" id="stop-button" style="display:none;">
-                        <i class="fas fa-stop"></i> {{ _('csm.stop') }}
+                        <i class="fas fa-stop"></i> 停止
                     </button>
                 </div>
             </div>
 
-            <input type="hidden" id ="uid" name="uid" value="{{uid}}">
-            <input type="hidden" id ="t" name="t" value="{{t}}">
-            <input type="hidden" id ="app_source" name="app_source" value="{{app_source}}">
-            <input type="hidden" id ="greeting" name="greeting" value="{{greeting}}">
+            <input type="hidden" id="uid" name="uid" value="{{uid}}">
+            <input type="hidden" id="t" name="t" value="{{token}}">
+            <input type="hidden" id="app_source" name="app_source" value="csm">
         </form>
     </div>
-    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
-    <script type="text/javascript" src="/static/i18n.js"></script>
+    <script>
+        // 从 URL 参数 t 提取 token 并持久化
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var t = params.get('t');
+            if (t) {
+                localStorage.setItem('token', t);
+            }
+        })();
+    </script>
     <script type="text/javascript" src="/static/csm.js"></script>
 </body>
 </html>

@@ -1,88 +1,511 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright (c) [2025] [liuyngchng@hotmail.com] - All rights reserved.
-
 """
-知识库问答系统
-pip install gunicorn flask concurrent-log-handler langchain_openai langchain_ollama \
- langchain_core langchain_community pandas tabulate pymysql cx_Oracle pycryptodome
+CSM 知识库问答系统 — 主入口
+对标 Go 版本 go_to_chat/main.go
+独立运行，不依赖外部认证/统计服务。
 """
+import io
 import json
 import logging.config
 import os
-import time
+import signal
+import sys
 import threading
-from collections import deque
+import time
 
-from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, request, abort, send_from_directory, render_template
-from jinja2 import ChoiceLoader, FileSystemLoader
-from apps.csm.chat_agent import ChatAgent
-from common.const import SESSION_TIMEOUT, get_const
-from common.my_enums import AppType
-from common.statistic_util import add_input_token_by_uid, add_output_token_by_uid
-from common.sys_init import init_yml_cfg
-from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login, get_portal_login_url
-from common.bp_vdb import vdb_bp, VDB_PREFIX, clean_expired_vdb_file_task, process_vdb_file_task
-from common.cm_utils import get_console_arg1, estimate_tokens
-from common.i18n._hooks import register_i18n
-from common.i18n import get_msg
-from common.vdb_meta_util import VdbMeta
-from common.vdb_util import search_txt
-from common import statistic_util, my_enums, cm_utils
+from flask import Flask, request, jsonify, redirect
 
+# 配置必须在导入其他模块前加载
+from apps.csm.cfg import load_config, apply_db_config
+from apps.csm.store import SQLiteStore
+from apps.csm.session import SessionManager
+from apps.csm.kb_manager import KBManager
+from apps.csm.embedding_client import EmbeddingClient
+from apps.csm.handler import Handler
+from apps.csm.handler.auth import AuthHandler, extract_token, parse_token
+
+# ============================================================
+# 日志初始化
+# ============================================================
 log_config_path = 'logging.conf'
 if os.path.exists(log_config_path):
     logging.config.fileConfig(log_config_path, encoding="utf-8")
 else:
-    from common.const import LOG_FORMATTER
-    logging.basicConfig(level=logging.INFO,format= LOG_FORMATTER, force=True)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s", force=True)
 logger = logging.getLogger(__name__)
 
-my_cfg = init_yml_cfg()
-os.system(
-    "unset https_proxy ftp_proxy NO_PROXY FTP_PROXY HTTPS_PROXY HTTP_PROXY http_proxy ALL_PROXY all_proxy no_proxy"
-)
-
-# 全局变量，用于存储后台任务状态
+# ============================================================
+# 全局变量
+# ============================================================
+my_cfg = None
+meta_store = None
+session_mgr = None
+kb_manager = None
+handler = None
 background_tasks_started = False
 background_tasks_lock = threading.Lock()
-
-# 聊天会话历史 — key: session_id, value: {"uid": int, "history": deque(maxlen=10)}
-# 每个会话最多保留 10 条（5 轮对话），按 uid 隔离
-chat_sessions = {}
-chat_sessions_lock = threading.Lock()
-MAX_CHAT_HISTORY = 10
 
 
 def create_app():
     """应用工厂函数"""
-    app = Flask(__name__, static_folder=None)
-    # 将 common/templates 加入模板搜索路径
-    common_templates = os.path.join(os.path.dirname(__file__), '../../common/templates')
-    app.jinja_loader = ChoiceLoader([
-        app.jinja_loader,
-        FileSystemLoader(common_templates)
-    ])
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+    global my_cfg, meta_store, session_mgr, kb_manager, handler
+
+    app = Flask(__name__, static_folder=None, template_folder='templates')
     app.config['JSON_AS_ASCII'] = False
-    app.config['CFG'] = my_cfg
-    app.config['APP_SOURCE'] = my_enums.AppType.CSM.name.lower()
 
-    # 注册蓝图
-    app.register_blueprint(vdb_bp)
+    # ============================================================
+    # 1. 加载配置
+    # ============================================================
+    logger.info("加载配置文件...")
+    my_cfg = load_config("cfg.yml")
 
-    # 注册 i18n
-    register_i18n(app, scope="csm")
+    # ============================================================
+    # 2. 初始化数据库
+    # ============================================================
+    logger.info("初始化数据库...")
+    db_path = "cfg.db"
+    if not os.path.exists(db_path):
+        template = "cfg.db.template"
+        if os.path.exists(template):
+            import shutil
+            shutil.copy(template, db_path)
+            logger.info("从模板复制数据库: %s -> %s", template, db_path)
+        else:
+            logger.error("数据库文件 %s 不存在，且无模板文件 %s", db_path, template)
+            sys.exit(1)
 
-    # 注册路由
+    meta_store = SQLiteStore(db_path)
+
+    # 从数据库加载运行时配置
+    db_configs = meta_store.get_all_configs()
+    sys_auth = "true" if my_cfg["sys"].get("auth", True) else "false"
+    meta_store.seed_default_configs(my_cfg["sys"]["name"], sys_auth)
+    # 重新读取（seed 后可能已有新配置）
+    db_configs = meta_store.get_all_configs()
+    apply_db_config(my_cfg, db_configs)
+
+    logger.info("系统配置: name=%s, auth=%s, api_auth=%s",
+                my_cfg["sys"]["name"], my_cfg["sys"]["auth"], my_cfg["sys"].get("api_auth", True))
+
+    # ============================================================
+    # 3. 初始化会话管理器
+    # ============================================================
+    session_mgr = SessionManager()
+
+    # ============================================================
+    # 4. 初始化知识库管理器
+    # ============================================================
+    kb_manager = KBManager(my_cfg, meta_store)
+
+    # ============================================================
+    # 5. 初始化 Embedding 客户端
+    # ============================================================
+    emb_client = None
+    if my_cfg["api"].get("embedding_api_uri") and my_cfg["api"].get("embedding_api_key"):
+        try:
+            emb_client = EmbeddingClient(
+                my_cfg["api"]["embedding_api_uri"],
+                my_cfg["api"]["embedding_api_key"],
+                my_cfg["api"]["embedding_model_name"],
+            )
+        except Exception as e:
+            logger.warning("Embedding 客户端初始化失败: %s", e)
+
+    # ============================================================
+    # 6. 初始化处理器
+    # ============================================================
+    handler = Handler(my_cfg, kb_manager, session_mgr, meta_store, emb_client)
+
+    # ============================================================
+    # 7. 注册路由
+    # ============================================================
     register_routes(app)
 
-    # 在应用启动时初始化后台任务（使用应用上下文）
+    # ============================================================
+    # 8. 启动后台任务
+    # ============================================================
     with app.app_context():
         start_background_tasks_once()
 
+    # ============================================================
+    # 9. 优雅退出
+    # ============================================================
+    def graceful_shutdown(signum, frame):
+        logger.info("正在关闭服务...")
+        kb_manager.stop_file_worker()
+        meta_store.close()
+        os._exit(0)
+
+    signal.signal(signal.SIGINT, graceful_shutdown)
+    signal.signal(signal.SIGTERM, graceful_shutdown)
+
     return app
+
+
+def register_routes(app):
+    """注册所有路由"""
+
+    # ============================================================
+    # 静态文件
+    # ============================================================
+    @app.route('/static/<path:file_name>')
+    def get_static_file(file_name):
+        from flask import send_from_directory
+        static_dirs = [
+            os.path.join(os.path.dirname(__file__), 'static'),
+        ]
+        # 也尝试 common/static
+        common_static = os.path.join(os.path.dirname(__file__), '../../common/static')
+        if os.path.exists(common_static):
+            static_dirs.append(common_static)
+
+        for static_dir in static_dirs:
+            file_path = os.path.join(static_dir, file_name)
+            if os.path.exists(file_path):
+                return send_from_directory(static_dir, file_name)
+        return "File not found", 404
+
+    # ============================================================
+    # 免认证页面路由
+    # ============================================================
+    @app.route('/login')
+    def login_page():
+        return handler.Auth.login_page()
+
+    # ============================================================
+    # 认证 API
+    # ============================================================
+    @app.route('/api/login', methods=['POST'])
+    def api_login():
+        return handler.Auth.login()
+
+    @app.route('/api/logout', methods=['POST'])
+    def api_logout():
+        return handler.Auth.logout()
+
+    # ============================================================
+    # 需要认证的页面路由
+    # ============================================================
+    @app.route('/')
+    @handler.Auth.require_auth
+    def page_index():
+        return handler.Page.index()
+
+    @app.route('/vdb/idx')
+    @handler.Auth.require_auth
+    def page_vdb_index():
+        return handler.Page.vdb_index()
+
+    @app.route('/user/api')
+    @handler.Auth.require_auth
+    def page_user_api():
+        return handler.Page.user_api_index()
+
+    # ============================================================
+    # 需要认证的 API 路由（受 api_auth 开关控制）
+    # ============================================================
+
+    @app.route('/api/chat', methods=['POST'])
+    @handler.Auth.require_api_auth
+    def api_chat():
+        return handler.Chat.chat()
+
+    @app.route('/api/chat/clear', methods=['POST'])
+    @handler.Auth.require_api_auth
+    def api_chat_clear():
+        return handler.Chat.clear()
+
+    @app.route('/api/agents', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_agents():
+        return handler.Auth.get_online_agents()
+
+    @app.route('/api/faq', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_faq_list():
+        return handler.Faq.list()
+
+    @app.route('/api/faq/template', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_faq_template():
+        return handler.Faq.template()
+
+    @app.route('/api/me', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_me():
+        return handler.Auth.me()
+
+    @app.route('/api/ai-agents/public', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_agents_public():
+        return handler.Agent.list_public()
+
+    @app.route('/api/workflows', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_workflows_public():
+        return handler.Workflow.list_public()
+
+    @app.route('/api/config', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_config_get():
+        return handler.Config.get_config()
+
+    @app.route('/api/vdb', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_vdb_list():
+        return handler.Vdb.my_list()
+
+    @app.route('/api/vdb/pub', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_vdb_pub():
+        return handler.Vdb.pub_list()
+
+    @app.route('/api/vdb', methods=['POST'])
+    @handler.Auth.require_api_auth
+    def api_vdb_create():
+        return handler.Vdb.create()
+
+    @app.route('/api/vdb/<int:vdb_id>', methods=['DELETE'])
+    @handler.Auth.require_api_auth
+    def api_vdb_delete(vdb_id):
+        return handler.Vdb.delete(vdb_id)
+
+    @app.route('/api/vdb/<int:vdb_id>/default', methods=['PUT'])
+    @handler.Auth.require_api_auth
+    def api_vdb_set_default(vdb_id):
+        return handler.Vdb.set_default(vdb_id)
+
+    @app.route('/api/vdb/<int:vdb_id>/files', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_vdb_files(vdb_id):
+        return handler.Vdb.file_list(vdb_id)
+
+    @app.route('/api/vdb/<int:vdb_id>/upload', methods=['POST'])
+    @handler.Auth.require_api_auth
+    def api_vdb_upload(vdb_id):
+        return handler.Vdb.upload(vdb_id)
+
+    @app.route('/api/vdb/search', methods=['POST'])
+    @handler.Auth.require_api_auth
+    def api_vdb_search():
+        return handler.Vdb.search()
+
+    @app.route('/api/vdb/file/<int:file_id>/progress', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_vdb_file_progress(file_id):
+        return handler.Vdb.process_info(file_id)
+
+    @app.route('/api/vdb/file/<int:file_id>', methods=['DELETE'])
+    @handler.Auth.require_api_auth
+    def api_vdb_file_delete(file_id):
+        return handler.Vdb.file_delete(file_id)
+
+    # ============================================================
+    # 管理员页面路由
+    # ============================================================
+    @app.route('/admin/config')
+    @handler.Auth.require_auth
+    @handler.Auth.require_admin
+    def admin_config():
+        return handler.Page.config_index()
+
+    # ============================================================
+    # 管理员 API 路由
+    # ============================================================
+    @app.route('/api/config', methods=['PUT'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_config_update():
+        return handler.Config.update_config()
+
+    @app.route('/api/faq', methods=['POST'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_faq_create():
+        return handler.Faq.create()
+
+    @app.route('/api/faq/upload', methods=['POST'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_faq_upload():
+        return handler.Faq.upload()
+
+    @app.route('/api/faq/<int:faq_id>', methods=['PUT'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_faq_update(faq_id):
+        return handler.Faq.update(faq_id)
+
+    @app.route('/api/faq/<int:faq_id>', methods=['DELETE'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_faq_delete(faq_id):
+        return handler.Faq.delete(faq_id)
+
+    @app.route('/api/faq', methods=['DELETE'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_faq_clear():
+        return handler.Faq.clear_all()
+
+    @app.route('/api/users', methods=['GET'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_users_list():
+        return handler.User.list_users()
+
+    @app.route('/api/users', methods=['POST'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_users_create():
+        return handler.User.create_user()
+
+    @app.route('/api/users/<user_name>', methods=['DELETE'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_users_delete(user_name):
+        return handler.User.delete_user(user_name)
+
+    @app.route('/api/users/<user_name>/reset-pwd', methods=['PUT'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_users_reset_pwd(user_name):
+        return handler.User.reset_user_pwd(user_name)
+
+    @app.route('/api/ai-agents', methods=['GET'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_agents_list():
+        return handler.Agent.list()
+
+    @app.route('/api/ai-agents', methods=['POST'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_agents_create():
+        return handler.Agent.create()
+
+    @app.route('/api/ai-agents/<int:agent_id>', methods=['GET'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_agents_get(agent_id):
+        return handler.Agent.get(agent_id)
+
+    @app.route('/api/ai-agents/<int:agent_id>', methods=['PUT'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_agents_update(agent_id):
+        return handler.Agent.update(agent_id)
+
+    @app.route('/api/ai-agents/<int:agent_id>', methods=['DELETE'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_agents_delete(agent_id):
+        return handler.Agent.delete(agent_id)
+
+    @app.route('/api/workflows', methods=['POST'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_workflows_create():
+        return handler.Workflow.create()
+
+    @app.route('/api/workflows/<int:workflow_id>', methods=['GET'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_workflows_get(workflow_id):
+        return handler.Workflow.get(workflow_id)
+
+    @app.route('/api/workflows/<int:workflow_id>', methods=['PUT'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_workflows_update(workflow_id):
+        return handler.Workflow.update(workflow_id)
+
+    @app.route('/api/workflows/<int:workflow_id>', methods=['DELETE'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_workflows_delete(workflow_id):
+        return handler.Workflow.delete(workflow_id)
+
+    # ============================================================
+    # 用户自助 API
+    # ============================================================
+    @app.route('/api/user/password', methods=['PUT'])
+    @handler.Auth.require_api_auth
+    def api_user_change_pwd():
+        return handler.User.change_password()
+
+    @app.route('/api/user/tokens', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_user_tokens():
+        return handler.User.list_my_tokens()
+
+    @app.route('/api/user/token', methods=['POST'])
+    @handler.Auth.require_api_auth
+    def api_user_gen_token():
+        return handler.User.generate_token()
+
+    @app.route('/api/user/call-logs', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_user_call_logs():
+        return handler.User.my_call_logs()
+
+    # ============================================================
+    # API 调用日志中间件
+    # ============================================================
+    @app.before_request
+    def api_call_log_middleware():
+        """记录 API 调用的中间件"""
+        # 只记录 /api/ 路径
+        if not request.path.startswith('/api/'):
+            return
+
+        # 仅记录携带 API token 的请求
+        auth = request.headers.get("Authorization", "")
+        if not auth.startswith("Bearer "):
+            return
+
+        # 解析 token
+        token_str = auth[7:]
+        user = parse_token(token_str)
+        if not user:
+            return
+
+        # 保存请求信息到 request 中，供 after_request 使用
+        request._api_log_user = user["user_name"]
+        request._api_log_body = request.get_data(as_text=True)[:1000]
+
+    @app.after_request
+    def api_call_log_after(response):
+        """记录 API 调用日志"""
+        user_name = getattr(request, "_api_log_user", None)
+        if not user_name:
+            return response
+
+        # 构造日志
+        req_body = getattr(request, "_api_log_body", "")
+        resp_body = response.get_data(as_text=True)
+        if len(resp_body) > 1000:
+            resp_body = resp_body[:1000] + "..."
+
+        status_code = response.status_code
+        err_msg = ""
+        if status_code >= 400:
+            err_msg = resp_body
+
+        # 异步保存日志
+        def _save_log():
+            try:
+                meta_store.save_api_call_log(
+                    user_name, request.path, request.method,
+                    req_body, resp_body, status_code, err_msg,
+                )
+            except Exception as e:
+                logger.error("保存 API 调用日志失败: %s", e)
+
+        threading.Thread(target=_save_log, daemon=True).start()
+
+        return response
 
 
 def start_background_tasks_once():
@@ -90,255 +513,35 @@ def start_background_tasks_once():
     global background_tasks_started
     with background_tasks_lock:
         if not background_tasks_started:
-            logger.info("start_init_bg_task...")
+            logger.info("启动后台任务...")
             start_background_tasks()
             background_tasks_started = True
 
 
-def register_routes(app):
-    """注册所有路由"""
-
-    @app.route('/static/<path:file_name>')
-    def get_static_file(file_name):
-        static_dirs = [
-            os.path.join(os.path.dirname(__file__), '../../common/static'),
-            os.path.join(os.path.dirname(__file__), 'static'),
-        ]
-
-        for static_dir in static_dirs:
-            if os.path.exists(os.path.join(static_dir, file_name)):
-                logger.debug(f"get_static_file, {static_dir}, {file_name}")
-                return send_from_directory(static_dir, file_name)
-        logger.error(f"no_file_found_error, {file_name}")
-        abort(404)
-
-    @app.route('/webfonts/<path:file_name>')
-    def get_webfonts_file(file_name):
-        font_file_name = f"webfonts/{file_name}"
-        return get_static_file(font_file_name)
-
-    @app.route('/')
-    def app_home():
-        app_source = AppType.CSM.name.lower()
-        sys_name = my_enums.AppType.get_app_type(app_source)
-        t = request.args.get("t")
-        if not t:
-            logger.info("no_token_redirect_auth_login_index")
-            return redirect_to_portal_login(app_source)
-        session_info = cm_utils.decode_token(t, my_cfg['sys']['cypher_key'])
-        if not session_info:
-            logger.info("no_session_info_redirect_auth_login_index")
-            return redirect_to_portal_login(app_source)
-        uid = session_info['uid']
-        dt_idx = f"{app_source}_index.html"
-        logger.info(f"return_page {dt_idx}")
-        statistic_util.add_access_count_by_uid(uid, 1, app_source)
-
-        if session_info["role"] == 2:
-            hack_admin = "1"
-        else:
-            hack_admin = "0"
-
-        greeting = get_const("greeting", app_source)
-        arg1 = get_const("arg1", app_source)
-        arg2 = get_const("arg2", app_source)
-        arg3 = get_const("arg3", app_source)
-
-        ctx = {
-            "uid": uid,
-            "t": t,
-            "sys_name": sys_name,
-            "greeting": greeting,
-            "app_source": app_source,
-            "hack_admin": hack_admin,
-            "arg1": arg1,
-            "arg2": arg2,
-            "arg3": arg3,
-        }
-
-        session_key = f"{uid}_{get_client_ip()}"
-        auth_info[session_key] = time.time()
-        logger.info(f"return_page {dt_idx}, ctx {ctx}")
-        return render_template(dt_idx, **ctx)
-
-    @app.route('/chat', methods=['POST'])
-    def chat(catch=None):
-        """
-        curl -s --noproxy '*' -X POST  'http://127.0.0.1:19000/chat' \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d '{"msg":"who are you?"}'
-        :return a string
-        """
-        logger.info(f"chat_request {request.form}")
-        msg = request.form.get('msg', "").strip()
-        uid = int(request.form.get('uid'))
-        session_id = request.form.get('session_id', '')
-
-        if not msg or not uid or not session_id:
-            warning_info = get_msg("csm.missing_params")
-            logger.error(f"{warning_info}, {msg}, {uid}, {session_id}")
-            return warning_info
-
-        session_key = f"{uid}_{get_client_ip()}"
-        if (not auth_info.get(session_key, None)
-                or time.time() - auth_info.get(session_key) > SESSION_TIMEOUT):
-            logger.error(f"auth_expired_for_uid, {uid}")
-            return app.response_class(
-                json.dumps({'error': 'auth_expired',
-                            'redirect': get_portal_login_url(AppType.CSM.name.lower())}),
-                status=401,
-                mimetype='application/json'
-            )
-
-        logger.info(f"rcv_msg, {msg}, uid {uid}, sid {session_id}")
-        auth_info[session_key] = time.time()
-
-        # 获取后端管理的会话历史（最近 10 条），按 uid 隔离
-        with chat_sessions_lock:
-            if session_id not in chat_sessions:
-                chat_sessions[session_id] = {"uid": uid, "history": deque(maxlen=MAX_CHAT_HISTORY)}
-            elif str(chat_sessions[session_id].get("uid", "")) != str(uid):
-                # 如果 session 属于其他用户，重建一个（极端情况：UUID 碰撞或恶意请求）
-                logger.warning(f"session_uid_mismatch_reset, sid={session_id}, old_uid={chat_sessions[session_id].get('uid')}, req_uid={uid}")
-                chat_sessions[session_id] = {"uid": uid, "history": deque(maxlen=MAX_CHAT_HISTORY)}
-            session_history = list(chat_sessions[session_id]["history"])
-
-        history_str = "\n".join(
-            f"{h['role']}：{h['content']}" for h in session_history
-        ) if session_history else ""
-        logger.info(f"session_history_len={len(session_history)}, uid={uid}, sid={session_id}")
-
-        # 获取用户所有知识库，逐个检索并合并结果
-        user_kb_list = VdbMeta.get_vdb_info_by_uid(uid, include_others_public=False)
-        if not user_kb_list:
-            answer = get_msg("csm.no_knowledge")
-            logger.info(f"no_kb_found_for_uid, {uid}")
-            return answer
-
-        all_context_parts = []
-        for kb in user_kb_list:
-            kb_id = kb.get('id')
-            kb_name = kb.get('name', '')
-            kb_owner_uid = kb.get('uid', uid)
-            my_vector_db_dir = f"{VDB_PREFIX}{kb_owner_uid}_{kb_id}"
-            if not os.path.exists(my_vector_db_dir):
-                logger.info(f"vdb_dir_not_exists_skip, {my_vector_db_dir}")
-                continue
-            kb_context = search_txt(msg, my_vector_db_dir, 0.1, my_cfg['api'], 3)
-            if kb_context:
-                all_context_parts.append(f"[{kb_name}]\n{kb_context}")
-            logger.info(f"searched_kb, {kb_name}, kb_id={kb_id}, has_result={bool(kb_context)}")
-
-        if not all_context_parts:
-            answer = get_msg("csm.no_relevant_content")
-            logger.info(f"no_relevant_content_across_all_kbs_for_uid, {uid}")
-            return answer
-
-        context = "\n".join(all_context_parts)
-        logger.info(f"merged_context_from_{len(all_context_parts)}_kbs, len={len(context)}")
-
-        chat_agent = ChatAgent(my_cfg)
-
-        def generate_stream():
-            from datetime import datetime
-            now = datetime.now()
-            cur_date = now.strftime("%Y-%m-%d")
-            weekdays = ["一", "二", "三", "四", "五", "六", "日"]
-            cur_week = weekdays[now.weekday()]
-
-            full_response = ""
-            stream_input = {
-                "context": context,
-                "question": msg,
-                "history": history_str,
-                "cur_date": cur_date,
-                "cur_week": cur_week,
-            }
-            logger.info(f"stream_input {stream_input}")
-            input_tokens = estimate_tokens(str(stream_input))
-            logger.info(f"{uid}, input_tokens, {input_tokens}")
-            add_input_token_by_uid(uid, input_tokens, AppType.CSM.name.lower())
-            logger.info(f"{uid}, get_stream")
-            for chunk in chat_agent.get_chain().stream(stream_input):
-                full_response += chunk
-                yield chunk
-            logger.info(f"full_response: {full_response}")
-            output_tokens = estimate_tokens(json.dumps(full_response))
-            logger.info(f"{uid}, output_tokens, {output_tokens}")
-            add_output_token_by_uid(uid, output_tokens, AppType.CSM.name.lower())
-
-            # 流式结束后，将本轮对话存入后端会话历史
-            with chat_sessions_lock:
-                if session_id not in chat_sessions:
-                    chat_sessions[session_id] = {"uid": uid, "history": deque(maxlen=MAX_CHAT_HISTORY)}
-                chat_sessions[session_id]["history"].append({"role": "用户", "content": msg})
-                chat_sessions[session_id]["history"].append({"role": "助手", "content": full_response})
-                logger.info(f"saved_to_history, sid={session_id}, len={len(chat_sessions[session_id]['history'])}")
-
-        return app.response_class(generate_stream(), mimetype='text/event-stream')
-
-    @app.route('/chat/clear', methods=['POST'])
-    def clear_chat():
-        """清空指定会话的后端聊天历史"""
-        session_id = request.form.get('session_id', '')
-        uid = request.form.get('uid', '')
-        logger.info(f"clear_chat_request, uid={uid}, sid={session_id}")
-        with chat_sessions_lock:
-            if session_id in chat_sessions:
-                session_data = chat_sessions[session_id]
-                # 校验 uid 归属，防止跨用户操作
-                if str(session_data.get("uid", "")) != str(uid):
-                    logger.warning(f"clear_chat_uid_mismatch, req_uid={uid}, session_uid={session_data.get('uid')}")
-                    return 'denied'
-                del chat_sessions[session_id]
-                logger.info(f"chat_history_cleared, sid={session_id}")
-        return 'ok'
-
-
 def start_background_tasks():
     """启动后台任务线程"""
-    if my_cfg['sys'].get('debug_mode', False):
-        logger.warning("system_in_debug_mode_background_task_exit")
+    if my_cfg.get("debug_mode", False):
+        logger.warning("系统处于调试模式，跳过后台任务")
         return
 
-    def _start_tasks():
-        # 等待应用完全启动
+    def _start():
         time.sleep(2)
-        logger.info("Starting background tasks...")
+        logger.info("后台任务已启动")
+        # 启动文件处理 worker
+        kb_manager.start_file_worker()
 
-        # 启动VDB清理任务
-        vdb_clean_thread = threading.Thread(target=clean_expired_vdb_file_task, daemon=True, name="vdb_clean_task")
-        vdb_clean_thread.start()
-
-        # 启动VDB处理任务
-        vdb_process_thread = threading.Thread(target=process_vdb_file_task, daemon=True, name="vdb_process_task")
-        vdb_process_thread.start()
-
-        logger.info("all_bg_tasks_started")
-
-    # 在新线程中启动后台任务，避免阻塞主线程
-    threading.Thread(target=_start_tasks, daemon=True).start()
+    threading.Thread(target=_start, daemon=True).start()
 
 
+# ============================================================
 # 创建应用实例
+# ============================================================
 app = create_app()
 
-# 当直接运行脚本时，启动开发服务器
+# ============================================================
+# 主入口
+# ============================================================
 if __name__ == '__main__':
-    """
-    just for test, not for a production environment.
-    """
-    # ====== Debug链接：生成带 token 的直接访问链接 ======
-    debug_token = cm_utils.create_token(1, 0, 86400, my_cfg['sys']['cypher_key'])
-    print(f"\n{'='*70}")
-    print(f"  Debug访问链接（直接点击进入）:")
-    print(f"  >>> http://127.0.0.1:19007?t={debug_token}")
-    print(f"  uid=1, role=0, token有效期=24h")
-    print(f"{'='*70}\n")
-
-    logger.info(f"my_cfg {my_cfg.get('db')},\n{my_cfg.get('api')}")
-    app.config['ENV'] = 'dev'
-    # port = get_console_arg1()
     port = 19007
-    logger.info(f"csm_listen_on_port {port}")
-    app.run(host='0.0.0.0', port=port)
+    logger.info("CSM 服务启动: port=%d", port)
+    app.run(host='0.0.0.0', port=port, debug=my_cfg.get("server", {}).get("debug", False))
