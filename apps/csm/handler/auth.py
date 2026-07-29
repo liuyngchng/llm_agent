@@ -85,20 +85,13 @@ class AuthHandler:
         self._agents_lock = threading.Lock()
 
     def login_page(self):
-        """登录页面"""
-        return """
-        <!DOCTYPE html>
-        <html>
-        <head><title>登录</title><meta charset="utf-8"></head>
-        <body>
-            <form method="post" action="/api/login">
-                <input name="user_name" placeholder="用户名"><br>
-                <input name="user_pwd" type="password" placeholder="密码"><br>
-                <button type="submit">登录</button>
-            </form>
-        </body>
-        </html>
-        """
+        """登录页面（对标 Go LoginPage）"""
+        from flask import render_template
+        return render_template("login.html",
+            default_user="user0",
+            default_pwd="user0",
+            error_msg="",
+        )
 
     def login(self):
         """处理登录请求"""

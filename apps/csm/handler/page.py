@@ -17,7 +17,7 @@ class PageHandler:
         self.cfg = cfg
 
     def index(self):
-        """聊天主页面"""
+        """聊天主页面（对标 Go PageHandler.Index）"""
         uid = get_auth_uid()
         role = get_auth_role()
         token = get_token_str()
@@ -27,15 +27,10 @@ class PageHandler:
             uid=uid,
             role=role,
             token=token,
-            app_source="csm",
-            greeting=self.cfg["sys"].get("greeting", ""),
-            arg1=self.cfg.get("arg1", ""),
-            arg2=self.cfg.get("arg2", ""),
-            arg3=self.cfg.get("arg3", ""),
         )
 
     def vdb_index(self):
-        """知识库管理页面"""
+        """知识库管理页面（对标 Go PageHandler.VdbIndex）"""
         uid = get_auth_uid()
         role = get_auth_role()
         token = get_token_str()
@@ -45,8 +40,6 @@ class PageHandler:
             uid=uid,
             role=role,
             token=token,
-            app_source="csm",
-            vdb_status="",
         )
 
     def user_api_index(self):

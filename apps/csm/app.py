@@ -519,15 +519,8 @@ def start_background_tasks_once():
 
 
 def start_background_tasks():
-    """启动后台任务线程"""
-    if my_cfg.get("debug_mode", False):
-        logger.warning("系统处于调试模式，跳过后台任务")
-        return
-
+    """启动后台任务线程（对标 Go：go kbManager.StartFileWorker()）"""
     def _start():
-        time.sleep(2)
-        logger.info("后台任务已启动")
-        # 启动文件处理 worker
         kb_manager.start_file_worker()
 
     threading.Thread(target=_start, daemon=True).start()

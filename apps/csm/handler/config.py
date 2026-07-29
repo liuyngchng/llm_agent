@@ -69,8 +69,7 @@ class ConfigHandler:
         sys_data = data.get("sys", {})
         if sys_data.get("name"):
             self.store.set_config("sys.name", sys_data["name"], "系统名称")
-        if sys_data.get("auth"):
-            self.store.set_config("sys.auth", sys_data["auth"], "是否启用认证")
+        # sys.auth 只从 cfg.yml 读取，不允许在页面上修改（对标 Go）
         if sys_data.get("api_auth"):
             self.store.set_config("sys.api_auth", sys_data["api_auth"], "是否启用接口认证")
 

@@ -20,12 +20,15 @@ class Handler:
 
     def __init__(self, cfg: dict, kb_manager, session_mgr, store,
                  embedding_client=None, llm_client=None):
+        # FaqHandler 先创建，注入给 ChatHandler（对标 Go）
+        faq_handler = FaqHandler(store, embedding_client)
+
         self.Page = PageHandler(cfg)
-        self.Chat = ChatHandler(cfg, kb_manager, session_mgr, store)
+        self.Chat = ChatHandler(cfg, kb_manager, session_mgr, store, faq_handler)
         self.Vdb = VdbHandler(cfg, kb_manager, store)
         self.Config = ConfigHandler(cfg, store)
         self.Auth = AuthHandler(cfg, store)
         self.User = UserHandler(store)
         self.Agent = AgentHandler(store)
         self.Workflow = WorkflowHandler(store)
-        self.Faq = FaqHandler(store, embedding_client)
+        self.Faq = faq_handler

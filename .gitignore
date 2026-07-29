@@ -38,6 +38,8 @@ sqlite_vss
 **/cfg.db
 **/auth.db
 **/cfg.db-journal
+**/cfg.db-wal
+**/cfg.db-shm
 **/*.cer
 **/*.faiss
 **/*.doc
