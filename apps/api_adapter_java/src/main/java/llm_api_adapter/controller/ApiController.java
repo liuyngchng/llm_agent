@@ -232,7 +232,8 @@ public class ApiController {
 
         int statusCode = conn.getResponseCode();
         if (statusCode != 200) {
-            String errBody = new String(readAll(conn.getErrorStream()), StandardCharsets.UTF_8);
+            java.io.InputStream errStream = conn.getErrorStream();
+            String errBody = errStream != null ? new String(readAll(errStream), StandardCharsets.UTF_8) : "(no body)";
             log.error("Upstream error: {} - {}", statusCode, errBody);
             httpResp.setStatus(502);
             httpResp.setContentType("application/json;charset=UTF-8");
@@ -285,7 +286,8 @@ public class ApiController {
 
         int statusCode = conn.getResponseCode();
         if (statusCode != 200) {
-            String errBody = new String(readAll(conn.getErrorStream()), StandardCharsets.UTF_8);
+            java.io.InputStream errStream = conn.getErrorStream();
+            String errBody = errStream != null ? new String(readAll(errStream), StandardCharsets.UTF_8) : "(no body)";
             log.error("Upstream error: {} - {}", statusCode, errBody);
             return ResponseEntity.status(502).body(
                     new ErrorResponse("error", "api_error", "Upstream API returned " + statusCode));

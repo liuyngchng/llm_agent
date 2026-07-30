@@ -135,7 +135,7 @@ public class ConversionService {
                 result.add(convertAssistantContent(content));
             }
         }
-        return result;
+        return fixToolMessageOrdering(result);
     }
 
     @SuppressWarnings("unchecked")
@@ -227,7 +227,8 @@ public class ConversionService {
         if (content instanceof String) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("role", "assistant");
-            m.put("content", content);
+            // null content 可能来自 Anthropic thinking 等特殊 block，用空字符串避免 "content": null
+            m.put("content", content != null ? content : "");
             return m;
         }
         if (content instanceof List) {
@@ -246,7 +247,12 @@ public class ConversionService {
                     Map<String, Object> func = new LinkedHashMap<>();
                     func.put("name", str(block.get("name"), ""));
                     try {
-                        func.put("arguments", mapper.writeValueAsString(block.getOrDefault("input", "")));
+                        Object input = block.getOrDefault("input", null);
+                        if (input == null || (input instanceof String && ((String) input).isEmpty())) {
+                            func.put("arguments", "{}");
+                        } else {
+                            func.put("arguments", mapper.writeValueAsString(input));
+                        }
                     } catch (JsonProcessingException e) {
                         func.put("arguments", "{}");
                     }
@@ -260,7 +266,12 @@ public class ConversionService {
 
             Map<String, Object> oai = new LinkedHashMap<>();
             oai.put("role", "assistant");
-            oai.put("content", textParts.toString());
+            // 仅在有文本内容时才加 content 字段；纯 tool_use 消息不设 content，
+            // 避免 "content": "" 被某些 OpenAI 兼容 API 拒绝
+            String textContent = textParts.toString();
+            if (!textContent.isEmpty() || toolCalls.isEmpty()) {
+                oai.put("content", textContent);
+            }
             if (!toolCalls.isEmpty()) {
                 oai.put("tool_calls", toolCalls);
             }
@@ -270,6 +281,70 @@ public class ConversionService {
         m.put("role", "assistant");
         m.put("content", content != null ? content.toString() : "");
         return m;
+    }
+
+    /**
+     * 修复工具消息顺序：确保 tool 消息紧跟在对应的 assistant(tool_calls) 消息之后。
+     *
+     * OpenAI API 要求 assistant(tool_calls) 之后的每个 tool_call_id 必须由一条
+     * tool 消息回应，且中间不能插入 user 等其他角色的消息。
+     * 而 Anthropic API 允许 user 消息中同时包含 text 和 tool_result 块，
+     * 转换后可能变成 user 消息插在 assistant(tool_calls) 和 tool 消息之间。
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> fixToolMessageOrdering(List<Map<String, Object>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return messages;
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        int i = 0;
+        while (i < messages.size()) {
+            Map<String, Object> msg = messages.get(i);
+
+            if ("assistant".equals(msg.get("role")) && msg.containsKey("tool_calls")) {
+                List<Map<String, Object>> tcList = (List<Map<String, Object>>) msg.get("tool_calls");
+                if (tcList == null || tcList.isEmpty()) {
+                    result.add(msg);
+                    i++;
+                    continue;
+                }
+                Set<String> tcIds = new HashSet<>();
+                for (Map<String, Object> tc : tcList) {
+                    String id = str(tc.get("id"), "");
+                    if (!id.isEmpty()) tcIds.add(id);
+                }
+
+                result.add(msg);
+
+                // 收集后续连续的工具消息和插入的 user 消息
+                List<Map<String, Object>> toolMsgs = new ArrayList<>();
+                List<Map<String, Object>> userMsgs = new ArrayList<>();
+                int j = i + 1;
+                while (j < messages.size()) {
+                    Map<String, Object> nxt = messages.get(j);
+                    if ("tool".equals(nxt.get("role")) && tcIds.contains(str(nxt.get("tool_call_id"), ""))) {
+                        toolMsgs.add(nxt);
+                        j++;
+                    } else if ("user".equals(nxt.get("role"))) {
+                        userMsgs.add(nxt);
+                        j++;
+                    } else {
+                        break;
+                    }
+                }
+
+                // 工具消息优先排在 assistant 后面，user 消息排在最后
+                result.addAll(toolMsgs);
+                result.addAll(userMsgs);
+                i = j;
+            } else {
+                result.add(msg);
+                i++;
+            }
+        }
+
+        return result;
     }
 
     @SuppressWarnings("unchecked")
@@ -305,7 +380,7 @@ public class ConversionService {
             AnthropicResponse.ContentBlock tb = new AnthropicResponse.ContentBlock();
             tb.setType("thinking");
             tb.setThinking(reasoningText);
-            tb.setSignature("");
+            // signature 仅对 extended thinking 有意义，这里不设置以避免误导 Anthropic 客户端
             blocks.add(tb);
         }
         if (contentText != null && !contentText.isEmpty()) {

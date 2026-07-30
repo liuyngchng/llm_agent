@@ -86,7 +86,9 @@ public class SseConversionService {
             if (chunkFinish != null) finishReason = chunkFinish;
 
             String reasoningText = (String) delta.getOrDefault("reasoning_content", "");
-            if (reasoningText != null && !reasoningText.isEmpty()) {
+            // 仅当 thinking block 未关闭时才处理 reasoning delta
+            if (reasoningText != null && !reasoningText.isEmpty()
+                    && !(thinkingBlockIndex >= 0 && closedBlocks.contains(thinkingBlockIndex))) {
                 if (thinkingBlockIndex < 0) {
                     thinkingBlockIndex = nextBlockIndex++;
                     Map<String, Object> block = new LinkedHashMap<>();
