@@ -104,6 +104,52 @@ def make_json_response(data, status=200, headers=None):
     )
 
 
+def _fix_tool_message_ordering(openai_messages):
+    """修复工具消息顺序：确保 tool 消息紧跟在对应的 assistant(tool_calls) 消息之后。
+
+    OpenAI API 要求 assistant(tool_calls) 之后的每个 tool_call_id 必须由一条
+    tool 消息回应，且中间不能插入 user 等其他角色的消息。
+    而 Anthropic API 允许 user 消息中同时包含 text 和 tool_result 块，
+    转换后可能变成 user 消息插在 assistant(tool_calls) 和 tool 消息之间。
+    """
+    if not openai_messages:
+        return openai_messages
+
+    result = []
+    i = 0
+    while i < len(openai_messages):
+        msg = openai_messages[i]
+
+        if msg.get("role") == "assistant" and msg.get("tool_calls"):
+            tc_ids = {tc["id"] for tc in msg["tool_calls"]}
+            result.append(msg)
+
+            # 收集后续连续的工具消息和插入的 user 消息
+            tool_msgs = []
+            user_msgs = []
+            j = i + 1
+            while j < len(openai_messages):
+                nxt = openai_messages[j]
+                if nxt.get("role") == "tool" and nxt.get("tool_call_id") in tc_ids:
+                    tool_msgs.append(nxt)
+                    j += 1
+                elif nxt.get("role") == "user":
+                    user_msgs.append(nxt)
+                    j += 1
+                else:
+                    break
+
+            # 工具消息优先排在 assistant 后面，user 消息排在最后
+            result.extend(tool_msgs)
+            result.extend(user_msgs)
+            i = j
+        else:
+            result.append(msg)
+            i += 1
+
+    return result
+
+
 def anthropic_to_openai_messages(anthropic_messages, system_prompt=None):
     """将 Anthropic messages 转换为 OpenAI messages 格式"""
     openai_messages = []
@@ -128,12 +174,12 @@ def anthropic_to_openai_messages(anthropic_messages, system_prompt=None):
             openai_messages.extend(msgs)
         elif role == "assistant":
             openai_content, openai_tool_calls = _convert_anthropic_assistant_content_to_openai(content)
-            oai_msg = {"role": "assistant", "content": openai_content if openai_content else None}
+            oai_msg = {"role": "assistant", "content": openai_content if openai_content else ""}
             if openai_tool_calls:
                 oai_msg["tool_calls"] = openai_tool_calls
             openai_messages.append(oai_msg)
 
-    return openai_messages
+    return _fix_tool_message_ordering(openai_messages)
 
 
 def _convert_anthropic_content_to_openai(content):
@@ -600,12 +646,13 @@ def create_message():
             "Authorization": f"Bearer {llm_api_key}"
         }
 
-        logger.info(f"forward_to {llm_api_uri}/chat/completions, model={llm_model_name}, stream={stream}")
+        upstream_url = f"{llm_api_uri}/chat/completions"
+        logger.info(f"forward_to {upstream_url}, model={llm_model_name}, stream={stream}")
 
         if stream:
             logger.debug("stream request")
             upstream_response = requests.post(
-                f"{llm_api_uri}/chat/completions",
+                upstream_url,
                 headers=headers,
                 json=openai_request,
                 timeout=300,
@@ -642,7 +689,7 @@ def create_message():
         else:
             logger.debug("not_stream_request")
             upstream_response = requests.post(
-                f"{llm_api_uri}/doc_forge/completions",
+                upstream_url,
                 headers=headers,
                 json=openai_request,
                 timeout=300,
