@@ -431,101 +431,111 @@ def generate_anthropic_sse(openai_stream_response, anthropic_model):
         event = {"type": "content_block_stop", "index": index}
         return (f"event: content_block_stop\ndata: {json.dumps(event, ensure_ascii=False)}\n\n").encode('utf-8')
 
-    for line in openai_stream_response.iter_lines(decode_unicode=False):
-        if not line:
-            continue
+    line_count = 0
+    try:
+        for line in openai_stream_response.iter_lines(decode_unicode=False):
+            line_count += 1
+            if not line:
+                continue
 
-        try:
-            line_str = line.decode('utf-8')
-        except UnicodeDecodeError:
-            line_str = line.decode('utf-8', errors='replace')
-        except AttributeError:
-            line_str = line
+            try:
+                line_str = line.decode('utf-8')
+            except UnicodeDecodeError:
+                line_str = line.decode('utf-8', errors='replace')
+            except AttributeError:
+                line_str = line
 
-        if not line_str.startswith("data: "):
-            continue
+            if not line_str.startswith("data: "):
+                continue
 
-        data_str = line_str[6:].strip()
-        if data_str == "[DONE]":
-            break
+            data_str = line_str[6:].strip()
+            if data_str == "[DONE]":
+                break
 
-        try:
-            chunk = json.loads(data_str)
-        except json.JSONDecodeError:
-            continue
+            try:
+                chunk = json.loads(data_str)
+            except json.JSONDecodeError:
+                continue
 
-        # 先提取 usage（可能和 choices 在同一个 chunk 中）
-        chunk_usage = chunk.get("usage")
-        if chunk_usage:
-            input_tokens = chunk_usage.get("prompt_tokens", input_tokens)
-            output_tokens = chunk_usage.get("completion_tokens", output_tokens)
+            # 先提取 usage（可能和 choices 在同一个 chunk 中）
+            chunk_usage = chunk.get("usage")
+            if chunk_usage:
+                input_tokens = chunk_usage.get("prompt_tokens", input_tokens)
+                output_tokens = chunk_usage.get("completion_tokens", output_tokens)
 
-        choices = chunk.get("choices", [])
-        if not choices:
-            continue
+            choices = chunk.get("choices", [])
+            if not choices:
+                continue
 
-        choice = choices[0]
-        delta = choice.get("delta", {})
-        chunk_finish = choice.get("finish_reason")
-        if chunk_finish:
-            finish_reason = chunk_finish
+            choice = choices[0]
+            delta = choice.get("delta", {})
+            chunk_finish = choice.get("finish_reason")
+            if chunk_finish:
+                finish_reason = chunk_finish
 
-        # 处理推理/思考 delta（如 DeepSeek-R1 的 reasoning_content）
-        reasoning_text = delta.get("reasoning_content") or ""
-        if reasoning_text:
-            if thinking_block_index < 0:
-                thinking_block_index = next_block_index
-                next_block_index += 1
-                yield _emit_block_start(thinking_block_index, {
-                    "type": "thinking", "thinking": "", "signature": ""
-                })
-            yield _emit_block_delta(thinking_block_index, {
-                "type": "thinking_delta", "thinking": reasoning_text
-            })
-
-        # 处理文本 delta
-        content_text = delta.get("content") or ""
-        if content_text:
-            # 如果 thinking 内容块还开着，先关闭（推理结束后才开始正文）
-            if thinking_block_index >= 0 and thinking_block_index not in closed_blocks:
-                yield _emit_block_stop(thinking_block_index)
-                closed_blocks.add(thinking_block_index)
-
-            if text_block_index < 0:
-                text_block_index = next_block_index
-                next_block_index += 1
-                yield _emit_block_start(text_block_index, {"type": "text", "text": ""})
-
-            yield _emit_block_delta(text_block_index, {"type": "text_delta", "text": content_text})
-
-        # 处理 tool_calls delta
-        for tc in delta.get("tool_calls", []):
-            tc_index = tc.get("index", 0)
-
-            if tc_index not in tool_block_indices:
-                tool_block_indices[tc_index] = next_block_index
-                next_block_index += 1
-                tc_id = tc.get("id", "")
-                tc_name = tc.get("function", {}).get("name", "")
-                yield _emit_block_start(tool_block_indices[tc_index], {
-                    "type": "tool_use",
-                    "id": tc_id,
-                    "name": tc_name,
-                    "input": {}
+            # 处理推理/思考 delta（如 DeepSeek-R1 的 reasoning_content）
+            reasoning_text = delta.get("reasoning_content") or ""
+            if reasoning_text:
+                if thinking_block_index < 0:
+                    thinking_block_index = next_block_index
+                    next_block_index += 1
+                    yield _emit_block_start(thinking_block_index, {
+                        "type": "thinking", "thinking": "", "signature": ""
+                    })
+                yield _emit_block_delta(thinking_block_index, {
+                    "type": "thinking_delta", "thinking": reasoning_text
                 })
 
-            args = tc.get("function", {}).get("arguments", "")
-            if args:
-                yield _emit_block_delta(tool_block_indices[tc_index], {
-                    "type": "input_json_delta",
-                    "partial_json": args
-                })
+            # 处理文本 delta
+            content_text = delta.get("content") or ""
+            if content_text:
+                # 如果 thinking 内容块还开着，先关闭（推理结束后才开始正文）
+                if thinking_block_index >= 0 and thinking_block_index not in closed_blocks:
+                    yield _emit_block_stop(thinking_block_index)
+                    closed_blocks.add(thinking_block_index)
 
-        # 定期发送 ping 事件，防止代理/网关因超时断开 SSE 连接
-        now = time.time()
-        if now - last_ping >= ping_interval:
-            yield f"event: ping\ndata: {{}}\n\n".encode('utf-8')
-            last_ping = now
+                if text_block_index < 0:
+                    text_block_index = next_block_index
+                    next_block_index += 1
+                    yield _emit_block_start(text_block_index, {"type": "text", "text": ""})
+
+                yield _emit_block_delta(text_block_index, {"type": "text_delta", "text": content_text})
+
+            # 处理 tool_calls delta
+            for tc in delta.get("tool_calls", []):
+                tc_index = tc.get("index", 0)
+
+                if tc_index not in tool_block_indices:
+                    tool_block_indices[tc_index] = next_block_index
+                    next_block_index += 1
+                    tc_id = tc.get("id", "")
+                    tc_name = tc.get("function", {}).get("name", "")
+                    yield _emit_block_start(tool_block_indices[tc_index], {
+                        "type": "tool_use",
+                        "id": tc_id,
+                        "name": tc_name,
+                        "input": {}
+                    })
+
+                args = tc.get("function", {}).get("arguments", "")
+                if args:
+                    yield _emit_block_delta(tool_block_indices[tc_index], {
+                        "type": "input_json_delta",
+                        "partial_json": args
+                    })
+
+            # 定期发送 ping 事件，防止代理/网关因超时断开 SSE 连接
+            now = time.time()
+            if now - last_ping >= ping_interval:
+                yield f"event: ping\ndata: {{}}\n\n".encode('utf-8')
+                last_ping = now
+
+    except (requests.exceptions.ChunkedEncodingError,
+            requests.exceptions.ConnectionError,
+            urllib3.exceptions.ProtocolError) as e:
+        logger.warning(f"Upstream stream connection lost after {line_count} lines: {e}")
+    except Exception as e:
+        logger.warning(f"Unexpected error reading upstream stream after {line_count} lines: {e}", exc_info=True)
 
     # 为每个未关闭的 content block 发送 content_block_stop
     for i in range(next_block_index):
