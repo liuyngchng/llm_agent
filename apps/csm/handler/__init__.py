@@ -13,6 +13,7 @@ from apps.csm.handler.user import UserHandler
 from apps.csm.handler.agent import AgentHandler
 from apps.csm.handler.workflow import WorkflowHandler
 from apps.csm.handler.faq import FaqHandler
+from apps.csm.engine import WorkflowEngine, FastTextPredictor
 
 
 class Handler:
@@ -23,10 +24,18 @@ class Handler:
         # FaqHandler 先创建，注入给 ChatHandler（对标 Go）
         faq_handler = FaqHandler(store, embedding_client)
 
+        # 工作流引擎（对标 Go: engine.NewEngine）
+        ft_predictor = FastTextPredictor()
+        workflow_engine = WorkflowEngine(
+            cfg, kb_manager, store,
+            emb_client=embedding_client,
+            ft_predictor=ft_predictor,
+        )
+
         self.Page = PageHandler(cfg)
-        self.Chat = ChatHandler(cfg, kb_manager, session_mgr, store, faq_handler)
+        self.Chat = ChatHandler(cfg, kb_manager, session_mgr, store, faq_handler, workflow_engine)
         self.Vdb = VdbHandler(cfg, kb_manager, store)
-        self.Config = ConfigHandler(cfg, store)
+        self.Config = ConfigHandler(cfg, store, workflow_engine)
         self.Auth = AuthHandler(cfg, store)
         self.User = UserHandler(store)
         self.Agent = AgentHandler(store)

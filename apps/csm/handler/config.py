@@ -4,6 +4,7 @@
 系统配置处理器 — 对标 Go 版本 internal/handler/config.go
 """
 import logging
+import time
 from flask import request, jsonify
 
 from apps.csm.cfg import apply_db_config
@@ -15,9 +16,10 @@ logger = logging.getLogger(__name__)
 class ConfigHandler:
     """系统配置 API 处理器"""
 
-    def __init__(self, cfg: dict, store):
+    def __init__(self, cfg: dict, store, workflow_engine=None):
         self.cfg = cfg
         self.store = store
+        self.engine = workflow_engine
 
     def get_config(self):
         """获取所有配置 GET /api/config"""
@@ -129,6 +131,84 @@ class ConfigHandler:
         apply_db_config(self.cfg, db_configs)
 
         return jsonify({"status": "ok"})
+
+    def test_models(self):
+        """测试模型 API 连接 POST /api/config/test-models（对标 Go TestModels）"""
+        data = request.get_json(silent=True) or {}
+
+        results = []
+
+        # 1. 测试 LLM 对话模型
+        llm_uri = data.get("llm_api_uri", "")
+        if llm_uri:
+            t0 = time.time()
+            try:
+                from apps.csm.chat_agent import LLMClient
+                client = LLMClient(
+                    llm_uri,
+                    data.get("llm_api_key", ""),
+                    data.get("llm_model_name", ""),
+                )
+                client.chat("你是一个助手，请回复 OK。", "hi")
+                elapsed = int((time.time() - t0) * 1000)
+                results.append({"name": "LLM 对话模型", "ok": True, "message": "连接成功", "elapsed_ms": elapsed})
+            except Exception as e:
+                elapsed = int((time.time() - t0) * 1000)
+                logger.warning("model test: LLM failed: %s", e)
+                results.append({"name": "LLM 对话模型", "ok": False, "message": str(e), "elapsed_ms": elapsed})
+        else:
+            results.append({"name": "LLM 对话模型", "ok": False, "message": "未配置 API 地址"})
+
+        # 2. 测试 Embedding 向量模型
+        emb_uri = data.get("embedding_api_uri", "")
+        if emb_uri:
+            t0 = time.time()
+            try:
+                from apps.csm.embedding_client import EmbeddingClient
+                client = EmbeddingClient(
+                    emb_uri,
+                    data.get("embedding_api_key", ""),
+                    data.get("embedding_model_name", ""),
+                )
+                dim = client.dimension()
+                elapsed = int((time.time() - t0) * 1000)
+                results.append({"name": "Embedding 向量模型", "ok": True,
+                                "message": f"连接成功 (dim={dim})", "elapsed_ms": elapsed})
+            except Exception as e:
+                elapsed = int((time.time() - t0) * 1000)
+                logger.warning("model test: Embedding failed: %s", e)
+                results.append({"name": "Embedding 向量模型", "ok": False, "message": str(e), "elapsed_ms": elapsed})
+        else:
+            results.append({"name": "Embedding 向量模型", "ok": False, "message": "未配置 API 地址"})
+
+        # 3. 测试 Rerank 重排序模型
+        rerank_uri = data.get("rerank_api_uri", "")
+        if rerank_uri:
+            t0 = time.time()
+            try:
+                # 简单的 rerank API 测试（OpenAI 兼容接口可能不直接支持 rerank，跳过）
+                # 对标 Go 版本，如果项目中有 rerank 模块则使用
+                from apps.csm.embedding_client import EmbeddingClient
+                # Rerank 通常使用专门的 API endpoint，这里做基本连通性测试
+                client = EmbeddingClient(
+                    rerank_uri,
+                    data.get("rerank_api_key", ""),
+                    data.get("rerank_model_name", ""),
+                )
+                # 用 embedding 接口测试连通性（rerank 接口可能类似）
+                client.embed_single("connectivity test")
+                elapsed = int((time.time() - t0) * 1000)
+                results.append({"name": "Rerank 重排序模型", "ok": True, "message": "连接成功", "elapsed_ms": elapsed})
+            except Exception as e:
+                elapsed = int((time.time() - t0) * 1000)
+                logger.warning("model test: Rerank failed: %s", e)
+                results.append({"name": "Rerank 重排序模型", "ok": False, "message": str(e), "elapsed_ms": elapsed})
+        else:
+            results.append({"name": "Rerank 重排序模型", "ok": False, "message": "未配置 API 地址"})
+
+        all_ok = all(r.get("ok", False) for r in results)
+
+        return jsonify({"results": results, "all_ok": all_ok})
 
     def _get_prompt(self) -> str:
         prompt = self.store.get_prompt("chat_msg")

@@ -20,6 +20,27 @@ logger = logging.getLogger(__name__)
 # 常量
 # ============================================================
 
+# 默认智能体系统提示词（工作流引擎使用，{{sys.xxx}} 变量语法）
+# 对标 Go: defaultAgentPrompt
+DEFAULT_AGENT_PROMPT = """你是专业的对话机器人，负责解答客户咨询。你必须基于以下知识库信息回答用户问题。
+如果知识库中没有相关信息，请引导用户转接人工客服。
+
+今日日期：{{sys.cur_date}}（星期{{sys.cur_week}}）
+
+知识库内容：
+---
+{{sys.kb_context}}
+---
+
+历史对话：
+{{sys.history}}
+
+用户问题：{{sys.user_query}}
+
+请用亲切、专业的中文回答："""
+
+# 默认聊天提示词模板（简单聊天模式使用，{xxx} 变量语法）
+# 对标 Go: defaultChatPrompt
 DEFAULT_CHAT_PROMPT = """你是专业的对话机器人，负责解答客户咨询。你必须基于以下知识库信息回答用户问题。
 如果知识库中没有相关信息，请引导用户转接人工客服。
 
@@ -227,7 +248,7 @@ class SQLiteStore:
             return
         self.conn.execute(
             "INSERT INTO agent_def (name, description, system_prompt, vdb_ids) VALUES (?, ?, ?, '[]')",
-            ("通用客服", "默认智能体，负责解答客户咨询", DEFAULT_CHAT_PROMPT),
+            ("通用客服", "默认智能体，负责解答客户咨询", DEFAULT_AGENT_PROMPT),
         )
         self.conn.commit()
 
@@ -722,7 +743,6 @@ class SQLiteStore:
             ("sys.name", sys_name, "系统名称"),
             ("sys.auth", sys_auth, "是否启用认证 (true/false)"),
             ("sys.api_auth", "true", "是否启用接口认证 (true/false)"),
-            ("prompt.chat_msg", DEFAULT_CHAT_PROMPT, "聊天提示词模板"),
             ("kb.chunk_size", "300", "文本分片大小（字符数）"),
             ("kb.chunk_overlap", "80", "文本分片重叠大小（字符数）"),
             ("kb.top_k", "3", "检索返回条数"),

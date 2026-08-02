@@ -7,6 +7,8 @@ import json
 import logging
 from flask import request, jsonify
 
+from apps.csm.engine import has_next_nodes, validate_workflow_graph, auto_detect_is_final
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,7 +50,7 @@ class WorkflowHandler:
         return jsonify({"data": workflow})
 
     def create(self):
-        """创建工作流"""
+        """创建工作流（对标 Go Create，含 DAG 验证）"""
         data = request.get_json(silent=True) or {}
         name = data.get("name", "").strip()
         nodes = data.get("nodes", [])
@@ -58,8 +60,16 @@ class WorkflowHandler:
         if not nodes:
             return jsonify({"error": "工作流至少需要一个节点"}), 400
 
-        # 自动标记最后一个节点为 final
-        nodes[-1]["is_final"] = True
+        # DAG 模式：验证图结构
+        if has_next_nodes(nodes):
+            err = validate_workflow_graph(nodes)
+            if err:
+                return jsonify({"error": f"工作流图验证失败: {err}"}), 400
+            # 自动检测 IsFinal：无下游节点的即为 sink
+            auto_detect_is_final(nodes)
+        else:
+            # 线性模式：自动标记最后一个节点为 final
+            nodes[-1]["is_final"] = True
 
         id = self.store.create_workflow(
             name=name,
@@ -70,7 +80,7 @@ class WorkflowHandler:
         return jsonify({"status": "ok", "id": id})
 
     def update(self, workflow_id: int):
-        """更新工作流"""
+        """更新工作流（对标 Go Update，含 DAG 验证）"""
         existing = self.store.get_workflow(workflow_id)
         if not existing:
             return jsonify({"error": "工作流不存在"}), 404
@@ -81,9 +91,17 @@ class WorkflowHandler:
         if not nodes:
             return jsonify({"error": "工作流至少需要一个节点"}), 400
 
-        # 自动标记最后一个节点为 final，其余为 false
-        for i, node in enumerate(nodes):
-            node["is_final"] = (i == len(nodes) - 1)
+        # DAG 模式：验证图结构
+        if has_next_nodes(nodes):
+            err = validate_workflow_graph(nodes)
+            if err:
+                return jsonify({"error": f"工作流图验证失败: {err}"}), 400
+            # 自动检测 IsFinal：无下游节点的即为 sink
+            auto_detect_is_final(nodes)
+        else:
+            # 线性模式：自动标记最后一个节点为 final，其余为 false
+            for i, node in enumerate(nodes):
+                node["is_final"] = (i == len(nodes) - 1)
 
         self.store.update_workflow(
             workflow_id,

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 聊天处理器 — 对标 Go 版本 internal/handler/chat.go
-SSE 流式返回，支持 FAQ 匹配和知识库检索。
+SSE 流式返回，支持 FAQ 匹配、知识库检索和工作流引擎。
 """
 import json
 import logging
@@ -13,21 +13,25 @@ from flask import Response, request, jsonify, stream_with_context
 from apps.csm.handler.auth import get_auth_uid
 from apps.csm.chat_agent import LLMClient
 from apps.csm.store import DEFAULT_CHAT_PROMPT
+from apps.csm.engine import (
+    WorkflowEngine, classify_with_details, resolve_template,
+    format_history, get_weekday_cn,
+)
 
 logger = logging.getLogger(__name__)
-
-WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"]
 
 
 class ChatHandler:
     """聊天处理器（对标 Go internal/handler/chat.go）"""
 
-    def __init__(self, cfg: dict, kb_manager, session_mgr, store, faq_handler=None):
+    def __init__(self, cfg: dict, kb_manager, session_mgr, store,
+                 faq_handler=None, workflow_engine: WorkflowEngine = None):
         self.cfg = cfg
         self.kb_mgr = kb_manager
         self.session_mgr = session_mgr
         self.store = store
         self.faq_handler = faq_handler
+        self.engine = workflow_engine
 
         # 即刻创建 LLM 客户端（对标 Go：NewChatHandler 中 llmClient := llm.New(...)）
         api = self.cfg["api"]
@@ -95,7 +99,7 @@ class ChatHandler:
 
         # 获取知识库上下文
         cur_date = datetime.now().strftime("%Y-%m-%d")
-        cur_week = WEEKDAYS[datetime.now().weekday()]
+        cur_week = get_weekday_cn(datetime.now().weekday())
         context_str = self.kb_mgr.search_all_kbs(
             msg, uid,
             self.cfg["kb"].get("top_k", 3),
@@ -149,20 +153,46 @@ class ChatHandler:
 
     def _chat_with_workflow(self, uid: str, session_id: str, workflow_id: int, msg: str):
         """工作流引擎模式（对标 Go chatWithWorkflow）"""
-        logger.warning("workflow-chat 暂未完整实现: uid=%s, session=%s, workflow=%d, query=%s",
-                       uid, session_id, workflow_id, msg[:50])
+        # 加载工作流
+        workflow = self.store.get_workflow(workflow_id)
+        if not workflow:
+            return jsonify({"error": "工作流不存在"}), 404
 
         # 获取历史
         history = self.session_mgr.get_history(uid, session_id)
         history_str = self.session_mgr.format_history(history)
+
+        logger.info("workflow-chat: uid=%s, session=%s, workflow=%s(%d), query=%s",
+                    uid, session_id, workflow.get("name", ""), workflow_id, msg[:50])
 
         # 保存用户消息
         self.session_mgr.add_message(uid, session_id, "user", msg)
 
         def generate():
             yield "data: \n\n"
-            yield "data: [提示] 工作流引擎功能暂未实现，请使用默认聊天模式\n\n"
+
+            full_output = ""
+            try:
+                for evt in self.engine.execute_stream(workflow, history, uid, msg):
+                    if evt.type == "progress":
+                        # 进度事件作为注释发送（前端可解析）
+                        yield f"data: [进度] {evt.agent}\n\n"
+                    elif evt.type == "chunk":
+                        full_output += evt.content
+                        yield f"data: {evt.content}\n\n"
+                    elif evt.type == "error":
+                        yield f"data: [错误] {evt.content}\n\n"
+                    elif evt.type == "done":
+                        break
+            except Exception as e:
+                logger.error("workflow 执行错误: %s", e)
+                yield f"data: [错误] {e}\n\n"
+
             yield "data: [DONE]\n\n"
+
+            # 保存助手回复
+            if full_output:
+                self.session_mgr.add_message(uid, session_id, "assistant", full_output)
 
         return Response(
             stream_with_context(generate()),
@@ -182,3 +212,43 @@ class ChatHandler:
 
         self.session_mgr.clear(uid, session_id)
         return jsonify({"status": "ok"})
+
+    # ============================================================
+    # 意图分类测试接口（对标 Go TestClassifier）
+    # ============================================================
+
+    def test_classifier(self):
+        """意图分类测试接口 POST /api/classifier/test"""
+        data = request.get_json(silent=True) or {}
+        text = (data.get("text") or "").strip()
+        workflow_id = data.get("workflow_id", 0)
+
+        if not text:
+            return jsonify({"error": "参数错误: text 不能为空"}), 400
+        if workflow_id <= 0:
+            return jsonify({"error": "workflow_id 不能为空"}), 400
+
+        workflow = self.store.get_workflow(workflow_id)
+        if not workflow:
+            return jsonify({"error": "工作流不存在"}), 404
+
+        classifier_cfg = workflow.get("classifier")
+        if not classifier_cfg or not classifier_cfg.get("categories"):
+            return jsonify({"error": "该工作流没有配置意图分类器"}), 400
+
+        # 执行分类
+        emb_client = self.engine.emb_client if self.engine else None
+        ft_predictor = self.engine.ft_predictor if self.engine else None
+
+        tiers, final = classify_with_details(
+            classifier_cfg, text,
+            self._llm_client, emb_client, ft_predictor,
+        )
+
+        total_ms = sum(t.elapsed for t in tiers)
+
+        return jsonify({
+            "tiers": [t.to_dict() for t in tiers],
+            "final": final,
+            "total_ms": total_ms,
+        })

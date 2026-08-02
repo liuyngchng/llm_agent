@@ -251,6 +251,11 @@ def register_routes(app):
     def api_agents_public():
         return handler.Agent.list_public()
 
+    @app.route('/api/system-vars', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_system_vars():
+        return handler.Agent.list_system_vars()
+
     @app.route('/api/workflows', methods=['GET'])
     @handler.Auth.require_api_auth
     def api_workflows_public():
@@ -328,6 +333,12 @@ def register_routes(app):
     @handler.Auth.require_admin
     def api_config_update():
         return handler.Config.update_config()
+
+    @app.route('/api/config/test-models', methods=['POST'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_config_test_models():
+        return handler.Config.test_models()
 
     @app.route('/api/faq', methods=['POST'])
     @handler.Auth.require_api_auth
@@ -436,6 +447,12 @@ def register_routes(app):
     @handler.Auth.require_admin
     def api_workflows_delete(workflow_id):
         return handler.Workflow.delete(workflow_id)
+
+    @app.route('/api/classifier/test', methods=['POST'])
+    @handler.Auth.require_api_auth
+    @handler.Auth.require_admin
+    def api_classifier_test():
+        return handler.Chat.test_classifier()
 
     # ============================================================
     # 用户自助 API

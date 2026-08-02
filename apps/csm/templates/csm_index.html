@@ -39,6 +39,20 @@
             </div>
         </header>
 
+        {% if role == 1 %}
+        <div class="welcome-banner welcome-admin">
+            <i class="fas fa-user-shield"></i> 欢迎 {{ uid }} 使用本系统
+        </div>
+        {% elif role == 2 %}
+        <div class="welcome-banner welcome-agent">
+            <i class="fas fa-headset"></i> 欢迎 {{ uid }} 使用本系统，请随时关注用户的呼叫，无法值班请退出本系统
+        </div>
+        {% elif role == 3 %}
+        <div class="welcome-banner welcome-api">
+            <i class="fas fa-plug"></i> 欢迎 {{ uid }} 与本系统实现互联互通
+        </div>
+        {% endif %}
+
         <div class="chat-container" id="chat-container">
             <div class="message-container bot-message-container">
             </div>
@@ -46,6 +60,11 @@
 
         <form id="query-form">
             <div class="input-container">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <select id="workflow-select" style="padding:6px 10px;border:2px solid #e0e3e8;border-radius:8px;font-size:0.85rem;background:#fff;max-width:200px;">
+                        <option value="">默认对话模式</option>
+                    </select>
+                </div>
                 <input type="text" class="input-field" id="query-input" name="msg"
                        placeholder="请输入您的问题..." required autocomplete="off">
                 <div class="button-container">

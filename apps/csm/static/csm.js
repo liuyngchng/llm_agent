@@ -52,13 +52,14 @@ function restoreMessages() {
     messages.forEach(m => addMessageToDOM(m.text, m.type));
 }
 
-// 页面加载时恢复历史消息
+// 页面加载时恢复历史消息并加载工作流列表
 window.onload = function() {
     loadMessages();
     if (messages.length > 0) {
         restoreMessages();
     }
     queryInput.focus();
+    loadWorkflows();
 };
 
 // 表单提交事件
@@ -125,17 +126,23 @@ async function fetchQueryData(query) {
     currentBotMessage = addMessage(`<div class="typing-indicator"><span></span><span></span><span></span> 思考中...</div>`, 'bot');
 
     try {
-        const t = document.getElementById('t').value;
+        const t = localStorage.getItem('token') || document.getElementById('t').value;
         const uid = document.getElementById('uid').value;
+        const workflowId = parseInt(document.getElementById('workflow-select')?.value) || 0;
 
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
+                'Content-Type': 'application/json',
                 'Accept': 'text/event-stream',
                 'Authorization': 'Bearer ' + t,
             },
-            body: `msg=${encodeURIComponent(query)}&uid=${encodeURIComponent(uid)}&session_id=${encodeURIComponent(sessionId)}`,
+            body: JSON.stringify({
+                msg: query,
+                uid: uid,
+                session_id: sessionId,
+                workflow_id: workflowId
+            }),
             signal: abortController.signal,
             credentials: 'include'
         });
@@ -287,15 +294,15 @@ async function newChat() {
     }
     // 通知后端清空当前会话上下文
     const uid = document.getElementById('uid').value;
-    const t = document.getElementById('t').value;
+    const t = localStorage.getItem('token') || document.getElementById('t').value;
     try {
         await fetch('/api/chat/clear', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
+                'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + t,
             },
-            body: `session_id=${encodeURIComponent(sessionId)}&uid=${encodeURIComponent(uid)}`
+            body: JSON.stringify({ session_id: sessionId })
         });
     } catch (e) {
         console.warn('清空后端上下文失败:', e);
@@ -331,3 +338,28 @@ queryInput.addEventListener('keydown', function(e) {
         queryForm.dispatchEvent(new Event('submit'));
     }
 });
+
+// ============================================================
+// 工作流列表加载
+// ============================================================
+
+async function loadWorkflows() {
+    try {
+        var t = localStorage.getItem('token') || '';
+        var resp = await fetch('/api/workflows', {
+            headers: { 'Authorization': 'Bearer ' + t }
+        });
+        var json = await resp.json();
+        var workflows = json.data || [];
+        var sel = document.getElementById('workflow-select');
+        if (!sel) return;
+        workflows.forEach(function(w) {
+            var opt = document.createElement('option');
+            opt.value = w.id;
+            opt.textContent = w.name;
+            sel.appendChild(opt);
+        });
+    } catch(e) {
+        console.warn('加载工作流列表失败:', e);
+    }
+}
