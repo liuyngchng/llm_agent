@@ -108,13 +108,7 @@ class CsmEngine:
                     uid, truncate_str(user_query, 80), len(user_query), history_count)
 
         # 1. 意图分类（复用 classify，多级匹配：关键词 → fastText → 语义 → LLM → fallback）
-        try:
-            self.ft_predictor.train(
-                self.CSM_CLASSIFIER["categories"],
-                self.CSM_CLASSIFIER.get("prompt", ""),
-            )
-        except Exception as e:
-            logger.warning("fastText 训练失败，将跳过 fastText 层: %s", e)
+        # 模型已训练好（dt/ft/model.ftz），直接加载使用，不触发训练
         classify_start = time.time()
         intent = classify(
             self.CSM_CLASSIFIER, user_query,

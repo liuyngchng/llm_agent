@@ -130,10 +130,16 @@ class FastTextPredictor:
         os.makedirs(work_dir, exist_ok=True)
 
     def train(self, categories: list[dict], prompt: str = "") -> bool:
-        """根据类别定义训练 fastText 模型。
-        如果类别未变更（与上次训练的 hash 相同）则跳过训练。
-        返回 True 表示训练成功或无需训练。
+        """确保 fastText 模型可用。
+
+        模型已训练好（磁盘上存在 model.ftz）时直接返回 True，不重新训练。
+        只有 model.ftz 缺失时才执行训练（首次部署的兜底）。
+        返回 True 表示模型可用或训练成功。
         """
+        model_path = os.path.join(self.work_dir, "model.ftz")
+        if os.path.exists(model_path):
+            return True  # 模型已存在，直接加载使用
+
         hash_val = _hash_categories(categories, prompt)
         if hash_val == self.model_hash:
             return True  # 类别未变，无需重新训练
@@ -815,7 +821,7 @@ class WorkflowEngine:
 
         # 意图分类（如果工作流配置了 Classifier）
         if classifier_cfg and classifier_cfg.get("categories"):
-            # 确保 fastText 模型已训练
+            # 确保 fastText 模型可用（存在 model.ftz 时直接跳过，不重复训练）
             try:
                 self.ft_predictor.train(
                     classifier_cfg["categories"],
