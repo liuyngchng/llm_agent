@@ -127,4 +127,10 @@ def apply_db_config(cfg: dict, db_configs: dict[str, str]) -> dict:
             else:
                 target[key] = val
 
+    # 兜底：overlap 必须严格小于 chunkSize 的一定比例，否则文本切分会死循环
+    chunk_size = cfg["kb"].get("chunk_size", 300)
+    chunk_overlap = cfg["kb"].get("chunk_overlap", 80)
+    if chunk_overlap >= chunk_size:
+        cfg["kb"]["chunk_overlap"] = chunk_size // 3
+
     return cfg

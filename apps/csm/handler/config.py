@@ -12,6 +12,9 @@ from apps.csm.store import DEFAULT_CHAT_PROMPT
 
 logger = logging.getLogger(__name__)
 
+# overlap 允许占 chunk_size 的最大比例（百分比），避免文本切分死循环
+MAX_CHUNK_OVERLAP_RATIO = 30
+
 
 class ConfigHandler:
     """系统配置 API 处理器"""
@@ -102,7 +105,19 @@ class ConfigHandler:
         if kb_data.get("chunk_size"):
             self.store.set_config("kb.chunk_size", str(kb_data["chunk_size"]), "文本分片大小")
         if kb_data.get("chunk_overlap"):
-            self.store.set_config("kb.chunk_overlap", str(kb_data["chunk_overlap"]), "分片重叠大小")
+            chunk_size = self.cfg["kb"].get("chunk_size", 300)
+            if kb_data.get("chunk_size"):
+                chunk_size = int(kb_data["chunk_size"])
+            overlap = int(kb_data["chunk_overlap"])
+            # 校验：overlap 必须严格小于 chunk_size 的一定比例，否则文本切分步长为 0 会死循环
+            max_overlap = chunk_size * MAX_CHUNK_OVERLAP_RATIO // 100
+            if overlap >= chunk_size:
+                return jsonify({"error": f"分片重叠必须小于分片大小（当前 {overlap} ≥ {chunk_size}）"}), 400
+            if overlap > max_overlap:
+                return jsonify({
+                    "error": f"分片重叠过大，最多为分片大小的 {MAX_CHUNK_OVERLAP_RATIO}%（{max_overlap}），当前 {overlap}"
+                }), 400
+            self.store.set_config("kb.chunk_overlap", str(overlap), "分片重叠大小")
         if kb_data.get("top_k"):
             self.store.set_config("kb.top_k", str(kb_data["top_k"]), "检索返回条数")
         if kb_data.get("score_threshold"):

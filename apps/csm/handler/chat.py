@@ -25,13 +25,15 @@ class ChatHandler:
     """聊天处理器（对标 Go internal/handler/chat.go）"""
 
     def __init__(self, cfg: dict, kb_manager, session_mgr, store,
-                 faq_handler=None, workflow_engine: WorkflowEngine = None):
+                 faq_handler=None, workflow_engine: WorkflowEngine = None,
+                 csm_engine=None):
         self.cfg = cfg
         self.kb_mgr = kb_manager
         self.session_mgr = session_mgr
         self.store = store
         self.faq_handler = faq_handler
         self.engine = workflow_engine
+        self.csm_engine = csm_engine
 
         # 即刻创建 LLM 客户端（对标 Go：NewChatHandler 中 llmClient := llm.New(...)）
         api = self.cfg["api"]
@@ -152,18 +154,17 @@ class ChatHandler:
         )
 
     def _chat_with_workflow(self, uid: str, session_id: str, workflow_id: int, msg: str):
-        """工作流引擎模式（对标 Go chatWithWorkflow）"""
-        # 加载工作流
-        workflow = self.store.get_workflow(workflow_id)
-        if not workflow:
-            return jsonify({"error": "工作流不存在"}), 404
+        """工作流引擎模式（对标 Go chatWithWorkflow）
 
+        当前为【CSM 硬编码模式】：直接走 CsmEngine 写死的客服问答逻辑
+        （分类→路由→检索→回答），不再从数据库加载工作流配置。
+        若需恢复动态配置，放开注释分支、删除 execute_stream_csm 调用。
+        """
         # 获取历史
         history = self.session_mgr.get_history(uid, session_id)
-        history_str = self.session_mgr.format_history(history)
 
-        logger.info("workflow-chat: uid=%s, session=%s, workflow=%s(%d), query=%s",
-                    uid, session_id, workflow.get("name", ""), workflow_id, msg[:50])
+        logger.info("workflow-chat: uid=%s, session=%s, workflow=%d, query=%s",
+                    uid, session_id, workflow_id, msg[:50])
 
         # 保存用户消息
         self.session_mgr.add_message(uid, session_id, "user", msg)
@@ -173,10 +174,14 @@ class ChatHandler:
 
             full_output = ""
             try:
-                for evt in self.engine.execute_stream(workflow, history, uid, msg):
+                # 【CSM 硬编码模式】若需恢复动态配置，改回：
+                # workflow = self.store.get_workflow(workflow_id)
+                # events = self.engine.execute_stream(workflow, history, uid, msg)
+                events = self.csm_engine.execute_stream_csm(workflow_id, msg, uid, history)
+                for evt in events:
                     if evt.type == "progress":
-                        # 进度事件作为注释发送（前端可解析）
-                        yield f"data: [进度] {evt.agent}\n\n"
+                        # 进度事件：对标 Go "[步骤 %d/%d] %s"，前端 app.js 解析 [步骤 前缀
+                        yield f"data: [步骤 {evt.step}/{evt.total}] {evt.agent}\n\n"
                     elif evt.type == "chunk":
                         full_output += evt.content
                         yield f"data: {evt.content}\n\n"

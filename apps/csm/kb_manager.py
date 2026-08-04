@@ -443,6 +443,12 @@ class KBManager:
         """简单文本切分"""
         if chunk_size <= 0:
             chunk_size = 300
+        # 防止 chunk_overlap >= chunk_size 导致切分步长 <= 0 死循环
+        if chunk_overlap >= chunk_size:
+            chunk_overlap = chunk_size // 3
+        # 同理防止步长为负
+        if chunk_overlap < 0:
+            chunk_overlap = 0
 
         paragraphs = text.split("\n")
         chunks = []

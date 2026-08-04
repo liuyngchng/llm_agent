@@ -14,6 +14,7 @@ from apps.csm.handler.agent import AgentHandler
 from apps.csm.handler.workflow import WorkflowHandler
 from apps.csm.handler.faq import FaqHandler
 from apps.csm.engine import WorkflowEngine, FastTextPredictor
+from apps.csm.csm_engine import CsmEngine
 
 
 class Handler:
@@ -32,8 +33,15 @@ class Handler:
             ft_predictor=ft_predictor,
         )
 
+        # CSM 硬编码引擎（对标 Go: engine.csm.go，共享 fastText 预测器）
+        csm_engine = CsmEngine(
+            cfg, kb_manager, store,
+            emb_client=embedding_client,
+            ft_predictor=ft_predictor,
+        )
+
         self.Page = PageHandler(cfg)
-        self.Chat = ChatHandler(cfg, kb_manager, session_mgr, store, faq_handler, workflow_engine)
+        self.Chat = ChatHandler(cfg, kb_manager, session_mgr, store, faq_handler, workflow_engine, csm_engine)
         self.Vdb = VdbHandler(cfg, kb_manager, store)
         self.Config = ConfigHandler(cfg, store, workflow_engine)
         self.Auth = AuthHandler(cfg, store)
