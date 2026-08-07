@@ -54,12 +54,126 @@ class ChatHandler:
             return prompt
         return DEFAULT_CHAT_PROMPT
 
+    def _resolve_uid(self, data: dict) -> str:
+        """根据 api_auth 开关决定使用哪个 UID（对标 Go resolveUID）"""
+        api_auth = self.cfg["sys"].get("api_auth", True)
+        if api_auth:
+            return get_auth_uid()
+        # API 认证关闭时，优先使用请求中的 uid
+        req_uid = (data.get("uid") or "").strip()
+        if req_uid:
+            return req_uid
+        return get_auth_uid()
+
+    def chat_sync(self):
+        """同步聊天接口 POST /api/chat/sync（对标 Go ChatHandler.ChatSync）"""
+        data = request.get_json(silent=True) or {}
+        msg = (data.get("msg") or "").strip()
+        uid = self._resolve_uid(data)
+
+        if not msg:
+            return jsonify({"error": "消息不能为空"}), 400
+
+        work_mode = self.cfg["sys"].get("work_mode", 0)
+        if work_mode == 1:  # CSM
+            return self._chat_sync_csm(uid, msg)
+        elif work_mode == 2:  # Dynamic
+            return self._chat_sync_dynamic(uid, msg)
+        else:  # KB
+            return self._chat_sync_kb(uid, msg)
+
+    def _chat_sync_kb(self, uid: str, msg: str):
+        """知识库问答模式同步版本"""
+        history = self.session_mgr.get_history(uid)
+        history_str = self.session_mgr.format_history(history)
+
+        faq_threshold = self.cfg.get("faq", {}).get("match_threshold", 0.85)
+        if self.faq_handler and self.faq_handler.get_faq_count() > 0:
+            faq_answer, faq_score = self.faq_handler.match_faq(msg, faq_threshold)
+            if faq_answer:
+                self.session_mgr.add_message(uid, "user", msg)
+                self.session_mgr.add_message(uid, "assistant", faq_answer)
+                return jsonify({"answer": faq_answer, "source": "faq", "score": faq_score})
+
+        cur_date = datetime.now().strftime("%Y-%m-%d")
+        cur_week = get_weekday_cn(datetime.now().weekday())
+        context_str = self.kb_mgr.search_all_kbs(
+            msg, uid,
+            self.cfg["kb"].get("top_k", 3),
+            self.cfg["kb"].get("score_threshold", 0.1),
+        )
+
+        prompt_template = self._get_prompt_template()
+        system_prompt = prompt_template.replace("{context}", context_str or "")
+        system_prompt = system_prompt.replace("{history}", history_str)
+        system_prompt = system_prompt.replace("{question}", msg)
+        system_prompt = system_prompt.replace("{cur_date}", cur_date)
+        system_prompt = system_prompt.replace("{cur_week}", cur_week)
+
+        self.session_mgr.add_message(uid, "user", msg)
+        try:
+            answer = self._llm_client.chat(system_prompt, msg)
+        except Exception as e:
+            logger.error("LLM 调用失败: %s", e)
+            return jsonify({"error": f"LLM 调用失败: {e}"}), 500
+
+        self.session_mgr.add_message(uid, "assistant", answer)
+        return jsonify({"answer": answer, "source": "kb"})
+
+    def _chat_sync_csm(self, uid: str, msg: str):
+        """CSM 工作流同步版本"""
+        history = self.session_mgr.get_history(uid)
+        self.session_mgr.add_message(uid, "user", msg)
+
+        full_output = ""
+        try:
+            events = self.csm_engine.execute_stream_csm(0, msg, uid, history)
+            for evt in events:
+                if evt.type == "chunk":
+                    full_output += evt.content
+                elif evt.type == "error":
+                    raise Exception(evt.content)
+                elif evt.type == "done":
+                    break
+        except Exception as e:
+            logger.error("CSM 工作流执行失败: %s", e)
+            return jsonify({"error": f"工作流执行失败: {e}"}), 500
+
+        self.session_mgr.add_message(uid, "assistant", full_output)
+        return jsonify({"answer": full_output, "source": "csm"})
+
+    def _chat_sync_dynamic(self, uid: str, msg: str):
+        """动态工作流同步版本"""
+        history = self.session_mgr.get_history(uid)
+        workflow_id = self.cfg["sys"].get("default_workflow_id", 0)
+        self.session_mgr.add_message(uid, "user", msg)
+
+        workflow = self.store.get_workflow(workflow_id) if workflow_id > 0 else None
+        if not workflow:
+            return jsonify({"error": f"工作流 {workflow_id} 不存在"}), 500
+
+        full_output = ""
+        try:
+            events = self.engine.execute_stream(workflow, history, uid, msg)
+            for evt in events:
+                if evt.type == "chunk":
+                    full_output += evt.content
+                elif evt.type == "error":
+                    raise Exception(evt.content)
+                elif evt.type == "done":
+                    break
+        except Exception as e:
+            logger.error("工作流执行失败: %s", e)
+            return jsonify({"error": f"工作流执行失败: {e}"}), 500
+
+        self.session_mgr.add_message(uid, "assistant", full_output)
+        return jsonify({"answer": full_output, "source": "dynamic"})
+
     def chat(self):
         """处理聊天请求，SSE 流式返回（对标 Go ChatHandler.Chat）"""
         data = request.get_json(silent=True) or {}
         msg = (data.get("msg") or "").strip()
-        session_id = data.get("session_id") or "default"
-        uid = get_auth_uid()
+        uid = self._resolve_uid(data)
 
         if not msg:
             return jsonify({"error": "消息不能为空"}), 400
@@ -67,19 +181,17 @@ class ChatHandler:
         # 根据系统配置的工作模式决定聊天路径
         work_mode = self.cfg["sys"].get("work_mode", 0)
         if work_mode == 1:  # CSM
-            return self._chat_with_csm(uid, session_id, msg)
+            return self._chat_with_csm(uid, msg)
         elif work_mode == 2:  # Dynamic
-            return self._chat_with_dynamic(uid, session_id, msg)
+            return self._chat_with_dynamic(uid, msg)
         else:  # KB
-            return self._chat_with_kb(uid, session_id, msg)
+            return self._chat_with_kb(uid, msg)
 
-    def _chat_with_kb(self, uid: str, session_id: str, msg: str):
+    def _chat_with_kb(self, uid: str, msg: str):
         """知识库问答模式 — FAQ 匹配 → 知识库检索 → LLM 对话（对标 Go chatWithKB）"""
-        # 获取历史
-        history = self.session_mgr.get_history(uid, session_id)
+        history = self.session_mgr.get_history(uid)
         history_str = self.session_mgr.format_history(history)
 
-        # FAQ 匹配
         faq_threshold = self.cfg.get("faq", {}).get("match_threshold", 0.85)
         if self.faq_handler and self.faq_handler.get_faq_count() > 0:
             faq_answer, faq_score = self.faq_handler.match_faq(msg, faq_threshold)
@@ -88,11 +200,11 @@ class ChatHandler:
                             uid, msg[:50], faq_score)
 
                 def generate_faq():
-                    self.session_mgr.add_message(uid, session_id, "user", msg)
+                    self.session_mgr.add_message(uid, "user", msg)
                     yield "data: \n\n"
                     yield f"data: {faq_answer}\n\n"
                     yield "data: [DONE]\n\n"
-                    self.session_mgr.add_message(uid, session_id, "assistant", faq_answer)
+                    self.session_mgr.add_message(uid, "assistant", faq_answer)
 
                 return Response(
                     stream_with_context(generate_faq()),
@@ -104,7 +216,6 @@ class ChatHandler:
                     },
                 )
 
-        # 获取知识库上下文
         cur_date = datetime.now().strftime("%Y-%m-%d")
         cur_week = get_weekday_cn(datetime.now().weekday())
         context_str = self.kb_mgr.search_all_kbs(
@@ -113,7 +224,6 @@ class ChatHandler:
             self.cfg["kb"].get("score_threshold", 0.1),
         )
 
-        # 构建提示词
         prompt_template = self._get_prompt_template()
         system_prompt = prompt_template.replace("{context}", context_str or "")
         system_prompt = system_prompt.replace("{history}", history_str)
@@ -121,11 +231,10 @@ class ChatHandler:
         system_prompt = system_prompt.replace("{cur_date}", cur_date)
         system_prompt = system_prompt.replace("{cur_week}", cur_week)
 
-        logger.info("chat: uid=%s, session=%s, query=%s, contextLen=%d",
-                    uid, session_id, msg[:50], len(context_str))
+        logger.info("chat: uid=%s, query=%s, contextLen=%d",
+                    uid, msg[:50], len(context_str))
 
-        # 保存用户消息
-        self.session_mgr.add_message(uid, session_id, "user", msg)
+        self.session_mgr.add_message(uid, "user", msg)
 
         def generate():
             yield "data: \n\n"
@@ -142,7 +251,7 @@ class ChatHandler:
             yield "data: [DONE]\n\n"
 
             if full_response:
-                self.session_mgr.add_message(uid, session_id, "assistant", full_response)
+                self.session_mgr.add_message(uid, "assistant", full_response)
 
         return Response(
             stream_with_context(generate()),
@@ -154,29 +263,20 @@ class ChatHandler:
             },
         )
 
-    def _chat_with_csm(self, uid: str, session_id: str, msg: str):
-        """CSM 硬编码工作流模式（对标 Go chatWithCSMWorkflow）
+    def _chat_with_csm(self, uid: str, msg: str):
+        """CSM 硬编码工作流模式（对标 Go chatWithCSMWorkflow）"""
+        history = self.session_mgr.get_history(uid)
 
-        直接走 CsmEngine 写死的客服问答逻辑（分类→路由→检索→回答），
-        不再从数据库加载工作流配置。
-        """
-        # 获取历史
-        history = self.session_mgr.get_history(uid, session_id)
+        logger.info("workflow-chat-csm: uid=%s, query=%s",
+                    uid, msg[:50])
 
-        logger.info("workflow-chat-csm: uid=%s, session=%s, query=%s",
-                    uid, session_id, msg[:50])
-
-        # 保存用户消息
-        self.session_mgr.add_message(uid, session_id, "user", msg)
+        self.session_mgr.add_message(uid, "user", msg)
 
         def generate():
             yield "data: \n\n"
 
             full_output = ""
             try:
-                # 【CSM 硬编码模式】若需恢复动态配置，改回：
-                # workflow = self.store.get_workflow(workflow_id)
-                # events = self.engine.execute_stream(workflow, history, uid, msg)
                 events = self.csm_engine.execute_stream_csm(0, msg, uid, history)
                 for evt in events:
                     if evt.type == "progress":
@@ -195,7 +295,7 @@ class ChatHandler:
             yield "data: [DONE]\n\n"
 
             if full_output:
-                self.session_mgr.add_message(uid, session_id, "assistant", full_output)
+                self.session_mgr.add_message(uid, "assistant", full_output)
 
         return Response(
             stream_with_context(generate()),
@@ -207,24 +307,21 @@ class ChatHandler:
             },
         )
 
-    def _chat_with_dynamic(self, uid: str, session_id: str, msg: str):
+    def _chat_with_dynamic(self, uid: str, msg: str):
         """动态加载数据库工作流配置模式（对标 Go chatWithDynamicWorkflow）"""
-        # 获取历史
-        history = self.session_mgr.get_history(uid, session_id)
+        history = self.session_mgr.get_history(uid)
 
         workflow_id = self.cfg["sys"].get("default_workflow_id", 0)
-        logger.info("workflow-chat-dynamic: uid=%s, session=%s, workflow=%d, query=%s",
-                    uid, session_id, workflow_id, msg[:50])
+        logger.info("workflow-chat-dynamic: uid=%s, workflow=%d, query=%s",
+                    uid, workflow_id, msg[:50])
 
-        # 保存用户消息
-        self.session_mgr.add_message(uid, session_id, "user", msg)
+        self.session_mgr.add_message(uid, "user", msg)
 
         def generate():
             yield "data: \n\n"
 
             full_output = ""
             try:
-                # 从数据库加载工作流配置并执行
                 workflow = self.store.get_workflow(workflow_id) if workflow_id > 0 else None
                 if not workflow:
                     yield f"data: [错误] 工作流 {workflow_id} 不存在\n\n"
@@ -247,7 +344,7 @@ class ChatHandler:
             yield "data: [DONE]\n\n"
 
             if full_output:
-                self.session_mgr.add_message(uid, session_id, "assistant", full_output)
+                self.session_mgr.add_message(uid, "assistant", full_output)
 
         return Response(
             stream_with_context(generate()),
@@ -259,13 +356,16 @@ class ChatHandler:
             },
         )
 
-    def clear(self):
-        """清空会话（对标 Go ChatHandler.Clear，JSON 请求体）"""
-        data = request.get_json(silent=True) or {}
+    def history(self):
+        """获取当前用户的历史消息 GET /api/chat/history"""
         uid = get_auth_uid()
-        session_id = data.get("session_id") or "default"
+        history = self.session_mgr.get_history(uid)
+        return jsonify({"data": history})
 
-        self.session_mgr.clear(uid, session_id)
+    def clear(self):
+        """清空会话（对标 Go ChatHandler.Clear）"""
+        uid = get_auth_uid()
+        self.session_mgr.clear(uid)
         return jsonify({"status": "ok"})
 
     # ============================================================

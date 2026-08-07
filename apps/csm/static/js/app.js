@@ -26,8 +26,6 @@ const MAX_MESSAGES = 50;
 let messages = [];
 
 // 会话 ID
-let sessionId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
-
 // localStorage key
 function getStorageKey() {
     var uidEl = document.getElementById('uid');
@@ -147,8 +145,7 @@ async function fetchQueryData(query) {
                 'Accept': 'text/event-stream'
             },
             body: JSON.stringify({
-                msg: query,
-                session_id: sessionId
+                msg: query
             }),
             signal: abortController.signal
         });
@@ -293,12 +290,11 @@ async function newChat() {
         await authFetch('/api/chat/clear', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ session_id: sessionId })
+            body: JSON.stringify({})
         });
     } catch (e) {
         console.warn('清空上下文失败:', e);
     }
-    sessionId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
     messages = [];
     saveMessages();
     chatContainer.innerHTML = '';

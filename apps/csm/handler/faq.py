@@ -49,6 +49,31 @@ class FaqHandler:
             entries = []
         return jsonify({"data": entries})
 
+    def match(self):
+        """FAQ 独立匹配接口 POST /api/faq/match"""
+        data = request.get_json(silent=True) or {}
+        query = (data.get("query") or "").strip()
+
+        if not query:
+            return jsonify({"error": "query 不能为空"}), 400
+
+        # 从配置中读取阈值
+        threshold = 0.85
+        cfg_val = self.store.get_config("faq.match_threshold")
+        if cfg_val:
+            try:
+                threshold = float(cfg_val)
+            except (ValueError, TypeError):
+                pass
+
+        answer, score = self.match_faq(query, threshold)
+        matched = answer is not None
+        return jsonify({
+            "answer": answer or "",
+            "score": score,
+            "matched": matched,
+        })
+
     def template(self):
         """下载 FAQ 模板文件 GET /api/faq/template"""
         from flask import Response

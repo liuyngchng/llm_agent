@@ -233,6 +233,18 @@ class ConfigHandler:
 
         return jsonify({"results": results, "all_ok": all_ok})
 
+    def info(self):
+        """返回服务信息 GET /api/info"""
+        return jsonify({
+            "name": self.cfg["sys"]["name"],
+            "version": "1.0.0",
+            "work_mode": self.cfg["sys"].get("work_mode", 0),
+            "vector_backend": self.cfg.get("vector", {}).get("backend", "local"),
+            "store_backend": self.cfg.get("store", {}).get("backend", "sqlite"),
+            "supported_file_types": ["txt", "md", "pdf", "docx", "xlsx"],
+            "api_auth_enabled": self.cfg["sys"].get("api_auth", True),
+        })
+
     def _get_prompt(self) -> str:
         prompt = self.store.get_prompt("chat_msg")
         if prompt:

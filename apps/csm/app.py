@@ -179,6 +179,10 @@ def register_routes(app):
     # ============================================================
     # 免认证页面路由
     # ============================================================
+    @app.route('/health')
+    def health_check():
+        return jsonify({"status": "ok"})
+
     @app.route('/login')
     def login_page():
         return handler.Auth.login_page()
@@ -221,6 +225,16 @@ def register_routes(app):
     def api_chat():
         return handler.Chat.chat()
 
+    @app.route('/api/chat/sync', methods=['POST'])
+    @handler.Auth.require_api_auth
+    def api_chat_sync():
+        return handler.Chat.chat_sync()
+
+    @app.route('/api/chat/history', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_chat_history():
+        return handler.Chat.history()
+
     @app.route('/api/chat/clear', methods=['POST'])
     @handler.Auth.require_api_auth
     def api_chat_clear():
@@ -235,6 +249,11 @@ def register_routes(app):
     @handler.Auth.require_api_auth
     def api_faq_list():
         return handler.Faq.list()
+
+    @app.route('/api/faq/match', methods=['POST'])
+    @handler.Auth.require_api_auth
+    def api_faq_match():
+        return handler.Faq.match()
 
     @app.route('/api/faq/template', methods=['GET'])
     @handler.Auth.require_api_auth
@@ -251,6 +270,31 @@ def register_routes(app):
     def api_agents_public():
         return handler.Agent.list_public()
 
+    @app.route('/api/ai-agents', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_agents_list():
+        return handler.Agent.list()
+
+    @app.route('/api/ai-agents', methods=['POST'])
+    @handler.Auth.require_api_auth
+    def api_agents_create():
+        return handler.Agent.create()
+
+    @app.route('/api/ai-agents/<int:agent_id>', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_agents_get(agent_id):
+        return handler.Agent.get(agent_id)
+
+    @app.route('/api/ai-agents/<int:agent_id>', methods=['PUT'])
+    @handler.Auth.require_api_auth
+    def api_agents_update(agent_id):
+        return handler.Agent.update(agent_id)
+
+    @app.route('/api/ai-agents/<int:agent_id>', methods=['DELETE'])
+    @handler.Auth.require_api_auth
+    def api_agents_delete(agent_id):
+        return handler.Agent.delete(agent_id)
+
     @app.route('/api/system-vars', methods=['GET'])
     @handler.Auth.require_api_auth
     def api_system_vars():
@@ -261,10 +305,25 @@ def register_routes(app):
     def api_workflows_public():
         return handler.Workflow.list_public()
 
+    @app.route('/api/workflows/<int:workflow_id>', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_workflows_get(workflow_id):
+        return handler.Workflow.get(workflow_id)
+
+    @app.route('/api/classifier/test', methods=['POST'])
+    @handler.Auth.require_api_auth
+    def api_classifier_test():
+        return handler.Chat.test_classifier()
+
     @app.route('/api/config', methods=['GET'])
     @handler.Auth.require_api_auth
     def api_config_get():
         return handler.Config.get_config()
+
+    @app.route('/api/info', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_info():
+        return handler.Config.info()
 
     @app.route('/api/vdb', methods=['GET'])
     @handler.Auth.require_api_auth
@@ -310,6 +369,16 @@ def register_routes(app):
     @handler.Auth.require_api_auth
     def api_vdb_file_progress(file_id):
         return handler.Vdb.process_info(file_id)
+
+    @app.route('/api/vdb/file/<int:file_id>/chunks', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_vdb_file_chunks(file_id):
+        return handler.Vdb.chunks(file_id)
+
+    @app.route('/api/vdb/file/<int:file_id>/download', methods=['GET'])
+    @handler.Auth.require_api_auth
+    def api_vdb_file_download(file_id):
+        return handler.Vdb.download(file_id)
 
     @app.route('/api/vdb/file/<int:file_id>', methods=['DELETE'])
     @handler.Auth.require_api_auth
@@ -394,47 +463,11 @@ def register_routes(app):
     def api_users_reset_pwd(user_name):
         return handler.User.reset_user_pwd(user_name)
 
-    @app.route('/api/ai-agents', methods=['GET'])
-    @handler.Auth.require_api_auth
-    @handler.Auth.require_admin
-    def api_agents_list():
-        return handler.Agent.list()
-
-    @app.route('/api/ai-agents', methods=['POST'])
-    @handler.Auth.require_api_auth
-    @handler.Auth.require_admin
-    def api_agents_create():
-        return handler.Agent.create()
-
-    @app.route('/api/ai-agents/<int:agent_id>', methods=['GET'])
-    @handler.Auth.require_api_auth
-    @handler.Auth.require_admin
-    def api_agents_get(agent_id):
-        return handler.Agent.get(agent_id)
-
-    @app.route('/api/ai-agents/<int:agent_id>', methods=['PUT'])
-    @handler.Auth.require_api_auth
-    @handler.Auth.require_admin
-    def api_agents_update(agent_id):
-        return handler.Agent.update(agent_id)
-
-    @app.route('/api/ai-agents/<int:agent_id>', methods=['DELETE'])
-    @handler.Auth.require_api_auth
-    @handler.Auth.require_admin
-    def api_agents_delete(agent_id):
-        return handler.Agent.delete(agent_id)
-
     @app.route('/api/workflows', methods=['POST'])
     @handler.Auth.require_api_auth
     @handler.Auth.require_admin
     def api_workflows_create():
         return handler.Workflow.create()
-
-    @app.route('/api/workflows/<int:workflow_id>', methods=['GET'])
-    @handler.Auth.require_api_auth
-    @handler.Auth.require_admin
-    def api_workflows_get(workflow_id):
-        return handler.Workflow.get(workflow_id)
 
     @app.route('/api/workflows/<int:workflow_id>', methods=['PUT'])
     @handler.Auth.require_api_auth
@@ -447,12 +480,6 @@ def register_routes(app):
     @handler.Auth.require_admin
     def api_workflows_delete(workflow_id):
         return handler.Workflow.delete(workflow_id)
-
-    @app.route('/api/classifier/test', methods=['POST'])
-    @handler.Auth.require_api_auth
-    @handler.Auth.require_admin
-    def api_classifier_test():
-        return handler.Chat.test_classifier()
 
     # ============================================================
     # 用户自助 API

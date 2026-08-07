@@ -107,21 +107,53 @@ class VdbHandler:
         return jsonify({"data": finfo})
 
     def search(self):
-        """在知识库中检索 POST /api/vdb/search"""
+        """在知识库中检索 POST /api/vdb/search（支持 vdb_id / vdb_ids / 全库搜索）"""
         uid = get_auth_uid()
         data = request.get_json(silent=True) or {}
-        query = data.get("query", "")
+        query = (data.get("query") or "").strip()
+        vdb_ids = data.get("vdb_ids", [])
         vdb_id = data.get("vdb_id", 0)
 
-        if not query or not vdb_id:
-            return jsonify({"error": "参数错误"}), 400
+        if not query:
+            return jsonify({"error": "query 不能为空"}), 400
 
-        result = self.kb_mgr.search_in_kb(
-            query, vdb_id, uid,
-            self.cfg["kb"].get("top_k", 3),
-            self.cfg["kb"].get("score_threshold", 0.1),
-        )
-        return jsonify({"data": result})
+        top_k = self.cfg["kb"].get("top_k", 3)
+        threshold = self.cfg["kb"].get("score_threshold", 0.1)
+
+        if vdb_ids and isinstance(vdb_ids, list) and len(vdb_ids) > 0:
+            result = self.kb_mgr.search_in_kbs(query, [int(v) for v in vdb_ids], uid, top_k, threshold)
+        elif vdb_id:
+            result = self.kb_mgr.search_in_kb(query, int(vdb_id), uid, top_k, threshold)
+        else:
+            result = self.kb_mgr.search_all_kbs(query, uid, top_k, threshold)
+
+        return jsonify({"data": result or ""})
+
+    def chunks(self, file_id: int):
+        """获取文件的分块列表 GET /api/vdb/file/<id>/chunks"""
+        uid = get_auth_uid()
+        finfo = self.store.get_file_by_id(file_id)
+        if not finfo or finfo.get("uid") != uid:
+            return jsonify({"error": "文件不存在"}), 404
+
+        chunks = self.kb_mgr.get_file_chunks(file_id)
+        if chunks is None:
+            chunks = []
+        return jsonify({"data": chunks})
+
+    def download(self, file_id: int):
+        """下载文件 GET /api/vdb/file/<id>/download"""
+        from flask import send_file
+        uid = get_auth_uid()
+        finfo = self.store.get_file_by_id(file_id)
+        if not finfo or finfo.get("uid") != uid:
+            return jsonify({"error": "文件不存在"}), 404
+
+        file_path = finfo.get("file_path", "")
+        if not file_path or not os.path.exists(file_path):
+            return jsonify({"error": "文件不存在"}), 404
+
+        return send_file(file_path, as_attachment=True, download_name=finfo.get("name", ""))
 
     def file_delete(self, file_id: int):
         """删除文件 DELETE /api/vdb/file/<id>"""

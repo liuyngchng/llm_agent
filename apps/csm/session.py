@@ -22,37 +22,34 @@ class SessionManager:
 
     def __init__(self):
         self._lock = threading.Lock()
-        # key: "uid:session_id" -> {"uid": str, "history": deque, "updated_at": float}
+        # key: uid -> {"uid": str, "history": deque, "updated_at": float}
         self._sessions = {}
         self._start_cleanup()
 
-    def get_history(self, uid: str, session_id: str) -> list:
+    def get_history(self, uid: str) -> list:
         """获取会话历史"""
-        key = f"{uid}:{session_id}"
         with self._lock:
-            entry = self._sessions.get(key)
+            entry = self._sessions.get(uid)
             if not entry:
                 return []
             return list(entry["history"])
 
-    def add_message(self, uid: str, session_id: str, role: str, content: str):
+    def add_message(self, uid: str, role: str, content: str):
         """添加消息到会话历史"""
-        key = f"{uid}:{session_id}"
         with self._lock:
-            if key not in self._sessions:
-                self._sessions[key] = {
+            if uid not in self._sessions:
+                self._sessions[uid] = {
                     "uid": uid,
                     "history": deque(maxlen=MAX_HISTORY_ROUNDS * 2),
                 }
-            entry = self._sessions[key]
+            entry = self._sessions[uid]
             entry["history"].append({"role": role, "content": content})
             entry["updated_at"] = time.time()
 
-    def clear(self, uid: str, session_id: str):
+    def clear(self, uid: str):
         """清空会话历史"""
-        key = f"{uid}:{session_id}"
         with self._lock:
-            self._sessions.pop(key, None)
+            self._sessions.pop(uid, None)
 
     def format_history(self, messages: list) -> str:
         """格式化历史消息为字符串"""

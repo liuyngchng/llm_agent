@@ -221,6 +221,37 @@ class KBManager:
 
         return "\n".join(all_parts)
 
+    def search_in_kbs(self, query: str, vdb_ids: list, uid: str,
+                      top_k: int = None, score_threshold: float = None) -> str:
+        """在多个指定知识库中检索"""
+        if top_k is None:
+            top_k = self.cfg["kb"].get("top_k", 3)
+        if score_threshold is None:
+            score_threshold = self.cfg["kb"].get("score_threshold", 0.1)
+
+        all_parts = []
+        for vdb_id in vdb_ids:
+            try:
+                ctx = self.search_in_kb(query, int(vdb_id), uid, top_k, score_threshold)
+                if ctx:
+                    info = self.store.get_vdb_by_id(int(vdb_id))
+                    kb_name = info.get("name", f"KB_{vdb_id}") if info else f"KB_{vdb_id}"
+                    all_parts.append(f"[{kb_name}]\n{ctx}")
+            except Exception as e:
+                logger.error("搜索知识库失败: vdb_id=%s, error=%s", vdb_id, e)
+
+        return "\n".join(all_parts)
+
+    def get_file_chunks(self, file_id: int) -> list:
+        """获取文件的所有 chunk（从向量数据库中按 source 查询）"""
+        finfo = self.store.get_file_by_id(file_id)
+        if not finfo:
+            raise RuntimeError("文件不存在")
+
+        vs = self._get_or_create_store(finfo["vdb_id"])
+        abs_path = os.path.abspath(finfo["file_path"])
+        return vs.list_by_source(abs_path)
+
     # ============================================================
     # 文档处理 Worker
     # ============================================================

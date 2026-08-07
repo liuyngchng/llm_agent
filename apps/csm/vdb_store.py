@@ -162,6 +162,21 @@ class LocalVectorStore:
             self.conn.commit()
             self.docs = [d for d in self.docs if d["source"] != source]
 
+    def list_by_source(self, source: str) -> list:
+        """根据 source 列出所有 chunks"""
+        with self._lock:
+            import copy
+            results = []
+            for d in self.docs:
+                if d["source"] == source:
+                    results.append({
+                        "id": d["id"],
+                        "content": d["content"],
+                        "metadata": {"source": d["source"]},
+                        "score": 0,
+                    })
+            return results
+
     def purge(self):
         with self._lock:
             self.conn.execute("DELETE FROM vectors WHERE vdb_id = ?", (self.vdb_id,))
