@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 # 默认配置值
 DEFAULT_CONFIG = {
     "server": {"port": 19007, "debug": True},
-    "sys": {"name": "对话机器人", "auth": False, "api_auth": False},
+    "sys": {"name": "对话机器人", "auth": False, "api_auth": False, "work_mode": 0, "default_workflow_id": 0},
     "api": {
         "llm_api_uri": "",
         "llm_api_key": "",
@@ -88,6 +88,8 @@ def apply_db_config(cfg: dict, db_configs: dict[str, str]) -> dict:
         ("sys.name", ["sys", "name"]),
         ("sys.auth", ["sys", "auth"]),
         ("sys.api_auth", ["sys", "api_auth"]),
+        ("sys.work_mode", ["sys", "work_mode"]),
+        ("sys.default_workflow_id", ["sys", "default_workflow_id"]),
         ("api.llm_api_uri", ["api", "llm_api_uri"]),
         ("api.llm_api_key", ["api", "llm_api_key"]),
         ("api.llm_model_name", ["api", "llm_model_name"]),

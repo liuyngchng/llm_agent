@@ -73,33 +73,12 @@ function restoreMessages() {
     messages.forEach(m => addMessageToDOM(m.text, m.type));
 }
 
-// 加载可用工作流列表
-async function loadWorkflows() {
-    try {
-        var resp = await authFetch('/api/workflows');
-        var json = await resp.json();
-        var wfs = json.data || [];
-        var sel = document.getElementById('workflow-select');
-        if (sel) {
-            wfs.forEach(function(w) {
-                var opt = document.createElement('option');
-                opt.value = w.id;
-                opt.textContent = w.name;
-                sel.appendChild(opt);
-            });
-        }
-    } catch(e) {
-        console.warn('加载工作流列表失败:', e);
-    }
-}
-
 // 页面加载
 window.onload = function() {
     loadMessages();
     if (messages.length > 0) {
         restoreMessages();
     }
-    loadWorkflows();
     queryInput.focus();
 };
 
@@ -169,8 +148,7 @@ async function fetchQueryData(query) {
             },
             body: JSON.stringify({
                 msg: query,
-                session_id: sessionId,
-                workflow_id: parseInt(document.getElementById('workflow-select').value) || 0
+                session_id: sessionId
             }),
             signal: abortController.signal
         });

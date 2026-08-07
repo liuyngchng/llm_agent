@@ -698,6 +698,21 @@
                     </div>
 
                     <div class="cfg-form-group" style="margin-top:28px;">
+                        <label>工作模式</label>
+                        <select id="sys_work_mode" style="max-width:400px;">
+                            <option value="0">知识库问答</option>
+                            <option value="1">CSM 工作流</option>
+                            <option value="2">动态工作流</option>
+                        </select>
+                    </div>
+                    <div class="cfg-form-group" id="sys_workflow_row" style="display:none;">
+                        <label>工作流 <span class="cfg-hint">(动态工作流模式下生效)</span></label>
+                        <select id="sys_default_workflow" style="max-width:400px;">
+                            <option value="0">请选择工作流</option>
+                        </select>
+                    </div>
+
+                    <div class="cfg-form-group" style="margin-top:28px;">
                         <label>
                             聊天提示词模板
                             <span class="cfg-hint">
@@ -1115,6 +1130,10 @@
         document.getElementById('kb_rerank_enabled').addEventListener('change', function() {
             document.getElementById('rerankLabel').textContent = this.checked ? '已启用' : '未启用';
         });
+        // 工作模式切换：动态工作流模式下显示工作流选择器
+        document.getElementById('sys_work_mode').addEventListener('change', function() {
+            document.getElementById('sys_workflow_row').style.display = (this.value === '2') ? '' : 'none';
+        });
 
         // ============================================================
         // 加载配置
@@ -1133,6 +1152,11 @@
                 const apiAuth = data.sys.api_auth !== 'false'; // 默认启用
                 document.getElementById('sys_api_auth').checked = apiAuth;
                 document.getElementById('apiAuthLabel').textContent = apiAuth ? '已启用' : '未启用';
+                // 工作模式
+                var workMode = data.sys.work_mode || 0;
+                document.getElementById('sys_work_mode').value = workMode;
+                document.getElementById('sys_workflow_row').style.display = (workMode === 2) ? '' : 'none';
+                document.getElementById('sys_default_workflow').value = data.sys.default_workflow_id || 0;
 
                 // 模型配置
                 document.getElementById('llm_api_uri').value = data.api.llm_api_uri || '';
@@ -1379,7 +1403,9 @@
                 sys: {
                     name: sysName,
                     auth: document.getElementById('sys_auth').checked ? 'true' : 'false',
-                    api_auth: document.getElementById('sys_api_auth').checked ? 'true' : 'false'
+                    api_auth: document.getElementById('sys_api_auth').checked ? 'true' : 'false',
+                    work_mode: parseInt(document.getElementById('sys_work_mode').value) || 0,
+                    default_workflow_id: parseInt(document.getElementById('sys_default_workflow').value) || 0
                 },
                 api: {
                     llm_api_uri: '', llm_api_key: '', llm_model_name: '',
@@ -1934,6 +1960,30 @@
         // ============================================================
         // 意图分类测试
         // ============================================================
+
+        // ============================================================
+        // 加载系统配置页面的工作流列表
+        // ============================================================
+        async function loadSysWorkflows() {
+            try {
+                var resp = await authFetch('/api/workflows');
+                var json = await resp.json();
+                var wfs = json.data || [];
+                var sel = document.getElementById('sys_default_workflow');
+                if (sel) {
+                    // 保留第一个 "请选择工作流" 选项
+                    while (sel.options.length > 1) sel.remove(1);
+                    wfs.forEach(function(w) {
+                        var opt = document.createElement('option');
+                        opt.value = w.id;
+                        opt.textContent = w.name;
+                        sel.appendChild(opt);
+                    });
+                }
+            } catch(e) {
+                console.warn('加载工作流列表失败:', e);
+            }
+        }
 
         async function loadWorkflows() {
             try {
@@ -2692,13 +2742,17 @@
             renderCanvas();
         }
 
-        // 初始加载
-        loadConfig();
-        loadUsers();
-        loadAiAgents();
-        loadFaqList();
-        loadWorkflows();
-        loadWorkflowList();
+        // 初始加载（先加载工作流列表，再加载配置以正确设置默认值）
+        async function initPage() {
+            await loadSysWorkflows();
+            loadConfig();
+            loadUsers();
+            loadAiAgents();
+            loadFaqList();
+            loadWorkflows();
+            loadWorkflowList();
+        }
+        initPage();
     </script>
 </body>
 </html>

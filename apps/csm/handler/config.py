@@ -32,6 +32,8 @@ class ConfigHandler:
                 "name": self.cfg["sys"]["name"],
                 "auth": str(self.cfg["sys"].get("auth", False)).lower(),
                 "api_auth": str(self.cfg["sys"].get("api_auth", True)).lower(),
+                "work_mode": self.cfg["sys"].get("work_mode", 0),
+                "default_workflow_id": self.cfg["sys"].get("default_workflow_id", 0),
             },
             "api": {
                 "llm_api_uri": self.cfg["api"].get("llm_api_uri", ""),
@@ -77,6 +79,12 @@ class ConfigHandler:
         # sys.auth 只从 cfg.yml 读取，不允许在页面上修改（对标 Go）
         if sys_data.get("api_auth"):
             self.store.set_config("sys.api_auth", sys_data["api_auth"], "是否启用接口认证")
+        # 工作模式（始终保存）
+        if "work_mode" in sys_data:
+            self.store.set_config("sys.work_mode", str(sys_data["work_mode"]), "工作模式: 0=KB, 1=CSM, 2=动态工作流")
+        # 动态工作流 ID
+        if "default_workflow_id" in sys_data:
+            self.store.set_config("sys.default_workflow_id", str(sys_data["default_workflow_id"]), "动态工作流 ID")
 
         # 更新 API 配置
         api_data = data.get("api", {})

@@ -56,25 +56,30 @@ class ChatHandler:
 
     def chat(self):
         """处理聊天请求，SSE 流式返回（对标 Go ChatHandler.Chat）"""
-        # JSON 请求体解析（对标 Go c.ShouldBindJSON(&req)）
         data = request.get_json(silent=True) or {}
         msg = (data.get("msg") or "").strip()
         session_id = data.get("session_id") or "default"
-        workflow_id = data.get("workflow_id", 0)
         uid = get_auth_uid()
 
         if not msg:
             return jsonify({"error": "消息不能为空"}), 400
 
-        # 如果指定了 workflow_id，走工作流引擎
-        if workflow_id > 0:
-            return self._chat_with_workflow(uid, session_id, workflow_id, msg)
+        # 根据系统配置的工作模式决定聊天路径
+        work_mode = self.cfg["sys"].get("work_mode", 0)
+        if work_mode == 1:  # CSM
+            return self._chat_with_csm(uid, session_id, msg)
+        elif work_mode == 2:  # Dynamic
+            return self._chat_with_dynamic(uid, session_id, msg)
+        else:  # KB
+            return self._chat_with_kb(uid, session_id, msg)
 
+    def _chat_with_kb(self, uid: str, session_id: str, msg: str):
+        """知识库问答模式 — FAQ 匹配 → 知识库检索 → LLM 对话（对标 Go chatWithKB）"""
         # 获取历史
         history = self.session_mgr.get_history(uid, session_id)
         history_str = self.session_mgr.format_history(history)
 
-        # FAQ 匹配（对标 Go chat.go 中的 faq 匹配逻辑）
+        # FAQ 匹配
         faq_threshold = self.cfg.get("faq", {}).get("match_threshold", 0.85)
         if self.faq_handler and self.faq_handler.get_faq_count() > 0:
             faq_answer, faq_score = self.faq_handler.match_faq(msg, faq_threshold)
@@ -123,10 +128,8 @@ class ChatHandler:
         self.session_mgr.add_message(uid, session_id, "user", msg)
 
         def generate():
-            # 发送初始事件（对标 Go: fmt.Fprintf(c.Writer, "data: \n\n")）
             yield "data: \n\n"
 
-            # 调用 LLM 流式
             full_response = ""
             try:
                 for chunk in self._llm_client.chat_stream(system_prompt, msg):
@@ -136,10 +139,8 @@ class ChatHandler:
                 logger.error("LLM 错误: %s", e)
                 yield f"data: [错误] {e}\n\n"
 
-            # 发送结束标记
             yield "data: [DONE]\n\n"
 
-            # 保存助手回复
             if full_response:
                 self.session_mgr.add_message(uid, session_id, "assistant", full_response)
 
@@ -153,18 +154,17 @@ class ChatHandler:
             },
         )
 
-    def _chat_with_workflow(self, uid: str, session_id: str, workflow_id: int, msg: str):
-        """工作流引擎模式（对标 Go chatWithWorkflow）
+    def _chat_with_csm(self, uid: str, session_id: str, msg: str):
+        """CSM 硬编码工作流模式（对标 Go chatWithCSMWorkflow）
 
-        当前为【CSM 硬编码模式】：直接走 CsmEngine 写死的客服问答逻辑
-        （分类→路由→检索→回答），不再从数据库加载工作流配置。
-        若需恢复动态配置，放开注释分支、删除 execute_stream_csm 调用。
+        直接走 CsmEngine 写死的客服问答逻辑（分类→路由→检索→回答），
+        不再从数据库加载工作流配置。
         """
         # 获取历史
         history = self.session_mgr.get_history(uid, session_id)
 
-        logger.info("workflow-chat: uid=%s, session=%s, workflow=%d, query=%s",
-                    uid, session_id, workflow_id, msg[:50])
+        logger.info("workflow-chat-csm: uid=%s, session=%s, query=%s",
+                    uid, session_id, msg[:50])
 
         # 保存用户消息
         self.session_mgr.add_message(uid, session_id, "user", msg)
@@ -177,10 +177,9 @@ class ChatHandler:
                 # 【CSM 硬编码模式】若需恢复动态配置，改回：
                 # workflow = self.store.get_workflow(workflow_id)
                 # events = self.engine.execute_stream(workflow, history, uid, msg)
-                events = self.csm_engine.execute_stream_csm(workflow_id, msg, uid, history)
+                events = self.csm_engine.execute_stream_csm(0, msg, uid, history)
                 for evt in events:
                     if evt.type == "progress":
-                        # 进度事件：对标 Go "[步骤 %d/%d] %s"，前端 app.js 解析 [步骤 前缀
                         yield f"data: [步骤 {evt.step}/{evt.total}] {evt.agent}\n\n"
                     elif evt.type == "chunk":
                         full_output += evt.content
@@ -195,7 +194,58 @@ class ChatHandler:
 
             yield "data: [DONE]\n\n"
 
-            # 保存助手回复
+            if full_output:
+                self.session_mgr.add_message(uid, session_id, "assistant", full_output)
+
+        return Response(
+            stream_with_context(generate()),
+            mimetype="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    def _chat_with_dynamic(self, uid: str, session_id: str, msg: str):
+        """动态加载数据库工作流配置模式（对标 Go chatWithDynamicWorkflow）"""
+        # 获取历史
+        history = self.session_mgr.get_history(uid, session_id)
+
+        workflow_id = self.cfg["sys"].get("default_workflow_id", 0)
+        logger.info("workflow-chat-dynamic: uid=%s, session=%s, workflow=%d, query=%s",
+                    uid, session_id, workflow_id, msg[:50])
+
+        # 保存用户消息
+        self.session_mgr.add_message(uid, session_id, "user", msg)
+
+        def generate():
+            yield "data: \n\n"
+
+            full_output = ""
+            try:
+                # 从数据库加载工作流配置并执行
+                workflow = self.store.get_workflow(workflow_id) if workflow_id > 0 else None
+                if not workflow:
+                    yield f"data: [错误] 工作流 {workflow_id} 不存在\n\n"
+                else:
+                    events = self.engine.execute_stream(workflow, history, uid, msg)
+                    for evt in events:
+                        if evt.type == "progress":
+                            yield f"data: [步骤 {evt.step}/{evt.total}] {evt.agent}\n\n"
+                        elif evt.type == "chunk":
+                            full_output += evt.content
+                            yield f"data: {evt.content}\n\n"
+                        elif evt.type == "error":
+                            yield f"data: [错误] {evt.content}\n\n"
+                        elif evt.type == "done":
+                            break
+            except Exception as e:
+                logger.error("workflow 执行错误: %s", e)
+                yield f"data: [错误] {e}\n\n"
+
+            yield "data: [DONE]\n\n"
+
             if full_output:
                 self.session_mgr.add_message(uid, session_id, "assistant", full_output)
 

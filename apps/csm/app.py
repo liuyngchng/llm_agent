@@ -520,11 +520,14 @@ def register_routes(app):
         if status_code >= 400:
             err_msg = resp_body
 
-        # 异步保存日志
+        # 异步保存日志 — 先捕获请求上下文的变量，避免线程中访问 request 报错
+        path = request.path
+        method = request.method
+
         def _save_log():
             try:
                 meta_store.save_api_call_log(
-                    user_name, request.path, request.method,
+                    user_name, path, method,
                     req_body, resp_body, status_code, err_msg,
                 )
             except Exception as e:
