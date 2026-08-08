@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -24,6 +26,8 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 	lastPing := time.Now()
 	pingInterval := 30 * time.Second
 
+	flusher, _ := writer.(http.Flusher)
+
 	var mu sync.Mutex // protects the state above
 
 	// emit* helpers that write SSE frames to the writer.
@@ -31,8 +35,13 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 	emit := func(frame []byte) error {
 		mu.Lock()
 		defer mu.Unlock()
-		_, err := writer.Write(frame)
-		return err
+		if _, err := writer.Write(frame); err != nil {
+			return err
+		}
+		if flusher != nil {
+			flusher.Flush()
+		}
+		return nil
 	}
 
 	emitBlockStart := func(index int, block map[string]interface{}) error {
@@ -108,7 +117,7 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 
 		mu.Lock()
 
-		// Extract usage (prompt_tokens tracked but only completion_tokens sent in SSE message_delta)
+		// Extract usage
 		if chunkUsage, ok := chunk["usage"].(map[string]interface{}); ok {
 			if ct, ok := chunkUsage["completion_tokens"].(float64); ok {
 				outputTokens = int(ct)
@@ -258,7 +267,9 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 	}
 
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("scan upstream stream: %w", err)
+		// Graceful recovery like Python: log the error but still close open
+		// blocks and emit final message events so the client gets a clean response.
+		log.Printf("[WARN] Upstream stream connection lost after %d lines: %v", lineCount, err)
 	}
 
 	mu.Lock()

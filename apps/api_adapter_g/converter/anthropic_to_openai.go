@@ -35,7 +35,13 @@ func AnthropicToOpenAIRequest(anthropicData map[string]interface{}, modelName st
 	if maxTokens == 0 {
 		maxTokens = 4096
 	}
-	temperature, _ := anthropicData["temperature"].(float64)
+	// Default to 0.7 when not provided, matching Python adapter behavior.
+	temperature := 0.7
+	if val, ok := anthropicData["temperature"]; ok {
+		if t, ok := val.(float64); ok {
+			temperature = t
+		}
+	}
 	stream, _ := anthropicData["stream"].(bool)
 	stopSequences, _ := anthropicData["stop_sequences"]
 	topP, _ := anthropicData["top_p"]

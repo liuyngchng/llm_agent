@@ -123,3 +123,4 @@ func GenerateMsgID() string {
 	}
 	return fmt.Sprintf("msg_%s", hex.EncodeToString(b))
 }
+
