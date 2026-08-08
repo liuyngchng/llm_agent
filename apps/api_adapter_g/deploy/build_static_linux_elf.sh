@@ -14,6 +14,9 @@ OUTPUT="${APP_DIR}/deploy/api_adapter_g_linux_amd64"
 
 cd "$APP_DIR"
 
+# 设置 Go 代理，便于下载相关组件
+go env -w GOPROXY=https://goproxy.cn,direct
+
 echo "=== Building static Linux ELF ==="
 echo "  Source : $APP_DIR"
 echo "  Output : $OUTPUT"
