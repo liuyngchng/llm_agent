@@ -862,5 +862,12 @@ if __name__ == '__main__':
     # logger.info(f"Cert: {cert_file}, Key: {key_file}")
     # app.run(host='0.0.0.0', port=port, threaded=True, ssl_context=(cert_file, key_file))
     logger.info(f"llm_api_adapter, listening_port={port}, upstream={llm_api_uri}, model={llm_model_name}")
+    logger.info(
+        "Service started. Test it with:\n\n"
+        f'  curl -X POST "http://127.0.0.1:{port}/v1/messages" \\\n'
+        '    -H "x-api-key: sk-***" \\\n'
+        '    -H "Content-Type: application/json" \\\n'
+        f'    -d \'{{"model":"{llm_model_name}","messages":[{{"role":"user","content":"hello"}}],"max_tokens":50}}\'\n'
+    )
 
     app.run(host='0.0.0.0', port=port, threaded=True)

@@ -117,7 +117,13 @@ func main() {
 		}
 	}()
 
-	log.Printf("[INFO] Listening on port %d, upstream=%s, model=%s", port, llmAPIURI, modelName)
+	log.Printf("[INFO] Service started. Test it with:\n\n"+
+		"  curl -X POST \"http://127.0.0.1:%d/v1/messages\" \\\n"+
+		"    -H \"x-api-key: sk-***\" \\\n"+
+		"    -H \"Content-Type: application/json\" \\\n"+
+		"    -d '{\"model\":\"%s\",\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}],\"max_tokens\":50}'\n",
+		port, modelName)
+	log.Printf("[INFO] Listening on :%d, upstream=%s, model=%s", port, llmAPIURI, modelName)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("[FATAL] Server error: %v", err)
 	}
