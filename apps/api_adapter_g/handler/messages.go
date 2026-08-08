@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,6 +22,9 @@ type MessagesHandler struct {
 }
 
 // NewMessagesHandler creates a MessagesHandler with a default HTTP client.
+// The client is configured to skip TLS verification and bypass system proxy,
+// matching the Python adapter's verify=False and proxies={} behavior for
+// internal/corporate upstream servers.
 func NewMessagesHandler(uri, key, model string) *MessagesHandler {
 	return &MessagesHandler{
 		LLMAPIURI: uri,
@@ -28,6 +32,12 @@ func NewMessagesHandler(uri, key, model string) *MessagesHandler {
 		ModelName: model,
 		Client: &http.Client{
 			Timeout: 300 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+				Proxy: nil, // explicitly bypass system proxy
+			},
 		},
 	}
 }

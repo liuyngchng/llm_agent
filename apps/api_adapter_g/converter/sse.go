@@ -8,12 +8,13 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 )
 
 // GenerateAnthropicSSE reads an OpenAI SSE stream from reader and writes
 // Anthropic-format SSE events to writer.
+// SSE generation is single-threaded (one goroutine reads chunks, processes
+// them, and writes to the client), so no locking is needed.
 func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel string) error {
 	msgID := GenerateMsgID()
 	thinkingBlockIndex := -1
@@ -28,13 +29,8 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 
 	flusher, _ := writer.(http.Flusher)
 
-	var mu sync.Mutex // protects the state above
-
-	// emit* helpers that write SSE frames to the writer.
-	// They acquire the mutex internally for thread-safety.
+	// emit writes an SSE frame to the writer and flushes.
 	emit := func(frame []byte) error {
-		mu.Lock()
-		defer mu.Unlock()
 		if _, err := writer.Write(frame); err != nil {
 			return err
 		}
@@ -115,8 +111,6 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 			continue
 		}
 
-		mu.Lock()
-
 		// Extract usage
 		if chunkUsage, ok := chunk["usage"].(map[string]interface{}); ok {
 			if ct, ok := chunkUsage["completion_tokens"].(float64); ok {
@@ -126,13 +120,11 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 
 		choices, _ := chunk["choices"].([]interface{})
 		if len(choices) == 0 {
-			mu.Unlock()
 			continue
 		}
 
 		choice, _ := choices[0].(map[string]interface{})
 		if choice == nil {
-			mu.Unlock()
 			continue
 		}
 
@@ -142,7 +134,6 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 
 		delta, _ := choice["delta"].(map[string]interface{})
 		if delta == nil {
-			mu.Unlock()
 			continue
 		}
 
@@ -157,7 +148,6 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 					"thinking":  "",
 					"signature": "",
 				}); err != nil {
-					mu.Unlock()
 					return fmt.Errorf("write thinking block start: %w", err)
 				}
 			}
@@ -165,7 +155,6 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 				"type":     "thinking_delta",
 				"thinking": reasoningText,
 			}); err != nil {
-				mu.Unlock()
 				return fmt.Errorf("write thinking delta: %w", err)
 			}
 		}
@@ -176,7 +165,6 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 			// Close thinking block before starting text
 			if thinkingBlockIndex >= 0 && !closedBlocks[thinkingBlockIndex] {
 				if err := emitBlockStop(thinkingBlockIndex); err != nil {
-					mu.Unlock()
 					return fmt.Errorf("write thinking block stop: %w", err)
 				}
 				closedBlocks[thinkingBlockIndex] = true
@@ -189,7 +177,6 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 					"type": "text",
 					"text": "",
 				}); err != nil {
-					mu.Unlock()
 					return fmt.Errorf("write text block start: %w", err)
 				}
 			}
@@ -198,7 +185,6 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 				"type": "text_delta",
 				"text": contentText,
 			}); err != nil {
-				mu.Unlock()
 				return fmt.Errorf("write text delta: %w", err)
 			}
 		}
@@ -233,7 +219,6 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 					"name":  tcName,
 					"input": map[string]interface{}{},
 				}); err != nil {
-					mu.Unlock()
 					return fmt.Errorf("write tool block start: %w", err)
 				}
 			}
@@ -246,7 +231,6 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 						"type":         "input_json_delta",
 						"partial_json": args,
 					}); err != nil {
-						mu.Unlock()
 						return fmt.Errorf("write tool delta: %w", err)
 					}
 				}
@@ -257,13 +241,10 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 		now := time.Now()
 		if now.Sub(lastPing) >= pingInterval {
 			if _, err := writer.Write([]byte("event: ping\ndata: {}\n\n")); err != nil {
-				mu.Unlock()
 				return fmt.Errorf("write ping: %w", err)
 			}
 			lastPing = now
 		}
-
-		mu.Unlock()
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -271,9 +252,6 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 		// blocks and emit final message events so the client gets a clean response.
 		log.Printf("[WARN] Upstream stream connection lost after %d lines: %v", lineCount, err)
 	}
-
-	mu.Lock()
-	defer mu.Unlock()
 
 	// Close any unclosed content blocks
 	for i := 0; i < nextBlockIndex; i++ {
