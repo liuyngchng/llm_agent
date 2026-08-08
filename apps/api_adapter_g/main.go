@@ -27,6 +27,7 @@ import (
 )
 
 func main() {
+	log.SetOutput(os.Stdout)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 	log.Println("[INFO] Starting api_adapter_go...")
 
