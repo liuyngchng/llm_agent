@@ -1,0 +1,13 @@
+# config.yaml — configuration file for api_adapter_go
+sys:
+  name: LLM API Adapter (Go)
+
+api:
+  # OpenAI-compatible LLM API base URL
+  llm_api_uri: https://api.deepseek.com/v1
+
+  # OpenAI-compatible LLM API key
+  llm_api_key: sk-123456
+
+  # Default model name to use for upstream requests
+  llm_model_name: deepseek-chat

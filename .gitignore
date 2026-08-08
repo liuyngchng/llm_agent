@@ -64,3 +64,8 @@ apps/asr/converted/*
 apps/asr/results/*
 apps/asr/uploads/*
 apps/statistics_service/statistics.db
+
+# Go build artifacts (api_adapter_g)
+**/api_adapter_g/api_adapter_g
+**/api_adapter_g/deploy/api_adapter_g_*
+**/api_adapter_g/api_adapter_g.exe
