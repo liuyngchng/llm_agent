@@ -55,96 +55,112 @@ public class SseConversionService {
         startEvent.put("message", startMsg);
         callback.onEvent(sseEncode("message_start", startEvent));
 
+        long lastPing = System.currentTimeMillis();
+        long pingInterval = 30000; // 30 秒，防止代理/网关超时断开
+
         BufferedReader reader = new BufferedReader(new InputStreamReader(upstreamStream, StandardCharsets.UTF_8));
-        String line;
-        while ((line = reader.readLine()) != null) {
-            if (line.isEmpty()) continue;
-            if (!line.startsWith("data: ")) continue;
+        int lineCount = 0;
+        try {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                lineCount++;
+                if (line.isEmpty()) continue;
+                if (!line.startsWith("data: ")) continue;
 
-            String dataStr = line.substring(6).trim();
-            if ("[DONE]".equals(dataStr)) break;
+                String dataStr = line.substring(6).trim();
+                if ("[DONE]".equals(dataStr)) break;
 
-            Map<String, Object> chunk;
-            try {
-                chunk = mapper.readValue(dataStr, Map.class);
-            } catch (Exception e) {
-                continue;
-            }
-
-            Map<String, Object> chunkUsage = (Map<String, Object>) chunk.get("usage");
-            if (chunkUsage != null) {
-                inputTokens = toInt(chunkUsage.get("prompt_tokens"), inputTokens);
-                outputTokens = toInt(chunkUsage.get("completion_tokens"), outputTokens);
-            }
-
-            List<Map<String, Object>> choices = (List<Map<String, Object>>) chunk.get("choices");
-            if (choices == null || choices.isEmpty()) continue;
-
-            Map<String, Object> choice = choices.get(0);
-            Map<String, Object> delta = (Map<String, Object>) choice.getOrDefault("delta", new HashMap<>());
-            String chunkFinish = (String) choice.get("finish_reason");
-            if (chunkFinish != null) finishReason = chunkFinish;
-
-            String reasoningText = (String) delta.getOrDefault("reasoning_content", "");
-            // 仅当 thinking block 未关闭时才处理 reasoning delta
-            if (reasoningText != null && !reasoningText.isEmpty()
-                    && !(thinkingBlockIndex >= 0 && closedBlocks.contains(thinkingBlockIndex))) {
-                if (thinkingBlockIndex < 0) {
-                    thinkingBlockIndex = nextBlockIndex++;
-                    Map<String, Object> block = new LinkedHashMap<>();
-                    block.put("type", "thinking");
-                    block.put("thinking", "");
-                    block.put("signature", "");
-                    callback.onEvent(sseBlockStart(thinkingBlockIndex, block));
+                Map<String, Object> chunk;
+                try {
+                    chunk = mapper.readValue(dataStr, Map.class);
+                } catch (Exception e) {
+                    continue;
                 }
-                Map<String, Object> d = new LinkedHashMap<>();
-                d.put("type", "thinking_delta");
-                d.put("thinking", reasoningText);
-                callback.onEvent(sseDelta(thinkingBlockIndex, d));
-            }
 
-            String contentText = (String) delta.getOrDefault("content", "");
-            if (contentText != null && !contentText.isEmpty()) {
-                if (thinkingBlockIndex >= 0 && !closedBlocks.contains(thinkingBlockIndex)) {
-                    callback.onEvent(sseStop(thinkingBlockIndex));
-                    closedBlocks.add(thinkingBlockIndex);
+                Map<String, Object> chunkUsage = (Map<String, Object>) chunk.get("usage");
+                if (chunkUsage != null) {
+                    inputTokens = toInt(chunkUsage.get("prompt_tokens"), inputTokens);
+                    outputTokens = toInt(chunkUsage.get("completion_tokens"), outputTokens);
                 }
-                if (textBlockIndex < 0) {
-                    textBlockIndex = nextBlockIndex++;
-                    callback.onEvent(sseBlockStart(textBlockIndex, mapOf("type", "text", "text", "")));
-                }
-                Map<String, Object> d = new LinkedHashMap<>();
-                d.put("type", "text_delta");
-                d.put("text", contentText);
-                callback.onEvent(sseDelta(textBlockIndex, d));
-            }
 
-            List<Map<String, Object>> tcDeltas = (List<Map<String, Object>>) delta.get("tool_calls");
-            if (tcDeltas != null) {
-                for (Map<String, Object> tc : tcDeltas) {
-                    int tcIdx = toInt(tc.get("index"), 0);
-                    if (!tcIndexMap.containsKey(tcIdx)) {
-                        tcIndexMap.put(tcIdx, nextBlockIndex++);
-                        String tcId = str(tc.get("id"), "");
-                        Map<String, Object> func = (Map<String, Object>) tc.getOrDefault("function", new HashMap<>());
-                        String tcName = str(func.get("name"), "");
+                List<Map<String, Object>> choices = (List<Map<String, Object>>) chunk.get("choices");
+                if (choices == null || choices.isEmpty()) continue;
+
+                Map<String, Object> choice = choices.get(0);
+                Map<String, Object> delta = (Map<String, Object>) choice.getOrDefault("delta", new HashMap<>());
+                String chunkFinish = (String) choice.get("finish_reason");
+                if (chunkFinish != null) finishReason = chunkFinish;
+
+                String reasoningText = (String) delta.getOrDefault("reasoning_content", "");
+                // 仅当 thinking block 未关闭时才处理 reasoning delta
+                if (reasoningText != null && !reasoningText.isEmpty()
+                        && !(thinkingBlockIndex >= 0 && closedBlocks.contains(thinkingBlockIndex))) {
+                    if (thinkingBlockIndex < 0) {
+                        thinkingBlockIndex = nextBlockIndex++;
                         Map<String, Object> block = new LinkedHashMap<>();
-                        block.put("type", "tool_use");
-                        block.put("id", tcId);
-                        block.put("name", tcName);
-                        block.put("input", new HashMap<>());
-                        callback.onEvent(sseBlockStart(tcIndexMap.get(tcIdx), block));
+                        block.put("type", "thinking");
+                        block.put("thinking", "");
+                        block.put("signature", "");
+                        callback.onEvent(sseBlockStart(thinkingBlockIndex, block));
                     }
-                    Map<String, Object> func = (Map<String, Object>) tc.getOrDefault("function", new HashMap<>());
-                    String args = str(func.get("arguments"), "");
-                    if (!args.isEmpty()) {
-                        Map<String, Object> d = new LinkedHashMap<>();
-                        d.put("type", "input_json_delta");
-                        d.put("partial_json", args);
-                        callback.onEvent(sseDelta(tcIndexMap.get(tcIdx), d));
+                    Map<String, Object> d = new LinkedHashMap<>();
+                    d.put("type", "thinking_delta");
+                    d.put("thinking", reasoningText);
+                    callback.onEvent(sseDelta(thinkingBlockIndex, d));
+                }
+
+                String contentText = (String) delta.getOrDefault("content", "");
+                if (contentText != null && !contentText.isEmpty()) {
+                    if (thinkingBlockIndex >= 0 && !closedBlocks.contains(thinkingBlockIndex)) {
+                        callback.onEvent(sseStop(thinkingBlockIndex));
+                        closedBlocks.add(thinkingBlockIndex);
+                    }
+                    if (textBlockIndex < 0) {
+                        textBlockIndex = nextBlockIndex++;
+                        callback.onEvent(sseBlockStart(textBlockIndex, mapOf("type", "text", "text", "")));
+                    }
+                    Map<String, Object> d = new LinkedHashMap<>();
+                    d.put("type", "text_delta");
+                    d.put("text", contentText);
+                    callback.onEvent(sseDelta(textBlockIndex, d));
+                }
+
+                List<Map<String, Object>> tcDeltas = (List<Map<String, Object>>) delta.get("tool_calls");
+                if (tcDeltas != null) {
+                    for (Map<String, Object> tc : tcDeltas) {
+                        int tcIdx = toInt(tc.get("index"), 0);
+                        if (!tcIndexMap.containsKey(tcIdx)) {
+                            tcIndexMap.put(tcIdx, nextBlockIndex++);
+                            String tcId = str(tc.get("id"), "");
+                            Map<String, Object> func = (Map<String, Object>) tc.getOrDefault("function", new HashMap<>());
+                            String tcName = str(func.get("name"), "");
+                            Map<String, Object> block = new LinkedHashMap<>();
+                            block.put("type", "tool_use");
+                            block.put("id", tcId);
+                            block.put("name", tcName);
+                            block.put("input", new HashMap<>());
+                            callback.onEvent(sseBlockStart(tcIndexMap.get(tcIdx), block));
+                        }
+                        Map<String, Object> func = (Map<String, Object>) tc.getOrDefault("function", new HashMap<>());
+                        String args = str(func.get("arguments"), "");
+                        if (!args.isEmpty()) {
+                            Map<String, Object> d = new LinkedHashMap<>();
+                            d.put("type", "input_json_delta");
+                            d.put("partial_json", args);
+                            callback.onEvent(sseDelta(tcIndexMap.get(tcIdx), d));
+                        }
                     }
                 }
+
+                // 定期发送 ping 事件，防止代理/网关因超时断开 SSE 连接
+                long now = System.currentTimeMillis();
+                if (now - lastPing >= pingInterval) {
+                    callback.onEvent("event: ping\ndata: {}\n\n");
+                    lastPing = now;
+                }
             }
+        } catch (Exception e) {
+            log.warn("Upstream stream connection lost after {} lines: {}", lineCount, e.getMessage());
         }
 
         for (int i = 0; i < nextBlockIndex; i++) {

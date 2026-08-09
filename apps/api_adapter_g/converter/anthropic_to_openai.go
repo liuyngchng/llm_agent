@@ -186,8 +186,11 @@ func AnthropicMessagesToOpenAI(anthropicMessages []interface{}, systemPrompt int
 		case "assistant":
 			oaContent, oaToolCalls := convertAnthropicAssistantContent(content)
 			oaMsg := map[string]interface{}{
-				"role":    "assistant",
-				"content": oaContent,
+				"role": "assistant",
+			}
+			// 纯 tool_use 消息不设 content，避免 "content": "" 被某些 API 拒绝
+			if oaContent != "" || oaToolCalls == nil {
+				oaMsg["content"] = oaContent
 			}
 			if oaToolCalls != nil {
 				oaMsg["tool_calls"] = oaToolCalls
@@ -301,7 +304,7 @@ func convertAnthropicAssistantContent(content interface{}) (string, interface{})
 
 func convertAnthropicAssistantContentBlocks(blocks []interface{}) (string, interface{}) {
 	var textParts []string
-	var toolCalls []map[string]interface{}
+	var toolCalls []interface{}
 
 	for _, b := range blocks {
 		block, ok := b.(map[string]interface{})

@@ -174,7 +174,10 @@ def anthropic_to_openai_messages(anthropic_messages, system_prompt=None):
             openai_messages.extend(msgs)
         elif role == "assistant":
             openai_content, openai_tool_calls = _convert_anthropic_assistant_content_to_openai(content)
-            oai_msg = {"role": "assistant", "content": openai_content if openai_content else ""}
+            oai_msg = {"role": "assistant"}
+            # 纯 tool_use 消息不设 content，避免 "content": "" 被某些 API 拒绝
+            if openai_content or not openai_tool_calls:
+                oai_msg["content"] = openai_content if openai_content else ""
             if openai_tool_calls:
                 oai_msg["tool_calls"] = openai_tool_calls
             openai_messages.append(oai_msg)
