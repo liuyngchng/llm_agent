@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # 默认配置值
 DEFAULT_CONFIG = {
-    "server": {"port": 19007, "debug": True},
+    "server": {"port": 19007, "debug": True, "mode": "singleton", "role": "all", "token_secret": ""},
     "sys": {"name": "对话机器人", "auth": False, "api_auth": False, "work_mode": 0, "default_workflow_id": 0},
     "api": {
         "llm_api_uri": "",

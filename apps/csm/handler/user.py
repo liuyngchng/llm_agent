@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 用户管理处理器 — 对标 Go 版本 internal/handler/user.go
+安全升级：使用 bcrypt 替代 MD5，密码由 handler 层验证。
 """
-import hashlib
 import logging
 import time
 from flask import request, jsonify
 
-from apps.csm.handler.auth import get_auth_uid, generate_token, parse_token, _md5
+from apps.csm.crypto import hash_password, verify_password, validate_password
+from apps.csm.handler.auth import get_auth_uid, generate_token, parse_token
 from apps.csm.handler.auth import TOKEN_TTL
 
 logger = logging.getLogger(__name__)
@@ -45,9 +46,16 @@ class UserHandler:
         if not user_name or not user_pwd:
             return jsonify({"error": "用户名和密码不能为空"}), 400
 
-        md5_pwd = _md5(user_pwd)
+        # 验证密码复杂度
         try:
-            self.store.create_user(user_name, md5_pwd, role, note)
+            validate_password(user_pwd)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+
+        # 使用 bcrypt 哈希密码
+        pwd_hash = hash_password(user_pwd)
+        try:
+            self.store.create_user(user_name, pwd_hash, role, note)
             return jsonify({"status": "ok"})
         except Exception as e:
             return jsonify({"error": f"创建用户失败: {e}"}), 400
@@ -73,8 +81,15 @@ class UserHandler:
         if not user_pwd:
             return jsonify({"error": "密码不能为空"}), 400
 
-        md5_pwd = _md5(user_pwd)
-        self.store.reset_password(user_name, md5_pwd)
+        # 验证密码复杂度
+        try:
+            validate_password(user_pwd)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+
+        # 使用 bcrypt 哈希密码
+        pwd_hash = hash_password(user_pwd)
+        self.store.reset_password(user_name, pwd_hash)
         return jsonify({"status": "ok"})
 
     # ============================================================
@@ -91,13 +106,27 @@ class UserHandler:
         if not new_pwd:
             return jsonify({"error": "新密码不能为空"}), 400
 
-        old_md5 = _md5(old_pwd)
-        new_md5 = _md5(new_pwd)
+        # 验证新密码复杂度
+        try:
+            validate_password(new_pwd)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
 
-        if self.store.update_password(user_name, old_md5, new_md5):
+        # 先从数据库取得当前用户，验证旧密码
+        user = self.store.get_user_by_name(user_name)
+        if not user:
+            return jsonify({"error": "获取用户信息失败"}), 500
+
+        if not verify_password(old_pwd, user["user_pwd"]):
+            return jsonify({"error": "旧密码不正确"}), 400
+
+        # 使用 bcrypt 哈希新密码
+        new_pwd_hash = hash_password(new_pwd)
+
+        if self.store.update_password(user_name, new_pwd_hash):
             return jsonify({"status": "ok"})
         else:
-            return jsonify({"error": "旧密码不正确"}), 400
+            return jsonify({"error": "修改密码失败"}), 400
 
     # ============================================================
     # API Token 管理

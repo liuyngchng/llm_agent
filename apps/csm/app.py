@@ -4,6 +4,7 @@
 CSM 知识库问答系统 — 主入口
 对标 Go 版本 go_to_chat/main.go
 独立运行，不依赖外部认证/统计服务。
+安全升级：安全响应头、敏感路径日志脱敏、token 密钥校验。
 """
 import io
 import json
@@ -97,6 +98,18 @@ def create_app():
 
     logger.info("系统配置: name=%s, auth=%s, api_auth=%s",
                 my_cfg["sys"]["name"], my_cfg["sys"]["auth"], my_cfg["sys"].get("api_auth", True))
+
+    # Token 签名密钥校验
+    mode = my_cfg["server"].get("mode", "singleton")
+    token_secret = my_cfg["server"].get("token_secret", "")
+    if mode == "cluster" and not token_secret:
+        print("错误: cluster 模式下必须配置 server.token_secret（多节点共享 HMAC 签名密钥）", file=sys.stderr)
+        print("请在 cfg.yml 的 server 段中添加 token_secret 字段，例如:", file=sys.stderr)
+        print("  server:", file=sys.stderr)
+        print('    token_secret: "请使用 openssl rand -hex 32 生成随机密钥"', file=sys.stderr)
+        sys.exit(1)
+    if not token_secret:
+        logger.warning("未配置 server.token_secret，使用默认密钥。生产环境请务必设置自定义密钥！")
 
     # ============================================================
     # 3. 初始化会话管理器
@@ -505,8 +518,12 @@ def register_routes(app):
         return handler.User.my_call_logs()
 
     # ============================================================
-    # API 调用日志中间件
+    # API 调用日志中间件 + 安全响应头
     # ============================================================
+
+    # 敏感路径：请求体不应记录到日志
+    SENSITIVE_PATHS = {"/api/login", "/api/user/password", "/api/users"}
+
     @app.before_request
     def api_call_log_middleware():
         """记录 API 调用的中间件"""
@@ -530,14 +547,34 @@ def register_routes(app):
         request._api_log_body = request.get_data(as_text=True)[:1000]
 
     @app.after_request
-    def api_call_log_after(response):
-        """记录 API 调用日志"""
+    def add_security_headers_and_log(response):
+        # 安全响应头
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "0"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
+            "script-src 'self' 'unsafe-inline'; "
+            "font-src 'self'; "
+            "img-src 'self' data:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'"
+        )
+
+        # API 调用日志
         user_name = getattr(request, "_api_log_user", None)
         if not user_name:
             return response
 
         # 构造日志
         req_body = getattr(request, "_api_log_body", "")
+        # 敏感路径不记录请求体
+        if request.path in SENSITIVE_PATHS:
+            req_body = "[敏感数据已脱敏]"
+
         resp_body = response.get_data(as_text=True)
         if len(resp_body) > 1000:
             resp_body = resp_body[:1000] + "..."

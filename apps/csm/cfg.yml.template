@@ -4,6 +4,20 @@
 server:
   port: 19007
   debug: true
+  # 运行模式:
+  #   singleton — 单例模式（默认）
+  #   cluster  — 集群模式
+  mode: "singleton"
+  # 服务角色:
+  #   all   — 全功能（默认）
+  #   admin — 仅管理面
+  #   chat  — 仅用户聊天面
+  role: "all"
+  # HMAC 签名密钥（用于生成和验证登录 token）:
+  #   - 单例模式：留空使用默认密钥（生产环境建议设置）
+  #   - 集群模式：必须设置，所有节点必须使用相同的密钥
+  #   - 生成方式：openssl rand -hex 32
+  # token_secret: ""
 
 sys:
   name: 智能客服

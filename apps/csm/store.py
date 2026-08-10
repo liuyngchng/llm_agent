@@ -9,10 +9,11 @@ import os
 import sqlite3
 import threading
 import time
-import hashlib
 import logging
 from typing import Optional
 from datetime import datetime, timezone
+
+from apps.csm.crypto import hash_password
 
 logger = logging.getLogger(__name__)
 
@@ -234,7 +235,7 @@ class SQLiteStore:
             ("api0", 3, "内置API调用用户"),
         ]
         for name, role, note in builtin_users:
-            pwd = self._md5(name)
+            pwd = hash_password(name)  # 密码与用户名相同，使用 bcrypt 哈希
             self.conn.execute(
                 "INSERT INTO users (user_name, user_pwd, role, note) VALUES (?, ?, ?, ?)",
                 (name, pwd, role, note),
@@ -251,10 +252,6 @@ class SQLiteStore:
             ("通用客服", "默认智能体，负责解答客户咨询", DEFAULT_AGENT_PROMPT),
         )
         self.conn.commit()
-
-    @staticmethod
-    def _md5(s: str) -> str:
-        return hashlib.md5(s.encode()).hexdigest()
 
     # ============================================================
     # 知识库 (vdb_info) CRUD
@@ -391,10 +388,11 @@ class SQLiteStore:
     # 用户 (users)
     # ============================================================
 
-    def get_user_by_login(self, user_name: str, md5_pwd: str) -> Optional[dict]:
+    def get_user_by_login(self, user_name: str) -> Optional[dict]:
+        """按用户名查询用户（密码验证由 handler 层用 bcrypt 完成）"""
         row = self.conn.execute(
-            "SELECT uid, user_name, user_pwd, role, note FROM users WHERE user_name = ? AND user_pwd = ?",
-            (user_name, md5_pwd),
+            "SELECT uid, user_name, user_pwd, role, note FROM users WHERE user_name = ?",
+            (user_name,),
         ).fetchone()
         return self._row_to_dict(row) if row else None
 
@@ -411,11 +409,11 @@ class SQLiteStore:
         ).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
-    def create_user(self, user_name: str, user_pwd: str, role: int, note: str = ""):
+    def create_user(self, user_name: str, user_pwd_hash: str, role: int, note: str = ""):
         with self._lock:
             self.conn.execute(
                 "INSERT INTO users (user_name, user_pwd, role, note) VALUES (?, ?, ?, ?)",
-                (user_name, user_pwd, role, note),
+                (user_name, user_pwd_hash, role, note),
             )
             self.conn.commit()
 
@@ -423,16 +421,18 @@ class SQLiteStore:
         self.conn.execute("DELETE FROM users WHERE user_name = ?", (user_name,))
         self.conn.commit()
 
-    def reset_password(self, user_name: str, md5_pwd: str):
+    def reset_password(self, user_name: str, pwd_hash: str):
+        """重置用户密码（直接设置哈希后的密码）"""
         self.conn.execute(
-            "UPDATE users SET user_pwd = ? WHERE user_name = ?", (md5_pwd, user_name),
+            "UPDATE users SET user_pwd = ? WHERE user_name = ?", (pwd_hash, user_name),
         )
         self.conn.commit()
 
-    def update_password(self, user_name: str, old_md5_pwd: str, new_md5_pwd: str) -> bool:
+    def update_password(self, user_name: str, new_pwd_hash: str) -> bool:
+        """修改密码（直接设置新哈希，密码验证由 handler 层用 bcrypt 完成）"""
         cur = self.conn.execute(
-            "UPDATE users SET user_pwd = ? WHERE user_name = ? AND user_pwd = ?",
-            (new_md5_pwd, user_name, old_md5_pwd),
+            "UPDATE users SET user_pwd = ? WHERE user_name = ?",
+            (new_pwd_hash, user_name),
         )
         self.conn.commit()
         return cur.rowcount > 0
