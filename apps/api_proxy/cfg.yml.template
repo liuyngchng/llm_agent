@@ -1,0 +1,28 @@
+# config.yaml — shared configuration file for api_adapter_g and api_proxy
+#
+# Both programs can share this file. The api section is identical;
+# the sys section uses different field names so there is no collision.
+sys:
+  name: LLM API Services
+
+  # Port for api_adapter_g (Anthropic→OpenAI protocol adapter)
+  port: 16001
+
+  # Port for api_proxy (OpenAI transparent proxy)
+  proxy_port: 17001
+
+  # Log file for api_adapter_g
+  log_file: logs/api_adapter.log
+
+  # Log file for api_proxy
+  proxy_log_file: logs/api_proxy.log
+
+api:
+  # OpenAI-compatible LLM API base URL
+  llm_api_uri: https://api.deepseek.com/v1
+
+  # OpenAI-compatible LLM API key
+  llm_api_key: sk-123456
+
+  # Default model name
+  llm_model_name: deepseek-chat

@@ -1,0 +1,6 @@
+# Log files
+logs/
+
+# Build artifacts
+api_proxy_linux_amd64
+api_proxy_windows_amd64.exe
