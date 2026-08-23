@@ -5,6 +5,10 @@ sys:
   # Port the server listens on (default: 16001)
   port: 16001
 
+  # Log file path (default: logs/api_adapter.log). Supports both / and \ separators.
+  # Works on Windows and Linux.
+  log_file: logs/api_adapter.log
+
 api:
   # OpenAI-compatible LLM API base URL
   llm_api_uri: https://api.deepseek.com/v1

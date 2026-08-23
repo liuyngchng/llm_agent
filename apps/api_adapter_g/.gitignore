@@ -1,0 +1,6 @@
+# Log files
+logs/
+
+# Build artifacts
+api_adapter_linux_amd64
+api_adapter_windows_amd64.exe

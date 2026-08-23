@@ -30,7 +30,6 @@ import (
 const defaultPort = 16001
 
 func main() {
-	log.SetOutput(os.Stdout)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 
 	// Parse command-line arguments (supports --help, --port, and positional port).
@@ -45,13 +44,25 @@ func main() {
 		os.Exit(2)
 	}
 
-	log.Println("[INFO] Starting api_adapter_go...")
-
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("[FATAL] Failed to load configuration: %v", err)
+		fmt.Fprintf(os.Stderr, "[FATAL] Failed to load configuration: %v\n", err)
+		os.Exit(1)
 	}
+
+	// Set up log output to file so logs persist and are viewable on both Windows and Linux.
+	logFile, err := setupLogFile(cfg.Sys.LogFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[FATAL] Failed to set up log file %s: %v\n", cfg.Sys.LogFile, err)
+		os.Exit(1)
+	}
+	if logFile != nil {
+		defer logFile.Close()
+		log.SetOutput(logFile)
+	}
+
+	log.Println("[INFO] Starting api_adapter_go...")
 
 	llmAPIURI := cfg.API.LLMAPIURI
 	llmAPIKey := cfg.API.LLMAPIKey
@@ -251,6 +262,26 @@ Examples:
   # Show help
   api_adapter_go --help
 `)
+}
+
+// setupLogFile creates the log directory (if needed) and opens the log file
+// for appending. It returns nil when the log file path is empty (meaning the
+// caller should keep logging to stderr/stdout).
+func setupLogFile(logPath string) (*os.File, error) {
+	if logPath == "" {
+		return nil, nil
+	}
+
+	if err := config.EnsureLogDir(logPath); err != nil {
+		return nil, fmt.Errorf("create log directory: %w", err)
+	}
+
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("open log file: %w", err)
+	}
+
+	return f, nil
 }
 
 // parseArgs parses the command-line arguments and returns the port, whether

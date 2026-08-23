@@ -4,6 +4,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
@@ -17,17 +18,32 @@ type Config struct {
 // DefaultPort is the fallback listen port when none is configured.
 const DefaultPort = 16001
 
+// DefaultLogFile is the fallback log file path when none is configured.
+// Uses forward slashes which work on both Windows and Linux.
+const DefaultLogFile = "logs/api_adapter.log"
+
 // SysConfig holds system-level configuration.
 type SysConfig struct {
-	Name string `yaml:"name"`
-	Port int    `yaml:"port"`
+	Name    string `yaml:"name"`
+	Port    int    `yaml:"port"`
+	LogFile string `yaml:"log_file"`
 }
 
 // APIConfig holds the upstream LLM API configuration.
 type APIConfig struct {
-	LLMAPIURI   string `yaml:"llm_api_uri"`
-	LLMAPIKey   string `yaml:"llm_api_key"`
+	LLMAPIURI    string `yaml:"llm_api_uri"`
+	LLMAPIKey    string `yaml:"llm_api_key"`
 	LLMModelName string `yaml:"llm_model_name"`
+}
+
+// EnsureLogDir creates the directory for the log file if it doesn't exist.
+// Uses filepath.Dir for cross-platform path handling.
+func EnsureLogDir(logPath string) error {
+	dir := filepath.Dir(logPath)
+	if dir == "." || dir == "" {
+		return nil
+	}
+	return os.MkdirAll(dir, 0755)
 }
 
 // Load reads and parses the YAML configuration file.
@@ -75,6 +91,11 @@ func Load() (*Config, error) {
 	}
 	if cfg.Sys.Port < 1 || cfg.Sys.Port > 65535 {
 		return nil, fmt.Errorf("invalid config: sys.port must be 1–65535, got %d", cfg.Sys.Port)
+	}
+
+	// Apply the default log file when none is configured.
+	if cfg.Sys.LogFile == "" {
+		cfg.Sys.LogFile = DefaultLogFile
 	}
 
 	// Trim trailing slash from URI
