@@ -33,7 +33,7 @@ func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 
 	// Parse command-line arguments (supports --help, --port, and positional port).
-	port, showHelp, err := parseArgs(os.Args[1:])
+	cliPort, showHelp, err := parseArgs(os.Args[1:])
 	if showHelp {
 		printUsage()
 		os.Exit(0)
@@ -55,6 +55,12 @@ func main() {
 	llmAPIURI := cfg.API.LLMAPIURI
 	llmAPIKey := cfg.API.LLMAPIKey
 	modelName := cfg.API.LLMModelName
+
+	// Determine listen port: CLI flag takes precedence, then config file, then hardcoded default.
+	port := cfg.Sys.Port
+	if cliPort != 0 {
+		port = cliPort
+	}
 
 	log.Printf("[INFO] Upstream URI: %s", llmAPIURI)
 	log.Printf("[INFO] Model: %s", modelName)
@@ -161,8 +167,10 @@ Usage:
 
 Options:
   -p, --port <port>  Listen on the given port (default: ` + strconv.Itoa(defaultPort) + `).
+                     Can also be set via sys.port in cfg.yml.
                      The port can also be passed as a positional argument
                      (e.g. "api_adapter_go 8080").
+                     Priority: CLI flag > cfg.yml > built-in default.
 
   -h, --help         Show this help message and exit.
 
@@ -189,7 +197,6 @@ Examples:
 // parseArgs parses the command-line arguments and returns the port, whether
 // help was requested, and any error encountered (e.g. invalid port value).
 func parseArgs(args []string) (port int, showHelp bool, err error) {
-	port = defaultPort
 	argsUsed := false
 
 	for i := 0; i < len(args); i++ {

@@ -14,9 +14,13 @@ type Config struct {
 	API APIConfig `yaml:"api"`
 }
 
+// DefaultPort is the fallback listen port when none is configured.
+const DefaultPort = 16001
+
 // SysConfig holds system-level configuration.
 type SysConfig struct {
 	Name string `yaml:"name"`
+	Port int    `yaml:"port"`
 }
 
 // APIConfig holds the upstream LLM API configuration.
@@ -63,6 +67,14 @@ func Load() (*Config, error) {
 	}
 	if cfg.API.LLMModelName == "" {
 		return nil, fmt.Errorf("missing required config: api.llm_model_name (default model name)")
+	}
+
+	// Apply the default listen port when none is configured.
+	if cfg.Sys.Port == 0 {
+		cfg.Sys.Port = DefaultPort
+	}
+	if cfg.Sys.Port < 1 || cfg.Sys.Port > 65535 {
+		return nil, fmt.Errorf("invalid config: sys.port must be 1–65535, got %d", cfg.Sys.Port)
 	}
 
 	// Trim trailing slash from URI

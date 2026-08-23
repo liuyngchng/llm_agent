@@ -2,6 +2,9 @@
 sys:
   name: LLM API Adapter (Go)
 
+  # Port the server listens on (default: 16001)
+  port: 16001
+
 api:
   # OpenAI-compatible LLM API base URL
   llm_api_uri: https://api.deepseek.com/v1
