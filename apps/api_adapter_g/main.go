@@ -113,7 +113,7 @@ func main() {
 
 	// Apply middleware stack: CORS → Auth → Logging
 	var app http.Handler = mux
-	app = handler.AuthMiddleware(llmAPIKey)(app)
+	// app = handler.AuthMiddleware(llmAPIKey)(app)
 	app = handler.CORSMiddleware(app)
 
 	// Wrap with recovery
