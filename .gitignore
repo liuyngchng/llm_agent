@@ -72,3 +72,9 @@ apps/statistics_service/statistics.db
 **/api_adapter_g/api_adapter_g.exe
 **/api_adapter_g/api_adapter_linux_amd64
 **/api_adapter_g/api_adapter_windows_amd64.exe
+
+# Go build artifacts (api_proxy)
+**/api_proxy/logs/
+**/api_proxy/api_proxy
+**/api_proxy/api_proxy_linux_amd64
+**/api_proxy/api_proxy_windows_amd64.exe

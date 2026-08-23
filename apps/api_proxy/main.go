@@ -15,8 +15,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -111,8 +114,6 @@ func main() {
 			} else {
 				pr.Out.Header.Set("X-Forwarded-For", clientIP)
 			}
-
-			log.Printf("[PROXY] %s %s -> %s %s", pr.In.RemoteAddr, pr.In.URL.Path, pr.Out.URL.Host, pr.Out.URL.Path)
 		},
 		Transport: &http.Transport{
 			// Explicitly set Proxy to nil to ignore system proxy environment
@@ -153,9 +154,42 @@ func main() {
 		fmt.Fprintf(w, `{"service":"api_proxy","upstream":"%s","model":"%s","listen":"%s"}`, upstreamURI, modelName, listenAddr)
 	})
 
-	// All other requests go through the proxy
+	// All other requests go through the proxy with request/response logging
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
+
+		// Read and log the request body (truncated), then restore it for
+		// the reverse proxy to forward.
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			log.Printf("[ERROR] Failed to read request body: %v", err)
+			http.Error(w, `{"error":{"message":"failed to read request body","type":"proxy_error"}}`, http.StatusBadRequest)
+			return
+		}
+		r.Body.Close()
+		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+
+		log.Printf("[DEBUG] Request body: %s", truncateStr(string(bodyBytes), 500))
+
+		// Parse model and stream info from the request body for logging
+		var bodyData map[string]interface{}
+		reqModel := "-"
+		reqStream := false
+		if json.Unmarshal(bodyBytes, &bodyData) == nil {
+			if m, ok := bodyData["model"].(string); ok {
+				reqModel = m
+			}
+			if s, ok := bodyData["stream"].(bool); ok {
+				reqStream = s
+			}
+		}
+
+		log.Printf("[INFO] forward to %s, model=%s, stream=%v", rewritePath(upstreamURL.Path, r.URL.Path), reqModel, reqStream)
+
 		proxy.ServeHTTP(w, r)
+
+		elapsed := time.Since(startTime)
+		log.Printf("[INFO] %s request processed in %.2fs", r.URL.Path, elapsed.Seconds())
 	})
 
 	// Apply middleware
@@ -227,17 +261,58 @@ func corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// recoveryMiddleware catches panics in handlers and returns a 500 error.
+// statusRecorder wraps http.ResponseWriter to track whether WriteHeader has
+// been called, so the recovery middleware can avoid writing a second status.
+type statusRecorder struct {
+	http.ResponseWriter
+	wroteHeader bool
+	status      int
+}
+
+func (r *statusRecorder) WriteHeader(status int) {
+	if r.wroteHeader {
+		return
+	}
+	r.wroteHeader = true
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
+}
+
+func (r *statusRecorder) Write(b []byte) (int, error) {
+	if !r.wroteHeader {
+		r.WriteHeader(http.StatusOK)
+	}
+	return r.ResponseWriter.Write(b)
+}
+
+// Unwrap returns the underlying ResponseWriter for http.ResponseController.
+func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
+}
+
+// recoveryMiddleware catches panics in handlers.  If the panic is caused by a
+// client disconnect (net/http: abort Handler), it is logged at INFO level
+// because this is normal for streaming responses.  Other panics are logged at
+// ERROR level.  A 500 response is only written if headers have not yet been
+// sent.
 func recoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sr := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		defer func() {
 			if rec := recover(); rec != nil {
-				log.Printf("[ERROR] Panic recovered: %v", rec)
-				http.Error(w, fmt.Sprintf(`{"error":{"message":"internal server error","type":"internal_error"}}`),
-					http.StatusInternalServerError)
+				errMsg := fmt.Sprintf("%v", rec)
+				if errMsg == "net/http: abort Handler" {
+					log.Printf("[INFO] Client disconnected (abort Handler) for %s %s", r.Method, r.URL.Path)
+				} else {
+					log.Printf("[ERROR] Panic recovered: %v", rec)
+				}
+				if !sr.wroteHeader {
+					http.Error(sr, fmt.Sprintf(`{"error":{"message":"internal server error","type":"internal_error"}}`),
+						http.StatusInternalServerError)
+				}
 			}
 		}()
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(sr, r)
 	})
 }
 
@@ -266,6 +341,14 @@ func rewritePath(base, incoming string) string {
 		return incoming
 	}
 	return base + incoming
+}
+
+// truncateStr truncates a string to maxLen characters for logging.
+func truncateStr(s string, maxLen int) string {
+	if len(s) > maxLen {
+		return s[:maxLen]
+	}
+	return s
 }
 
 // getLocalIPs returns all non-loopback IPv4 addresses of the local machine.
