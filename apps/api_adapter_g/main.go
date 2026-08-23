@@ -6,9 +6,9 @@
 //
 // Usage:
 //
-//	go run . [port]
+//	api_adapter_go [options]
 //
-// Port defaults to 16001 if not specified.
+// See printUsage for the full set of options.
 package main
 
 import (
@@ -26,9 +26,24 @@ import (
 	"api_adapter_go/handler"
 )
 
+const defaultPort = 16001
+
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
+
+	// Parse command-line arguments (supports --help, --port, and positional port).
+	port, showHelp, err := parseArgs(os.Args[1:])
+	if showHelp {
+		printUsage()
+		os.Exit(0)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n\n", err)
+		printUsage()
+		os.Exit(2)
+	}
+
 	log.Println("[INFO] Starting api_adapter_go...")
 
 	// Load configuration
@@ -43,14 +58,6 @@ func main() {
 
 	log.Printf("[INFO] Upstream URI: %s", llmAPIURI)
 	log.Printf("[INFO] Model: %s", modelName)
-
-	// Determine port
-	port := 16001
-	if len(os.Args) > 1 {
-		if p, err := strconv.Atoi(os.Args[1]); err == nil {
-			port = p
-		}
-	}
 
 	// Build handler dependencies
 	msgHandler := handler.NewMessagesHandler(llmAPIURI, llmAPIKey, modelName)
@@ -142,4 +149,78 @@ func recoveryMiddleware(next http.Handler) http.Handler {
 		}()
 		next.ServeHTTP(w, r)
 	})
+}
+
+// printUsage prints the help message to stdout.
+func printUsage() {
+	fmt.Print(`api_adapter_go — OpenAI-to-Anthropic API protocol adapter
+
+Usage:
+  api_adapter_go [options]
+  api_adapter_go [port]          (backward-compatible shorthand)
+
+Options:
+  -p, --port <port>  Listen on the given port (default: ` + strconv.Itoa(defaultPort) + `).
+                     The port can also be passed as a positional argument
+                     (e.g. "api_adapter_go 8080").
+
+  -h, --help         Show this help message and exit.
+
+Environment:
+  ADAPTER_CONFIG     Path to the YAML configuration file (default: cfg.yml).
+
+Examples:
+  # Run on the default port (16001)
+  api_adapter_go
+
+  # Run on a custom port
+  api_adapter_go --port 8080
+  api_adapter_go -p 8080
+  api_adapter_go 8080
+
+  # Use a custom config file
+  ADAPTER_CONFIG=/path/to/cfg.yml api_adapter_go
+
+  # Show help
+  api_adapter_go --help
+`)
+}
+
+// parseArgs parses the command-line arguments and returns the port, whether
+// help was requested, and any error encountered (e.g. invalid port value).
+func parseArgs(args []string) (port int, showHelp bool, err error) {
+	port = defaultPort
+	argsUsed := false
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch arg {
+		case "-h", "--help":
+			// -h or --help anywhere prints help and exits.
+			return 0, true, nil
+		case "-p", "--port":
+			if i+1 >= len(args) {
+				return 0, false, fmt.Errorf("missing value for %s", arg)
+			}
+			i++
+			p, perr := strconv.Atoi(args[i])
+			if perr != nil || p < 1 || p > 65535 {
+				return 0, false, fmt.Errorf("invalid port: %q (must be 1–65535)", args[i])
+			}
+			port = p
+			argsUsed = true
+		default:
+			// Treat any unrecognised non-flag argument as a positional port.
+			if argsUsed {
+				return 0, false, fmt.Errorf("unexpected argument: %s", arg)
+			}
+			p, perr := strconv.Atoi(arg)
+			if perr != nil || p < 1 || p > 65535 {
+				return 0, false, fmt.Errorf("invalid port: %q (must be 1–65535)", arg)
+			}
+			port = p
+			argsUsed = true
+		}
+	}
+	return port, false, nil
 }
