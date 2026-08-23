@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -13,7 +12,6 @@ import java.util.*;
 /**
  * Reads OpenAI SSE stream and emits Anthropic SSE events via a callback.
  */
-@Service
 public class SseConversionService {
     private static final Logger log = LoggerFactory.getLogger(SseConversionService.class);
 

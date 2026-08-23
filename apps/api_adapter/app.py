@@ -624,7 +624,6 @@ def add_cors_headers(response):
 
 
 @app.route('/v1/messages', methods=['POST'])
-@require_auth
 def create_message():
     start_time = time.time()
     logger.debug(f"Request headers: {dict(request.headers)}")
@@ -755,7 +754,6 @@ def create_message():
 
 
 @app.route('/v1/models', methods=['GET'])
-@require_auth
 def list_models():
     """返回模型列表（Anthropic 格式）"""
     models_data = {
@@ -775,7 +773,6 @@ def list_models():
 
 
 @app.route('/v1/models/<model_id>', methods=['GET'])
-@require_auth
 def get_model(model_id):
     """获取单个模型信息"""
     return make_json_response({
@@ -787,7 +784,6 @@ def get_model(model_id):
 
 
 @app.route('/v1/messages/count_tokens', methods=['POST'])
-@require_auth
 def count_tokens():
     """Token 计数估算端点 — Anthropic 客户端用此管理上下文窗口"""
     data = request.json

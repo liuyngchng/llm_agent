@@ -9,55 +9,61 @@ import java.io.InputStream;
 import java.util.Map;
 
 /**
- * Loads config.yml/cfg.yml and sets System properties so Spring @Value can read them.
+ * Loads config.yml/cfg.yml into a {@link Config} object. Environment variables
+ * (SERVER_PORT, LLM_API_URI, LLM_API_KEY, LLM_MODEL_NAME) override the file.
  */
 public class ConfigLoader {
     private static final Logger log = LoggerFactory.getLogger(ConfigLoader.class);
 
     @SuppressWarnings("unchecked")
-    public static void loadToSystem(String path) {
+    public static Config load(String path) {
+        Config cfg = new Config();
         try (InputStream in = new FileInputStream(path)) {
             Yaml yaml = new Yaml();
             Map<String, Object> root = yaml.load(in);
             Map<String, Object> api = (Map<String, Object>) root.get("api");
             if (api != null) {
-                setSysProp("app.llm-api-uri", api.get("llm_api_uri"), "http://localhost:8000/v1");
-                setSysProp("app.llm-api-key", api.get("llm_api_key"), "");
-                setSysProp("app.llm-model-name", api.get("llm_model_name"), "deepseek-chat");
+                cfg.setLlmApiUri(str(api.get("llm_api_uri"), cfg.getLlmApiUri()));
+                cfg.setLlmApiKey(str(api.get("llm_api_key"), ""));
+                cfg.setLlmModelName(str(api.get("llm_model_name"), cfg.getLlmModelName()));
             }
-            // server port from sys section or env
             Map<String, Object> sys = (Map<String, Object>) root.get("sys");
-            if (sys != null && sys.containsKey("port")) {
-                setSysProp("server.port", sys.get("port"), "16001");
+            if (sys != null) {
+                if (sys.get("name") != null) cfg.setName(sys.get("name").toString());
+                if (sys.get("port") != null) cfg.setPort(toInt(sys.get("port"), cfg.getPort()));
+                if (sys.get("log_file") != null) cfg.setLogFile(sys.get("log_file").toString());
             }
-            if (System.getenv("SERVER_PORT") != null) {
-                System.setProperty("server.port", System.getenv("SERVER_PORT"));
-            }
-            log.info("Loaded config from {}: uri={}, model={}", path,
-                    System.getProperty("app.llm-api-uri"),
-                    System.getProperty("app.llm-model-name"));
+            log.info("Loaded config from {}: uri={}, model={}", path, cfg.getLlmApiUri(), cfg.getLlmModelName());
         } catch (Exception e) {
             log.warn("Failed to load config from {}: {}. Using env/fallback defaults.", path, e.getMessage());
-            // env fallback
-            setSysPropFromEnv("app.llm-api-uri", "LLM_API_URI", "http://localhost:8000/v1");
-            setSysPropFromEnv("app.llm-api-key", "LLM_API_KEY", "");
-            setSysPropFromEnv("app.llm-model-name", "LLM_MODEL_NAME", "deepseek-chat");
+            cfg.setLlmApiUri(env("LLM_API_URI", cfg.getLlmApiUri()));
+            cfg.setLlmApiKey(env("LLM_API_KEY", ""));
+            cfg.setLlmModelName(env("LLM_MODEL_NAME", cfg.getLlmModelName()));
         }
-        // env always overrides
-        if (System.getenv("LLM_API_URI") != null)
-            System.setProperty("app.llm-api-uri", System.getenv("LLM_API_URI"));
-        if (System.getenv("LLM_API_KEY") != null)
-            System.setProperty("app.llm-api-key", System.getenv("LLM_API_KEY"));
-        if (System.getenv("LLM_MODEL_NAME") != null)
-            System.setProperty("app.llm-model-name", System.getenv("LLM_MODEL_NAME"));
+
+        // Environment always overrides
+        if (System.getenv("SERVER_PORT") != null) cfg.setPort(toInt(System.getenv("SERVER_PORT"), cfg.getPort()));
+        if (System.getenv("LLM_API_URI") != null) cfg.setLlmApiUri(System.getenv("LLM_API_URI"));
+        if (System.getenv("LLM_API_KEY") != null) cfg.setLlmApiKey(System.getenv("LLM_API_KEY"));
+        if (System.getenv("LLM_MODEL_NAME") != null) cfg.setLlmModelName(System.getenv("LLM_MODEL_NAME"));
+
+        return cfg;
     }
 
-    private static void setSysProp(String key, Object val, String def) {
-        System.setProperty(key, val != null ? val.toString() : def);
+    private static String str(Object v, String def) {
+        return v != null ? v.toString() : def;
     }
 
-    private static void setSysPropFromEnv(String key, String envName, String def) {
-        String v = System.getenv(envName);
-        System.setProperty(key, v != null ? v : def);
+    private static String env(String key, String def) {
+        String v = System.getenv(key);
+        return v != null ? v : def;
+    }
+
+    private static int toInt(Object v, int def) {
+        try {
+            return v instanceof Number ? ((Number) v).intValue() : Integer.parseInt(v.toString().trim());
+        } catch (Exception e) {
+            return def;
+        }
     }
 }

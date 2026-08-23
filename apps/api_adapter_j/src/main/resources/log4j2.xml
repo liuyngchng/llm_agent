@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <!-- File only, no console appender (matches the Go adapter behavior).
+             Log file path comes from the sys.log_file config via the "log.file"
+             system property, defaulting to logs/api_adapter.log. -->
+        <RollingFile name="FILE"
+                     fileName="${sys:log.file:-logs/api_adapter.log}"
+                     filePattern="${sys:log.file:-logs/api_adapter.log}.%d{yyyy-MM-dd}.%i.gz">
+            <PatternLayout>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</pattern>
+                <charset>UTF-8</charset>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="100"/>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <!-- Async root logger: offloads file I/O from request threads. -->
+        <AsyncRoot level="info">
+            <AppenderRef ref="FILE"/>
+        </AsyncRoot>
+    </Loggers>
+</Configuration>

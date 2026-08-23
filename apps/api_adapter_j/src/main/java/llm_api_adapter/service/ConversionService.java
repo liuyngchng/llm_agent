@@ -6,11 +6,9 @@ import llm_api_adapter.model.AnthropicRequest;
 import llm_api_adapter.model.AnthropicResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 
 import java.util.*;
 
-@Service
 public class ConversionService {
     private static final Logger log = LoggerFactory.getLogger(ConversionService.class);
 
