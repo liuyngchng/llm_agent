@@ -134,15 +134,19 @@ func main() {
 	// Detect local IPs for display
 	localIPs := getLocalIPs()
 
-	log.Printf("[INFO] Service started on port %d. Test it with:\n", port)
+	msg := fmt.Sprintf("[INFO] Service started on port %d. your ANTHROPIC_BASE_URL=\n", port)
 	for _, ip := range localIPs {
-		log.Printf("         http://%s:%d/v1/messages", ip, port)
+		msg += fmt.Sprintf("          http://%s:%d\n", ip, port)
 	}
-	log.Printf("\n  curl -X POST \"http://127.0.0.1:%d/v1/messages\" \\\n"+
-		"    -H \"x-api-key: sk-***\" \\\n"+
-		"    -H \"Content-Type: application/json\" \\\n"+
-		"    -d '{\"model\":\"%s\",\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}],\"max_tokens\":50}'\n",
+	log.Print(msg)
+
+	curlMsg := fmt.Sprintf("[INFO] You can test the endpoint with the following curl command:\n"+
+		"    curl -X POST \"http://127.0.0.1:%d/v1/messages\" \\\n"+
+		"      -H \"x-api-key: sk-***\" \\\n"+
+		"      -H \"Content-Type: application/json\" \\\n"+
+		"      -d '{\"model\":\"%s\",\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}],\"max_tokens\":50}'\n",
 		port, modelName)
+	log.Print(curlMsg)
 	log.Printf("[INFO] Listening on :%d, upstream=%s, model=%s", port, llmAPIURI, modelName)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("[FATAL] Server error: %v", err)
