@@ -70,3 +70,5 @@ apps/statistics_service/statistics.db
 **/api_adapter_g/api_adapter_go
 **/api_adapter_g/deploy/api_adapter_g_*
 **/api_adapter_g/api_adapter_g.exe
+**/api_adapter_g/api_adapter_linux_amd64
+**/api_adapter_g/api_adapter_windows_amd64.exe
