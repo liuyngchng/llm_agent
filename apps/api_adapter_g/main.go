@@ -15,6 +15,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -130,8 +131,14 @@ func main() {
 		}
 	}()
 
-	log.Printf("[INFO] Service started. Test it with:\n\n"+
-		"  curl -X POST \"http://127.0.0.1:%d/v1/messages\" \\\n"+
+	// Detect local IPs for display
+	localIPs := getLocalIPs()
+
+	log.Printf("[INFO] Service started on port %d. Test it with:\n", port)
+	for _, ip := range localIPs {
+		log.Printf("         http://%s:%d/v1/messages", ip, port)
+	}
+	log.Printf("\n  curl -X POST \"http://127.0.0.1:%d/v1/messages\" \\\n"+
 		"    -H \"x-api-key: sk-***\" \\\n"+
 		"    -H \"Content-Type: application/json\" \\\n"+
 		"    -d '{\"model\":\"%s\",\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}],\"max_tokens\":50}'\n",
@@ -142,6 +149,54 @@ func main() {
 	}
 
 	log.Println("[INFO] Server stopped")
+}
+
+// getLocalIPs returns all non-loopback IPv4 addresses of the local machine.
+// If no non-loopback IP is found, it falls back to loopback addresses.
+func getLocalIPs() []string {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return []string{"127.0.0.1"}
+	}
+
+	var ips []string
+	var loopback []string
+
+	for _, iface := range interfaces {
+		// Skip down interfaces
+		if iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, addr := range addrs {
+			ipNet, ok := addr.(*net.IPNet)
+			if !ok {
+				continue
+			}
+			ip := ipNet.IP.To4()
+			if ip == nil {
+				continue // skip IPv6
+			}
+			if ip.IsLoopback() {
+				loopback = append(loopback, ip.String())
+			} else {
+				ips = append(ips, ip.String())
+			}
+		}
+	}
+
+	if len(ips) > 0 {
+		return ips
+	}
+	if len(loopback) > 0 {
+		return loopback
+	}
+	return []string{"127.0.0.1"}
 }
 
 // recoveryMiddleware catches panics in handlers and returns a 500 error.
