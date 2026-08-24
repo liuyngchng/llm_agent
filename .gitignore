@@ -77,4 +77,5 @@ apps/statistics_service/statistics.db
 **/api_proxy/logs/
 **/api_proxy/api_proxy
 **/api_proxy/api_proxy_linux_amd64
+**/api_proxy/api_proxy.exe
 **/api_proxy/api_proxy_windows_amd64.exe
