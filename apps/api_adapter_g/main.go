@@ -149,7 +149,8 @@ func main() {
 	for _, ip := range localIPs {
 		msg += fmt.Sprintf("          http://%s:%d\n", ip, port)
 	}
-	log.Print(msg)
+	// Print the listening address to the console only; everything else goes to the log file.
+	fmt.Print(msg)
 
 	curlMsg := fmt.Sprintf("[INFO] You can test the endpoint with the following curl command:\n"+
 		"    curl -X POST \"http://127.0.0.1:%d/v1/messages\" \\\n"+
@@ -265,8 +266,8 @@ Examples:
 }
 
 // setupLogFile creates the log directory (if needed) and opens the log file
-// for appending. It returns nil when the log file path is empty (meaning the
-// caller should keep logging to stderr/stdout).
+// for writing (overwriting existing content). It returns nil when the log file
+// path is empty (meaning the caller should keep logging to stderr/stdout).
 func setupLogFile(logPath string) (*os.File, error) {
 	if logPath == "" {
 		return nil, nil
@@ -276,7 +277,7 @@ func setupLogFile(logPath string) (*os.File, error) {
 		return nil, fmt.Errorf("create log directory: %w", err)
 	}
 
-	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(logPath, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("open log file: %w", err)
 	}
