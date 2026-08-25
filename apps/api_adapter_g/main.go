@@ -12,14 +12,19 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -50,6 +55,14 @@ func main() {
 		fmt.Fprintf(os.Stderr, "[FATAL] Failed to load configuration: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Connectivity check: verify the upstream LLM API is reachable.
+	// This runs BEFORE log file setup so the result is printed to the console.
+	if err := checkUpstreamConnectivity(cfg.API.LLMAPIURI, cfg.API.LLMAPIKey, cfg.API.LLMModelName); err != nil {
+		fmt.Fprintf(os.Stderr, "[FATAL] Upstream connectivity check failed: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println("[OK] Upstream connectivity check passed.")
 
 	// Set up log output to file so logs persist and are viewable on both Windows and Linux.
 	logFile, err := setupLogFile(cfg.Sys.LogFile)
@@ -167,8 +180,15 @@ func main() {
 	log.Println("[INFO] Server stopped")
 }
 
+// truncateStr truncates a string to maxLen characters for display.
+func truncateStr(s string, maxLen int) string {
+	if len(s) > maxLen {
+		return s[:maxLen] + "..."
+	}
+	return s
+}
+
 // getLocalIPs returns all non-loopback IPv4 addresses of the local machine.
-// If no non-loopback IP is found, it falls back to loopback addresses.
 func getLocalIPs() []string {
 	interfaces, err := net.Interfaces()
 	if err != nil {
@@ -321,4 +341,72 @@ func parseArgs(args []string) (port int, showHelp bool, err error) {
 		}
 	}
 	return port, false, nil
+}
+
+// checkUpstreamConnectivity sends a lightweight request to the upstream LLM API
+// to verify the URI, API key, and model name are correct. All output goes to
+// stdout/stderr so it is visible in the console before the log file is set up.
+func checkUpstreamConnectivity(uri, apiKey, modelName string) error {
+	fmt.Printf("[INFO] Checking upstream connectivity to %s ...\n", uri)
+
+	// Build a minimal chat completion request to test connectivity.
+	reqBody := map[string]interface{}{
+		"model": modelName,
+		"messages": []map[string]string{
+			{"role": "user", "content": "hi"},
+		},
+		"max_tokens": 1,
+	}
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("marshal test request: %w", err)
+	}
+
+	baseURI := strings.TrimRight(uri, "/")
+	upstreamURL := fmt.Sprintf("%s/chat/completions", baseURI)
+
+	req, err := http.NewRequest(http.MethodPost, upstreamURL, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("create test request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+			Proxy: nil,
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("cannot reach upstream API %q: %w", uri, err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK {
+		fmt.Printf("[INFO] Upstream API responded with 200 OK.\n")
+		return nil
+	}
+
+	switch resp.StatusCode {
+	case http.StatusUnauthorized:
+		return fmt.Errorf("upstream API returned 401 Unauthorized — check your llm_api_key. Response: %s",
+			truncateStr(string(respBody), 200))
+	case http.StatusForbidden:
+		return fmt.Errorf("upstream API returned 403 Forbidden — check your llm_api_key permissions. Response: %s",
+			truncateStr(string(respBody), 200))
+	case http.StatusNotFound:
+		return fmt.Errorf("upstream API returned 404 Not Found — check your llm_api_uri (%q). Response: %s",
+			uri, truncateStr(string(respBody), 200))
+	default:
+		return fmt.Errorf("upstream API returned unexpected status %d. Response: %s",
+			resp.StatusCode, truncateStr(string(respBody), 200))
+	}
 }
