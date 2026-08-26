@@ -200,6 +200,10 @@ def register_routes(app):
     def login_page():
         return handler.Auth.login_page()
 
+    @app.route('/register')
+    def register_page():
+        return handler.Auth.register_page()
+
     # ============================================================
     # 认证 API
     # ============================================================
@@ -210,6 +214,10 @@ def register_routes(app):
     @app.route('/api/logout', methods=['POST'])
     def api_logout():
         return handler.Auth.logout()
+
+    @app.route('/api/register', methods=['POST'])
+    def api_register():
+        return handler.User.register()
 
     # ============================================================
     # 需要认证的页面路由
@@ -522,7 +530,7 @@ def register_routes(app):
     # ============================================================
 
     # 敏感路径：请求体不应记录到日志
-    SENSITIVE_PATHS = {"/api/login", "/api/user/password", "/api/users"}
+    SENSITIVE_PATHS = {"/api/login", "/api/register", "/api/user/password", "/api/users"}
 
     @app.before_request
     def api_call_log_middleware():

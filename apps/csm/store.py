@@ -6,12 +6,14 @@ SQLite 元数据存储 — 对标 Go 版本 internal/store/sqlite.go
 """
 import json
 import os
+import secrets
 import sqlite3
+import string
 import threading
 import time
 import logging
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from apps.csm.crypto import hash_password
 
@@ -140,6 +142,7 @@ class SQLiteStore:
             user_pwd TEXT NOT NULL DEFAULT '',
             role INTEGER NOT NULL DEFAULT 0,
             note TEXT NOT NULL DEFAULT '',
+            pwd_expires_at TEXT NOT NULL DEFAULT '',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
@@ -226,22 +229,36 @@ class SQLiteStore:
         if count > 0:
             return
 
-        builtin_users = [
-            ("user0", 0, "内置普通用户"),
-            ("user1", 0, "内置普通用户"),
-            ("admin", 1, "内置管理员"),
-            ("person0", 2, "内置客服座席"),
-            ("person1", 2, "内置客服座席"),
-            ("api0", 3, "内置API调用用户"),
-        ]
-        for name, role, note in builtin_users:
-            pwd = hash_password(name)  # 密码与用户名相同，使用 bcrypt 哈希
-            self.conn.execute(
-                "INSERT INTO users (user_name, user_pwd, role, note) VALUES (?, ?, ?, ?)",
-                (name, pwd, role, note),
-            )
+        # 生成随机初始密码（12 位字母数字）
+        alphabet = string.ascii_letters + string.digits
+        admin_pwd = ''.join(secrets.choice(alphabet) for _ in range(12))
+
+        pwd_hash = hash_password(admin_pwd)
+        expires_at = (datetime.now() + timedelta(hours=1)).isoformat()
+
+        # admin 密码 1 小时后过期，登录后强制修改
+        self.conn.execute(
+            "INSERT INTO users (user_name, user_pwd, role, note, pwd_expires_at) VALUES (?, ?, ?, ?, ?)",
+            ("admin", pwd_hash, 1, "内置管理员", expires_at),
+        )
+
+        # 内置 API 调用用户
+        api_pwd = hash_password("api0")
+        self.conn.execute(
+            "INSERT INTO users (user_name, user_pwd, role, note) VALUES (?, ?, ?, ?)",
+            ("api0", api_pwd, 3, "内置API调用用户"),
+        )
         self.conn.commit()
-        logger.info("种子用户已创建")
+
+        # 随机密码打印到控制台和日志
+        logger.info("首次运行已创建管理员账号 admin initial_password=%s expires_in=1h", admin_pwd)
+        print()
+        print("========================================")
+        print("  首次运行已创建管理员账号 admin")
+        print(f"  初始密码: {admin_pwd}")
+        print("  该密码 1 小时内有效，登录后需立即修改密码")
+        print("========================================")
+        print()
 
     def _seed_default_agent(self):
         count = self.conn.execute("SELECT COUNT(*) FROM agent_def").fetchone()[0]
@@ -391,21 +408,21 @@ class SQLiteStore:
     def get_user_by_login(self, user_name: str) -> Optional[dict]:
         """按用户名查询用户（密码验证由 handler 层用 bcrypt 完成）"""
         row = self.conn.execute(
-            "SELECT uid, user_name, user_pwd, role, note FROM users WHERE user_name = ?",
+            "SELECT uid, user_name, user_pwd, role, note, pwd_expires_at FROM users WHERE user_name = ?",
             (user_name,),
         ).fetchone()
         return self._row_to_dict(row) if row else None
 
     def get_user_by_name(self, user_name: str) -> Optional[dict]:
         row = self.conn.execute(
-            "SELECT uid, user_name, user_pwd, role, note FROM users WHERE user_name = ?",
+            "SELECT uid, user_name, user_pwd, role, note, pwd_expires_at FROM users WHERE user_name = ?",
             (user_name,),
         ).fetchone()
         return self._row_to_dict(row) if row else None
 
     def list_users(self) -> list:
         rows = self.conn.execute(
-            "SELECT uid, user_name, user_pwd, role, note FROM users ORDER BY uid",
+            "SELECT uid, user_name, user_pwd, role, note, pwd_expires_at FROM users ORDER BY uid",
         ).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
@@ -429,13 +446,21 @@ class SQLiteStore:
         self.conn.commit()
 
     def update_password(self, user_name: str, new_pwd_hash: str) -> bool:
-        """修改密码（直接设置新哈希，密码验证由 handler 层用 bcrypt 完成）"""
+        """修改密码并清除密码过期时间"""
         cur = self.conn.execute(
-            "UPDATE users SET user_pwd = ? WHERE user_name = ?",
+            "UPDATE users SET user_pwd = ?, pwd_expires_at = '' WHERE user_name = ?",
             (new_pwd_hash, user_name),
         )
         self.conn.commit()
         return cur.rowcount > 0
+
+    def clear_pwd_expiry(self, user_name: str):
+        """清除密码过期时间（修改密码后同步调用）"""
+        self.conn.execute(
+            "UPDATE users SET pwd_expires_at = '' WHERE user_name = ?",
+            (user_name,),
+        )
+        self.conn.commit()
 
     # ============================================================
     # API Token

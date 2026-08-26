@@ -29,11 +29,11 @@
             <form id="loginForm" class="login-form">
                 <div class="login-field">
                     <label><i class="fas fa-user"></i> 用户名</label>
-                    <input type="text" id="userName" value="{{ default_user }}" placeholder="请输入用户名" required autocomplete="off">
+                    <input type="text" id="userName" placeholder="请输入用户名" required autocomplete="off">
                 </div>
                 <div class="login-field">
                     <label><i class="fas fa-lock"></i> 密码</label>
-                    <input type="password" id="userPwd" value="{{ default_pwd }}" placeholder="请输入密码" required>
+                    <input type="password" id="userPwd" placeholder="请输入密码" required>
                 </div>
                 <button type="submit" class="login-btn">
                     <i class="fas fa-sign-in-alt"></i> 登 录
@@ -41,13 +41,38 @@
             </form>
 
             <div class="login-footer">
-                <p>内置账号: user0 / user1 / admin / person0 / person1</p>
-                <p>密码与用户名相同</p>
+                <a href="/register" class="login-register-link">
+                    <i class="fas fa-user-plus"></i> 注册新账号
+                </a>
             </div>
         </div>
     </div>
 
+    <!-- 强制修改密码弹窗（首次登录 admin 触发） -->
+    <div id="forcePwdModal" class="pwd-modal-overlay" style="display:none;">
+        <div class="pwd-modal">
+            <h3><i class="fas fa-key"></i> 首次登录，请修改密码</h3>
+            <p class="force-pwd-tip">管理员初始密码即将过期，请设置新密码后继续使用。</p>
+            <div class="pwd-modal-error" id="forcePwdError" style="display:none;"></div>
+            <form id="forcePwdForm">
+                <div class="pwd-field">
+                    <label>新密码</label>
+                    <input type="password" id="forceNewPwd" required>
+                </div>
+                <div class="pwd-field">
+                    <label>确认新密码</label>
+                    <input type="password" id="forceConfirmPwd" required>
+                </div>
+                <div class="pwd-actions">
+                    <button type="submit" class="login-btn" style="width:auto;padding:10px 24px;">确认修改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        let loginToken = '';
+
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const userName = document.getElementById('userName').value.trim();
@@ -69,8 +94,17 @@
                 });
                 const data = await resp.json();
                 if (data.status === 'ok') {
-                    localStorage.setItem('token', data.token);
-                    window.location.href = '/?t=' + encodeURIComponent(data.token);
+                    loginToken = data.token;
+                    if (data.must_change_pwd) {
+                        // 弹出强制改密码
+                        document.getElementById('forceNewPwd').value = '';
+                        document.getElementById('forceConfirmPwd').value = '';
+                        document.getElementById('forcePwdError').style.display = 'none';
+                        document.getElementById('forcePwdModal').style.display = 'flex';
+                    } else {
+                        localStorage.setItem('token', data.token);
+                        window.location.href = '/?t=' + encodeURIComponent(data.token);
+                    }
                 } else {
                     errorMsg.textContent = data.error || '登录失败';
                     errorDiv.style.display = 'flex';
@@ -78,6 +112,44 @@
             } catch (err) {
                 errorMsg.textContent = '网络错误: ' + err.message;
                 errorDiv.style.display = 'flex';
+            }
+        });
+
+        // 强制修改密码提交
+        document.getElementById('forcePwdForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const newPwd = document.getElementById('forceNewPwd').value;
+            const confirmPwd = document.getElementById('forceConfirmPwd').value;
+            const errDiv = document.getElementById('forcePwdError');
+
+            if (!newPwd || !confirmPwd) {
+                errDiv.textContent = '密码不能为空';
+                errDiv.style.display = 'block';
+                return;
+            }
+            if (newPwd !== confirmPwd) {
+                errDiv.textContent = '两次输入的密码不一致';
+                errDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/user/password', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ old_pwd: document.getElementById('userPwd').value.trim(), new_pwd: newPwd })
+                });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    localStorage.setItem('token', loginToken);
+                    window.location.href = '/?t=' + encodeURIComponent(loginToken);
+                } else {
+                    errDiv.textContent = data.error || '修改失败';
+                    errDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errDiv.textContent = '网络错误: ' + err.message;
+                errDiv.style.display = 'block';
             }
         });
     </script>

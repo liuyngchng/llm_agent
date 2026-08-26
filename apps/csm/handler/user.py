@@ -129,6 +129,37 @@ class UserHandler:
             return jsonify({"error": "修改密码失败"}), 400
 
     # ============================================================
+    # 用户自助注册
+    # ============================================================
+
+    def register(self):
+        """用户自助注册 POST /api/register"""
+        data = request.get_json(silent=True) or {}
+        user_name = data.get("user_name", "").strip()
+        user_pwd = data.get("user_pwd", "").strip()
+
+        if not user_name or not user_pwd:
+            return jsonify({"error": "用户名和密码不能为空"}), 400
+
+        # 验证密码复杂度
+        try:
+            validate_password(user_pwd)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+
+        # 检查用户名是否已存在
+        existing = self.store.get_user_by_name(user_name)
+        if existing:
+            return jsonify({"error": "用户名已被占用"}), 409
+
+        pwd_hash = hash_password(user_pwd)
+        try:
+            self.store.create_user(user_name, pwd_hash, 0, "自行注册")  # RoleNormal
+            return jsonify({"status": "ok"})
+        except Exception as e:
+            return jsonify({"error": f"注册失败: {e}"}), 500
+
+    # ============================================================
     # API Token 管理
     # ============================================================
 

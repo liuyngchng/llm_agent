@@ -11,6 +11,7 @@ import base64
 import logging
 import threading
 import time
+from datetime import datetime
 from flask import request, jsonify, redirect
 from functools import wraps
 
@@ -261,11 +262,15 @@ class AuthHandler:
         from flask import render_template
         debug = self.cfg.get("server", {}).get("debug", False)
         return render_template("login.html",
-            default_user="user0",
-            default_pwd="user0",
             error_msg="",
             debug=debug,
         )
+
+    def register_page(self):
+        """注册页面"""
+        from flask import render_template, request
+        msg = request.args.get("msg", "")
+        return render_template("register.html", msg=msg)
 
     def login(self):
         """处理登录请求"""
@@ -293,6 +298,17 @@ class AuthHandler:
         # 登录成功，清除失败记录
         _clear_login_failures(client_ip)
 
+        # 检查密码是否过期
+        pwd_expires_at = user.get("pwd_expires_at", "")
+        if pwd_expires_at:
+            try:
+                expires_dt = datetime.fromisoformat(pwd_expires_at)
+                if datetime.now() > expires_dt:
+                    return jsonify({"error": "密码已过期，请联系管理员重置"}), 403
+            except (ValueError, TypeError):
+                pass
+        must_change_pwd = bool(pwd_expires_at)
+
         # admin 实例：仅管理员可登录
         role = self.cfg["server"].get("role", "all")
         if role == "admin" and user["role"] != 1:  # RoleAdmin
@@ -311,6 +327,7 @@ class AuthHandler:
             "token": token,
             "user_name": user["user_name"],
             "role": user["role"],
+            "must_change_pwd": must_change_pwd,
         })
 
         # 设置 httpOnly Cookie

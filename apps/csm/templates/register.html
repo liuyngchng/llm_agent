@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/lib/font-awesome.all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <title>注册</title>
+</head>
+<body>
+    <div class="login-wrapper">
+        <div class="login-card">
+            <div class="login-header">
+                <i class="fas fa-user-plus"></i>
+                <h1>对话机器人</h1>
+                <p>注册新账号</p>
+            </div>
+
+            {% if msg %}
+            <div class="login-success">
+                <i class="fas fa-check-circle"></i> <span>{{ msg }}</span>
+            </div>
+            {% endif %}
+
+            <div class="login-error" id="regError" style="display:none;">
+                <i class="fas fa-exclamation-circle"></i> <span id="regErrorMsg"></span>
+            </div>
+
+            <form id="regForm" class="login-form">
+                <div class="login-field">
+                    <label><i class="fas fa-user"></i> 用户名</label>
+                    <input type="text" id="regUserName" placeholder="请输入用户名" required autocomplete="off">
+                </div>
+                <div class="login-field">
+                    <label><i class="fas fa-lock"></i> 密码</label>
+                    <input type="password" id="regUserPwd" placeholder="请输入密码（至少6位）" required>
+                </div>
+                <div class="login-field">
+                    <label><i class="fas fa-lock"></i> 确认密码</label>
+                    <input type="password" id="regConfirmPwd" placeholder="请再次输入密码" required>
+                </div>
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-user-plus"></i> 注 册
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <a href="/login" class="login-register-link">
+                    <i class="fas fa-arrow-left"></i> 返回登录
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('regForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const userName = document.getElementById('regUserName').value.trim();
+            const userPwd = document.getElementById('regUserPwd').value;
+            const confirmPwd = document.getElementById('regConfirmPwd').value;
+            const errDiv = document.getElementById('regError');
+            const errMsg = document.getElementById('regErrorMsg');
+
+            if (!userName || !userPwd || !confirmPwd) {
+                errMsg.textContent = '所有字段不能为空';
+                errDiv.style.display = 'flex';
+                return;
+            }
+            if (userPwd !== confirmPwd) {
+                errMsg.textContent = '两次输入的密码不一致';
+                errDiv.style.display = 'flex';
+                return;
+            }
+            if (userPwd.length < 6) {
+                errMsg.textContent = '密码长度至少6个字符';
+                errDiv.style.display = 'flex';
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_name: userName, user_pwd: userPwd })
+                });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    window.location.href = '/login?registered=1';
+                } else {
+                    errMsg.textContent = data.error || '注册失败';
+                    errDiv.style.display = 'flex';
+                }
+            } catch (err) {
+                errMsg.textContent = '网络错误: ' + err.message;
+                errDiv.style.display = 'flex';
+            }
+        });
+    </script>
+</body>
+</html>
