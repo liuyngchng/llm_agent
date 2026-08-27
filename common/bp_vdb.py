@@ -322,8 +322,12 @@ def search_vdb():
         return json.dumps({"error": "缺少参数"}, ensure_ascii=False), 400
     my_vector_db_dir = f"{VDB_PREFIX}{uid}_{kb_id}"
 
-    search_result = search_txt(search_input, my_vector_db_dir, 0.1, get_cfg()['api'], 3)
-    logger.info(f"search_result_for_[{search_input}], {search_result}")
+    api_cfg = get_cfg()['api']
+    # 如果配置了 rerank API 则自动启用
+    rerank_on = bool(api_cfg.get('rerank_api_uri') and api_cfg.get('rerank_model_name'))
+
+    search_result = search_txt(search_input, my_vector_db_dir, 0.1, api_cfg, 3, rerank_enabled=rerank_on)
+    logger.info(f"search_result_for_[{search_input}], rerank={rerank_on}, {search_result}")
     if search_result:
         search_result = search_result.replace("\n", "<br>")
         return json.dumps({"search_output": search_result}, ensure_ascii=False), 200

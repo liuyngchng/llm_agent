@@ -15,6 +15,7 @@ import time
 import httpx
 import logging.config
 from openai import OpenAI
+import json
 
 from pymilvus import (
     MilvusClient, FieldSchema, DataType, CollectionSchema,
@@ -582,22 +583,83 @@ def mls_search(
 # ============================================================
 
 
+def _rerank(query: str, documents: list[dict], llm_cfg: dict, top_k: int) -> list[dict]:
+    """
+    调用远端 rerank API 对候选文档重排序
+    :param query: 查询文本
+    :param documents: 候选文档列表，每项需包含 "content" 字段
+    :param llm_cfg: 配置，需包含 rerank_api_uri / rerank_api_key / rerank_model_name
+    :param top_k: 返回前 top_k 个结果
+    :return: 按 rerank 相关度分数降序排列的文档列表（score 字段被替换为 rerank 分数）
+    """
+    rerank_api_uri = llm_cfg.get('rerank_api_uri', '')
+    rerank_api_key = llm_cfg.get('rerank_api_key', '')
+    rerank_model_name = llm_cfg.get('rerank_model_name', '')
+
+    if not rerank_api_uri or not rerank_model_name or not documents:
+        return documents[:top_k]
+
+    payload = {
+        "model": rerank_model_name,
+        "query": query,
+        "documents": [d.get("content", "") for d in documents],
+        "top_n": top_k,
+    }
+    headers = {"Content-Type": "application/json"}
+    if rerank_api_key:
+        headers["Authorization"] = f"Bearer {rerank_api_key}"
+
+    try:
+        with httpx.Client(verify=False, timeout=httpx.Timeout(30.0)) as client:
+            resp = client.post(rerank_api_uri, json=payload, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        logger.warning(f"rerank_api_err, fallback to original order: {e}")
+        return documents[:top_k]
+
+    # 兼容多种返回格式：Cohere 风格 {"results": [{"index", "relevance_score"}]}
+    results = data.get("results") or data.get("data") or []
+    ranked = []
+    for r in results:
+        idx = r.get("index", 0)
+        score = r.get("relevance_score", r.get("score", 0.0))
+        if isinstance(idx, int) and 0 <= idx < len(documents):
+            doc = dict(documents[idx])
+            doc["score"] = float(score)
+            doc["rerank_score"] = float(score)
+            ranked.append(doc)
+
+    if not ranked:
+        logger.warning("rerank_empty_result, fallback to original order")
+        return documents[:top_k]
+
+    ranked.sort(key=lambda x: x["score"], reverse=True)
+    logger.info(f"rerank_done, candidates={len(documents)}, returned={len(ranked)}")
+    return ranked[:top_k]
+
+
 def mls_hybrid_search(
     query: str,
     vector_db_dir: str,
     score_threshold: float,
     llm_cfg: dict,
-    top_k: int = 3
+    top_k: int = 3,
+    rerank_enabled: bool = False,
 ) -> list[dict]:
     """
-    混合检索：dense 向量 + Milvus 内置 BM25 (sparse)，WeightedRanker 加权融合
+    混合检索：dense 向量 + Milvus 内置 BM25 (sparse)，WeightedRanker 加权融合，可选 rerank 重排序
     :param query: 查询文本
     :param vector_db_dir: Milvus 数据库目录路径
     :param score_threshold: 相似度阈值 [0, 1]，低于此阈值的结果被过滤
     :param llm_cfg: LLM 配置
     :param top_k: 返回结果数量
+    :param rerank_enabled: 是否启用 rerank 重排序（需在 llm_cfg 中配置 rerank_api_* 信息）
     :return: [{"id": ..., "content": ..., "metadata": ..., "score": ...}, ...]
     """
+    # 启用 rerank 时，多召回一些候选，再用 rerank 精排
+    retrieve_n = top_k * 3 if rerank_enabled else top_k
+
     collection_name = DEFAULT_COLLECTION_NAME
     client = get_milvus_client(vector_db_dir)
 
@@ -616,7 +678,7 @@ def mls_hybrid_search(
         data=[query_vector],
         anns_field="vector",
         param={"metric_type": "COSINE"},
-        limit=top_k
+        limit=retrieve_n
     )
 
     # Sparse (BM25) 搜索请求 — 直接传入原始文本，Milvus 内置分词
@@ -624,7 +686,7 @@ def mls_hybrid_search(
         data=[query],
         anns_field="sparse_vec",
         param={"metric_type": "BM25"},
-        limit=top_k
+        limit=retrieve_n
     )
 
     # Milvus 原生混合检索
@@ -632,7 +694,7 @@ def mls_hybrid_search(
         collection_name=collection_name,
         reqs=[dense_req, sparse_req],
         ranker=WeightedRanker(DENSE_WEIGHT, SPARSE_WEIGHT),
-        limit=top_k,
+        limit=retrieve_n,
         output_fields=["content", "source"],
     )
 
@@ -641,8 +703,6 @@ def mls_hybrid_search(
     if results and results[0]:
         for hit in results[0]:
             combined_score = hit.get("distance", 0.0)
-            # WeightedRanker score 可能是任意范围，取其原始值作为排序分
-            # 对 dense 部分做阈值过滤：如果向量相似度太低，跳过
             entity = hit.get("entity", {})
 
             formatted_results.append({
@@ -653,7 +713,12 @@ def mls_hybrid_search(
             })
 
     logger.info(f"mls_hybrid_search, q={query[:50]}, results={len(formatted_results)}")
-    return formatted_results
+
+    # rerank 精排
+    if rerank_enabled and len(formatted_results) > 1:
+        return _rerank(query, formatted_results, llm_cfg, top_k)
+
+    return formatted_results[:top_k]
 
 
 def mls_search_txt(
@@ -661,20 +726,22 @@ def mls_search_txt(
     vector_db_dir: str,
     score_threshold: float,
     llm_cfg: dict,
-    txt_num: int
+    txt_num: int,
+    rerank_enabled: bool = False,
 ) -> str:
     """
-    搜索入口 — 混合检索（向量 + BM25），返回拼接后的文本字符串
+    搜索入口 — 混合检索（向量 + BM25），可选 rerank 重排序，返回拼接后的文本字符串
     :param txt: 查询文本
     :param vector_db_dir: Milvus 数据库目录路径
     :param score_threshold: 相似度阈值
     :param llm_cfg: LLM 配置
     :param txt_num: 返回的文本块数量
+    :param rerank_enabled: 是否启用 rerank 重排序（需在 llm_cfg 中配置 rerank_api_* 信息）
     :return: 拼接后的检索结果文本
     """
     search_results = []
     try:
-        search_results = mls_hybrid_search(txt, vector_db_dir, score_threshold, llm_cfg, txt_num)
+        search_results = mls_hybrid_search(txt, vector_db_dir, score_threshold, llm_cfg, txt_num, rerank_enabled)
     except Exception as e:
         logger.exception(f"mls_search_txt_err, embedding uri: {llm_cfg.get('embedding_api_uri', 'N/A')}, err={e}", exc_info=True)
 

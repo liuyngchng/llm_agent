@@ -206,7 +206,10 @@ def register_routes(app):
             my_cfg['api']['llm_model_name'] = LLM_MODEL_DICT.get(model_id)
             logger.info(f"llm_cfg_customized_for_uid, {uid}, {my_cfg['api']['llm_model_name']}")
 
-        context = search_txt(msg, my_vector_db_dir, 0.1, my_cfg['api'], 3)
+        # 如果配置了 rerank API 则自动启用
+        rerank_on = bool(my_cfg['api'].get('rerank_api_uri') and my_cfg['api'].get('rerank_model_name'))
+
+        context = search_txt(msg, my_vector_db_dir, 0.1, my_cfg['api'], 3, rerank_enabled=rerank_on)
         if not context:
             answer = get_msg("chat2kb.no_relevant_content")
             logger.info(f"vector_db_search_return_none, {answer}, {my_vector_db_dir}")

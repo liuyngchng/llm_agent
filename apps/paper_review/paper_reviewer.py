@@ -949,7 +949,9 @@ def get_reference_from_vdb(keywords: str, vdb_dir: str, llm_cfg: dict) -> str:
 
     try:
         if "" != vdb_dir and os.path.exists(vdb_dir):
-            reference = search_txt(keywords, vdb_dir, 0.5, llm_cfg, 2).strip()
+            # 如果配置了 rerank API 则自动启用
+            rerank_on = bool(llm_cfg.get('rerank_api_uri') and llm_cfg.get('rerank_model_name'))
+            reference = search_txt(keywords, vdb_dir, 0.5, llm_cfg, 2, rerank_enabled=rerank_on).strip()
         else:
             logger.warning(f"vdb_dir_not_exist: {vdb_dir}, get no references")
             reference = ""

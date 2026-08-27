@@ -667,32 +667,85 @@ def _keyword_search(query: str, vector_db_dir: str, top_k: int = 3) -> list[dict
     return results
 
 
+def _rerank(query: str, documents: list[dict], llm_cfg: dict, top_k: int) -> list[dict]:
+    """
+    调用远端 rerank API 对候选文档重排序
+    :param query: 查询文本
+    :param documents: 候选文档列表，每项需包含 "content" 字段
+    :param llm_cfg: 配置，需包含 rerank_api_uri / rerank_api_key / rerank_model_name
+    :param top_k: 返回前 top_k 个结果
+    :return: 按 rerank 相关度分数降序排列的文档列表（score 字段被替换为 rerank 分数）
+    """
+    rerank_api_uri = llm_cfg.get('rerank_api_uri', '')
+    rerank_api_key = llm_cfg.get('rerank_api_key', '')
+    rerank_model_name = llm_cfg.get('rerank_model_name', '')
+
+    if not rerank_api_uri or not rerank_model_name or not documents:
+        return documents[:top_k]
+
+    payload = {
+        "model": rerank_model_name,
+        "query": query,
+        "documents": [d.get("content", "") for d in documents],
+        "top_n": top_k,
+    }
+    headers = {"Content-Type": "application/json"}
+    if rerank_api_key:
+        headers["Authorization"] = f"Bearer {rerank_api_key}"
+
+    try:
+        with httpx.Client(verify=False, timeout=httpx.Timeout(30.0)) as client:
+            resp = client.post(rerank_api_uri, json=payload, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        logger.warning(f"rerank_api_err, fallback to original order: {e}")
+        return documents[:top_k]
+
+    # 兼容多种返回格式：Cohere 风格 {"results": [{"index", "relevance_score"}]}
+    results = data.get("results") or data.get("data") or []
+    ranked = []
+    for r in results:
+        idx = r.get("index", 0)
+        score = r.get("relevance_score", r.get("score", 0.0))
+        if isinstance(idx, int) and 0 <= idx < len(documents):
+            doc = dict(documents[idx])
+            doc["score"] = float(score)
+            doc["rerank_score"] = float(score)
+            ranked.append(doc)
+
+    if not ranked:
+        logger.warning("rerank_empty_result, fallback to original order")
+        return documents[:top_k]
+
+    ranked.sort(key=lambda x: x["score"], reverse=True)
+    logger.info(f"rerank_done, candidates={len(documents)}, returned={len(ranked)}")
+    return ranked[:top_k]
+
+
 def hybrid_search(query: str, vector_db_dir: str, score_threshold: float,
-                  llm_cfg: dict, top_k: int = 3) -> list[dict]:
+                  llm_cfg: dict, top_k: int = 3, rerank_enabled: bool = False) -> list[dict]:
     """
-    混合检索：向量 + BM25，RRF 合并排序
+    混合检索：向量 + BM25，RRF 合并排序，可选 rerank 重排序
     """
+    # 启用 rerank 时，多召回一些候选，再用 rerank 精排
+    retrieve_n = top_k * 3 if rerank_enabled else top_k
+
     # 向量检索
     vector_results = []
     try:
-        vector_results = search(query, score_threshold, vector_db_dir, llm_cfg, top_k)
+        vector_results = search(query, score_threshold, vector_db_dir, llm_cfg, retrieve_n)
     except Exception as e:
         logger.warning(f"hybrid_vector_err, {e}")
 
     # BM25 关键词检索
     keyword_results = []
     try:
-        keyword_results = _keyword_search(query, vector_db_dir, top_k)
+        keyword_results = _keyword_search(query, vector_db_dir, retrieve_n)
     except Exception as e:
         logger.warning(f"hybrid_keyword_err, {e}")
 
     logger.info(f"hybrid_search, vector={len(vector_results)}, keyword={len(keyword_results)}, q={query[:50]}")
-
-    # 如果只有一侧有结果，直接返回
-    if not keyword_results:
-        return vector_results[:top_k]
-    if not vector_results:
-        return keyword_results[:top_k]
 
     # RRF 合并：按 content 去重，分数叠加
     rrf_scores = {}       # content -> RRF score
@@ -709,8 +762,8 @@ def hybrid_search(query: str, vector_db_dir: str, score_threshold: float,
         if content not in doc_by_content:
             doc_by_content[content] = doc
 
-    # 按 RRF 分数降序，取 top_k
-    sorted_contents = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
+    # 按 RRF 分数降序，取 retrieve_n
+    sorted_contents = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[:retrieve_n]
 
     merged = []
     for content, rrf_score in sorted_contents:
@@ -719,23 +772,29 @@ def hybrid_search(query: str, vector_db_dir: str, score_threshold: float,
         merged.append(doc)
 
     logger.info(f"hybrid_merged, total={len(merged)}")
-    return merged
+
+    # rerank 精排：对合并结果做重排序，取 top_k
+    if rerank_enabled and len(merged) > 1:
+        return _rerank(query, merged, llm_cfg, top_k)
+
+    return merged[:top_k]
 
 
 def search_txt(txt: str, vector_db_dir: str, score_threshold: float,
-        llm_cfg: dict, txt_num: int) -> str:
+        llm_cfg: dict, txt_num: int, rerank_enabled: bool = False) -> str:
     """
-    调用入口 — 混合检索（向量 + BM25）
+    调用入口 — 混合检索（向量 + BM25），可选 rerank 重排序
     :param txt: the query text
     :param vector_db_dir: the directory to save the vector db
     :param score_threshold: the score threshold
     :param llm_cfg: llm configuration info in system config.
     :param txt_num: the number of txt to return
+    :param rerank_enabled: 是否启用 rerank 重排序（需在 llm_cfg 中配置 rerank_api_* 信息）
     :return: the results
     """
     search_results = []
     try:
-        search_results = hybrid_search(txt, vector_db_dir, score_threshold, llm_cfg, txt_num)
+        search_results = hybrid_search(txt, vector_db_dir, score_threshold, llm_cfg, txt_num, rerank_enabled)
     except Exception as e:
         logger.exception(f"search_txt_err, embedding uri: {llm_cfg['embedding_api_uri']}, err={e}", exc_info=True)
 
