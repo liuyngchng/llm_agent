@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -35,8 +35,6 @@ import (
 const defaultPort = 16001
 
 func main() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
-
 	// Parse command-line arguments (supports --help, --port, and positional port).
 	cliPort, showHelp, err := parseArgs(os.Args[1:])
 	if showHelp {
@@ -72,10 +70,12 @@ func main() {
 	}
 	if logFile != nil {
 		defer logFile.Close()
-		log.SetOutput(logFile)
+		setDefaultLogger(logFile)
+	} else {
+		setDefaultLogger(os.Stderr)
 	}
 
-	log.Println("[INFO] Starting api_adapter_go...")
+	slog.Info("Starting api_adapter_go...")
 
 	llmAPIURI := cfg.API.LLMAPIURI
 	llmAPIKey := cfg.API.LLMAPIKey
@@ -87,8 +87,8 @@ func main() {
 		port = cliPort
 	}
 
-	log.Printf("[INFO] Upstream URI: %s", llmAPIURI)
-	log.Printf("[INFO] Model: %s", modelName)
+	slog.Info(fmt.Sprintf("Upstream URI: %s", llmAPIURI))
+	slog.Info(fmt.Sprintf("Model: %s", modelName))
 
 	// Build handler dependencies
 	msgHandler := handler.NewMessagesHandler(llmAPIURI, llmAPIKey, modelName)
@@ -145,13 +145,13 @@ func main() {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		sig := <-sigCh
-		log.Printf("[INFO] Received signal %v, shutting down...", sig)
+		slog.Info(fmt.Sprintf("Received signal %v, shutting down...", sig))
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		if err := server.Shutdown(ctx); err != nil {
-			log.Printf("[ERROR] Server shutdown error: %v", err)
+			slog.Error(fmt.Sprintf("Server shutdown error: %v", err))
 		}
 	}()
 
@@ -171,13 +171,13 @@ func main() {
 		"      -H \"Content-Type: application/json\" \\\n"+
 		"      -d '{\"model\":\"%s\",\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}],\"max_tokens\":50}'\n",
 		port, modelName)
-	log.Print(curlMsg)
-	log.Printf("[INFO] Listening on :%d, upstream=%s, model=%s", port, llmAPIURI, modelName)
+	slog.Info(curlMsg)
+	slog.Info(fmt.Sprintf("Listening on :%d, upstream=%s, model=%s", port, llmAPIURI, modelName))
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("[FATAL] Server error: %v", err)
+		fatal("Server error: %v", err)
 	}
 
-	log.Println("[INFO] Server stopped")
+	slog.Info("Server stopped")
 }
 
 // truncateStr truncates a string to maxLen characters for display.
@@ -240,7 +240,7 @@ func recoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				log.Printf("[ERROR] Panic recovered: %v", rec)
+				slog.Error(fmt.Sprintf("Panic recovered: %v", rec))
 				handler.WriteError(w, http.StatusInternalServerError, "internal_error", fmt.Sprintf("internal server error: %v", rec))
 			}
 		}()

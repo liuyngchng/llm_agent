@@ -2,7 +2,8 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -133,7 +134,7 @@ func Welcome(w http.ResponseWriter, r *http.Request, modelName, upstreamURI stri
 // logRequest logs incoming requests.
 func logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("[INFO] %s %s", r.Method, r.URL.Path)
+		slog.Info(fmt.Sprintf("%s %s", r.Method, r.URL.Path))
 		next.ServeHTTP(w, r)
 	})
 }

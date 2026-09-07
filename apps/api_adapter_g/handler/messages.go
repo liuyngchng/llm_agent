@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -65,7 +65,7 @@ func (h *MessagesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[DEBUG] Request body: %s", truncateStr(string(body), 500))
+	slog.Debug(fmt.Sprintf("Request body: %s", truncateStr(string(body), 500)))
 
 	// Validate messages
 	messages, ok := data["messages"].([]interface{})
@@ -80,13 +80,13 @@ func (h *MessagesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Convert request
 	openaiReq, err := converter.AnthropicToOpenAIRequest(data, h.ModelName)
 	if err != nil {
-		log.Printf("[ERROR] Failed to convert request: %v", err)
+		slog.Error(fmt.Sprintf("Failed to convert request: %v", err))
 		WriteError(w, http.StatusInternalServerError, "internal_error", "failed to convert request")
 		return
 	}
 
 	upstreamURL := fmt.Sprintf("%s/chat/completions", h.LLMAPIURI)
-	log.Printf("[INFO] forward to %s, model=%s, stream=%v", upstreamURL, h.ModelName, stream)
+	slog.Info(fmt.Sprintf("forward to %s, model=%s, stream=%v", upstreamURL, h.ModelName, stream))
 
 	reqBody, _ := json.Marshal(openaiReq)
 
@@ -110,7 +110,7 @@ func (h *MessagesHandler) handleStream(w http.ResponseWriter, r *http.Request, u
 
 	resp, err := h.Client.Do(upstreamReq)
 	if err != nil {
-		log.Printf("[ERROR] Upstream request failed: %v", err)
+		slog.Error(fmt.Sprintf("Upstream request failed: %v", err))
 		WriteError(w, http.StatusBadGateway, "api_error", fmt.Sprintf("Upstream API error: %v", err))
 		return
 	}
@@ -118,7 +118,7 @@ func (h *MessagesHandler) handleStream(w http.ResponseWriter, r *http.Request, u
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Printf("[ERROR] Upstream error: %d - %s", resp.StatusCode, string(body))
+		slog.Error(fmt.Sprintf("Upstream error: %d - %s", resp.StatusCode, string(body)))
 		WriteError(w, http.StatusBadGateway, "api_error", fmt.Sprintf("Upstream API returned %d", resp.StatusCode))
 		return
 	}
@@ -131,11 +131,11 @@ func (h *MessagesHandler) handleStream(w http.ResponseWriter, r *http.Request, u
 	w.WriteHeader(http.StatusOK)
 
 	if err := converter.GenerateAnthropicSSE(resp.Body, w, anthropicModel); err != nil {
-		log.Printf("[ERROR] SSE conversion error: %v", err)
+		slog.Error(fmt.Sprintf("SSE conversion error: %v", err))
 	}
 
 	elapsed := time.Since(startTime)
-	log.Printf("[INFO] Stream request processed in %.2fs", elapsed.Seconds())
+	slog.Info(fmt.Sprintf("Stream request processed in %.2fs", elapsed.Seconds()))
 }
 
 func (h *MessagesHandler) handleNonStream(w http.ResponseWriter, r *http.Request, upstreamURL string, reqBody []byte, anthropicModel string, startTime time.Time) {
@@ -151,7 +151,7 @@ func (h *MessagesHandler) handleNonStream(w http.ResponseWriter, r *http.Request
 
 	resp, err := h.Client.Do(upstreamReq)
 	if err != nil {
-		log.Printf("[ERROR] Upstream request failed: %v", err)
+		slog.Error(fmt.Sprintf("Upstream request failed: %v", err))
 		WriteError(w, http.StatusBadGateway, "api_error", fmt.Sprintf("Upstream API error: %v", err))
 		return
 	}
@@ -160,14 +160,14 @@ func (h *MessagesHandler) handleNonStream(w http.ResponseWriter, r *http.Request
 	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("[ERROR] Upstream error: %d - %s", resp.StatusCode, string(body))
+		slog.Error(fmt.Sprintf("Upstream error: %d - %s", resp.StatusCode, string(body)))
 		WriteError(w, http.StatusBadGateway, "api_error", fmt.Sprintf("Upstream API returned %d", resp.StatusCode))
 		return
 	}
 
 	var openaiResp map[string]interface{}
 	if err := json.Unmarshal(body, &openaiResp); err != nil {
-		log.Printf("[ERROR] Failed to parse upstream response: %v", err)
+		slog.Error(fmt.Sprintf("Failed to parse upstream response: %v", err))
 		WriteError(w, http.StatusInternalServerError, "internal_error", "failed to parse upstream response")
 		return
 	}
@@ -178,7 +178,7 @@ func (h *MessagesHandler) handleNonStream(w http.ResponseWriter, r *http.Request
 	WriteJSON(w, http.StatusOK, anthropicResp)
 
 	elapsed := time.Since(startTime)
-	log.Printf("[INFO] Non-stream request processed in %.2fs", elapsed.Seconds())
+	slog.Info(fmt.Sprintf("Non-stream request processed in %.2fs", elapsed.Seconds()))
 }
 
 // ---------------------------------------------------------------------------

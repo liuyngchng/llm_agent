@@ -3,7 +3,8 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 )
@@ -37,8 +38,8 @@ func AuthMiddleware(apiKey string) func(http.Handler) http.Handler {
 
 			clientKey := ExtractAPIKey(r)
 			if clientKey != apiKey {
-				log.Printf("[WARN] Invalid API key attempt. Expected prefix: %s..., Got prefix: %s...",
-					truncate(apiKey, 20), truncate(clientKey, 20))
+				slog.Warn(fmt.Sprintf("Invalid API key attempt. Expected prefix: %s..., Got prefix: %s...",
+					truncate(apiKey, 20), truncate(clientKey, 20)))
 				WriteJSON(w, http.StatusUnauthorized, map[string]interface{}{
 					"type": "error",
 					"error": map[string]interface{}{
@@ -95,7 +96,7 @@ func WriteJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.WriteHeader(status)
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Printf("[ERROR] Failed to write JSON response: %v", err)
+		slog.Error(fmt.Sprintf("Failed to write JSON response: %v", err))
 	}
 }
 

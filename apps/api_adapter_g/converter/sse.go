@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -250,7 +250,7 @@ func GenerateAnthropicSSE(reader io.Reader, writer io.Writer, anthropicModel str
 	if err := scanner.Err(); err != nil {
 		// Graceful recovery like Python: log the error but still close open
 		// blocks and emit final message events so the client gets a clean response.
-		log.Printf("[WARN] Upstream stream connection lost after %d lines: %v", lineCount, err)
+		slog.Warn(fmt.Sprintf("Upstream stream connection lost after %d lines: %v", lineCount, err))
 	}
 
 	// Close any unclosed content blocks

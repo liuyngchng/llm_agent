@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -37,8 +37,6 @@ import (
 )
 
 func main() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
-
 	// Parse command-line arguments
 	cliPort, showHelp, err := parseArgs(os.Args[1:])
 	if showHelp {
@@ -74,10 +72,12 @@ func main() {
 	}
 	if logFile != nil {
 		defer logFile.Close()
-		log.SetOutput(logFile)
+		setDefaultLogger(logFile)
+	} else {
+		setDefaultLogger(os.Stderr)
 	}
 
-	log.Println("[INFO] Starting api_proxy...")
+	slog.Info("Starting api_proxy...")
 
 	upstreamURI := cfg.API.LLMAPIURI
 	apiKey := cfg.API.LLMAPIKey
@@ -90,13 +90,13 @@ func main() {
 	}
 	listenAddr := fmt.Sprintf(":%d", port)
 
-	log.Printf("[INFO] Upstream URI: %s", upstreamURI)
-	log.Printf("[INFO] Model: %s", modelName)
+	slog.Info(fmt.Sprintf("Upstream URI: %s", upstreamURI))
+	slog.Info(fmt.Sprintf("Model: %s", modelName))
 
 	// Parse upstream URL
 	upstreamURL, err := url.Parse(upstreamURI)
 	if err != nil {
-		log.Fatalf("[FATAL] Invalid upstream URI %q: %v", upstreamURI, err)
+		fatal("Invalid upstream URI %q: %v", upstreamURI, err)
 	}
 
 	// Build reverse proxy
@@ -139,7 +139,7 @@ func main() {
 			ExpectContinueTimeout: 1 * time.Second,
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
-			log.Printf("[ERROR] Proxy error for %s %s: %v", r.Method, r.URL.Path, err)
+			slog.Error(fmt.Sprintf("Proxy error for %s %s: %v", r.Method, r.URL.Path, err))
 			http.Error(w, fmt.Sprintf(`{"error":{"message":"proxy error: %s","type":"proxy_error"}}`, err.Error()),
 				http.StatusBadGateway)
 		},
@@ -171,14 +171,14 @@ func main() {
 		// the reverse proxy to forward.
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
-			log.Printf("[ERROR] Failed to read request body: %v", err)
+			slog.Error(fmt.Sprintf("Failed to read request body: %v", err))
 			http.Error(w, `{"error":{"message":"failed to read request body","type":"proxy_error"}}`, http.StatusBadRequest)
 			return
 		}
 		r.Body.Close()
 		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 
-		log.Printf("[DEBUG] Request body: %s", truncateStr(string(bodyBytes), 500))
+		slog.Debug(fmt.Sprintf("Request body: %s", truncateStr(string(bodyBytes), 500)))
 
 		// Parse model and stream info from the request body for logging
 		var bodyData map[string]interface{}
@@ -193,12 +193,12 @@ func main() {
 			}
 		}
 
-		log.Printf("[INFO] forward to %s, model=%s, stream=%v", rewritePath(upstreamURL.Path, r.URL.Path), reqModel, reqStream)
+		slog.Info(fmt.Sprintf("forward to %s, model=%s, stream=%v", rewritePath(upstreamURL.Path, r.URL.Path), reqModel, reqStream))
 
 		proxy.ServeHTTP(w, r)
 
 		elapsed := time.Since(startTime)
-		log.Printf("[INFO] %s request processed in %.2fs", r.URL.Path, elapsed.Seconds())
+		slog.Info(fmt.Sprintf("%s request processed in %.2fs", r.URL.Path, elapsed.Seconds()))
 	})
 
 	// Apply middleware
@@ -219,13 +219,13 @@ func main() {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		sig := <-sigCh
-		log.Printf("[INFO] Received signal %v, shutting down...", sig)
+		slog.Info(fmt.Sprintf("Received signal %v, shutting down...", sig))
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		if err := server.Shutdown(ctx); err != nil {
-			log.Printf("[ERROR] Server shutdown error: %v", err)
+			slog.Error(fmt.Sprintf("Server shutdown error: %v", err))
 		}
 	}()
 
@@ -243,16 +243,16 @@ func main() {
 		"      -H \"Content-Type: application/json\" \\\n"+
 		"      -d '{\"model\":\"%s\",\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}],\"max_tokens\":50}'\n",
 		port, modelName)
-	log.Print(curlMsg)
-	log.Printf("[INFO] Listening on :%d, upstream=%s", port, upstreamURI)
-	log.Printf("[INFO] No auth required on incoming requests — upstream key injected automatically")
-	log.Printf("[INFO] System proxy env vars (HTTP_PROXY, HTTPS_PROXY, etc.) are IGNORED for upstream connections")
+	slog.Info(curlMsg)
+	slog.Info(fmt.Sprintf("Listening on :%d, upstream=%s", port, upstreamURI))
+	slog.Info("No auth required on incoming requests — upstream key injected automatically")
+	slog.Info("System proxy env vars (HTTP_PROXY, HTTPS_PROXY, etc.) are IGNORED for upstream connections")
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("[FATAL] Server error: %v", err)
+		fatal("Server error: %v", err)
 	}
 
-	log.Println("[INFO] Server stopped")
+	slog.Info("Server stopped")
 }
 
 // corsMiddleware adds permissive CORS headers to all responses.
@@ -312,9 +312,9 @@ func recoveryMiddleware(next http.Handler) http.Handler {
 			if rec := recover(); rec != nil {
 				errMsg := fmt.Sprintf("%v", rec)
 				if errMsg == "net/http: abort Handler" {
-					log.Printf("[INFO] Client disconnected (abort Handler) for %s %s", r.Method, r.URL.Path)
+					slog.Info(fmt.Sprintf("Client disconnected (abort Handler) for %s %s", r.Method, r.URL.Path))
 				} else {
-					log.Printf("[ERROR] Panic recovered: %v", rec)
+					slog.Error(fmt.Sprintf("Panic recovered: %v", rec))
 				}
 				if !sr.wroteHeader {
 					http.Error(sr, fmt.Sprintf(`{"error":{"message":"internal server error","type":"internal_error"}}`),
@@ -583,4 +583,3 @@ func checkUpstreamConnectivity(uri, apiKey, modelName string) error {
 			resp.StatusCode, truncateStr(string(respBody), 200))
 	}
 }
-
