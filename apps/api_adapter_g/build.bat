@@ -17,7 +17,7 @@ echo === Building Windows amd64 ===
 set CGO_ENABLED=0
 set GOOS=windows
 set GOARCH=amd64
-go build -o api_adapter_windows_amd64.exe .
+go build -ldflags "-H windowsgui" -o api_adapter_windows_amd64.exe .
 echo Windows amd64 build done: api_adapter_windows_amd64.exe
 
 echo === Build complete ===
