@@ -7,7 +7,7 @@ import logging.config
 import uuid
 import time
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory, abort
 
 import threading
 
@@ -22,13 +22,35 @@ from common.my_enums import AppType
 
 my_cfg = init_yml_cfg()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=None)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max
 app.config['CFG'] = my_cfg
 app.config['APP_SOURCE'] = my_enums.AppType.ASR.name.lower()
 
 register_i18n(app, scope="asr")
+
+
+@app.route('/static/<path:file_name>')
+def get_static_file(file_name):
+    """提供静态文件，优先 app 自身 static，其次 common/static"""
+    static_dirs = [
+        os.path.join(os.path.dirname(__file__), 'static'),
+        os.path.join(os.path.dirname(__file__), '../../common/static'),
+    ]
+    for static_dir in static_dirs:
+        file_path = os.path.join(static_dir, file_name)
+        if os.path.exists(file_path):
+            return send_from_directory(static_dir, file_name)
+    logger.error(f"静态文件未找到: {file_name}")
+    abort(404)
+
+
+@app.route('/webfonts/<path:file_name>')
+def get_webfonts_file(file_name):
+    """提供字体文件"""
+    font_file_name = f"webfonts/{file_name}"
+    return get_static_file(font_file_name)
 
 
 # 配置目录
@@ -57,6 +79,10 @@ ASR_PORT = my_cfg['funasr']['port']
 SUPPORTED_FORMATS = {'.m4a', '.mp3', '.amr', '.wav', '.flac', '.ogg', '.aac'}
 
 
+# ============================================================
+# 页面路由
+# ============================================================
+
 @app.route('/')
 def app_home():
     app_source = AppType.ASR.name.lower()
@@ -79,11 +105,6 @@ def app_home():
     else:
         hack_admin = "0"
 
-    # greeting = get_const("greeting", app_source)
-    # arg1 = get_const("arg1", app_source)
-    # arg2 = get_const("arg2", app_source)
-    # arg3 = get_const("arg3", app_source)
-
     ctx = {
         "uid": uid,
         "t": t,
@@ -101,6 +122,41 @@ def app_home():
     logger.info(f"return_page {dt_idx}, ctx {ctx}")
     return render_template(dt_idx, **ctx)
 
+
+@app.route('/asr/task', methods=['GET'])
+def asr_task_index():
+    """我的任务页面"""
+    logger.info(f"asr_task_index, {request.args}")
+    t = request.args.get('t', '').strip()
+    app_source = request.args.get('app_source', 'asr')
+    if not t:
+        logger.warning("no_token_in_asr_task")
+        return redirect_to_portal_login(app_source)
+    session_info = cm_utils.decode_token(t, my_cfg['sys']['cypher_key'])
+    if not session_info:
+        logger.warning("invalid_token_in_asr_task")
+        return redirect_to_portal_login(app_source)
+    uid = str(session_info['uid'])
+    session_key = f"{uid}_{get_client_ip()}"
+    auth_info[session_key] = time.time()
+    statistic_util.add_access_count_by_uid(int(uid), 1, app_source)
+    warning_info = request.args.get('warning_info', "")
+    sys_name = my_enums.AppType.get_app_type(app_source)
+    ctx = {
+        "uid": uid,
+        "t": t,
+        "sys_name": sys_name,
+        "app_source": app_source,
+        "warning_info": warning_info,
+    }
+    dt_idx = "asr_my_task.html"
+    logger.info(f"{uid}, return_asr_task_page {dt_idx}")
+    return render_template(dt_idx, **ctx)
+
+
+# ============================================================
+# API 路由
+# ============================================================
 
 @app.route('/api/upload', methods=['POST'])
 def upload_audio():
@@ -123,6 +179,9 @@ def upload_audio():
         logger.info(info)
         return jsonify(info), 400
 
+    # 获取用户 ID（从表单或 URL 参数）
+    uid = int(request.form.get('uid', request.args.get('uid', 0)))
+
     # 保存原始文件
     original_filename = file.filename
     safe_filename = f"{uuid.uuid4().hex}{file_ext}"
@@ -131,9 +190,9 @@ def upload_audio():
     file.save(file_path)
     logger.info(f"upload_file_saved, {file_path}")
 
-    # 创建任务
-    task_id = asr_tasks.create_task(original_filename, str(input_path), None)
-    logger.info(f"create_task {task_id}")
+    # 创建任务（持久化到 SQLite）
+    task_id = asr_tasks.create_task(original_filename, str(input_path), None, uid=uid)
+    logger.info(f"create_task {task_id}, uid={uid}")
     # 异步处理
     thread = threading.Thread(
         target=process_audio_async,
@@ -144,7 +203,7 @@ def upload_audio():
     info = {
         'task_id': task_id,
         'status': 'converting',
-        'message': '文件已上传，开始处理...'
+        'message': '文件已上传，后台开始处理...'
     }
     logger.info(info)
     return jsonify(info)
@@ -158,17 +217,27 @@ def get_task_status(task_id):
         return jsonify({'error': '任务不存在'}), 404
 
     return jsonify({
-        'task_id': task['id'],
+        'task_id': task['task_id'],
         'status': task['status'],
         'result_text': task.get('result_text'),
         'error': task.get('error'),
         'progress': task.get('progress'),
         'original_filename': task['original_filename'],
-        'timestamp': task['timestamp'].isoformat()
     })
 
 
-@app.route('/api/download/<task_id>')
+@app.route('/asr/my/task', methods=['POST'])
+def my_asr_task():
+    """获取当前用户的 ASR 任务列表"""
+    data = request.json or {}
+    uid = int(data.get('uid', 0))
+    logger.debug(f"{uid}, get_my_asr_tasks")
+    task_list = asr_tasks.get_user_tasks(uid)
+    logger.debug(f"{uid}, found {len(task_list)} tasks")
+    return jsonify({'tasks': task_list}), 200
+
+
+@app.route('/asr/download/<task_id>')
 def download_result(task_id):
     """下载识别结果"""
     task = asr_tasks.get_task(task_id)
@@ -178,8 +247,10 @@ def download_result(task_id):
     if task['status'] != 'completed' or not task.get('result_text'):
         return jsonify({'error': '任务未完成或结果不存在'}), 400
 
-    # 生成下载文件
     result_file = RESULTS_DIR / f"{task_id}.txt"
+    if not result_file.exists():
+        return jsonify({'error': '结果文件不存在'}), 404
+
     original_name = Path(task['original_filename']).stem
     download_name = f"{original_name}_转写结果.txt"
 
@@ -191,35 +262,47 @@ def download_result(task_id):
     )
 
 
+@app.route('/asr/del/task', methods=['POST'])
+def delete_asr_task():
+    """删除指定任务"""
+    data = request.json or {}
+    task_id = data.get('task_id', '')
+    if not task_id:
+        return jsonify({'error': '缺少 task_id'}), 400
+    logger.info(f"delete_asr_task {task_id}")
+    asr_tasks.delete_task(task_id)
+    return jsonify({'message': '已删除'}), 200
+
+
 @app.route('/api/tasks')
 def get_all_tasks():
-    """获取所有任务"""
-    tasks = []
-    for task_id, task in asr_tasks.tasks.items():
-        tasks.append({
-            'task_id': task['id'],
+    """获取所有任务（兼容旧接口，不分用户）"""
+    uid = int(request.args.get('uid', 0))
+    tasks = asr_tasks.get_user_tasks(uid)
+    result = []
+    for task in tasks:
+        result.append({
+            'task_id': task['task_id'],
             'original_filename': task['original_filename'],
             'status': task['status'],
-            'timestamp': task['timestamp'].isoformat(),
+            'timestamp': task['created_at'],
             'has_result': task['status'] == 'completed'
         })
-    # 按时间倒序
-    tasks.sort(key=lambda x: x['timestamp'], reverse=True)
-    return jsonify({'tasks': tasks[:20]})
+    return jsonify({'tasks': result[:20]})
 
 
 @app.route('/api/clear_tasks', methods=['POST'])
 def clear_completed_tasks():
-    """清理已完成的任务"""
-    to_delete = []
-    for task_id, task in asr_tasks.tasks.items():
+    """清理已完成的任务（兼容旧接口）"""
+    uid = int(request.json.get('uid', 0) if request.json else 0)
+    tasks = asr_tasks.get_user_tasks(uid)
+    count = 0
+    for task in tasks:
         if task['status'] in ['completed', 'failed']:
-            to_delete.append(task_id)
+            asr_tasks.delete_task(task['task_id'])
+            count += 1
 
-    for task_id in to_delete:
-        asr_tasks.delete_task(task_id)
-
-    return jsonify({'message': f'已清理 {len(to_delete)} 个任务'})
+    return jsonify({'message': f'已清理 {count} 个任务'})
 
 
 if __name__ == '__main__':

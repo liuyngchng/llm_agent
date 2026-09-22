@@ -23,7 +23,7 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    height: 92vh;
+    min-height: 80vh;
 }
 
 .header {
@@ -65,7 +65,8 @@ body {
     align-items: center;
 }
 
-.btn-clear {
+.btn-clear,
+.btn-tasks {
     background: rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);
     color: white;
@@ -77,10 +78,97 @@ body {
     display: flex;
     align-items: center;
     gap: 4px;
+    text-decoration: none;
 }
 
-.btn-clear:hover {
+.btn-clear:hover,
+.btn-tasks:hover {
     background: rgba(255, 255, 255, 0.3);
+}
+
+.btn-tasks:hover {
+    color: white;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 24px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.welcome-section {
+    text-align: center;
+    color: #666;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    justify-content: center;
+}
+
+.welcome-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.welcome-desc {
+    font-size: 0.92rem;
+    color: #888;
+}
+
+.upload-result {
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.upload-result-processing {
+    background: #e6f4ff;
+    color: #1890ff;
+    border: 1px solid #91d5ff;
+}
+
+.upload-result-success {
+    background: #f6ffed;
+    color: #333;
+    border: 1px solid #b7eb8f;
+}
+
+.upload-result-error {
+    background: #fff2f0;
+    color: #ff4d4f;
+    border: 1px solid #ffa39e;
+}
+
+.goto-tasks-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 8px 18px;
+    background: linear-gradient(135deg, #4b6cb7, #3a5a9e);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.goto-tasks-link:hover {
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(75, 108, 183, 0.4);
 }
 
 .chat-container {

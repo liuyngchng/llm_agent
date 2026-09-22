@@ -1,15 +1,10 @@
 let selectedFiles = [];
-let pollingIntervals = {};
-let waitStartTime = {};  // taskId → timestamp when progress first hit 100%
 
-// 初始化
 document.addEventListener('DOMContentLoaded', function() {
     initEventListeners();
-    loadTaskHistory();
 });
 
 function initEventListeners() {
-    // 上传按钮
     const uploadBtn = document.getElementById('uploadButton');
     const fileInput = document.getElementById('fileInput');
 
@@ -19,34 +14,25 @@ function initEventListeners() {
 
     fileInput.addEventListener('change', (e) => {
         handleFiles(e.target.files);
-        fileInput.value = ''; // 清空，允许重复选择同一个文件
-    });
-
-    // 清空历史按钮
-    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
-        if (confirm(__('asr.clear_confirm'))) {
-            clearHistory();
-        }
+        fileInput.value = '';
     });
 }
 
 function handleFiles(files) {
     for (let file of files) {
-        // 检查文件格式
         const validExtensions = ['.mp3', '.m4a', '.amr', '.wav', '.flac', '.ogg', '.aac'];
         const ext = '.' + file.name.split('.').pop().toLowerCase();
 
         if (validExtensions.includes(ext)) {
             selectedFiles.push(file);
         } else {
-            showMessage(__('asr.system_role'), __fmt_named('asr.unsupported_format', {name: file.name}), 'error');
+            showUploadResult(__fmt_named('asr.unsupported_format', {name: file.name}), 'error');
         }
     }
 
     updateFileList();
 
     if (selectedFiles.length > 0) {
-        // 自动上传所有选中的文件
         uploadAllFiles();
     }
 }
@@ -123,13 +109,18 @@ function setUploadButtonEnabled(enabled) {
 }
 
 async function uploadFile(file) {
-    // 显示上传中的消息
-    const tempId = 'temp_' + Date.now() + '_' + Math.random();
-    showMessage(__('asr.user_role'), file.name, 'user', tempId);
-    showMessage(__('asr.system_role'), __fmt_named('asr.processing', {name: file.name}) + ` <i class="fas fa-spinner spin"></i>`, 'processing', null, tempId);
+    showUploadResult(
+        __('asr.processing') + ` <i class="fas fa-spinner spin"></i>`,
+        'processing'
+    );
 
     const formData = new FormData();
     formData.append('file', file);
+
+    // 从隐藏 input 获取 uid 和 t
+    const uid = document.getElementById('uid').value || '0';
+    const t = document.getElementById('t').value || '';
+    formData.append('uid', uid);
 
     try {
         const response = await fetch('/api/upload', {
@@ -140,253 +131,33 @@ async function uploadFile(file) {
         const data = await response.json();
 
         if (response.ok) {
-            // 替换处理中的消息
-            updateMessage(tempId, __fmt_named('asr.uploaded_processing', {name: file.name}) + ` <i class="fas fa-spinner spin"></i>`);
-            // 开始轮询任务状态
-            startPolling(data.task_id, tempId, file.name);
+            const tasksUrl = `/asr/task?uid=${uid}&app_source=asr&t=${t}`;
+            showUploadResult(`
+                <div><i class="fas fa-check-circle" style="color: #52c41a; margin-right: 6px;"></i>${__('asr.upload_success')}</div>
+                <div style="margin-top: 8px; font-size: 0.9rem; color: #666;">${__('asr.view_tasks_hint')}</div>
+                <a href="${tasksUrl}" target="_blank" class="goto-tasks-link">
+                    <i class="fas fa-tasks"></i> ${__('asr.my_tasks_btn')}
+                </a>
+            `, 'success');
         } else {
-            updateMessage(tempId, __fmt_named('asr.process_failed', {msg: data.error}), 'error');
+            showUploadResult(__fmt_named('asr.process_failed', {msg: data.error}), 'error');
         }
     } catch (error) {
         console.error('Upload error:', error);
-        updateMessage(tempId, __fmt_named('asr.upload_failed', {msg: error.message}), 'error');
+        showUploadResult(__fmt_named('asr.upload_failed', {msg: error.message}), 'error');
     }
 }
 
-function startPolling(taskId, messageId, filename) {
-    if (pollingIntervals[taskId]) {
-        clearInterval(pollingIntervals[taskId]);
-    }
-
-    const poll = async () => {
-        try {
-            const response = await fetch(`/api/status/${taskId}`);
-            const data = await response.json();
-
-            if (data.status === 'completed') {
-                // 识别完成
-                clearInterval(pollingIntervals[taskId]);
-                delete pollingIntervals[taskId];
-                delete waitStartTime[taskId];
-
-                const resultHtml = `
-                    <div>✅ ${__('asr.transcription_done')}</div>
-                    <div style="margin-top: 10px; padding: 10px; background: #f0f2f5; border-radius: 8px;">
-                        ${escapeHtml(data.result_text || __('asr.no_result'))}
-                    </div>
-                    <button class="download-btn" onclick="downloadResult('${taskId}', '${filename}')">
-                        <i class="fas fa-download"></i> ${__('asr.download_result')}
-                    </button>
-                `;
-                updateMessage(messageId, resultHtml, 'completed');
-
-                // 添加到历史记录
-                addToTaskHistory(taskId, filename, data.result_text);
-
-            } else if (data.status === 'failed') {
-                clearInterval(pollingIntervals[taskId]);
-                delete pollingIntervals[taskId];
-                delete waitStartTime[taskId];
-                updateMessage(messageId, `❌ ${__fmt_named('asr.transcribe_failed', {msg: data.error})}`, 'error');
-            } else {
-                // 更新状态及进度
-                let statusHtml;
-                if (data.status === 'converting') {
-                    statusHtml = __fmt_named('asr.converting_format', {name: filename}) + ` <i class="fas fa-spinner spin"></i>`;
-                } else if (data.progress !== undefined && data.progress !== null) {
-                    const pct = data.progress;
-                    if (pct >= 100) {
-                        // 数据已全部发送，等待服务端处理
-                        if (!waitStartTime[taskId]) {
-                            waitStartTime[taskId] = Date.now();
-                        }
-                        const elapsed = Math.floor((Date.now() - waitStartTime[taskId]) / 1000);
-                        const minutes = Math.floor(elapsed / 60);
-                        const seconds = elapsed % 60;
-                        const elapsedStr = minutes > 0
-                            ? __fmt_named('asr.elapsed_format', {m: minutes, s: seconds})
-                            : __fmt_named('asr.elapsed_format', {m: 0, s: seconds});
-                        statusHtml = __fmt_named('asr.waiting_server', {name: filename, elapsed: elapsedStr}) + ` <i class="fas fa-spinner spin"></i>`;
-                    } else {
-                        statusHtml = __fmt_named('asr.processing_pct', {name: filename, pct: pct}) + ` <i class="fas fa-spinner spin"></i>`;
-                        statusHtml += `
-                            <div style="margin-top: 8px; background: #e9ecef; border-radius: 6px; height: 8px; overflow: hidden;">
-                                <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #4b6cb7, #6c8de0); border-radius: 6px; transition: width 1s ease;"></div>
-                            </div>`;
-                    }
-                } else {
-                    statusHtml = __fmt_named('asr.recognizing', {name: filename}) + ` <i class="fas fa-spinner spin"></i>`;
-                }
-                updateMessage(messageId, statusHtml);
-            }
-        } catch (error) {
-            console.error('Polling error:', error);
-        }
-    };
-
-    // 立即执行一次
-    poll();
-    // 每2秒轮询一次
-    pollingIntervals[taskId] = setInterval(poll, 2000);
-}
-
-async function downloadResult(taskId, filename) {
-    try {
-        const response = await fetch(`/api/download/${taskId}`);
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${filename.replace(/\.[^/.]+$/, '')}_转写结果.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        } else {
-            const error = await response.json();
-            alert(__('asr.download_failed') + error.error);
-        }
-    } catch (error) {
-        console.error('Download error:', error);
-        alert(__('asr.download_failed') + error.message);
-    }
-}
-
-function showMessage(sender, content, type = 'text', senderType = 'user', existingId = null) {
-    const chatHistory = document.getElementById('chatHistory');
-    const messageId = existingId || 'msg_' + Date.now() + '_' + Math.random();
-
-    // 如果是现有消息的更新，找到并更新
-    if (existingId) {
-        const existingMsg = document.getElementById(existingId);
-        if (existingMsg) {
-            const contentDiv = existingMsg.querySelector('.message-content');
-            if (contentDiv) {
-                if (type === 'error') {
-                    contentDiv.style.background = '#fee';
-                    contentDiv.style.color = '#c33';
-                } else if (type === 'completed') {
-                    contentDiv.style.background = '#e8f5e9';
-                }
-                contentDiv.innerHTML = content;
-            }
-            return existingMsg;
-        }
-    }
-
-    // 创建新消息
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${senderType === 'user' ? 'user-message' : 'ai-message'}`;
-    messageDiv.id = messageId;
-
-    const headerIcon = senderType === 'user' ? 'fa-user' : 'fa-robot';
-    const headerText = senderType === 'user' ? __('asr.user_role') : __('asr.system_role');
-
-    messageDiv.innerHTML = `
-        <div class="message-header">
-            <i class="fas ${headerIcon}"></i>
-            <span>${escapeHtml(headerText)}</span>
-        </div>
-        <div class="message-content">
-            ${content}
-        </div>
-    `;
-
-    chatHistory.appendChild(messageDiv);
-    messageDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-    return messageDiv;
-}
-
-function updateMessage(messageId, content, type = null) {
-    const messageDiv = document.getElementById(messageId);
-    if (messageDiv) {
-        const contentDiv = messageDiv.querySelector('.message-content');
-        if (contentDiv) {
-            if (type === 'error') {
-                contentDiv.style.background = '#fee';
-                contentDiv.style.color = '#c33';
-            } else if (type === 'completed') {
-                contentDiv.style.background = '#e8f5e9';
-            }
-            contentDiv.innerHTML = content;
-        }
-    }
+function showUploadResult(html, type) {
+    const el = document.getElementById('uploadResult');
+    el.style.display = 'block';
+    el.innerHTML = html;
+    el.className = 'upload-result upload-result-' + type;
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
-}
-
-async function loadTaskHistory() {
-    try {
-        const response = await fetch('/api/tasks');
-        const data = await response.json();
-
-        if (data.tasks && data.tasks.length > 0) {
-            // 显示最近的任务
-            for (let task of data.tasks.slice(0, 5)) {
-                if (task.status === 'completed') {
-                    addToTaskHistory(task.task_id, task.original_filename, null);
-                }
-            }
-        }
-    } catch (error) {
-        console.error('Load history error:', error);
-    }
-}
-
-function addToTaskHistory(taskId, filename, resultText) {
-    const chatHistory = document.getElementById('chatHistory');
-    // 检查是否已经存在
-    const existing = document.getElementById(`history_${taskId}`);
-    if (existing) return;
-
-    const historyDiv = document.createElement('div');
-    historyDiv.className = 'message ai-message';
-    historyDiv.id = `history_${taskId}`;
-
-    historyDiv.innerHTML = `
-        <div class="message-header">
-            <i class="fas fa-history"></i>
-            <span>${__('asr.history_title')}</span>
-        </div>
-        <div class="message-content">
-            <div><strong>📁 ${escapeHtml(filename)}</strong></div>
-            <div style="margin-top: 8px;">✅ ${__('asr.transcription_done')}</div>
-            <button class="download-btn" style="margin-top: 8px;" onclick="downloadResult('${taskId}', '${filename}')">
-                <i class="fas fa-download"></i> ${__('asr.download_result')}
-            </button>
-        </div>
-    `;
-
-    // 插入到欢迎消息之后
-    const welcomeMsg = chatHistory.querySelector('.welcome-message');
-    if (welcomeMsg && welcomeMsg.nextSibling) {
-        chatHistory.insertBefore(historyDiv, welcomeMsg.nextSibling);
-    } else {
-        chatHistory.appendChild(historyDiv);
-    }
-}
-
-async function clearHistory() {
-    try {
-        await fetch('/api/clear_tasks', { method: 'POST' });
-
-        // 清空页面上的历史记录
-        const chatHistory = document.getElementById('chatHistory');
-        const messages = chatHistory.querySelectorAll('.message:not(.welcome-message)');
-        messages.forEach(msg => {
-            if (msg.id && msg.id.startsWith('history_')) {
-                msg.remove();
-            }
-        });
-
-        showMessage(__('asr.system_role'), __('asr.history_cleared'), 'text');
-    } catch (error) {
-        console.error('Clear history error:', error);
-    }
 }

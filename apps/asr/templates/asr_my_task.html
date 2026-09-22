@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ _('asr.task_page_title') }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/asr.my.task.css">
+    {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
+    <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
+    <script type="text/javascript" src="/static/i18n.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-microphone-alt"></i> {{ _('asr.task_page_title') }}</h1>
+            <p>{{ _('asr.task_page_desc') }}</p>
+            <div style="margin-top: 12px;">
+                <button id="clearCompletedBtn" class="header-action-btn">
+                    <i class="fas fa-broom"></i> {{ _('asr.clear_completed') }}
+                </button>
+            </div>
+        </header>
+
+        <div class="tasks-container">
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="spinner"></div>
+            </div>
+            <table id="tasksTable">
+                <thead>
+                    <tr>
+                        <th>{{ _('common.no') }}</th>
+                        <th>{{ _('asr.col_filename') }}</th>
+                        <th>{{ _('asr.col_create_time') }}</th>
+                        <th>{{ _('asr.col_status') }}</th>
+                        <th>{{ _('asr.col_progress') }}</th>
+                        <th>{{ _('asr.col_download') }}</th>
+                        <th>{{ _('asr.col_actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <i class="fas fa-inbox"></i>
+                <h3>{{ _('common.empty_task_list') }}</h3>
+                <p>{{ _('common.empty_task_desc') }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="auto-refresh-indicator" id="refreshIndicator">
+        <i class="fas fa-sync-alt"></i> {{ _('common.auto_refresh_on') }}
+    </div>
+    <input type="hidden" id="uid" name="uid" value="{{uid}}">
+    <input type="hidden" id="t" name="t" value="{{t}}">
+    <script type="text/javascript" src="/static/asr.my.task.js"></script>
+</body>
+</html>

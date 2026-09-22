@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>{{sys_name}}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='asr.css') }}">
+    <link rel="stylesheet" href="/static/asr.css">
     {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
 </head>
 <body>
@@ -15,21 +15,21 @@
             <div class="model-info">
                 <span>{{ _('asr.supported_formats') }}</span>
                 <div class="model-info-actions">
-                    <button id="clearHistoryBtn" class="btn-clear">
-                        <i class="fas fa-trash-alt"></i> {{ _('asr.clear_history') }}
-                    </button>
+                    <a href="/asr/task?uid={{uid}}&app_source={{app_source}}&t={{t}}" class="btn-tasks" target="_blank">
+                        <i class="fas fa-tasks"></i> {{ _('asr.my_tasks_btn') }}
+                    </a>
                 </div>
             </div>
         </header>
 
-        <div class="chat-container">
-            <div class="chat-history" id="chatHistory">
-                <div class="welcome-message">
-                    <i class="fas fa-head-side-microphone" style="font-size: 48px; color: #4b6cb7; margin-bottom: 15px;"></i>
-                    <p>🎙️ {{ _('asr.welcome') }}</p>
-                    <p style="font-size: 0.9rem; margin-top: 10px;">{{ _('asr.welcome_desc') }}</p>
-                </div>
+        <div class="main-content">
+            <div class="welcome-section">
+                <i class="fas fa-head-side-microphone" style="font-size: 56px; color: #4b6cb7; margin-bottom: 16px;"></i>
+                <p class="welcome-title">🎙️ {{ _('asr.welcome') }}</p>
+                <p class="welcome-desc">{{ _('asr.welcome_desc') }}</p>
             </div>
+
+            <div class="upload-result" id="uploadResult" style="display: none;"></div>
 
             <div class="input-area">
                 <div class="input-container">
@@ -43,7 +43,6 @@
                             </div>
                             <div class="file-list" id="fileList"></div>
                         </div>
-                        <textarea id="messageInput" placeholder="{{ _('asr.note_placeholder') }}" rows="2"></textarea>
                     </div>
 
                     <div class="input-actions">
@@ -76,8 +75,12 @@
         </footer>
     </div>
 
+    <input type="hidden" id="uid" name="uid" value="{{uid}}">
+    <input type="hidden" id="t" name="t" value="{{t}}">
+    <input type="hidden" id="appSource" name="appSource" value="{{app_source}}">
+
     <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
     <script type="text/javascript" src="/static/i18n.js"></script>
-    <script src="{{ url_for('static', filename='asr.js') }}"></script>
+    <script src="/static/asr.js"></script>
 </body>
 </html>

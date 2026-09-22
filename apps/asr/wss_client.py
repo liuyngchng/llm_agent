@@ -58,6 +58,7 @@ voices = Queue()
 offline_msg_done = False
 _asr_lock = Lock()
 _progress_callback = None
+_sent_callback = None
 
 
 async def record_microphone():
@@ -224,6 +225,9 @@ async def record_from_scp(chunk_begin, chunk_size):
                 message = json.dumps({"is_speaking": is_speaking})
                 # voices.put(message)
                 await websocket.send(message)
+                global _sent_callback
+                if _sent_callback:
+                    _sent_callback()
 
             sleep_duration = (
                 0.001
@@ -331,7 +335,8 @@ async def ws_client(id, chunk_begin, chunk_size):
             ssl_context = None
         print("connect to", uri)
         async with websockets.connect(
-            uri, subprotocols=["binary"], ping_interval=None, close_timeout=30,
+            uri, subprotocols=["binary"], ping_interval=30, ping_timeout=10, close_timeout=60,
+            max_size=50 * 1024 * 1024,  # 50MB，长音频结果 JSON 可能超标
             ssl=ssl_context
         ) as websocket:
             if args.audio_in is not None:
@@ -352,18 +357,18 @@ def one_thread(id, chunk_begin, chunk_size):
 
 
 def run_offline_asr(audio_in, output_dir, host='localhost', port=10095, ssl=0,
-                    mode='offline', use_itn=1, progress_callback=None):
+                    mode='offline', use_itn=1, progress_callback=None, sent_callback=None):
     """Programmatic entry point for offline ASR recognition.
 
     Calls the FunASR WebSocket client directly (no subprocess or argparse).
     Results are written to ``output_dir`` as text files.
 
     Thread-safe: serialises concurrent calls via ``_asr_lock``.
-    If ``progress_callback`` is provided, it is called periodically with a
-    percentage (int 0-100) during the ASR processing phase.
+    ``progress_callback(pct)`` is called with 0-100 during audio chunk sending.
+    ``sent_callback()`` is called once all chunks have been sent (entering server-side inference).
     """
     import types
-    global args, _progress_callback
+    global args, _progress_callback, _sent_callback
     with _asr_lock:
         args = types.SimpleNamespace(
             host=host,
@@ -388,10 +393,12 @@ def run_offline_asr(audio_in, output_dir, host='localhost', port=10095, ssl=0,
             os.makedirs(args.output_dir)
 
         _progress_callback = progress_callback
+        _sent_callback = sent_callback
         try:
             one_thread(0, 0, 1)
         finally:
             _progress_callback = None
+            _sent_callback = None
 
 
 def main():
