@@ -113,7 +113,7 @@ function renderTasksTable(tasks) {
 function buildStatusBadge(task) {
     const map = {
         'converting': { cls: 'status-converting', key: 'asr.status_converting' },
-        'processing': { cls: 'status-processing', key: 'asr.status_sending' },
+        'processing': { cls: 'status-processing', key: 'asr.status_transcribing' },
         'transcribing': { cls: 'status-transcribing', key: 'asr.status_transcribing' },
         'completed': { cls: 'status-completed', key: 'asr.status_completed' },
         'failed': { cls: 'status-failed', key: 'asr.status_failed' },

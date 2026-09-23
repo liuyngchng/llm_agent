@@ -143,6 +143,7 @@ ollama==0.4.7
 omegaconf==2.3.0
 onnx==1.17.0
 onnxruntime==1.19.2
+sherpa-onnx==1.13.8
 openai==1.68.2
 opencv-python==4.11.0.86
 opencv-python-headless==4.11.0.86

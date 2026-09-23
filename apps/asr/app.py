@@ -12,7 +12,7 @@ from flask import Flask, render_template, request, jsonify, send_file, send_from
 import threading
 
 
-from apps.asr.asr_util import asr_tasks, process_audio_async
+from apps.asr.asr_util import asr_tasks, process_audio_async, resume_incomplete_tasks
 from common.sys_init import init_yml_cfg
 from common.auth_util import auth_info, get_client_ip, redirect_to_portal_login
 from common import cm_utils, statistic_util, my_enums
@@ -222,6 +222,8 @@ def get_task_status(task_id):
         'result_text': task.get('result_text'),
         'error': task.get('error'),
         'progress': task.get('progress'),
+        'total_segments': task.get('total_segments', 0),
+        'completed_segments': task.get('completed_segments', 0),
         'original_filename': task['original_filename'],
     })
 
@@ -306,14 +308,19 @@ def clear_completed_tasks():
 
 
 if __name__ == '__main__':
-    # ====== Debug链接：生成带 token 的直接访问链接 ======
-    debug_token = cm_utils.create_token(1, 0, 86400, my_cfg['sys']['cypher_key'])
-    print(f"\n{'='*70}")
-    print(f"  Debug访问链接（直接点击进入）:")
-    print(f"  >>> http://127.0.0.1:19010?t={debug_token}")
-    print(f"  uid=1, role=0, token有效期=24h")
-    print(f"{'='*70}\n")
-
     port = 19010
-    logger.info(f"asr_service_listen_on_port {port}")
+
+    # Flask debug 模式会启用 reloader，导致代码执行两遍。
+    # 只在 reloader 子进程中打印 debug 链接和执行初始化，避免重复。
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        debug_token = cm_utils.create_token(1, 0, 86400, my_cfg['sys']['cypher_key'])
+        print(f"\n{'='*70}")
+        print(f"  Debug访问链接（直接点击进入）:")
+        print(f"  >>> http://127.0.0.1:19010?t={debug_token}")
+        print(f"  uid=1, role=0, token有效期=24h")
+        print(f"{'='*70}\n")
+
+        # 恢复未完成的任务（断点续转写），只在子进程中执行一次
+        resume_incomplete_tasks(ASR_HOST, ASR_PORT)
+
     app.run(debug=True, host='0.0.0.0', port=port)

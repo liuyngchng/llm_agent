@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import json
 import os
 import sqlite3
 import threading
+import time
 import uuid
+import wave
 from datetime import datetime
 from pathlib import Path
 import subprocess
+
+import numpy as np
+import sherpa_onnx
 
 import logging.config
 
@@ -23,6 +29,115 @@ BASE_DIR = Path(__file__).parent
 CONVERTED_DIR = BASE_DIR / 'converted'
 RESULTS_DIR = BASE_DIR / 'results'
 DB_PATH = BASE_DIR / 'asr.db'
+
+# 确保目录存在（asr_util 可独立于 app.py 使用）
+for _d in (CONVERTED_DIR, RESULTS_DIR):
+    _d.mkdir(parents=True, exist_ok=True)
+
+# ── VAD 配置 ───────────────────────────────────────────────
+VAD_MODEL_PATH = os.environ.get(
+    "ASR_VAD_MODEL",
+    os.path.expanduser("~/.voicenote/models/silero_vad.onnx"),
+)
+MAX_SEGMENT_SECONDS = 300  # 5 分钟
+
+
+# ── VAD 切分 ───────────────────────────────────────────────
+
+def _build_vad_detector(sample_rate):
+    """构建 sherpa-onnx VoiceActivityDetector。"""
+    if not Path(VAD_MODEL_PATH).is_file():
+        raise FileNotFoundError(f"VAD 模型文件不存在: {VAD_MODEL_PATH}")
+
+    config = sherpa_onnx.VadModelConfig()
+    config.silero_vad.model = VAD_MODEL_PATH
+    config.silero_vad.threshold = 0.5
+    config.silero_vad.min_silence_duration = 0.5  # 0.5 秒静音视为段边界
+    config.silero_vad.min_speech_duration = 0.25  # 忽略 <0.25 秒的噪音
+    config.silero_vad.max_speech_duration = MAX_SEGMENT_SECONDS  # 5 分钟上限
+    config.sample_rate = sample_rate
+
+    # buffer_size_in_seconds=30 可以避免大文件频繁扩容
+    return sherpa_onnx.VoiceActivityDetector(config, buffer_size_in_seconds=30)
+
+
+def segment_wav_and_write(wav_path, output_dir):
+    """对 WAV 文件做 VAD 切分并写入磁盘。
+
+    流式处理：每次从 WAV 读 2 秒（VAD 判定边界的最小有效块），转 float32 后
+    feed VAD，边出段边写盘。内存峰值仅 ~128KB，不受输入 WAV 总时长影响，
+    支持 >12h 的大文件。
+
+    关键：feed 块必须是 2 秒左右的小块，一次性喂大块会导致 VAD 内部
+    is_speech 判定被 OR 合并，无法及时切段，circular buffer 持续膨胀 OOM。
+
+    返回 list[(start_sec, dur_sec, seg_wav_path)]。
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    with wave.open(str(wav_path), 'rb') as wf:
+        sr = wf.getframerate()
+        total_frames = wf.getnframes()
+        total_dur = total_frames / sr
+    logger.info("vad_start, file=%s, duration=%.1fs",
+                Path(wav_path).name, total_dur)
+
+    vad = _build_vad_detector(sr)
+    segment_paths = []
+
+    FEED_SECONDS = 5  # 5 秒块 feed，足够检测 0.5s 静音边界，又不会过大导致 buffer 膨胀
+    feed_frames = FEED_SECONDS * sr
+
+    with wave.open(str(wav_path), 'rb') as wf:
+        while True:
+            pcm = wf.readframes(feed_frames)
+            if not pcm:
+                break
+            chunk = np.frombuffer(pcm, dtype=np.int16).astype(np.float32, copy=False)
+            del pcm
+            chunk /= 32768.0
+            vad.accept_waveform(chunk)
+            del chunk
+            _drain_vad_segments(vad, sr, output_dir, segment_paths)
+
+    vad.flush()
+    _drain_vad_segments(vad, sr, output_dir, segment_paths)
+
+    total_speech = sum(p[1] for p in segment_paths)
+    logger.info("vad_done, segments=%d, total_speech=%.1fs=%.1fmin",
+                len(segment_paths), total_speech, total_speech / 60)
+    return segment_paths
+
+
+def _drain_vad_segments(vad, sr, output_dir, segment_paths):
+    """Pop 所有已完成的 VAD 段，写入 WAV，追加元数据到 segment_paths。"""
+    while not vad.empty():
+        seg = vad.front
+        dur = len(seg.samples) / sr
+        start_sec = seg.start / sr if seg.start >= 0 else 0.0
+        idx = len(segment_paths)
+        seg_path = output_dir / f"seg_{idx:04d}.wav"
+        write_segment_wav(seg.samples, sr, seg_path)
+        segment_paths.append((start_sec, dur, seg_path))
+        vad.pop()
+
+
+def write_segment_wav(samples_float32, sample_rate, output_path):
+    """将 float32 音频（numpy 或 pybind11 vector）写入 16-bit mono WAV 文件。"""
+    if not isinstance(samples_float32, np.ndarray):
+        samples_float32 = np.array(samples_float32, dtype=np.float32)
+    # 原位缩放
+    np.multiply(samples_float32, 32767.0, out=samples_float32)
+    np.clip(samples_float32, -32768.0, 32767.0, out=samples_float32)
+    int16_samples = samples_float32.astype(np.int16)
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(output_path), 'wb') as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        wf.writeframes(int16_samples.tobytes())
 
 
 def convert_to_wav(input_path, output_path):
@@ -45,28 +160,27 @@ def convert_to_wav(input_path, output_path):
     return output_path
 
 
-def run_asr_transmit(wav_path, output_dir, asr_host, asr_port, task_id=None):
-    """运行 FunASR 识别（直接调用 wss_client，不再通过子进程）"""
+def run_asr_transmit(wav_path, output_dir, asr_host, asr_port, task_id=None,
+                     segment_progress_cb=None):
+    """运行 FunASR 识别（直接调用 wss_client）。
+
+    segment_progress_cb(inner_pct) 用于段内发送进度（0-100），可选。
+    """
     from apps.asr.wss_client import run_offline_asr
 
     wav_size_mb = Path(wav_path).stat().st_size / (1024 * 1024)
-    logger.info(f"{task_id}, call_funasr_server, host={asr_host}:{asr_port}, wav_size={wav_size_mb:.1f}MB, output_dir={output_dir}")
-
-    _last_logged_pct = [0]  # 用列表避免 nonlocal 问题
+    logger.info(
+        "%s, call_funasr_server, host=%s:%s, wav_size=%.1fMB, output_dir=%s",
+        task_id, asr_host, asr_port, wav_size_mb, output_dir,
+    )
 
     def _progress(pct):
-        if task_id:
-            asr_tasks.update_task(task_id, progress=pct)
-        # 每 20% 记录一次进度日志
-        if pct - _last_logged_pct[0] >= 20 or pct >= 100:
-            _last_logged_pct[0] = pct
-            logger.info(f"{task_id}, asr_progress={pct}%")
+        if segment_progress_cb:
+            segment_progress_cb(pct)
 
     def _sent():
-        # 音频全部发送完毕，进入服务端推理阶段
         if task_id:
-            asr_tasks.update_task(task_id, status='transcribing')
-            logger.info(f"{task_id}, all_chunks_sent, waiting_for_funasr_inference")
+            logger.info("%s, segment_sent_finished, waiting_for_funasr_inference", task_id)
 
     run_offline_asr(
         audio_in=str(wav_path),
@@ -79,7 +193,7 @@ def run_asr_transmit(wav_path, output_dir, asr_host, asr_port, task_id=None):
         progress_callback=_progress,
         sent_callback=_sent,
     )
-    logger.info(f"{task_id}, funasr_transmit_finished")
+    logger.info("%s, funasr_transmit_finished", task_id)
 
 
 def get_recognition_result(result_dir, file_prefix='text.0_0'):
@@ -137,11 +251,34 @@ class ASRTaskStore:
             );
         """)
         conn.commit()
+
+        # ── VAD 分段 / 断点续转写字段（向前兼容） ──
+        for col, col_def in [
+            ("total_segments", "INTEGER DEFAULT 0"),
+            ("completed_segments", "INTEGER DEFAULT 0"),
+            ("segment_results", "TEXT DEFAULT '[]'"),
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE asr_tasks ADD COLUMN {col} {col_def};")
+                conn.commit()
+                logger.info("db_migrate: added column %s", col)
+            except sqlite3.OperationalError:
+                pass  # 列已存在，忽略
+
         conn.close()
 
     def create_task(self, original_filename, original_path, converted_path, uid=0):
-        """创建新任务，返回 task_id"""
-        task_id = str(uuid.uuid4())
+        """创建新任务，返回 task_id（毫秒时间戳，并发时自增防止碰撞）。"""
+        with self._lock:
+            base = str(int(time.time() * 1000))
+            # 并发保护：同一毫秒内的第二个任务 +1ms
+            tid = base
+            n = 0
+            while self.get_task(tid) is not None:
+                n += 1
+                tid = str(int(time.time() * 1000) + n)
+            task_id = tid
+
         conn = self._get_conn()
         try:
             conn.execute(
@@ -157,7 +294,10 @@ class ASRTaskStore:
 
     def update_task(self, task_id, **kwargs):
         """更新任务字段"""
-        allowed = {'status', 'result_text', 'progress', 'error', 'converted_path', 'original_path'}
+        allowed = {
+            'status', 'result_text', 'progress', 'error', 'converted_path', 'original_path',
+            'total_segments', 'completed_segments', 'segment_results',
+        }
         fields = {}
         for k, v in kwargs.items():
             if k in allowed:
@@ -235,59 +375,188 @@ class ASRTaskStore:
 # 全局实例
 asr_tasks = ASRTaskStore(DB_PATH)
 
+# 用于防止同一个残留任务被重复拉起
+_resume_lock = threading.Lock()
+_resumed_task_ids = set()
+
 
 def process_audio_async(task_id, input_path, asr_host, asr_port):
-    """异步处理音频文件"""
-    original_name = Path(input_path).name
+    """异步处理音频文件（VAD 分段 + 逐段 ASR + 断点续转写）。"""
+    _process_audio_impl(task_id, input_path, asr_host, asr_port)
+
+
+def resume_incomplete_tasks(asr_host, asr_port):
+    """启动时检查 DB 中未完成的任务，重新拉起处理线程。"""
+    with _resume_lock:
+        conn = asr_tasks._get_conn()
+        try:
+            rows = conn.execute(
+                "SELECT * FROM asr_tasks "
+                "WHERE status IN ('converting','processing') "
+                "  AND completed_segments < total_segments "
+                "ORDER BY created_at ASC",
+            ).fetchall()
+        finally:
+            conn.close()
+
+        resumed = 0
+        for row in rows:
+            task = dict(row)
+            tid = task['task_id']
+            if tid in _resumed_task_ids:
+                continue
+            _resumed_task_ids.add(tid)
+
+            # 找到对应的原始文件路径
+            wav_path = (task.get('converted_path') or task.get('original_path') or '')
+            if not wav_path or not Path(wav_path).exists():
+                logger.warning("resume_skip, task=%s, wav_not_found=%s", tid, wav_path)
+                asr_tasks.update_task(tid, status='failed', error='音频文件丢失，无法恢复')
+                continue
+
+            logger.info(
+                "resume_task, task=%s, file=%s, done=%d/%d",
+                tid, task['original_filename'],
+                task.get('completed_segments', 0), task.get('total_segments', 0),
+            )
+            t = threading.Thread(
+                target=_process_audio_impl,
+                args=(tid, Path(wav_path), asr_host, asr_port),
+            )
+            t.daemon = True
+            t.start()
+            resumed += 1
+
+        if resumed:
+            logger.info("resume_incomplete_tasks: resumed %d tasks", resumed)
+
+
+def _process_audio_impl(task_id, input_path, asr_host, asr_port):
+    """处理音频的实际实现（支持从断点恢复）。"""
+    input_path = Path(input_path)
+    original_name = input_path.name
     try:
-        file_size_mb = Path(input_path).stat().st_size / (1024 * 1024)
-        logger.info(f"{task_id}, === START task, file={original_name}, size={file_size_mb:.1f}MB ===")
+        file_size_mb = input_path.stat().st_size / (1024 * 1024)
+        logger.info(
+            "%s, === START task, file=%s, size=%.1fMB ===",
+            task_id, original_name, file_size_mb,
+        )
 
-        # 更新状态：转换中
-        asr_tasks.update_task(task_id, status='converting')
-        logger.info(f"{task_id}, step1_converting_format, file={original_name}")
+        # 加载已有进度（断点续转写）
+        task = asr_tasks.get_task(task_id)
+        total_segments = task.get('total_segments', 0)
+        completed_segments = task.get('completed_segments', 0)
+        segment_results = json.loads(task.get('segment_results') or '[]')
 
-        # 生成输出路径
-        original_filename = Path(input_path).stem
-        wav_filename = f"{original_filename}_{uuid.uuid4().hex[:8]}.wav"
-        wav_path = CONVERTED_DIR / wav_filename
-        abs_path = os.path.abspath(wav_path)
+        # ── Step 1: 如果还没做格式转换，先转 WAV ──
+        wav_path = input_path
+        if input_path.suffix.lower() != '.wav':
+            asr_tasks.update_task(task_id, status='converting')
+            logger.info("%s, step1_converting_format", task_id)
+            wav_filename = f"{input_path.stem}_{uuid.uuid4().hex[:8]}.wav"
+            wav_path = CONVERTED_DIR / wav_filename
+            convert_to_wav(str(input_path), wav_path)
+            logger.info("%s, step1_done, converted to 16kHz mono WAV", task_id)
+            asr_tasks.update_task(task_id, converted_path=str(wav_path))
 
-        # 1. 转换为 WAV
-        convert_to_wav(input_path, wav_path)
-        logger.info(f"{task_id}, step1_done, converted to 16kHz mono WAV")
-        asr_tasks.update_task(task_id, converted_path=str(wav_path), status='processing')
+        # ── Step 2: VAD 切分（仅在首次或无段数时执行） ──
+        segments_dir = CONVERTED_DIR / task_id
+        if total_segments <= 0:
+            asr_tasks.update_task(task_id, status='processing', progress=0)
+            logger.info("%s, step2_vad_segmentation", task_id)
 
-        # 2. 执行 ASR 识别
-        asr_tasks.update_task(task_id, progress=0)
+            segment_meta = segment_wav_and_write(str(wav_path), segments_dir)
+            total_segments = len(segment_meta)
+            if total_segments == 0:
+                raise Exception("VAD 未检测到任何语音段")
+
+            asr_tasks.update_task(task_id, total_segments=total_segments)
+            logger.info(
+                "%s, step2_done, total_segments=%d, seg_wavs written to %s",
+                task_id, total_segments, segments_dir,
+            )
+        else:
+            logger.info(
+                "%s, step2_skip_vad, already segmented: %d segments, resume from #%d",
+                task_id, total_segments, completed_segments,
+            )
+
+        # ── Step 3: 逐段提交 FunASR ──
         result_dir = RESULTS_DIR / task_id
         result_dir.mkdir(exist_ok=True)
-        logger.info(f"{task_id}, step2_start_asr, sending to FunASR...")
-        run_asr_transmit(wav_path, result_dir, asr_host, asr_port, task_id=task_id)
 
-        # 3. 获取识别结果
-        result_content = get_recognition_result(result_dir)
-        if result_content:
-            text = extract_text_from_result(result_content)
-            text_len = len(text)
+        for i in range(completed_segments, total_segments):
+            seg_path = segments_dir / f"seg_{i:04d}.wav"
+            if not seg_path.exists():
+                raise Exception(f"段文件丢失: {seg_path}")
+
+            seg_dur = seg_path.stat().st_size / (16000 * 2)  # 粗略估算
+            logger.info(
+                "%s, step3_segment[%d/%d], dur=~%.1fs",
+                task_id, i + 1, total_segments, seg_dur,
+            )
+
+            seg_out_dir = result_dir / f"seg_{i:04d}"
+            seg_out_dir.mkdir(parents=True, exist_ok=True)
+
+            run_asr_transmit(seg_path, seg_out_dir, asr_host, asr_port, task_id=task_id)
+
+            # 读取单段结果
+            seg_text = ""
+            for text_file in sorted(seg_out_dir.glob("text.*")):
+                raw = text_file.read_text(encoding='utf-8').strip()
+                seg_text += extract_text_from_result(raw) + "\n"
+
+            seg_text = seg_text.strip()
+            segment_results.append(seg_text)
+            completed_segments = i + 1
+            progress = int(completed_segments / total_segments * 100)
+
+            # 每段完成后立即持久化（断点续转写的关键）
             asr_tasks.update_task(
                 task_id,
-                status='completed',
-                result_text=text,
-                progress=100,
+                completed_segments=completed_segments,
+                progress=progress,
+                segment_results=json.dumps(segment_results, ensure_ascii=False),
             )
-            # 保存结果到文件供下载
-            result_file = RESULTS_DIR / f"{task_id}.txt"
-            with open(result_file, 'w', encoding='utf-8') as f:
-                f.write(text)
-            logger.info(f"{task_id}, === DONE, status=completed, text_length={text_len}, file={original_name} ===")
-        else:
-            raise Exception("未获取到识别结果")
+            logger.info(
+                "%s, step3_segment_done[%d/%d], progress=%d%%, text_len=%d",
+                task_id, completed_segments, total_segments, progress, len(seg_text),
+            )
+
+        # ── Step 4: 合并结果 ──
+        logger.info("%s, step4_merging_results", task_id)
+        full_text = "\n".join(seg for seg in segment_results if seg)
+        asr_tasks.update_task(
+            task_id,
+            status='completed',
+            result_text=full_text,
+            progress=100,
+        )
+
+        # 保存下载文件
+        result_file = RESULTS_DIR / f"{task_id}.txt"
+        result_file.write_text(full_text, encoding='utf-8')
+        logger.info(
+            "%s, === DONE, status=completed, text_length=%d, file=%s ===",
+            task_id, len(full_text), original_name,
+        )
+
+        # 清理临时 segment WAV（保留合并结果）
+        if segments_dir.exists():
+            import shutil
+            try:
+                shutil.rmtree(segments_dir)
+            except Exception:
+                pass
 
         # 清理上传的原始文件
-        if Path(input_path).exists():
-            Path(input_path).unlink()
+        if input_path.exists() and input_path.suffix.lower() != '.wav':
+            input_path.unlink()
 
     except Exception as e:
         asr_tasks.update_task(task_id, status='failed', error=str(e))
-        logger.error(f"{task_id}, === FAILED, error={e}, file={original_name} ===")
+        logger.error(
+            "%s, === FAILED, error=%s, file=%s ===",
+            task_id, e, original_name,
+        )

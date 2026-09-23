@@ -63,6 +63,10 @@ common/sh/cfg.db.backup*
 apps/asr/converted/*
 apps/asr/results/*
 apps/asr/uploads/*
+.claude/
+apps/asr/asr.db
+apps/asr/asr.db-wal
+apps/asr/asr.db-shm
 apps/statistics_service/statistics.db
 
 # Go build artifacts (api_adapter_g)
