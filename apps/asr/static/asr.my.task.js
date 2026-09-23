@@ -62,6 +62,14 @@ function renderTasksTable(tasks) {
             const timeCell = document.createElement('td');
             row.appendChild(timeCell);
 
+            // 音频时长
+            const durCell = document.createElement('td');
+            row.appendChild(durCell);
+
+            // 转录耗时
+            const procCell = document.createElement('td');
+            row.appendChild(procCell);
+
             // 状态
             const statusCell = document.createElement('td');
             row.appendChild(statusCell);
@@ -90,17 +98,23 @@ function renderTasksTable(tasks) {
         // 创建时间
         cells[2].textContent = formatDateTime(task.created_at);
 
+        // 音频时长
+        cells[3].textContent = formatDuration(task.audio_duration_secs);
+
+        // 转录耗时
+        cells[4].textContent = formatDuration(task.processing_time_secs);
+
         // 状态
-        cells[3].innerHTML = buildStatusBadge(task);
+        cells[5].innerHTML = buildStatusBadge(task);
 
         // 进度
-        cells[4].innerHTML = buildProgressBar(task);
+        cells[6].innerHTML = buildProgressBar(task);
 
         // 下载
-        cells[5].innerHTML = buildDownloadBtn(task);
+        cells[7].innerHTML = buildDownloadBtn(task);
 
         // 操作
-        cells[6].innerHTML = buildActionBtn(task);
+        cells[8].innerHTML = buildActionBtn(task);
     });
 
     // 移除不存在的行
@@ -123,10 +137,6 @@ function buildStatusBadge(task) {
 }
 
 function buildProgressBar(task) {
-    // 转录中阶段没有进度可展示，只显示文字
-    if (task.status === 'transcribing') {
-        return `<span style="color: #1890ff; font-size: 0.85rem;">${__('asr.status_transcribing')}...</span>`;
-    }
     const pct = task.progress || 0;
     return `
         <div>${pct}%</div>
@@ -167,6 +177,15 @@ function formatDateTime(dateString) {
     } catch (e) {
         return dateString;
     }
+}
+
+function formatDuration(totalSecs) {
+    if (!totalSecs || totalSecs <= 0) return '-';
+    const secs = Math.round(totalSecs);
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return __fmt('asr.duration_format', h, m, s);
 }
 
 async function deleteTask(taskId, filename) {

@@ -140,6 +140,12 @@ def write_segment_wav(samples_float32, sample_rate, output_path):
         wf.writeframes(int16_samples.tobytes())
 
 
+def _get_wav_duration_secs(wav_path):
+    """读取 WAV 文件的音频时长（秒）。"""
+    with wave.open(wav_path, 'rb') as wf:
+        return wf.getnframes() / wf.getframerate()
+
+
 def convert_to_wav(input_path, output_path):
     """使用 ffmpeg 将音频转换为 WAV 格式"""
     cmd = [
@@ -246,25 +252,16 @@ class ASRTaskStore:
                 result_text TEXT,
                 progress INTEGER DEFAULT 0,
                 error TEXT,
+                total_segments INTEGER DEFAULT 0,
+                completed_segments INTEGER DEFAULT 0,
+                segment_results TEXT DEFAULT '[]',
+                audio_duration_secs REAL DEFAULT 0,
+                processing_time_secs REAL DEFAULT 0,
                 created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
                 updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
             );
         """)
         conn.commit()
-
-        # ── VAD 分段 / 断点续转写字段（向前兼容） ──
-        for col, col_def in [
-            ("total_segments", "INTEGER DEFAULT 0"),
-            ("completed_segments", "INTEGER DEFAULT 0"),
-            ("segment_results", "TEXT DEFAULT '[]'"),
-        ]:
-            try:
-                conn.execute(f"ALTER TABLE asr_tasks ADD COLUMN {col} {col_def};")
-                conn.commit()
-                logger.info("db_migrate: added column %s", col)
-            except sqlite3.OperationalError:
-                pass  # 列已存在，忽略
-
         conn.close()
 
     def create_task(self, original_filename, original_path, converted_path, uid=0):
@@ -436,6 +433,7 @@ def _process_audio_impl(task_id, input_path, asr_host, asr_port):
     input_path = Path(input_path)
     original_name = input_path.name
     try:
+        process_start = time.time()
         file_size_mb = input_path.stat().st_size / (1024 * 1024)
         logger.info(
             "%s, === START task, file=%s, size=%.1fMB ===",
@@ -475,6 +473,11 @@ def _process_audio_impl(task_id, input_path, asr_host, asr_port):
                 "%s, step2_done, total_segments=%d, seg_wavs written to %s",
                 task_id, total_segments, segments_dir,
             )
+
+            # 记录音频时长
+            audio_dur = _get_wav_duration_secs(str(wav_path))
+            asr_tasks.update_task(task_id, audio_duration_secs=audio_dur)
+            logger.info("%s, audio_duration=%.1fs", task_id, audio_dur)
         else:
             logger.info(
                 "%s, step2_skip_vad, already segmented: %d segments, resume from #%d",
@@ -527,20 +530,22 @@ def _process_audio_impl(task_id, input_path, asr_host, asr_port):
         # ── Step 4: 合并结果 ──
         logger.info("%s, step4_merging_results", task_id)
         full_text = "\n".join(seg for seg in segment_results if seg)
+        processing_secs = round(time.time() - process_start, 1)
         asr_tasks.update_task(
             task_id,
             status='completed',
             result_text=full_text,
             progress=100,
+            processing_time_secs=processing_secs,
+        )
+        logger.info(
+            "%s, === DONE, status=completed, text_length=%d, processing_time=%.1fs, file=%s ===",
+            task_id, len(full_text), processing_secs, original_name,
         )
 
         # 保存下载文件
         result_file = RESULTS_DIR / f"{task_id}.txt"
         result_file.write_text(full_text, encoding='utf-8')
-        logger.info(
-            "%s, === DONE, status=completed, text_length=%d, file=%s ===",
-            task_id, len(full_text), original_name,
-        )
 
         # 清理临时 segment WAV（保留合并结果）
         if segments_dir.exists():

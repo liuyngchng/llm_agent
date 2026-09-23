@@ -2348,6 +2348,24 @@ TRANSLATIONS = {
             "fr": "Progression",
             "ar": "التقدم",
         },
+        "col_audio_duration": {
+            "zh": "音频时长",
+            "en": "Duration",
+            "fr": "Duree",
+            "ar": "مدة الصوت",
+        },
+        "col_processing_time": {
+            "zh": "转录耗时",
+            "en": "Time Cost",
+            "fr": "Duree traitement",
+            "ar": "وقت المعالجة",
+        },
+        "duration_format": {
+            "zh": "{0}小时{1}分钟{2}秒",
+            "en": "{0}h {1}m {2}s",
+            "fr": "{0}h {1}min {2}s",
+            "ar": "{0}س {1}د {2}ث",
+        },
         "col_download": {
             "zh": "下载",
             "en": "Download",

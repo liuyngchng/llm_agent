@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ _('asr.task_page_title') }}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="/static/asr.my.task.css">
     {% if dir == 'rtl' %}<link rel="stylesheet" href="/static/rtl.css">{% endif %}
     <script>window.__I18N__ = {{ i18n_js | safe }}; window.__LANG__ = "{{ lang }}";</script>
@@ -32,6 +32,8 @@
                         <th>{{ _('common.no') }}</th>
                         <th>{{ _('asr.col_filename') }}</th>
                         <th>{{ _('asr.col_create_time') }}</th>
+                        <th>{{ _('asr.col_audio_duration') }}</th>
+                        <th>{{ _('asr.col_processing_time') }}</th>
                         <th>{{ _('asr.col_status') }}</th>
                         <th>{{ _('asr.col_progress') }}</th>
                         <th>{{ _('asr.col_download') }}</th>

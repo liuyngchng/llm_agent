@@ -287,14 +287,9 @@ async def message(id):
                 os.system("clear")
                 print("\rpid" + str(id) + ": " + text_print)
             elif meg["mode"] == "offline":
-                if timestamp != "":
-                    text_print += "{} timestamp: {}".format(text, timestamp)
-                else:
-                    text_print += "{}".format(text)
-
-                # text_print = text_print[-args.words_max_print:]
-                # os.system('clear')
-                print("\rpid" + str(id) + ": " + wav_name + ": " + text_print)
+                text_len = len(text)
+                preview = text[:20] + ("..." if text_len > 20 else "")
+                print("\rpid" + str(id) + ": " + wav_name + ": " + preview + f" (共{text_len}字)")
                 offline_msg_done = True
             else:
                 if meg["mode"] == "2pass-online":
