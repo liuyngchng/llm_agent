@@ -294,6 +294,7 @@ class ASRTaskStore:
         allowed = {
             'status', 'result_text', 'progress', 'error', 'converted_path', 'original_path',
             'total_segments', 'completed_segments', 'segment_results',
+            'audio_duration_secs', 'processing_time_secs',
         }
         fields = {}
         for k, v in kwargs.items():
