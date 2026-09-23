@@ -37,7 +37,7 @@ for _d in (CONVERTED_DIR, RESULTS_DIR):
 # ── VAD 配置 ───────────────────────────────────────────────
 VAD_MODEL_PATH = os.environ.get(
     "ASR_VAD_MODEL",
-    os.path.expanduser("~/.voicenote/models/silero_vad.onnx"),
+    str(BASE_DIR / 'models' / 'silero_vad.onnx'),
 )
 MAX_SEGMENT_SECONDS = 300  # 5 分钟
 

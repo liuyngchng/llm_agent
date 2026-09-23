@@ -46,7 +46,7 @@ if [[ $confirm == [Yy] ]]; then
         unstructured[pdf] langchain_core pydantic python-docx python-pptx pillow \
         concurrent_log_handler pydub pycryptodome wheel tabulate chromadb \
         lxml websockets markdown pypandoc pandas openpyxl xlsx2html svgwrite \
-        docxtpl pypdf pdfplumber rank-bm25 jieba
+        docxtpl pypdf pdfplumber rank-bm25 jieba numpy sherpa_onnx PyYAML
 
     cd ..
 else
