@@ -4,7 +4,9 @@
 FROM ubuntu:24.04
 
 # Set timezone
+ENV TZ=Asia/Shanghai
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone && \
     ulimit -n 65535
 
 WORKDIR /opt/app

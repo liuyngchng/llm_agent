@@ -17,7 +17,8 @@ RUN ./llm_py_env/bin/pip install --no-cache-dir --no-index --find-links=/tmp/whl
 
 FROM ubuntu_py:24.04
 COPY --from=builder /opt/llm_py_env /opt/llm_py_env
-RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime' && \
+ENV TZ=Asia/Shanghai
+RUN bash -c 'ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone' && \
     ulimit -n 65535
 WORKDIR /opt/app
 EXPOSE 19000 19001
