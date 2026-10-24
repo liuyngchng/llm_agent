@@ -5,7 +5,7 @@ sys:
   # Port the server listens on (default: 16001)
   port: 16001
 
-  # Log file path (default: logs/api_adapter.log). Supports both / and \ separators.
+  # Log file path (default: logs/api_adapter.log). In Docker this maps to the host's ./logs/ directory.
   # Works on Windows and Linux.
   log_file: logs/api_adapter.log
 
@@ -17,4 +17,4 @@ api:
   llm_api_key: sk-123456
 
   # Default model name to use for upstream requests
-  llm_model_name: deepseek-chat
+  llm_model_name: deepseek-v4-pro

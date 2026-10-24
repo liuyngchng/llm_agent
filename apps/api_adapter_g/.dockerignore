@@ -1,0 +1,29 @@
+# Git
+.git/
+.gitignore
+
+# Build scripts / deploy tools — not needed in runtime image
+deploy/
+build.bat
+
+# Go source (already compiled into the binary)
+config/
+converter/
+handler/
+main.go
+logger.go
+go.mod
+go.sum
+
+# Runtime host-mount directories
+logs/
+cfg/
+
+# Config template (used by build script for host mount, not inside image)
+cfg.yml.template
+
+# Windows binary (irrelevant for Linux image)
+*.exe
+
+# Docs
+README.md
