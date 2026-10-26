@@ -186,8 +186,9 @@ func (h *MessagesHandler) handleNonStream(w http.ResponseWriter, r *http.Request
 // ---------------------------------------------------------------------------
 
 func truncateStr(s string, maxLen int) string {
-	if len(s) > maxLen {
-		return s[:maxLen]
+	runes := []rune(s)
+	if len(runes) > maxLen {
+		return string(runes[:maxLen]) + "..."
 	}
 	return s
 }

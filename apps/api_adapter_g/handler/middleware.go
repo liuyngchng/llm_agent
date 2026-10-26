@@ -56,8 +56,9 @@ func AuthMiddleware(apiKey string) func(http.Handler) http.Handler {
 }
 
 func truncate(s string, maxLen int) string {
-	if len(s) > maxLen {
-		return s[:maxLen]
+	runes := []rune(s)
+	if len(runes) > maxLen {
+		return string(runes[:maxLen]) + "..."
 	}
 	if s == "" {
 		return "None"
