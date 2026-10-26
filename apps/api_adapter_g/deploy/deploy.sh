@@ -27,13 +27,6 @@ echo "  Project : ${PROJECT_DIR}"
 echo "============================================"
 echo ""
 
-# 检查当前目录下是否存在 apps/${APP} 文件夹（兼容从项目根目录执行的场景）
-if [ ! -f "main.go" ]; then
-    echo "错误：当前目录下未找到 ${APP} 源代码"
-    echo "请确保在 apps/${APP} 目录下执行此脚本"
-    exit 1
-fi
-
 # 检查 Docker 镜像是否存在
 if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -q "^${IMAGE}$"; then
     echo "错误：Docker 镜像 ${IMAGE} 不存在"
