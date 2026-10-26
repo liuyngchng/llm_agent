@@ -1,16 +1,17 @@
 #!/bin/bash
 # =============================================================================
-# api_adapter_g — Build & Deploy
+# api_adapter_g — Build
 #
 # Usage:
 #   ./deploy/build.sh            # build both binaries + Docker image
-#   ./deploy/build.sh run        # build all + deploy container
 #   ./deploy/build.sh bin        # build binaries only (Linux + Windows, no Docker)
 #
 # Outputs:
 #   api_adapter_linux_amd64        static ELF — run directly or via Docker
 #   api_adapter_windows_amd64.exe  standalone .exe — copy to Windows and run
 #   llm_api_adapter_g:1.1          Docker image (ubuntu:24.04)
+#
+# To deploy the Docker container, use:  ./deploy/deploy.sh
 # =============================================================================
 set -euo pipefail
 
@@ -23,18 +24,13 @@ IMAGE="llm_${APP}:1.1"
 BIN_LINUX="api_adapter_linux_amd64"
 BIN_WIN="api_adapter_windows_amd64.exe"
 
-HOST_CFG_DIR="${PROJECT_DIR}/cfg"
-HOST_LOGS_DIR="${PROJECT_DIR}/logs"
-CONTAINER="${APP}_app"
-
 MODE="${1:-all}"
 
 # ---- Helper ----
 usage() {
-    echo "Usage: $0 [all|bin|run]"
+    echo "Usage: $0 [all|bin]"
     echo "  all   Build Linux + Windows binaries + Docker image (default)"
     echo "  bin   Build both binaries only (no Docker)"
-    echo "  run   Build all + deploy container"
     exit 1
 }
 
@@ -97,43 +93,9 @@ do_docker() {
     docker images | grep "${IMAGE}" --color=always || true
 }
 
-# ---- Step: deploy (docker run) ----
-do_run() {
-    echo "=== [deploy] Preparing host directories ==="
-    mkdir -p "${HOST_CFG_DIR}" "${HOST_LOGS_DIR}"
-
-    if [ ! -f "${HOST_CFG_DIR}/cfg.yml" ]; then
-        if [ -f "cfg.yml.template" ]; then
-            cp cfg.yml.template "${HOST_CFG_DIR}/cfg.yml"
-            echo "  Created ${HOST_CFG_DIR}/cfg.yml from template — fill in real credentials then restart"
-        fi
-    else
-        echo "  Preserving existing ${HOST_CFG_DIR}/cfg.yml"
-    fi
-
-    echo "=== [deploy] Recreating container ==="
-    docker stop  "${CONTAINER}" 2>/dev/null || true
-    docker rm -f "${CONTAINER}" 2>/dev/null || true
-    docker network create llm_net 2>/dev/null || true
-
-    docker run -dit --name "${CONTAINER}" \
-      --security-opt seccomp=unconfined \
-      --network llm_net \
-      -v "${HOST_CFG_DIR}:/opt/app/cfg" \
-      -v "${HOST_LOGS_DIR}:/opt/app/logs" \
-      -p 16001:16001 \
-      -e ADAPTER_CONFIG=/opt/app/cfg/cfg.yml \
-      "${IMAGE}"
-
-    echo "  Container started: ${CONTAINER}"
-    docker ps -a | grep "${CONTAINER}" --color=always
-    echo ""
-    docker logs -f "${CONTAINER}"
-}
-
 # ---- Main ----
 echo "============================================"
-echo "  ${APP} — Build & Deploy"
+echo "  ${APP} — Build"
 echo "  Project : ${PROJECT_DIR}"
 echo "============================================"
 echo ""
@@ -149,7 +111,7 @@ case "${MODE}" in
         echo "    ELF    : ./${BIN_LINUX}"
         echo "    EXE    : ./${BIN_WIN}"
         echo "    Image  : ${IMAGE}"
-        echo "  Run './deploy/build.sh run' to deploy."
+        echo "  Run './deploy/deploy.sh' to deploy."
         echo "============================================"
         ;;
     bin)
@@ -161,12 +123,6 @@ case "${MODE}" in
         echo "    Linux  : ./${BIN_LINUX}"
         echo "    Windows: ./${BIN_WIN}"
         echo "============================================"
-        ;;
-    run)
-        do_clean
-        do_binaries
-        do_docker
-        do_run
         ;;
     *)
         usage

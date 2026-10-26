@@ -17,6 +17,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	_ "time/tzdata" // embed IANA timezone database for static builds
 	"io"
 	"log/slog"
 	"net"
