@@ -67,6 +67,10 @@ docker run -dit --name "${CONTAINER}" \
   "${IMAGE}"
 
 echo "容器 ${CONTAINER} 已启动"
+echo ""
+echo "=== [deploy] llm_net 容器间互访地址 ==="
+echo -e "  同网络其他容器可通过以下地址访问本容器：\033[31mhttp://${CONTAINER}:${PORT}\033[0m"
+echo ""
 docker ps -a | grep "${CONTAINER}" --color=always
 echo ""
 echo "部署完成"
